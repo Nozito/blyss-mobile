@@ -1,0 +1,216 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Switch,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Colors } from "@/constants/colors";
+import { proApi } from "@/lib/api";
+
+export default function ProPaymentsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [iban, setIban] = useState("");
+  const [acceptOnline, setAcceptOnline] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["pro-payment-settings"],
+    queryFn: () => proApi.getPaymentSettings?.() ?? Promise.resolve({ data: null }),
+    onSuccess: (res: any) => {
+      if (res?.data) {
+        setIban(res.data.iban || "");
+        setAcceptOnline(res.data.accept_online ?? false);
+      }
+    },
+  } as any);
+
+  const handleSave = async () => {
+    if (iban && iban.length < 14) {
+      Alert.alert("Erreur", "L'IBAN saisi semble invalide.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await proApi.updatePaymentSettings?.({ iban, accept_online: acceptOnline });
+      Alert.alert("Succès", "Paramètres de paiement mis à jour !");
+    } catch {
+      Alert.alert("Erreur", "Impossible de mettre à jour les paramètres.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.pro} />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      className="flex-1 bg-background"
+      contentContainerStyle={{
+        paddingTop: insets.top + 16,
+        paddingBottom: insets.bottom + 40,
+        paddingHorizontal: 20,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
+      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+        <View className="flex-row items-center mb-2">
+          <Pressable
+            onPress={() => router.back()}
+            className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
+          >
+            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          </Pressable>
+          <Text className="text-2xl font-bold text-foreground">Paramètres paiement</Text>
+        </View>
+        <Text className="text-sm text-muted-foreground ml-1">
+          Configure ton mode de versement et les paiements en ligne
+        </Text>
+      </Animated.View>
+
+      {/* Stripe status */}
+      <Animated.View entering={FadeInDown.duration(300).delay(60).springify()} className="mb-4">
+        <View
+          className="bg-card rounded-2xl p-4 flex-row items-center gap-3 border border-border"
+          style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        >
+          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: `${Colors.pro}18` }}>
+            <Ionicons name="card-outline" size={22} color={Colors.pro} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-foreground">Stripe Connect</Text>
+            <Text className="text-xs text-muted-foreground">Accepte les paiements en ligne sécurisés</Text>
+          </View>
+          <View className="px-3 py-1.5 rounded-full" style={{ backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "#BBF7D0" }}>
+            <Text className="text-xs font-bold" style={{ color: "#15803D" }}>Sécurisé</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* IBAN section */}
+      <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-4">
+        <View
+          className="bg-card rounded-2xl p-5 border border-border"
+          style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        >
+          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+            Coordonnées bancaires
+          </Text>
+
+          <Text className="text-xs font-semibold text-muted-foreground mb-2">IBAN</Text>
+          <View
+            className="flex-row items-center bg-muted rounded-xl px-4 h-12 mb-2 border border-border"
+          >
+            <Ionicons name="business-outline" size={16} color={Colors.mutedForeground} />
+            <TextInput
+              className="flex-1 ml-3 text-foreground text-sm"
+              placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+              placeholderTextColor={Colors.mutedForeground}
+              value={iban}
+              onChangeText={setIban}
+              autoCapitalize="characters"
+              keyboardType="default"
+            />
+          </View>
+          <Text className="text-xs text-muted-foreground leading-relaxed">
+            Tes virements seront effectués automatiquement sous 2 jours ouvrés après chaque paiement reçu.
+          </Text>
+        </View>
+      </Animated.View>
+
+      {/* Online payments toggle */}
+      <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="mb-6">
+        <View
+          className="bg-card rounded-2xl p-5 border border-border"
+          style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        >
+          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+            Paiements en ligne
+          </Text>
+
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 mr-4">
+              <Text className="text-sm font-semibold text-foreground mb-1">
+                Accepter les paiements en ligne
+              </Text>
+              <Text className="text-xs text-muted-foreground leading-relaxed">
+                Tes clientes pourront payer directement lors de la réservation. Zéro impayé.
+              </Text>
+            </View>
+            <Switch
+              value={acceptOnline}
+              onValueChange={setAcceptOnline}
+              trackColor={{ false: Colors.border, true: Colors.pro }}
+              thumbColor={Colors.white}
+            />
+          </View>
+
+          {acceptOnline && (
+            <Animated.View
+              entering={FadeInDown.duration(200).springify()}
+              className="mt-4 p-3 rounded-xl flex-row items-center gap-2"
+              style={{ backgroundColor: `${Colors.pro}0D` }}
+            >
+              <Ionicons name="checkmark-circle-outline" size={16} color={Colors.pro} />
+              <Text className="text-xs text-muted-foreground flex-1">
+                Les paiements en ligne sont activés. Les frais Stripe (1,5% + 0,25€) sont déduits automatiquement.
+              </Text>
+            </Animated.View>
+          )}
+        </View>
+      </Animated.View>
+
+      {/* Info cards */}
+      <Animated.View entering={FadeInDown.duration(300).delay(180).springify()} className="flex-row gap-3 mb-8">
+        <View className="flex-1 bg-card rounded-xl p-3 border border-border items-center gap-1">
+          <Ionicons name="shield-checkmark-outline" size={18} color={Colors.pro} />
+          <Text className="text-xs font-semibold text-foreground text-center">Stripe</Text>
+          <Text className="text-xs text-muted-foreground text-center">Sécurisé PCI</Text>
+        </View>
+        <View className="flex-1 bg-card rounded-xl p-3 border border-border items-center gap-1">
+          <Ionicons name="arrow-forward-outline" size={18} color={Colors.success} />
+          <Text className="text-xs font-semibold text-foreground text-center">Virement</Text>
+          <Text className="text-xs text-muted-foreground text-center">Automatique J+2</Text>
+        </View>
+        <View className="flex-1 bg-card rounded-xl p-3 border border-border items-center gap-1">
+          <Ionicons name="close-circle-outline" size={18} color={Colors.success} />
+          <Text className="text-xs font-semibold text-foreground text-center">0 impayé</Text>
+          <Text className="text-xs text-muted-foreground text-center">Garanti</Text>
+        </View>
+      </Animated.View>
+
+      {/* Save button */}
+      <Animated.View entering={FadeInDown.duration(300).delay(220).springify()}>
+        <Pressable
+          onPress={handleSave}
+          disabled={isSaving}
+          className="rounded-2xl h-14 items-center justify-center"
+          style={{ backgroundColor: Colors.pro, opacity: isSaving ? 0.7 : 1 }}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <Text className="text-white font-bold text-base">Enregistrer</Text>
+          )}
+        </Pressable>
+      </Animated.View>
+    </ScrollView>
+  );
+}
