@@ -1,0 +1,221 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Linking,
+  Alert,
+  Modal,
+  ActivityIndicator,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { Colors } from "@/constants/colors";
+import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
+
+interface RGPDRowProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  description: string;
+  onPress: () => void;
+  variant?: "default" | "destructive";
+}
+
+function RGPDRow({ icon, label, description, onPress, variant = "default" }: RGPDRowProps) {
+  const isDestructive = variant === "destructive";
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center gap-3 p-4 rounded-2xl border"
+      style={{
+        backgroundColor: isDestructive ? "#FFF0F0" : Colors.card,
+        borderColor: isDestructive ? "#FECACA" : Colors.border,
+      }}
+    >
+      <View
+        className="w-10 h-10 rounded-xl items-center justify-center"
+        style={{ backgroundColor: isDestructive ? "#FEE2E2" : `${Colors.pro}18` }}
+      >
+        <Ionicons
+          name={icon}
+          size={18}
+          color={isDestructive ? "#DC2626" : Colors.pro}
+        />
+      </View>
+      <View className="flex-1">
+        <Text
+          className="text-sm font-semibold"
+          style={{ color: isDestructive ? "#B91C1C" : Colors.foreground }}
+        >
+          {label}
+        </Text>
+        <Text className="text-xs text-muted-foreground leading-relaxed mt-0.5">{description}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+    </Pressable>
+  );
+}
+
+export default function ProRGPDScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await authApi.deleteAccount();
+      await logout();
+      router.replace("/(auth)/login");
+    } catch {
+      Alert.alert("Erreur", "Une erreur est survenue lors de la suppression.");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  return (
+    <View className="flex-1 bg-background">
+      {/* Sticky header */}
+      <Animated.View
+        entering={FadeInDown.duration(300).springify()}
+        className="bg-background border-b border-border"
+        style={{ paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20 }}
+      >
+        <View className="flex-row items-center gap-3">
+          <Pressable
+            onPress={() => router.back()}
+            className="p-2 -ml-2 rounded-xl"
+            style={{ backgroundColor: Colors.muted }}
+          >
+            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          </Pressable>
+          <View>
+            <Text className="font-semibold text-foreground text-base">Mes données personnelles</Text>
+            <Text className="text-xs text-muted-foreground">Confidentialité & compte</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Intro */}
+        <Animated.View
+          entering={FadeInDown.duration(300).delay(60).springify()}
+          className="flex-row items-center gap-3 p-4 rounded-2xl mb-6"
+          style={{ backgroundColor: `${Colors.pro}0D`, borderWidth: 1, borderColor: `${Colors.pro}26` }}
+        >
+          <Ionicons name="shield-checkmark-outline" size={20} color={Colors.pro} />
+          <Text className="text-xs text-muted-foreground leading-relaxed flex-1">
+            Chez Blyss, tes données t'appartiennent. Tu peux les consulter, les modifier ou les supprimer à tout moment.
+          </Text>
+        </Animated.View>
+
+        {/* Section: Mes données */}
+        <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-6">
+          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+            Mes données
+          </Text>
+          <View className="gap-2">
+            <RGPDRow
+              icon="download-outline"
+              label="Télécharger mes données"
+              description="Récupère une copie de tes informations au format JSON"
+              onPress={() => Alert.alert("Export", "La fonctionnalité d'export sera disponible prochainement.")}
+            />
+            <RGPDRow
+              icon="pencil-outline"
+              label="Modifier mes informations"
+              description="Nom, email, téléphone, photo de profil"
+              onPress={() => router.push("/(pro)/settings")}
+            />
+            <RGPDRow
+              icon="notifications-outline"
+              label="Gérer les notifications"
+              description="Choisis quelles notifications tu souhaites recevoir"
+              onPress={() => router.push("/(pro)/notifications")}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Section: Aide */}
+        <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="mb-6">
+          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+            Une question ?
+          </Text>
+          <RGPDRow
+            icon="mail-outline"
+            label="Contacter l'équipe Blyss"
+            description="privacy@blyssapp.fr — on répond sous 48h"
+            onPress={() => Linking.openURL("mailto:privacy@blyssapp.fr")}
+          />
+        </Animated.View>
+
+        {/* Section: Supprimer */}
+        <Animated.View entering={FadeInDown.duration(300).delay(180).springify()} className="mb-6">
+          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+            Supprimer mon compte
+          </Text>
+          <RGPDRow
+            icon="trash-outline"
+            label="Supprimer mon compte"
+            description="Efface définitivement toutes tes données de Blyss"
+            onPress={() => setShowDeleteModal(true)}
+            variant="destructive"
+          />
+        </Animated.View>
+
+        <Text className="text-center text-xs text-muted-foreground/60 leading-relaxed">
+          Politique de confidentialité Blyss
+        </Text>
+      </ScrollView>
+
+      {/* Delete confirmation modal */}
+      <Modal visible={showDeleteModal} transparent animationType="fade">
+        <View className="flex-1 bg-black/40 items-end justify-end p-4">
+          <View className="w-full bg-card rounded-3xl p-6" style={{ gap: 16 }}>
+            <View className="flex-row items-center gap-3">
+              <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
+                <Ionicons name="warning-outline" size={20} color="#DC2626" />
+              </View>
+              <Text className="font-bold text-foreground text-base">Supprimer mon compte</Text>
+            </View>
+            <Text className="text-sm text-muted-foreground leading-relaxed">
+              Cette action est irréversible. Toutes tes données personnelles seront supprimées dans les 30 jours.
+            </Text>
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={() => setShowDeleteModal(false)}
+                className="flex-1 h-11 rounded-xl border border-border items-center justify-center"
+              >
+                <Text className="text-sm font-semibold text-foreground">Annuler</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDelete}
+                disabled={isDeleting}
+                className="flex-1 h-11 rounded-xl items-center justify-center"
+                style={{ backgroundColor: "#DC2626", opacity: isDeleting ? 0.7 : 1 }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Text className="text-sm font-bold text-white">Supprimer</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
