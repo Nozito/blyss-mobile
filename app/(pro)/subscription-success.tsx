@@ -252,7 +252,7 @@ export default function ProSubscriptionSuccessScreen() {
           <View className="flex-row gap-3 mb-6">
             {[
               { icon: "calendar-outline" as const, label: "Agenda illimité", color: Colors.primary },
-              { icon: "trending-up-outline" as const, label: "Analytics pro", color: Colors.pro },
+              { icon: "trending-up-outline" as const, label: "Analytics pro", color: Colors.secondary },
               { icon: "flash-outline" as const, label: "Sans limite", color: "#10B981" },
             ].map(({ icon, label, color }, i) => (
               <Animated.View

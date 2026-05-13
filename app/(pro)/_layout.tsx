@@ -18,17 +18,32 @@ function TabIcon({
   focused: boolean;
   badge?: number;
 }) {
-  const activeColor = Colors.pro;
   return (
-    <View className="items-center justify-center">
+    <View style={{ alignItems: "center", justifyContent: "center", gap: 3 }}>
       <Ionicons
         name={focused ? name : (`${name}-outline` as keyof typeof Ionicons.glyphMap)}
-        size={24}
-        color={focused ? activeColor : Colors.mutedForeground}
+        size={22}
+        color={focused ? Colors.primary : "#9CA3AF"}
       />
+      {focused && (
+        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.primary }} />
+      )}
       {badge != null && badge > 0 && (
-        <View className="absolute -top-1 -right-2 bg-destructive rounded-full min-w-4 h-4 items-center justify-center px-1">
-          <Text className="text-white text-xs font-bold">
+        <View
+          style={{
+            position: "absolute",
+            top: -2,
+            right: -8,
+            backgroundColor: "#FF3B30",
+            borderRadius: 10,
+            minWidth: 16,
+            height: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 3,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 9, fontWeight: "700" }}>
             {badge > 99 ? "99+" : badge}
           </Text>
         </View>
@@ -46,7 +61,7 @@ export default function ProLayout() {
   if (!user) return <Redirect href="/(auth)/login" />;
   if (user.role !== "pro" && !user.is_admin) return <Redirect href="/(client)" />;
 
-  const proColor = Colors.pro;
+  const proColor = Colors.primary;
 
   return (
     <Tabs
@@ -59,11 +74,11 @@ export default function ProLayout() {
         tabBarStyle: {
           position: "absolute",
           borderTopWidth: 0.5,
-          borderTopColor: Colors.border,
+          borderTopColor: "#F5E0EB",
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom,
           backgroundColor:
-            Platform.OS === "android" ? "rgba(255,255,255,0.95)" : "transparent",
+            Platform.OS === "android" ? "rgba(255,255,255,0.97)" : "transparent",
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
@@ -75,7 +90,7 @@ export default function ProLayout() {
         name="dashboard"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ focused }) => <TabIcon name="grid" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
         }}
       />
       <Tabs.Screen

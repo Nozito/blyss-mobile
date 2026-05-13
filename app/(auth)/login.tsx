@@ -9,6 +9,7 @@ import {
   TextInput,
   Animated,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -120,23 +121,23 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ alignItems: "center", marginBottom: 40 }}>
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 24,
-              backgroundColor: Colors.primaryLight,
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 16,
-              shadowColor: Colors.primary,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 4,
-            }}
-          >
-            <Text style={{ fontSize: 36 }}>💅</Text>
+          <View style={{ position: "relative", marginBottom: 16 }}>
+            <View
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: 128,
+                height: 128,
+                borderRadius: 64,
+                backgroundColor: `${Colors.primary}33`,
+              }}
+            />
+            <Image
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              source={require("@/assets/logo.png")}
+              style={{ width: 128, height: 128 }}
+              resizeMode="contain"
+            />
           </View>
           <Text
             style={{

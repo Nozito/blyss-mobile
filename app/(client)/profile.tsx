@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Pressable,
   Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +14,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Colors } from "@/constants/colors";
+
+function calculateClientCompleteness(user: any): number {
+  let score = 30; // baseline name + email
+  if (user?.profile_photo) score += 20;
+  if (user?.phone_number) score += 20;
+  if (user?.city) score += 15;
+  if (user?.birth_date) score += 15;
+  return Math.min(score, 100);
+}
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -27,6 +37,7 @@ export default function ClientProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const profileCompleteness = useMemo(() => calculateClientCompleteness(user), [user]);
 
   const photoUri = user?.profile_photo
     ? user.profile_photo.startsWith("http")
@@ -101,22 +112,69 @@ export default function ClientProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Profile card */}
-      <Card elevated className="items-center py-6 mb-6">
-        <Avatar
-          uri={photoUri}
-          name={`${user?.first_name ?? ""} ${user?.last_name ?? ""}`}
-          size={80}
-        />
-        <Text className="text-xl font-bold text-foreground mt-3">
-          {user?.first_name} {user?.last_name}
-        </Text>
-        <Text className="text-muted-foreground text-sm mt-0.5">{user?.email}</Text>
-        {user?.city && (
-          <View className="flex-row items-center gap-1 mt-1">
-            <Ionicons name="location-outline" size={13} color={Colors.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">{user.city}</Text>
+      <Card elevated className="mb-6">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <View style={{ position: "relative" }}>
+            <Avatar
+              uri={photoUri}
+              name={`${user?.first_name ?? ""} ${user?.last_name ?? ""}`}
+              size={72}
+            />
+            <Pressable
+              onPress={() => router.push("/(client)/settings")}
+              style={{
+                position: "absolute",
+                bottom: -4,
+                right: -4,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: Colors.primary,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: Colors.primary,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.4,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              <Ionicons name="camera" size={13} color="#fff" />
+            </Pressable>
           </View>
-        )}
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>
+              {user?.first_name} {user?.last_name}
+            </Text>
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: user?.city ? 6 : 10 }}>
+              {user?.email}
+            </Text>
+            {user?.city && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 10 }}>
+                <Ionicons name="location-outline" size={12} color={Colors.mutedForeground} />
+                <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{user.city}</Text>
+              </View>
+            )}
+            {/* Completeness bar */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ flex: 1, height: 6, backgroundColor: Colors.muted, borderRadius: 3, overflow: "hidden" }}>
+                <LinearGradient
+                  colors={[Colors.primary, `${Colors.primary}99`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ height: "100%", width: `${profileCompleteness}%`, borderRadius: 3 }}
+                />
+              </View>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.primary }}>
+                {profileCompleteness}%
+              </Text>
+            </View>
+            <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 2 }}>
+              Profil complété
+            </Text>
+          </View>
+        </View>
       </Card>
 
       {/* Menu sections */}

@@ -102,7 +102,7 @@ export default function ProPublicProfileScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.pro} />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -130,9 +130,9 @@ export default function ProPublicProfileScreen() {
             <Pressable
               onPress={() => setShowPreview(true)}
               className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: `${Colors.pro}15` }}
+              style={{ backgroundColor: `${Colors.primary}15` }}
             >
-              <Ionicons name="eye-outline" size={20} color={Colors.pro} />
+              <Ionicons name="eye-outline" size={20} color={Colors.primary} />
             </Pressable>
           </View>
           <Text className="text-sm text-muted-foreground ml-1">
@@ -145,9 +145,9 @@ export default function ProPublicProfileScreen() {
           <Animated.View
             entering={FadeInDown.duration(200).springify()}
             className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border"
-            style={{ borderColor: `${Colors.pro}40`, backgroundColor: `${Colors.pro}08` }}
+            style={{ borderColor: `${Colors.primary}40`, backgroundColor: `${Colors.primary}08` }}
           >
-            <Ionicons name="alert-circle-outline" size={18} color={Colors.pro} />
+            <Ionicons name="alert-circle-outline" size={18} color={Colors.primary} />
             <View className="flex-1">
               <Text className="text-sm font-semibold text-foreground">Modifications non enregistrées</Text>
               <Text className="text-xs text-muted-foreground mt-0.5">N'oublie pas de sauvegarder tes changements</Text>
@@ -161,7 +161,7 @@ export default function ProPublicProfileScreen() {
           className="bg-card rounded-2xl p-4 mb-6 flex-row items-start gap-4 border border-border"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
-          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: Colors.pro }}>
+          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: Colors.primary }}>
             <Ionicons name="information-circle-outline" size={20} color={Colors.white} />
           </View>
           <View className="flex-1">
@@ -268,12 +268,12 @@ export default function ProPublicProfileScreen() {
               <View className="flex-row items-start gap-3 flex-1">
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: isPublic ? `${Colors.pro}15` : Colors.muted }}
+                  style={{ backgroundColor: isPublic ? `${Colors.primary}15` : Colors.muted }}
                 >
                   <Ionicons
                     name={isPublic ? "eye-outline" : "eye-off-outline"}
                     size={18}
-                    color={isPublic ? Colors.pro : Colors.mutedForeground}
+                    color={isPublic ? Colors.primary : Colors.mutedForeground}
                   />
                 </View>
                 <View className="flex-1">
@@ -290,7 +290,7 @@ export default function ProPublicProfileScreen() {
               <Switch
                 value={isPublic}
                 onValueChange={setIsPublic}
-                trackColor={{ false: Colors.border, true: Colors.pro }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
                 thumbColor={Colors.white}
               />
             </View>
@@ -309,7 +309,7 @@ export default function ProPublicProfileScreen() {
           disabled={!hasChanges || isSaving}
           className="h-14 rounded-2xl items-center justify-center flex-row gap-2"
           style={{
-            backgroundColor: hasChanges ? Colors.pro : Colors.muted,
+            backgroundColor: hasChanges ? Colors.primary : Colors.muted,
             opacity: isSaving ? 0.7 : 1,
           }}
         >
@@ -349,9 +349,9 @@ export default function ProPublicProfileScreen() {
             <View className="items-center mb-6">
               <View
                 className="w-20 h-20 rounded-2xl items-center justify-center mb-3"
-                style={{ backgroundColor: `${Colors.pro}20` }}
+                style={{ backgroundColor: `${Colors.primary}20` }}
               >
-                <Text className="text-3xl font-bold" style={{ color: Colors.pro }}>
+                <Text className="text-3xl font-bold" style={{ color: Colors.primary }}>
                   {(activityName || user?.first_name || "P")[0]}
                 </Text>
               </View>
@@ -366,7 +366,7 @@ export default function ProPublicProfileScreen() {
                 </View>
               ) : null}
               {instagram ? (
-                <Text className="text-sm mt-1" style={{ color: Colors.pro }}>
+                <Text className="text-sm mt-1" style={{ color: Colors.primary }}>
                   {instagram.startsWith("@") ? instagram : `@${instagram}`}
                 </Text>
               ) : null}
@@ -398,7 +398,7 @@ export default function ProPublicProfileScreen() {
             <Pressable
               onPress={() => setShowPreview(false)}
               className="h-14 rounded-2xl items-center justify-center"
-              style={{ backgroundColor: Colors.pro }}
+              style={{ backgroundColor: Colors.primary }}
             >
               <Text className="text-white font-semibold">Fermer l'aperçu</Text>
             </Pressable>

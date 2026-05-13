@@ -81,8 +81,8 @@ export default function ProHelpScreen() {
         className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border border-border"
         style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
       >
-        <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: `${Colors.pro}18` }}>
-          <Ionicons name="sparkles-outline" size={16} color={Colors.pro} />
+        <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: `${Colors.primary}18` }}>
+          <Ionicons name="sparkles-outline" size={16} color={Colors.primary} />
         </View>
         <View className="flex-1">
           <Text className="text-sm font-semibold text-foreground">Une question sur ton espace pro ?</Text>
@@ -100,7 +100,7 @@ export default function ProHelpScreen() {
               key={cat.id}
               onPress={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
               className="px-4 py-2 rounded-full"
-              style={{ backgroundColor: activeCategory === cat.id ? Colors.pro : Colors.muted }}
+              style={{ backgroundColor: activeCategory === cat.id ? Colors.primary : Colors.muted }}
             >
               <Text
                 className="text-xs font-semibold"
@@ -152,7 +152,7 @@ export default function ProHelpScreen() {
         <Pressable
           onPress={() => Linking.openURL("mailto:pro@blyssapp.fr")}
           className="rounded-2xl p-4 flex-row items-center justify-between"
-          style={{ backgroundColor: Colors.pro }}
+          style={{ backgroundColor: Colors.primary }}
         >
           <View className="flex-row items-center gap-3">
             <Ionicons name="mail-outline" size={18} color={Colors.white} />

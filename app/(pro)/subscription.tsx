@@ -88,7 +88,7 @@ export default function SubscriptionScreen() {
             <Card
               elevated
               className="mb-6 p-5"
-              style={{ borderWidth: 2, borderColor: Colors.pro }}
+              style={{ borderWidth: 2, borderColor: Colors.primary }}
             >
               <View className="flex-row items-center justify-between mb-2">
                 <Text className="text-lg font-bold text-foreground">

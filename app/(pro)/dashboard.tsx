@@ -156,6 +156,24 @@ export default function ProDashboard() {
             }}
           />
 
+          {/* Dot pattern overlay — mirrors web radial-gradient dots */}
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.08 }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  position: "absolute",
+                  width: 4,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: "#fff",
+                  left: (i % 4) * 60 + 10,
+                  top: Math.floor(i / 4) * 30 + 10,
+                }}
+              />
+            ))}
+          </View>
+
           <View style={{ gap: 16 }}>
             {/* Label */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -229,10 +247,10 @@ export default function ProDashboard() {
       <Animated.View entering={FadeInDown.delay(100).springify()}>
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
-            { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: Colors.primary },
-            { label: "Bloquer",  icon: "ban-outline" as const, onPress: () => setShowBlockModal(true), color: Colors.destructive },
-            { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: Colors.primary },
-          ].map(({ label, icon, onPress, color }) => (
+            { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: Colors.primary, iconBg: "#FFE8F3" },
+            { label: "Bloquer",  icon: "ban-outline" as const, onPress: () => setShowBlockModal(true), color: Colors.destructive, iconBg: "#FFE8E8" },
+            { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: Colors.primary, iconBg: "#FFE8F3" },
+          ].map(({ label, icon, onPress, color, iconBg }) => (
             <Pressable
               key={label}
               onPress={onPress}
@@ -257,7 +275,7 @@ export default function ProDashboard() {
                   width: 44,
                   height: 44,
                   borderRadius: 12,
-                  backgroundColor: `${color}1A`,
+                  backgroundColor: iconBg,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -278,9 +296,9 @@ export default function ProDashboard() {
           style={{
             borderRadius: 12,
             padding: 16,
-            backgroundColor: `${Colors.primary}0D`,
+            backgroundColor: "#FEF0F7",
             borderWidth: 1,
-            borderColor: `${Colors.primary}33`,
+            borderColor: "#FFD6E8",
             overflow: "hidden",
           }}
         >
@@ -382,7 +400,7 @@ export default function ProDashboard() {
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    backgroundColor: `${Colors.primary}1A`,
+                    backgroundColor: "#FFE8F3",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -525,7 +543,7 @@ export default function ProDashboard() {
             style={{
               borderRadius: 12,
               padding: 32,
-              backgroundColor: `${Colors.muted}4D`,
+              backgroundColor: "rgba(0,0,0,0.02)",
               borderWidth: 2,
               borderStyle: "dashed",
               borderColor: Colors.border,

@@ -54,7 +54,7 @@ export default function ProPaymentsScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.pro} />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -91,8 +91,8 @@ export default function ProPaymentsScreen() {
           className="bg-card rounded-2xl p-4 flex-row items-center gap-3 border border-border"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
-          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: `${Colors.pro}18` }}>
-            <Ionicons name="card-outline" size={22} color={Colors.pro} />
+          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: `${Colors.primary}18` }}>
+            <Ionicons name="card-outline" size={22} color={Colors.primary} />
           </View>
           <View className="flex-1">
             <Text className="text-sm font-semibold text-foreground">Stripe Connect</Text>
@@ -157,7 +157,7 @@ export default function ProPaymentsScreen() {
             <Switch
               value={acceptOnline}
               onValueChange={setAcceptOnline}
-              trackColor={{ false: Colors.border, true: Colors.pro }}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
               thumbColor={Colors.white}
             />
           </View>
@@ -166,9 +166,9 @@ export default function ProPaymentsScreen() {
             <Animated.View
               entering={FadeInDown.duration(200).springify()}
               className="mt-4 p-3 rounded-xl flex-row items-center gap-2"
-              style={{ backgroundColor: `${Colors.pro}0D` }}
+              style={{ backgroundColor: `${Colors.primary}0D` }}
             >
-              <Ionicons name="checkmark-circle-outline" size={16} color={Colors.pro} />
+              <Ionicons name="checkmark-circle-outline" size={16} color={Colors.primary} />
               <Text className="text-xs text-muted-foreground flex-1">
                 Les paiements en ligne sont activés. Les frais Stripe (1,5% + 0,25€) sont déduits automatiquement.
               </Text>
@@ -180,7 +180,7 @@ export default function ProPaymentsScreen() {
       {/* Info cards */}
       <Animated.View entering={FadeInDown.duration(300).delay(180).springify()} className="flex-row gap-3 mb-8">
         <View className="flex-1 bg-card rounded-xl p-3 border border-border items-center gap-1">
-          <Ionicons name="shield-checkmark-outline" size={18} color={Colors.pro} />
+          <Ionicons name="shield-checkmark-outline" size={18} color={Colors.primary} />
           <Text className="text-xs font-semibold text-foreground text-center">Stripe</Text>
           <Text className="text-xs text-muted-foreground text-center">Sécurisé PCI</Text>
         </View>
@@ -202,7 +202,7 @@ export default function ProPaymentsScreen() {
           onPress={handleSave}
           disabled={isSaving}
           className="rounded-2xl h-14 items-center justify-center"
-          style={{ backgroundColor: Colors.pro, opacity: isSaving ? 0.7 : 1 }}
+          style={{ backgroundColor: Colors.primary, opacity: isSaving ? 0.7 : 1 }}
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={Colors.white} />

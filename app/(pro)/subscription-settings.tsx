@@ -105,7 +105,7 @@ export default function ProSubscriptionSettingsScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.pro} />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }

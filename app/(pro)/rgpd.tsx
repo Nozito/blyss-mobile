@@ -38,12 +38,12 @@ function RGPDRow({ icon, label, description, onPress, variant = "default" }: RGP
     >
       <View
         className="w-10 h-10 rounded-xl items-center justify-center"
-        style={{ backgroundColor: isDestructive ? "#FEE2E2" : `${Colors.pro}18` }}
+        style={{ backgroundColor: isDestructive ? "#FEE2E2" : `${Colors.primary}18` }}
       >
         <Ionicons
           name={icon}
           size={18}
-          color={isDestructive ? "#DC2626" : Colors.pro}
+          color={isDestructive ? "#DC2626" : Colors.primary}
         />
       </View>
       <View className="flex-1">
@@ -113,9 +113,9 @@ export default function ProRGPDScreen() {
         <Animated.View
           entering={FadeInDown.duration(300).delay(60).springify()}
           className="flex-row items-center gap-3 p-4 rounded-2xl mb-6"
-          style={{ backgroundColor: `${Colors.pro}0D`, borderWidth: 1, borderColor: `${Colors.pro}26` }}
+          style={{ backgroundColor: `${Colors.primary}0D`, borderWidth: 1, borderColor: `${Colors.primary}26` }}
         >
-          <Ionicons name="shield-checkmark-outline" size={20} color={Colors.pro} />
+          <Ionicons name="shield-checkmark-outline" size={20} color={Colors.primary} />
           <Text className="text-xs text-muted-foreground leading-relaxed flex-1">
             Chez Blyss, tes données t'appartiennent. Tu peux les consulter, les modifier ou les supprimer à tout moment.
           </Text>
