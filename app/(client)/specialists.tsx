@@ -1,48 +1,17 @@
 import React, { useState, useMemo, useCallback } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeIn } from "react-native-reanimated";
 import { specialistsApi, favoritesApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
-
-const SERVICE_CHIPS = [
-  { label: "Gel", query: "gel" },
-  { label: "Manucure", query: "manucure" },
-  { label: "French", query: "french" },
-  { label: "Nail art", query: "nail art" },
-  { label: "Semi-perm.", query: "semi-permanent" },
-  { label: "Baby boomer", query: "baby boomer" },
-];
-const RATING_OPTIONS = [
-  { label: "4+", value: 4 },
-  { label: "4.5+", value: 4.5 },
-];
-
-interface Specialist {
-  id: number;
-  business_name: string;
-  specialty: string;
-  city: string;
-  rating: number;
-  reviews_count: number;
-  profile_image_url: string | null;
-  cover_image_url: string | null;
-  first_name: string;
-  distance_km: number | null;
-}
+import {
+  SpecialistCard,
+  type Specialist,
+} from "@/components/screens/client/specialists/SpecialistCard";
+import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
+import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
+import { SpecialistsMapView } from "@/components/screens/client/specialists/MapView";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [d, setD] = React.useState(value);
@@ -53,88 +22,26 @@ function useDebounce<T>(value: T, delay: number): T {
   return d;
 }
 
-function Chip({
-  active,
-  onPress,
-  children,
-  disabled,
-}: {
-  active: boolean;
-  onPress: () => void;
-  children: React.ReactNode;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        height: 36,
-        paddingHorizontal: 16,
-        borderRadius: 999,
-        backgroundColor: active ? Colors.primary : Colors.muted,
-        flexShrink: 0,
-        opacity: disabled ? 0.6 : 1,
-      }}
-    >
-      {children}
-    </Pressable>
-  );
-}
-
 function SkeletonCard() {
   return (
     <View
       style={{
         flexDirection: "row",
-        backgroundColor: Colors.card,
+        backgroundColor: "#FFFFFF",
         borderRadius: 16,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: `${Colors.border}66`,
+        borderColor: "#EBE6E066",
         minHeight: 130,
         marginBottom: 12,
       }}
     >
-      <View
-        style={{ width: 108, backgroundColor: Colors.muted, flexShrink: 0 }}
-      />
+      <View style={{ width: 108, backgroundColor: "#F8F5F1", flexShrink: 0 }} />
       <View style={{ flex: 1, padding: 16, gap: 10 }}>
-        <View
-          style={{
-            height: 16,
-            width: "75%",
-            backgroundColor: Colors.muted,
-            borderRadius: 8,
-          }}
-        />
-        <View
-          style={{
-            height: 12,
-            width: "50%",
-            backgroundColor: Colors.muted,
-            borderRadius: 8,
-          }}
-        />
-        <View
-          style={{
-            height: 12,
-            width: "65%",
-            backgroundColor: Colors.muted,
-            borderRadius: 8,
-          }}
-        />
-        <View
-          style={{
-            height: 36,
-            backgroundColor: Colors.muted,
-            borderRadius: 12,
-            marginTop: "auto",
-          }}
-        />
+        <View style={{ height: 16, width: "75%", backgroundColor: "#F8F5F1", borderRadius: 8 }} />
+        <View style={{ height: 12, width: "50%", backgroundColor: "#F8F5F1", borderRadius: 8 }} />
+        <View style={{ height: 12, width: "65%", backgroundColor: "#F8F5F1", borderRadius: 8 }} />
+        <View style={{ height: 36, backgroundColor: "#F8F5F1", borderRadius: 12, marginTop: "auto" }} />
       </View>
     </View>
   );
@@ -142,7 +49,6 @@ function SkeletonCard() {
 
 export default function SpecialistsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ search?: string; service?: string }>();
 
@@ -152,17 +58,10 @@ export default function SpecialistsScreen() {
   const [ratingFilter, setRatingFilter] = useState(0);
   const [showCityPanel, setShowCityPanel] = useState(false);
   const [cityFilter, setCityFilter] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
-  const { data: specialists = [], isLoading, isFetching } = useQuery<
-    Specialist[]
-  >({
-    queryKey: [
-      "specialists",
-      debouncedSearch,
-      cityFilter,
-      serviceFilter,
-      ratingFilter,
-    ],
+  const { data: specialists = [], isLoading, isFetching } = useQuery<Specialist[]>({
+    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter],
     queryFn: async () => {
       const res = await specialistsApi.getPros({
         limit: 100,
@@ -175,8 +74,7 @@ export default function SpecialistsScreen() {
       return (res.data as Array<Record<string, unknown>>).map((pro) => ({
         id: pro.id as number,
         business_name:
-          (pro.activity_name as string) ||
-          `${pro.first_name} ${pro.last_name}`,
+          (pro.activity_name as string) || `${pro.first_name} ${pro.last_name}`,
         specialty:
           (pro.specialty as string) ||
           (pro.activity_name as string) ||
@@ -188,6 +86,9 @@ export default function SpecialistsScreen() {
         cover_image_url: (pro.banner_photo as string | null) ?? null,
         first_name: pro.first_name as string,
         distance_km: (pro.distance_km as number | null) ?? null,
+        lat: (pro.lat as number | null) ?? null,
+        lng: (pro.lng as number | null) ?? null,
+        min_price: (pro.min_price as number | null) ?? null,
       }));
     },
     staleTime: 2 * 60_000,
@@ -235,16 +136,9 @@ export default function SpecialistsScreen() {
     [specialists]
   );
 
-  const hasActiveFilters = !!(
-    searchInput ||
-    cityFilter ||
-    serviceFilter ||
-    ratingFilter > 0
-  );
+  const hasActiveFilters = !!(searchInput || cityFilter || serviceFilter || ratingFilter > 0);
   const activeFiltersCount =
-    (cityFilter ? 1 : 0) +
-    (serviceFilter ? 1 : 0) +
-    (ratingFilter > 0 ? 1 : 0);
+    (cityFilter ? 1 : 0) + (serviceFilter ? 1 : 0) + (ratingFilter > 0 ? 1 : 0);
 
   const clearAll = useCallback(() => {
     setSearchInput("");
@@ -254,579 +148,140 @@ export default function SpecialistsScreen() {
   }, []);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: Specialist; index: number }) => {
-      const isFav = favoriteIds.has(item.id);
-      const photo = item.cover_image_url ?? item.profile_image_url;
-      return (
-        <Animated.View entering={FadeIn.delay(Math.min(index * 40, 280))}>
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/specialist/[id]",
-                params: { id: item.id },
-              })
-            }
-            style={{
-              flexDirection: "row",
-              backgroundColor: Colors.card,
-              borderRadius: 16,
-              overflow: "hidden",
-              borderWidth: 1,
-              borderColor: `${Colors.border}66`,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 6,
-              elevation: 1,
-              marginBottom: 12,
-            }}
-          >
-            {/* Photo */}
-            <View
-              style={{
-                width: 108,
-                flexShrink: 0,
-                backgroundColor: Colors.muted,
-                minHeight: 130,
-              }}
-            >
-              {photo ? (
-                <Image
-                  source={{ uri: photo }}
-                  style={{ width: "100%", height: "100%" }}
-                  contentFit="cover"
-                />
-              ) : (
-                <LinearGradient
-                  colors={[
-                    `${Colors.primary}26`,
-                    `${Colors.primary}14`,
-                    "transparent",
-                  ]}
-                  style={{
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 30,
-                      fontWeight: "700",
-                      color: `${Colors.primary}40`,
-                    }}
-                  >
-                    {item.first_name[0]}
-                  </Text>
-                </LinearGradient>
-              )}
-              {/* Favorite */}
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  toggleFav.mutate(item.id);
-                }}
-                style={{
-                  position: "absolute",
-                  top: 8,
-                  right: 8,
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: isFav
-                    ? `${Colors.primary}E6`
-                    : "rgba(0,0,0,0.4)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons
-                  name={isFav ? "heart" : "heart-outline"}
-                  size={12}
-                  color="#fff"
-                />
-              </Pressable>
-            </View>
-
-            {/* Info */}
-            <View
-              style={{
-                flex: 1,
-                padding: 16,
-                flexDirection: "column",
-                minHeight: 130,
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: "600",
-                    color: Colors.foreground,
-                    lineHeight: 20,
-                  }}
-                  numberOfLines={1}
-                >
-                  {item.business_name}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: Colors.primary,
-                    fontWeight: "500",
-                    marginTop: 2,
-                  }}
-                  numberOfLines={1}
-                >
-                  {item.specialty}
-                </Text>
-
-                {item.rating > 0 && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                      marginTop: 8,
-                    }}
-                  >
-                    <Ionicons name="star" size={11} color="#FBBF24" />
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: "700",
-                        color: Colors.foreground,
-                      }}
-                    >
-                      {item.rating.toFixed(1)}
-                    </Text>
-                    {item.reviews_count > 0 && (
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: Colors.mutedForeground,
-                        }}
-                      >
-                        · {item.reviews_count} avis
-                      </Text>
-                    )}
-                  </View>
-                )}
-
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                    marginTop: 6,
-                  }}
-                >
-                  <Ionicons
-                    name="location-outline"
-                    size={11}
-                    color={Colors.mutedForeground}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: Colors.mutedForeground,
-                      flex: 1,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {item.city}
-                  </Text>
-                  {item.distance_km != null && (
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: "700",
-                        color: Colors.primary,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {item.distance_km} km
-                    </Text>
-                  )}
-                </View>
-              </View>
-
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/specialist/[id]",
-                    params: { id: item.id },
-                  })
-                }
-                style={{
-                  marginTop: 12,
-                  height: 36,
-                  borderRadius: 12,
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text
-                  style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
-                >
-                  Réserver
-                </Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Animated.View>
-      );
-    },
+    ({ item, index }: { item: Specialist; index: number }) => (
+      <SpecialistCard
+        item={item}
+        isFav={favoriteIds.has(item.id)}
+        index={index}
+        onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: item.id } })}
+        onToggleFav={() => toggleFav.mutate(item.id)}
+      />
+    ),
     [favoriteIds, router, toggleFav]
   );
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: Colors.background,
-        paddingTop: insets.top,
-      }}
-    >
-      {/* Top bar */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            paddingBottom: 20,
-          }}
-        >
-          <Pressable
-            onPress={() => router.back()}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 16,
-              backgroundColor: Colors.muted,
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "700",
-                color: Colors.foreground,
-                lineHeight: 22,
-              }}
-            >
-              Expertes ongulaires
-            </Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
-              {isFetching
-                ? "Recherche en cours…"
-                : `${specialists.length} experte${specialists.length > 1 ? "s" : ""} trouvée${specialists.length > 1 ? "s" : ""}`}
-            </Text>
-          </View>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+      <SearchHeader
+        searchInput={searchInput}
+        onChangeText={setSearchInput}
+        onBack={() => router.back()}
+        count={specialists.length}
+        isFetching={isFetching}
+        viewMode={viewMode}
+        onToggleView={() => setViewMode((v) => (v === "list" ? "map" : "list"))}
+      />
 
-        {/* Search bar */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            height: 48,
-            borderRadius: 16,
-            backgroundColor: Colors.muted,
-            paddingHorizontal: 16,
-            gap: 10,
-            marginBottom: 16,
+      {/* FilterBar only in list mode */}
+      {viewMode === "list" && (
+        <FilterBar
+          ratingFilter={ratingFilter}
+          onRatingChange={setRatingFilter}
+          cityFilter={cityFilter}
+          showCityPanel={showCityPanel}
+          onCityToggle={() => setShowCityPanel((p) => !p)}
+          onCitySelect={(city) => {
+            setCityFilter(city === cityFilter ? "" : city);
+            setShowCityPanel(false);
           }}
-        >
-          {isFetching ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
-          ) : (
-            <Ionicons
-              name="search-outline"
-              size={16}
-              color={Colors.mutedForeground}
-            />
-          )}
-          <TextInput
-            value={searchInput}
-            onChangeText={setSearchInput}
-            placeholder="Nom, spécialité, ville…"
-            placeholderTextColor={Colors.mutedForeground}
-            style={{ flex: 1, fontSize: 14, color: Colors.foreground }}
-            autoCorrect={false}
-          />
-          {searchInput.length > 0 && (
-            <Pressable
-              onPress={() => setSearchInput("")}
+          uniqueCities={uniqueCities}
+          serviceFilter={serviceFilter}
+          onServiceChange={setServiceFilter}
+          hasActiveFilters={hasActiveFilters}
+          activeFiltersCount={activeFiltersCount}
+          onClearAll={clearAll}
+        />
+      )}
+
+      {/* ── MAP VIEW ── rendered always when viewMode=map, hidden otherwise */}
+      {viewMode === "map" && (
+        <SpecialistsMapView specialists={specialists} />
+      )}
+
+      {/* ── LIST VIEW ── kept mounted to avoid refetch on toggle */}
+      <View style={{ flex: 1, display: viewMode === "list" ? "flex" : "none" }}>
+        {isLoading ? (
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 100 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {[...Array(4)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </ScrollView>
+        ) : specialists.length === 0 ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+            <View
               style={{
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: `${Colors.foreground}1A`,
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: "#F8F5F1",
                 alignItems: "center",
                 justifyContent: "center",
+                marginBottom: 16,
               }}
             >
-              <Ionicons name="close" size={12} color={Colors.foreground} />
-            </Pressable>
-          )}
-        </View>
-
-        {/* Filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-          style={{ marginBottom: 4 }}
-        >
-          {RATING_OPTIONS.map((opt) => (
-            <Chip
-              key={opt.value}
-              active={ratingFilter === opt.value}
-              onPress={() =>
-                setRatingFilter(ratingFilter === opt.value ? 0 : opt.value)
-              }
+              <Ionicons name="search-outline" size={24} color="#6D6D78" />
+            </View>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#09090B",
+                textAlign: "center",
+                marginBottom: 6,
+              }}
             >
-              <Ionicons
-                name="star"
-                size={12}
-                color={
-                  ratingFilter === opt.value ? "#fff" : "#FBBF24"
-                }
-                style={ratingFilter === opt.value ? {} : undefined}
-              />
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: "500",
-                  color:
-                    ratingFilter === opt.value
-                      ? "#fff"
-                      : Colors.foreground,
-                }}
-              >
-                {opt.label}
-              </Text>
-            </Chip>
-          ))}
-          <Chip
-            active={!!cityFilter}
-            onPress={() => setShowCityPanel((p) => !p)}
-          >
-            <Ionicons
-              name="location-outline"
-              size={13}
-              color={cityFilter ? "#fff" : Colors.foreground}
-            />
+              Aucun résultat
+            </Text>
             <Text
               style={{
                 fontSize: 13,
-                fontWeight: "500",
-                color: cityFilter ? "#fff" : Colors.foreground,
+                color: "#6D6D78",
+                textAlign: "center",
+                lineHeight: 20,
+                maxWidth: 240,
+                marginBottom: 24,
               }}
             >
-              {cityFilter || "Ville"}
+              {hasActiveFilters
+                ? "Aucune experte ne correspond à ces critères."
+                : "Aucune experte disponible pour le moment."}
             </Text>
-          </Chip>
-          {SERVICE_CHIPS.map((c) => (
-            <Chip
-              key={c.query}
-              active={serviceFilter === c.query}
-              onPress={() =>
-                setServiceFilter(serviceFilter === c.query ? "" : c.query)
-              }
-            >
-              {serviceFilter === c.query && (
-                <Ionicons name="checkmark" size={12} color="#fff" />
-              )}
-              <Text
+            {hasActiveFilters && (
+              <Pressable
+                onPress={clearAll}
                 style={{
-                  fontSize: 13,
-                  fontWeight: "500",
-                  color:
-                    serviceFilter === c.query ? "#fff" : Colors.foreground,
+                  paddingHorizontal: 24,
+                  height: 44,
+                  borderRadius: 16,
+                  backgroundColor: "#FE5D9D",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                {c.label}
-              </Text>
-            </Chip>
-          ))}
-        </ScrollView>
-
-        {/* City panel */}
-        {showCityPanel && uniqueCities.length > 0 && (
-          <View
-            style={{
-              paddingTop: 12,
-              flexDirection: "row",
-              flexWrap: "wrap",
-              gap: 8,
-            }}
-          >
-            {["", ...uniqueCities].map((city) => (
-              <Chip
-                key={city || "__all"}
-                active={!city ? !cityFilter : cityFilter === city}
-                onPress={() => {
-                  setCityFilter(city === cityFilter ? "" : city);
-                  setShowCityPanel(false);
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "500",
-                    color:
-                      (!city ? !cityFilter : cityFilter === city)
-                        ? "#fff"
-                        : Colors.foreground,
-                  }}
-                >
-                  {city || "Toutes les villes"}
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>
+                  Voir toutes les expertes
                 </Text>
-              </Chip>
-            ))}
+              </Pressable>
+            )}
           </View>
-        )}
-
-        {/* Active filters */}
-        {hasActiveFilters && (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: 12,
+        ) : (
+          <FlatList
+            data={specialists}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderItem}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 20,
+              paddingBottom: 100,
             }}
-          >
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-              {activeFiltersCount > 0
-                ? `${activeFiltersCount} filtre${activeFiltersCount > 1 ? "s" : ""} actif${activeFiltersCount > 1 ? "s" : ""}`
-                : "Filtres actifs"}
-            </Text>
-            <Pressable
-              onPress={clearAll}
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <Ionicons name="close" size={10} color={Colors.primary} />
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: Colors.primary,
-                  fontWeight: "600",
-                }}
-              >
-                Tout effacer
-              </Text>
-            </Pressable>
-          </View>
+            showsVerticalScrollIndicator={false}
+            style={{ opacity: isFetching && specialists.length > 0 ? 0.5 : 1 }}
+          />
         )}
       </View>
-
-      {/* List */}
-      {isLoading ? (
-        <ScrollView
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 20,
-            paddingBottom: insets.bottom + 100,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          {[...Array(4)].map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </ScrollView>
-      ) : specialists.length === 0 ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 32,
-          }}
-        >
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: Colors.muted,
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 16,
-            }}
-          >
-            <Ionicons name="search-outline" size={24} color={Colors.mutedForeground} />
-          </View>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "700",
-              color: Colors.foreground,
-              textAlign: "center",
-              marginBottom: 6,
-            }}
-          >
-            Aucun résultat
-          </Text>
-          <Text
-            style={{
-              fontSize: 13,
-              color: Colors.mutedForeground,
-              textAlign: "center",
-              lineHeight: 20,
-              maxWidth: 240,
-              marginBottom: 24,
-            }}
-          >
-            {hasActiveFilters
-              ? "Aucune experte ne correspond à ces critères."
-              : "Aucune experte disponible pour le moment."}
-          </Text>
-          {hasActiveFilters && (
-            <Pressable
-              onPress={clearAll}
-              style={{
-                paddingHorizontal: 24,
-                height: 44,
-                borderRadius: 16,
-                backgroundColor: Colors.primary,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text
-                style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}
-              >
-                Voir toutes les expertes
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      ) : (
-        <FlatList
-          data={specialists}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 20,
-            paddingBottom: insets.bottom + 100,
-          }}
-          showsVerticalScrollIndicator={false}
-          style={{
-            opacity: isFetching && specialists.length > 0 ? 0.5 : 1,
-          }}
-        />
-      )}
-    </View>
+    </SafeAreaView>
   );
 }

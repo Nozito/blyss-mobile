@@ -2,439 +2,347 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
-  SectionList,
+  FlatList,
   Pressable,
   Switch,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { notificationsApi } from "@/lib/api";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
+import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
 
 type Tab = "activity" | "preferences";
+type PrefKey = keyof ClientNotificationSettings;
 
-type Notification = {
-  id: number;
-  type: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
+const NOTIF_CFG: Record<string, { icon: React.ComponentProps<typeof Ionicons>["name"]; color: string; bg: string }> = {
+  new_booking:       { icon: "checkmark-circle-outline", color: "#34C759", bg: "rgba(52,199,89,.12)" },
+  booking_confirmed: { icon: "checkmark-circle-outline", color: "#007AFF", bg: "rgba(0,122,255,.12)" },
+  booking_cancelled: { icon: "alert-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
+  booking_reminder:  { icon: "time-outline",             color: "#FF9500", bg: "rgba(255,149,0,.12)" },
+  message_received:  { icon: "chatbubble-outline",       color: "#5856D6", bg: "rgba(88,86,214,.12)" },
+  payment_received:  { icon: "card-outline",             color: "#34C759", bg: "rgba(52,199,89,.12)" },
+  promotional:       { icon: "gift-outline",             color: "#FF2D55", bg: "rgba(255,45,85,.12)" },
+  late_alert:        { icon: "warning-outline",          color: "#FF9500", bg: "rgba(255,149,0,.12)" },
+  default:           { icon: "notifications-outline",    color: "#8E8E93", bg: "rgba(142,142,147,.12)" },
 };
 
-const NOTIF_CFG: Record<string, { icon: keyof typeof import("@expo/vector-icons").Ionicons.glyphMap; color: string; bg: string }> = {
-  new_booking:       { icon: "checkmark-circle-outline", color: "#34C759", bg: "rgba(52,199,89,0.12)"    },
-  booking_confirmed: { icon: "checkmark-circle-outline", color: "#007AFF", bg: "rgba(0,122,255,0.12)"    },
-  booking_cancelled: { icon: "close-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,0.12)"    },
-  booking_reminder:  { icon: "time-outline",             color: "#FF9500", bg: "rgba(255,149,0,0.12)"    },
-  message_received:  { icon: "chatbubble-outline",       color: "#5856D6", bg: "rgba(88,86,214,0.12)"    },
-  payment_received:  { icon: "card-outline",             color: "#34C759", bg: "rgba(52,199,89,0.12)"    },
-  promotional:       { icon: "gift-outline",             color: "#FF2D55", bg: "rgba(255,45,85,0.12)"    },
-  late_alert:        { icon: "warning-outline",          color: "#FF9500", bg: "rgba(255,149,0,0.12)"    },
-  email_summary:     { icon: "mail-outline",             color: "#8E8E93", bg: "rgba(142,142,147,0.12)"  },
-  default:           { icon: "notifications-outline",    color: "#8E8E93", bg: "rgba(142,142,147,0.12)"  },
-};
-
-const PREF_ROWS = [
-  {
-    section: "Rendez-vous",
-    items: [
-      { key: "reminders",  title: "Rappels",          desc: "Rappels avant vos rendez-vous",    icon: "time-outline",             color: "#FF9500", bg: "rgba(255,149,0,0.12)"   },
-      { key: "changes",    title: "Modifications",    desc: "Annulations et modifications RDV", icon: "calendar-outline",          color: "#007AFF", bg: "rgba(0,122,255,0.12)"   },
-    ],
-  },
-  {
-    section: "Communications",
-    items: [
-      { key: "messages",   title: "Messages",         desc: "Nouveaux messages reçus",          icon: "chatbubble-outline",        color: "#5856D6", bg: "rgba(88,86,214,0.12)"   },
-      { key: "late",       title: "Alertes retard",   desc: "En cas de retard d'une cliente",   icon: "warning-outline",           color: "#FF3B30", bg: "rgba(255,59,48,0.12)"   },
-      { key: "offers",     title: "Offres & promo",   desc: "Promotions et nouveautés Blyss",   icon: "gift-outline",              color: "#FF2D55", bg: "rgba(255,45,85,0.12)"   },
-      { key: "email_summary", title: "Résumé email", desc: "Récap hebdomadaire par email",     icon: "mail-outline",              color: "#8E8E93", bg: "rgba(142,142,147,0.12)"  },
-    ],
-  },
-] as const;
-
-type PrefKey = "reminders" | "changes" | "messages" | "late" | "offers" | "email_summary";
-
-function formatRelTime(dateString: string) {
-  const date = new Date(dateString);
-  const diffMs    = Date.now() - date.getTime();
-  const diffMins  = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMs / 3_600_000);
-  const diffDays  = Math.floor(diffMs / 86_400_000);
-  if (diffMins  < 1)   return "maintenant";
-  if (diffMins  < 60)  return `${diffMins} min`;
-  if (diffHours < 24)  return `${diffHours}h`;
-  if (diffDays  === 1) return "hier";
-  if (diffDays  < 7)   return `${diffDays}j`;
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+function formatRelTime(dateString: string): string {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  const hours = Math.floor(diffMs / 3_600_000);
+  const days = Math.floor(diffMs / 86_400_000);
+  if (mins < 1) return "maintenant";
+  if (mins < 60) return `${mins} min`;
+  if (hours < 24) return `${hours}h`;
+  if (days === 1) return "hier";
+  if (days < 7) return `${days}j`;
+  return new Date(dateString).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-function groupByDay(notifications: Notification[]) {
-  const todayStart     = new Date(); todayStart.setHours(0, 0, 0, 0);
+function groupByDay(notifications: Array<{ id: number; type: string; message: string; is_read: boolean; created_at: string }>) {
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-  const weekStart      = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 7);
-  const groups = [
-    { title: "Aujourd'hui",   data: [] as Notification[] },
-    { title: "Hier",          data: [] as Notification[] },
-    { title: "Cette semaine", data: [] as Notification[] },
-    { title: "Plus ancien",   data: [] as Notification[] },
+  const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 7);
+  const groups: { label: string; items: typeof notifications }[] = [
+    { label: "Aujourd'hui", items: [] },
+    { label: "Hier", items: [] },
+    { label: "Cette semaine", items: [] },
+    { label: "Plus ancien", items: [] },
   ];
   for (const n of notifications) {
     const d = new Date(n.created_at); d.setHours(0, 0, 0, 0);
-    if      (d >= todayStart)     groups[0].data.push(n);
-    else if (d >= yesterdayStart) groups[1].data.push(n);
-    else if (d >= weekStart)      groups[2].data.push(n);
-    else                          groups[3].data.push(n);
+    if (d >= todayStart) groups[0].items.push(n);
+    else if (d >= yesterdayStart) groups[1].items.push(n);
+    else if (d >= weekStart) groups[2].items.push(n);
+    else groups[3].items.push(n);
   }
-  return groups.filter((g) => g.data.length > 0);
+  return groups.filter((g) => g.items.length > 0);
 }
 
-export default function NotificationsScreen() {
-  const insets = useSafeAreaInsets();
+interface PrefItem {
+  key: PrefKey;
+  label: string;
+  subtitle: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  iconBg: string;
+  iconColor: string;
+}
+
+const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
+  {
+    title: "Rendez-vous",
+    items: [
+      { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: "#FE5D9D20", iconColor: "#FE5D9D" },
+      { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: "#F59E0B20", iconColor: "#F59E0B" },
+      { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: "#06B6D420", iconColor: "#06B6D4" },
+    ],
+  },
+  {
+    title: "Messages",
+    items: [
+      { key: "messages", label: "Nouveaux messages", subtitle: "Quand une experte t'envoie un message", icon: "chatbubble-outline", iconBg: "#10B98120", iconColor: "#10B981" },
+    ],
+  },
+  {
+    title: "Promotions",
+    items: [
+      { key: "offers",        label: "Offres & codes promo", subtitle: "Exclusivités et promotions de tes expertes", icon: "gift-outline", iconBg: "#8B5CF620", iconColor: "#8B5CF6" },
+      { key: "email_summary", label: "Résumé par email", subtitle: "Récap' hebdo de tes rendez-vous", icon: "mail-outline", iconBg: "#6B728020", iconColor: "#6B7280" },
+    ],
+  },
+];
+
+export default function ClientNotificationsScreen() {
   const router = useRouter();
-  const qc = useQueryClient();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   const [tab, setTab] = useState<Tab>("activity");
-  const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>({
-    reminders: true, changes: true, messages: true, late: true, offers: true, email_summary: false,
-  });
   const [savingKey, setSavingKey] = useState<PrefKey | null>(null);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: () => notificationsApi.getAll(),
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [preferences, setPreferences] = useState<ClientNotificationSettings>({
+    reminders: true, changes: true, messages: true,
+    late: true, offers: true, email_summary: false,
   });
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const markReadMutation = useMutation({
-    mutationFn: (id: string) => notificationsApi.markAsRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
-  });
-
-  const notifications = (data?.data as Notification[] | undefined) ?? [];
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-  const grouped = useMemo(() => groupByDay(notifications), [notifications]);
-
-  const markAllRead = () => {
-    notifications.filter((n) => !n.is_read).forEach((n) => markReadMutation.mutate(String(n.id)));
-  };
+  useEffect(() => {
+    notificationsApi.getSettings()
+      .then((res) => { if (res.success && res.data) setPreferences(res.data); })
+      .finally(() => setPrefsLoading(false));
+  }, []);
 
   const togglePref = async (key: PrefKey) => {
     if (savingKey) return;
-    const next = !prefs[key];
-    setPrefs((p) => ({ ...p, [key]: next }));
+    const next = !preferences[key];
+    const prev = preferences;
+    setPreferences((p) => ({ ...p, [key]: next }));
     setSavingKey(key);
+    setSaveSuccess(false);
     try {
-      await notificationsApi.updateSettings({ [key]: next } as Record<string, boolean>);
+      const res = await notificationsApi.updateSettings({ [key]: next });
+      if (res.success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2500);
+      } else {
+        setPreferences(prev);
+      }
     } catch {
-      setPrefs((p) => ({ ...p, [key]: !next }));
+      setPreferences(prev);
+      Alert.alert("Erreur", "Impossible de mettre à jour la préférence");
     } finally {
       setSavingKey(null);
     }
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
-      {/* ── HEADER ── */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          paddingBottom: 16,
-        }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 16,
-            backgroundColor: Colors.muted,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: Colors.foreground }}>
-            Notifications
-          </Text>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1 }}>
-            {unreadCount > 0
-              ? `${unreadCount} non lue${unreadCount > 1 ? "s" : ""}`
-              : "Tout est lu"}
-          </Text>
-        </View>
-        {unreadCount > 0 && tab === "activity" && (
-          <Pressable
-            onPress={markAllRead}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              height: 36,
-              paddingHorizontal: 12,
-              borderRadius: 16,
-              backgroundColor: `${Colors.primary}1A`,
-            }}
-          >
-            <Ionicons name="checkmark-done-outline" size={14} color={Colors.primary} />
-            <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.primary }}>
-              Tout lire
-            </Text>
-          </Pressable>
-        )}
-      </View>
+  const markAllAsRead = () => {
+    notifications.filter((n) => !n.is_read).forEach((n) => markAsRead(n.id));
+    notifications.filter((n) => !n.is_read).forEach((n) =>
+      notificationsApi.markAsRead(String(n.id)).catch(() => {})
+    );
+  };
 
-      {/* ── TABS ── */}
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 4,
-          marginHorizontal: 20,
-          padding: 4,
-          borderRadius: 16,
-          backgroundColor: Colors.muted,
-          marginBottom: 20,
-        }}
-      >
-        {(["activity", "preferences"] as Tab[]).map((t) => (
+  const grouped = useMemo(() => groupByDay(notifications), [notifications]);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
+      <View style={{ flex: 1, paddingHorizontal: 20 }}>
+
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12, paddingBottom: 16 }}>
           <Pressable
-            key={t}
-            onPress={() => setTab(t)}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 12,
-              alignItems: "center",
-              backgroundColor: tab === t ? Colors.card : "transparent",
-              shadowColor: tab === t ? "#000" : "transparent",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: tab === t ? 0.06 : 0,
-              shadowRadius: 4,
-              elevation: tab === t ? 1 : 0,
-            }}
+            onPress={() => router.back()}
+            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
           >
-            <Text
+            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Notifications</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+              {unreadCount > 0 ? `${unreadCount} non lue${unreadCount > 1 ? "s" : ""}` : "Tout est lu"}
+            </Text>
+          </View>
+          {unreadCount > 0 && tab === "activity" && (
+            <Pressable
+              onPress={markAllAsRead}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: "#FE5D9D15" }}
+            >
+              <Ionicons name="checkmark-done-outline" size={14} color="#FE5D9D" />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: "#FE5D9D" }}>Tout lire</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Segmented control */}
+        <View style={{ flexDirection: "row", backgroundColor: Colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
+          {([["activity", "Activité"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
+            <Pressable
+              key={id}
+              onPress={() => setTab(id)}
               style={{
-                fontSize: 13,
-                fontWeight: "600",
-                color: tab === t ? Colors.foreground : Colors.mutedForeground,
+                flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
+                backgroundColor: tab === id ? "#fff" : "transparent",
+                shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: tab === id ? 0.08 : 0, shadowRadius: 4,
+                elevation: tab === id ? 2 : 0,
               }}
             >
-              {t === "activity" ? "Activité" : "Préférences"}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? Colors.foreground : Colors.mutedForeground }}>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
 
-      {/* ── ACTIVITY TAB ── */}
-      {tab === "activity" && (
-        isLoading ? (
+        {tab === "activity" ? (
+          notifications.length === 0 ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="notifications-outline" size={26} color={Colors.mutedForeground} />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Aucune notification</Text>
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", maxWidth: 220, lineHeight: 18 }}>
+                Tes notifications apparaîtront ici en temps réel.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={grouped}
+              keyExtractor={(item) => item.label}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 100 }}
+              renderItem={({ item: group }) => (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+                    {group.label}
+                  </Text>
+                  <View style={{ gap: 6 }}>
+                    {group.items.map((notif) => {
+                      const cfg = NOTIF_CFG[notif.type] ?? NOTIF_CFG.default;
+                      return (
+                        <Pressable
+                          key={notif.id}
+                          onPress={() => { if (!notif.is_read) markAsRead(notif.id); }}
+                          style={{
+                            flexDirection: "row", alignItems: "flex-start", gap: 12,
+                            padding: 14, borderRadius: 16,
+                            backgroundColor: notif.is_read ? Colors.muted : "#fff",
+                            borderWidth: notif.is_read ? 0 : 1,
+                            borderColor: "#FE5D9D1A",
+                            ...(notif.is_read ? {} : Shadows.card),
+                          }}
+                        >
+                          <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", flexShrink: 0, backgroundColor: cfg.bg, opacity: notif.is_read ? 0.55 : 1 }}>
+                            <Ionicons name={cfg.icon} size={17} color={cfg.color} />
+                          </View>
+                          <View style={{ flex: 1, paddingTop: 2 }}>
+                            <Text style={{ fontSize: 13, lineHeight: 18, color: notif.is_read ? Colors.mutedForeground : Colors.foreground, fontWeight: notif.is_read ? "400" : "600" }} numberOfLines={2}>
+                              {notif.message}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 6, fontWeight: "500" }}>
+                              {formatRelTime(notif.created_at)}
+                            </Text>
+                          </View>
+                          {!notif.is_read && (
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FE5D9D", marginTop: 6, flexShrink: 0 }} />
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            />
+          )
+        ) : prefsLoading ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator color={Colors.primary} />
           </View>
-        ) : grouped.length === 0 ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 20,
-                backgroundColor: Colors.muted,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 16,
-              }}
-            >
-              <Ionicons name="notifications-outline" size={28} color={Colors.mutedForeground} />
-            </View>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground, textAlign: "center" }}>
-              Aucune notification
-            </Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", marginTop: 4 }}>
-              Vous êtes à jour !
-            </Text>
-          </View>
         ) : (
-          <SectionList
-            sections={grouped}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          <FlatList
+            data={[1]}
+            keyExtractor={() => "prefs"}
             showsVerticalScrollIndicator={false}
-            renderSectionHeader={({ section }) => (
-              <View
-                style={{
-                  paddingHorizontal: 20,
-                  paddingVertical: 8,
-                  paddingTop: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "700",
-                    color: Colors.mutedForeground,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  {section.title}
-                </Text>
+            contentContainerStyle={{ paddingBottom: 100 }}
+            renderItem={() => (
+              <View>
+                {/* Bandeau info */}
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#FE5D9D15", borderRadius: 12, padding: 14, marginBottom: 24 }}>
+                  <Ionicons name="notifications-outline" size={18} color="#FE5D9D" />
+                  <Text style={{ flex: 1, fontSize: 13, color: "#FE5D9D", lineHeight: 18 }}>
+                    Choisis les alertes que tu souhaites recevoir.{" "}
+                    Tu peux modifier tes préférences à tout moment.
+                  </Text>
+                </View>
+
+                {/* Sections */}
+                {PREF_SECTIONS.map((section) => (
+                  <View key={section.title} style={{ marginBottom: 24 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                      {section.title}
+                    </Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
+                      {section.items.map((item, idx) => (
+                        <View
+                          key={item.key}
+                          style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14, borderBottomWidth: idx < section.items.length - 1 ? 1 : 0, borderBottomColor: "#F3F4F6" }}
+                        >
+                          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: item.iconBg, alignItems: "center", justifyContent: "center" }}>
+                            <Ionicons name={item.icon} size={20} color={item.iconColor} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>{item.label}</Text>
+                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{item.subtitle}</Text>
+                          </View>
+                          <Switch
+                            value={preferences[item.key]}
+                            onValueChange={() => togglePref(item.key)}
+                            trackColor={{ false: "#E5E7EB", true: "#FE5D9D" }}
+                            thumbColor="#fff"
+                            disabled={savingKey === item.key}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+
+                {/* Système */}
+                <View style={{ marginBottom: 24 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                    Système
+                  </Text>
+                  <View style={{ backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
+                    <Pressable
+                      onPress={() => Linking.openSettings()}
+                      style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14 }}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="settings-outline" size={20} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>Réglages système</Text>
+                        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>Activer les notifications pour Blyss</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {saveSuccess && (
+                  <View style={{ alignItems: "center", paddingVertical: 8 }}>
+                    <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>Préférences à jour ✓</Text>
+                  </View>
+                )}
               </View>
             )}
-            renderItem={({ item }) => {
-              const cfg = NOTIF_CFG[item.type] ?? NOTIF_CFG.default;
-              return (
-                <Pressable
-                  onPress={() => !item.is_read && markReadMutation.mutate(String(item.id))}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    gap: 12,
-                    paddingHorizontal: 20,
-                    paddingVertical: 14,
-                    backgroundColor: item.is_read ? "transparent" : `${Colors.primary}08`,
-                    borderBottomWidth: 1,
-                    borderBottomColor: `${Colors.border}80`,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 12,
-                      backgroundColor: cfg.bg,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Ionicons name={cfg.icon} size={18} color={cfg.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, color: Colors.foreground, lineHeight: 20 }}>
-                      {item.message}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 3 }}>
-                      {formatRelTime(item.created_at)}
-                    </Text>
-                  </View>
-                  {!item.is_read && (
-                    <View
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: Colors.primary,
-                        marginTop: 6,
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                </Pressable>
-              );
-            }}
           />
-        )
-      )}
-
-      {/* ── PREFERENCES TAB ── */}
-      {tab === "preferences" && (
-        <SectionList
-          sections={PREF_ROWS.map((s) => ({ title: s.section, data: [...s.items] }))}
-          keyExtractor={(item) => item.key}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100, gap: 8 }}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          renderSectionHeader={({ section }) => (
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: "600",
-                color: Colors.mutedForeground,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                paddingTop: 16,
-                paddingBottom: 8,
-              }}
-            >
-              {section.title}
-            </Text>
-          )}
-          renderSectionFooter={() => (
-            <View
-              style={{
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: Colors.border,
-                backgroundColor: Colors.card,
-                overflow: "hidden",
-              }}
-            />
-          )}
-          renderItem={({ item, index, section }) => {
-            const isLast = index === section.data.length - 1;
-            return (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  backgroundColor: Colors.card,
-                  borderRadius: 0,
-                  borderBottomWidth: isLast ? 0 : 1,
-                  borderBottomColor: `${Colors.border}80`,
-                  borderWidth: 1,
-                  borderColor: Colors.border,
-                  marginTop: index === 0 ? 0 : -1,
-                  borderTopLeftRadius: index === 0 ? 16 : 0,
-                  borderTopRightRadius: index === 0 ? 16 : 0,
-                  borderBottomLeftRadius: isLast ? 16 : 0,
-                  borderBottomRightRadius: isLast ? 16 : 0,
-                }}
-              >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    backgroundColor: item.bg,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Ionicons name={item.icon} size={18} color={item.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>
-                    {item.title}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
-                    {item.desc}
-                  </Text>
-                </View>
-                <Switch
-                  value={prefs[item.key as PrefKey] ?? true}
-                  onValueChange={() => togglePref(item.key as PrefKey)}
-                  disabled={savingKey === item.key}
-                  trackColor={{ true: Colors.primary, false: `${Colors.mutedForeground}40` }}
-                  thumbColor="#fff"
-                />
-              </View>
-            );
-          }}
-        />
-      )}
-    </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }

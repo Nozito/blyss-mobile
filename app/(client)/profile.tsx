@@ -1,230 +1,281 @@
-import React, { useMemo } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  Alert,
-} from "react-native";
+import React, { useState } from "react";
+import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar } from "@/components/ui/Avatar";
-import { Card } from "@/components/ui/Card";
-import { Colors } from "@/constants/colors";
+import { usersApi } from "@/lib/api";
+import { Shadows } from "@/constants/shadows";
 
-function calculateClientCompleteness(user: any): number {
-  let score = 30; // baseline name + email
-  if (user?.profile_photo) score += 20;
-  if (user?.phone_number) score += 20;
-  if (user?.city) score += 15;
-  if (user?.birth_date) score += 15;
-  return Math.min(score, 100);
-}
+const MENU_ITEMS = [
+  { icon: "settings-outline" as const, label: "Paramètres", route: "/(client)/settings" },
+  { icon: "notifications-outline" as const, label: "Notifications", route: "/(client)/notifications" },
+  { icon: "help-circle-outline" as const, label: "Aide", route: "/(client)/help" },
+  { icon: "shield-outline" as const, label: "RGPD", route: "/(client)/rgpd" },
+] as const;
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-interface MenuItem {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-}
-
-export default function ClientProfileScreen() {
-  const { user, logout } = useAuth();
+export default function ProfileScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const profileCompleteness = useMemo(() => calculateClientCompleteness(user), [user]);
+  const { user, logout, refreshProfile } = useAuth();
+  const [uploading, setUploading] = useState(false);
 
-  const photoUri = user?.profile_photo
-    ? user.profile_photo.startsWith("http")
-      ? user.profile_photo
-      : `${API_URL}${user.profile_photo}`
-    : undefined;
-
-  const handleLogout = () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
-      { text: "Non", style: "cancel" },
-      { text: "Oui", style: "destructive", onPress: logout },
+  const handlePickAvatar = () => {
+    Alert.alert("Photo de profil", "Choisir depuis…", [
+      {
+        text: "Galerie",
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]) {
+            await uploadPhoto(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: "Caméra",
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (perm.status !== "granted") {
+            Alert.alert("Permission refusée", "Autorise l'accès à la caméra dans les réglages.");
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]) {
+            await uploadPhoto(result.assets[0].uri);
+          }
+        },
+      },
+      { text: "Annuler", style: "cancel" },
     ]);
   };
 
-  const menuSections: { title: string; items: MenuItem[] }[] = [
-    {
-      title: "Mon compte",
-      items: [
-        {
-          icon: "person-outline",
-          label: "Modifier mon profil",
-          onPress: () => router.push("/(client)/settings"),
+  const uploadPhoto = async (uri: string) => {
+    setUploading(true);
+    const res = await usersApi.uploadProfilePhoto(uri);
+    setUploading(false);
+    if (!res.success) {
+      Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la photo.");
+      return;
+    }
+    await refreshProfile();
+  };
+
+  const displayName = user ? `${user.first_name} ${user.last_name}` : "";
+  const photoUrl = user?.profile_photo
+    ? user.profile_photo.startsWith("http")
+      ? user.profile_photo
+      : `${API_URL}${user.profile_photo}`
+    : null;
+
+  const profileCompleteness = (() => {
+    let score = 60;
+    if (user?.profile_photo) score += 20;
+    if ((user as Record<string, unknown> | null)?.phone_number) score += 20;
+    return score;
+  })();
+
+  const handleLogout = () => {
+    Alert.alert("Déconnexion", "Tu souhaites te déconnecter ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Se déconnecter",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/(auth)/login");
         },
-        {
-          icon: "notifications-outline",
-          label: "Notifications",
-          onPress: () => router.push("/(client)/notifications"),
-        },
-        {
-          icon: "card-outline",
-          label: "Moyens de paiement",
-          onPress: () => router.push("/(client)/payments"),
-        },
-      ],
-    },
-    {
-      title: "Légal",
-      items: [
-        {
-          icon: "help-circle-outline",
-          label: "Aide & support",
-          onPress: () => router.push("/(client)/help" as any),
-        },
-        {
-          icon: "shield-outline",
-          label: "Mes données personnelles",
-          onPress: () => router.push("/(client)/rgpd" as any),
-        },
-      ],
-    },
-    {
-      title: "Session",
-      items: [
-        {
-          icon: "log-out-outline",
-          label: "Se déconnecter",
-          onPress: handleLogout,
-          destructive: true,
-        },
-      ],
-    },
-  ];
+      },
+    ]);
+  };
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 100,
-        paddingHorizontal: 20,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Profile card */}
-      <Card elevated className="mb-6">
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-          <View style={{ position: "relative" }}>
-            <Avatar
-              uri={photoUri}
-              name={`${user?.first_name ?? ""} ${user?.last_name ?? ""}`}
-              size={72}
-            />
-            <Pressable
-              onPress={() => router.push("/(client)/settings")}
-              style={{
-                position: "absolute",
-                bottom: -4,
-                right: -4,
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: Colors.primary,
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: Colors.primary,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.4,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-            >
-              <Ionicons name="camera" size={13} color="#fff" />
-            </Pressable>
-          </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Page title */}
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: "#09090B", letterSpacing: -0.5 }}>
+            Mon profil
+          </Text>
+          <Text style={{ fontSize: 13, color: "#6D6D78", marginTop: 4 }}>
+            Gère ton compte Blyss
+          </Text>
+        </View>
 
+        {/* Profile card */}
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 20,
+            padding: 20,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 16,
+            ...Shadows.card,
+          }}
+        >
+          {/* Avatar avec badge caméra */}
+          <Pressable onPress={handlePickAvatar}
+            style={{ position: "relative", width: 72, height: 72 }}>
+            <View style={{
+              width: 72, height: 72, borderRadius: 20,
+              backgroundColor: "#FE5D9D20",
+              alignItems: "center", justifyContent: "center",
+              overflow: "hidden",
+            }}>
+              {photoUrl ? (
+                <Image source={{ uri: photoUrl }} style={{ width: 72, height: 72 }} contentFit="cover" />
+              ) : (
+                <Text style={{ fontSize: 24, fontWeight: "800", color: "#FE5D9D" }}>
+                  {`${user?.first_name?.[0] ?? ""}${user?.last_name?.[0] ?? ""}`}
+                </Text>
+              )}
+              {uploading && (
+                <View style={{
+                  ...StyleSheet.absoluteFillObject,
+                  backgroundColor: "rgba(0,0,0,0.4)",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <ActivityIndicator color="#fff" size="small" />
+                </View>
+              )}
+            </View>
+            {/* Badge caméra */}
+            <View style={{
+              position: "absolute", bottom: -4, right: -4,
+              width: 26, height: 26, borderRadius: 13,
+              backgroundColor: "#FE5D9D",
+              alignItems: "center", justifyContent: "center",
+              shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.4, shadowRadius: 4, elevation: 3,
+            }}>
+              <Ionicons name="camera" size={12} color="#fff" />
+            </View>
+          </Pressable>
+
+          {/* Nom + sous-titre + barre */}
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>
-              {user?.first_name} {user?.last_name}
+            <Text style={{ fontSize: 17, fontWeight: "800", color: "#09090B", marginBottom: 2 }}>
+              {displayName || "Profil"}
             </Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: user?.city ? 6 : 10 }}>
-              {user?.email}
-            </Text>
-            {user?.city && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 10 }}>
-                <Ionicons name="location-outline" size={12} color={Colors.mutedForeground} />
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{user.city}</Text>
-              </View>
+            {user?.email && (
+              <Text style={{ fontSize: 13, color: "#6D6D78", marginBottom: 10 }}>
+                {user.email}
+              </Text>
             )}
             {/* Completeness bar */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <View style={{ flex: 1, height: 6, backgroundColor: Colors.muted, borderRadius: 3, overflow: "hidden" }}>
+              <View style={{ flex: 1, height: 4, backgroundColor: "#F0F0F0", borderRadius: 2, overflow: "hidden" }}>
                 <LinearGradient
-                  colors={[Colors.primary, `${Colors.primary}99`]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{ height: "100%", width: `${profileCompleteness}%`, borderRadius: 3 }}
+                  colors={["#FE5D9D", "#FE5D9D99"]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={{ height: "100%", width: `${profileCompleteness}%`, borderRadius: 2 }}
                 />
               </View>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.primary }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#FE5D9D" }}>
                 {profileCompleteness}%
               </Text>
             </View>
-            <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 2 }}>
+            <Text style={{ fontSize: 10, color: "#6D6D78", marginTop: 3 }}>
               Profil complété
             </Text>
           </View>
         </View>
-      </Card>
 
-      {/* Menu sections */}
-      {menuSections.map((section) => (
-        <View key={section.title} className="mb-5">
-          <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-            {section.title}
-          </Text>
-          <Card>
-            {section.items.map((item, idx) => (
-              <Pressable
-                key={item.label}
-                onPress={item.onPress}
-                className={[
-                  "flex-row items-center gap-3 py-3.5",
-                  idx < section.items.length - 1 ? "border-b border-border" : "",
-                ].join(" ")}
+        {/* Menu items */}
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 20,
+            marginBottom: 16,
+            ...Shadows.card,
+          }}
+        >
+          {MENU_ITEMS.map((item, i) => (
+            <Pressable
+              key={item.route}
+              onPress={() => router.push(item.route as Parameters<typeof router.push>[0])}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderBottomWidth: i < MENU_ITEMS.length - 1 ? 1 : 0,
+                borderBottomColor: "#F0F0F0",
+              }}
+            >
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  backgroundColor: "#FE5D9D15",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <View
-                  className="w-8 h-8 rounded-xl items-center justify-center"
-                  style={{
-                    backgroundColor: item.destructive
-                      ? `${Colors.destructive}15`
-                      : Colors.primaryLight,
-                  }}
-                >
-                  <Ionicons
-                    name={item.icon}
-                    size={16}
-                    color={item.destructive ? Colors.destructive : Colors.primary}
-                  />
-                </View>
-                <Text
-                  className={[
-                    "flex-1 text-sm font-medium",
-                    item.destructive ? "text-destructive" : "text-foreground",
-                  ].join(" ")}
-                >
-                  {item.label}
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={Colors.mutedForeground}
-                />
-              </Pressable>
-            ))}
-          </Card>
+                <Ionicons name={item.icon} size={22} color="#FE5D9D" />
+              </View>
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: "#09090B" }}>
+                {item.label}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color="#6D6D78" />
+            </Pressable>
+          ))}
         </View>
-      ))}
-    </ScrollView>
+
+        {/* Logout */}
+        <Pressable
+          onPress={handleLogout}
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: 16,
+            padding: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+            borderWidth: 1,
+            borderColor: "#EF444430",
+          }}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              backgroundColor: "#FEF2F2",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          </View>
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: "#EF4444" }}>
+            Se déconnecter
+          </Text>
+        </Pressable>
+
+        <Text style={{ textAlign: "center", fontSize: 11, color: "#6D6D78", marginTop: 24 }}>
+          Blyss v1.0.0
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

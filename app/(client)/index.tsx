@@ -1,32 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
-  ScrollView,
-  Pressable,
   FlatList,
+  Pressable,
   ActivityIndicator,
+  type ListRenderItem,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuth } from "@/contexts/AuthContext";
 import { specialistsApi, favoritesApi, clientApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { Shadows } from "@/constants/shadows";
 
+// ── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { label: "Pose gel", emoji: "💅", query: "gel" },
-  { label: "Semi-perm.", emoji: "✨", query: "semi-permanent" },
-  { label: "French", emoji: "🤍", query: "french" },
-  { label: "Nail art", emoji: "🎨", query: "nail art" },
-  { label: "Manucure", emoji: "💎", query: "manucure" },
-  { label: "Baby boomer", emoji: "🌸", query: "baby boomer" },
-];
+  { label: "Pose gel",     emoji: "💅", query: "gel" },
+  { label: "Semi-perm.",   emoji: "✨", query: "semi-permanent" },
+  { label: "French",       emoji: "🤍", query: "french" },
+  { label: "Nail art",     emoji: "🎨", query: "nail art" },
+  { label: "Manucure",     emoji: "💎", query: "manucure" },
+  { label: "Baby boomer",  emoji: "🌸", query: "baby boomer" },
+] as const;
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Pro {
   id: number;
   first_name: string;
@@ -50,6 +51,7 @@ interface Booking {
   price?: number | string;
 }
 
+// ── SpecialistCard ────────────────────────────────────────────────────────────
 function SpecialistCard({
   pro,
   isFavorite,
@@ -62,100 +64,59 @@ function SpecialistCard({
   const router = useRouter();
   const displayName = pro.activity_name ?? `${pro.first_name} ${pro.last_name}`;
   const specialty = pro.pro_specialties?.[0] ?? "Nail Artist";
-  const imageUrl = pro.banner_photo ?? pro.profile_photo;
+  const bannerUrl = pro.banner_photo ?? pro.profile_photo;
 
   return (
     <Pressable
-      onPress={() =>
-        router.push({
-          pathname: "/specialist/[id]",
-          params: { id: pro.id },
-        })
-      }
-      style={{
-        minWidth: 280,
-        borderRadius: 24,
-        overflow: "hidden",
-        borderWidth: 2,
-        borderColor: Colors.border,
-        backgroundColor: Colors.card,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 4,
-      }}
+      onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: pro.id } })}
+      style={[{ width: 280, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
+      className="border-2 border-border bg-card"
     >
-      <View style={{ height: 192, backgroundColor: Colors.muted }}>
-        {imageUrl ? (
+      {/* Cover image */}
+      <View className="bg-muted" style={{ height: 192 }}>
+        {bannerUrl ? (
           <Image
-            source={{ uri: imageUrl }}
+            source={{ uri: bannerUrl }}
             style={{ width: "100%", height: "100%" }}
             contentFit="cover"
           />
         ) : (
           <LinearGradient
-            colors={[Colors.primaryLight, Colors.primary]}
+            colors={["#FFE6F0", "#FE5D9D"]}
             style={{ width: "100%", height: "100%" }}
           />
         )}
+
+        {/* Dark gradient overlay */}
         <LinearGradient
-          colors={[
-            "rgba(0,0,0,0)",
-            "rgba(0,0,0,0.3)",
-            "rgba(0,0,0,0.85)",
-          ]}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          }}
+          colors={["transparent", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.85)"]}
+          style={{ position: "absolute", inset: 0 } as any}
         />
+
+        {/* Favorite button */}
         <Pressable
           onPress={() => onToggleFav(pro.id)}
           style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            position: "absolute", top: 12, right: 12,
+            width: 36, height: 36, borderRadius: 18,
             backgroundColor: "rgba(255,255,255,0.9)",
-            alignItems: "center",
-            justifyContent: "center",
+            alignItems: "center", justifyContent: "center",
           }}
         >
           <Ionicons
             name={isFavorite ? "heart" : "heart-outline"}
             size={18}
-            color={isFavorite ? Colors.destructive : Colors.mutedForeground}
+            color={isFavorite ? "#EF4444" : "#6D6D78"}
           />
         </Pressable>
-        <View
-          style={{
-            position: "absolute",
-            bottom: 12,
-            left: 12,
-            right: 12,
-            flexDirection: "row",
-            gap: 12,
-            alignItems: "center",
-          }}
-        >
+
+        {/* Name overlay */}
+        <View style={{ position: "absolute", bottom: 12, left: 12, right: 12 }}
+          className="flex-row gap-3 items-center">
           <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              borderWidth: 2,
-              borderColor: "rgba(255,255,255,0.9)",
-              overflow: "hidden",
-              backgroundColor: Colors.primary,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            style={{ width: 56, height: 56, borderRadius: 16, borderWidth: 2,
+              borderColor: "rgba(255,255,255,0.9)", overflow: "hidden" }}
+            className="bg-primary items-center justify-center flex-shrink-0"
           >
             {pro.profile_photo ? (
               <Image
@@ -164,20 +125,13 @@ function SpecialistCard({
                 contentFit="cover"
               />
             ) : (
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 20 }}>
+              <Text className="text-white font-bold text-xl">
                 {pro.first_name[0]}
               </Text>
             )}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                color: "#fff",
-                fontSize: 16,
-                fontWeight: "700",
-              }}
-              numberOfLines={1}
-            >
+          <View className="flex-1">
+            <Text className="text-white font-bold text-base" numberOfLines={1}>
               {displayName}
             </Text>
             <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
@@ -187,59 +141,26 @@ function SpecialistCard({
         </View>
       </View>
 
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <View
-          style={{ flexDirection: "row", gap: 4, alignItems: "center" }}
-        >
-          <Ionicons
-            name="location-outline"
-            size={13}
-            color={Colors.mutedForeground}
-          />
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-            {pro.city ?? "France"}
-          </Text>
+      {/* Footer */}
+      <View className="px-4 py-3 flex-row items-center justify-between">
+        <View className="flex-row gap-1 items-center">
+          <Ionicons name="location-outline" size={13} color="#6D6D78" />
+          <Text className="text-xs text-muted-foreground">{pro.city ?? "France"}</Text>
         </View>
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+        <View className="flex-row gap-3 items-center">
           {pro.avg_rating != null && (
             <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                backgroundColor: "#fefce8",
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 999,
-              }}
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "#fefce8" }}
             >
               <Ionicons name="star" size={12} color="#FACC15" />
-              <Text
-                style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}
-              >
-                {pro.avg_rating.toFixed(1)}
+              <Text className="text-xs font-bold text-foreground">
+                {pro.avg_rating != null ? Number(pro.avg_rating).toFixed(1) : "–"}
               </Text>
             </View>
           )}
-          <View
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              backgroundColor: `${Colors.primary}1A`,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="chevron-forward" size={15} color={Colors.primary} />
+          <View className="w-7 h-7 rounded-lg bg-primary/10 items-center justify-center">
+            <Ionicons name="chevron-forward" size={15} color="#FE5D9D" />
           </View>
         </View>
       </View>
@@ -247,525 +168,302 @@ function SpecialistCard({
   );
 }
 
+// ── BookingItem ───────────────────────────────────────────────────────────────
 function BookingItem({ booking }: { booking: Booking }) {
   const router = useRouter();
   const proName =
     booking.pro_activity_name ??
     `${booking.pro_first_name ?? ""} ${booking.pro_last_name ?? ""}`.trim();
   const date = new Date(booking.start_datetime);
-  const dateStr = date.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-  });
-  const timeStr = date.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateStr = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const timeStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <Pressable
-      onPress={() =>
-        router.push({
-          pathname: "/(client)/my-bookings",
-        })
-      }
-      style={{
-        backgroundColor: Colors.card,
-        borderRadius: 16,
-        overflow: "hidden",
-        borderWidth: 2,
-        borderColor: `${Colors.primary}33`,
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
-        marginBottom: 12,
-        padding: 16,
-        flexDirection: "row",
-        gap: 16,
-        alignItems: "center",
-      }}
+      onPress={() => router.push("/(client)/my-bookings")}
+      className="bg-card rounded-2xl border-2 mb-3 p-4 flex-row gap-4 items-center active:opacity-80"
+      style={[{ borderColor: "rgba(254,93,157,0.2)" }, Shadows.soft]}
     >
-      <View
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 12,
-          backgroundColor: Colors.primary,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 18 }}>
+      <View className="w-14 h-14 rounded-xl bg-primary items-center justify-center flex-shrink-0">
+        <Text className="text-white font-bold text-lg">
           {(proName[0] ?? "?").toUpperCase()}
         </Text>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontWeight: "700",
-            fontSize: 15,
-            color: Colors.foreground,
-          }}
-        >
-          {proName}
-        </Text>
-        <Text
-          style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}
-        >
+      <View className="flex-1">
+        <Text className="font-bold text-base text-foreground">{proName}</Text>
+        <Text className="text-sm text-muted-foreground mt-0.5">
           {booking.prestation_name ?? "Prestation"}
         </Text>
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 12,
-            marginTop: 8,
-            alignItems: "center",
-          }}
-        >
-          <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
-            <Ionicons
-              name="calendar-outline"
-              size={12}
-              color={Colors.mutedForeground}
-            />
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-              {dateStr}
-            </Text>
+        <View className="flex-row gap-3 mt-2 items-center">
+          <View className="flex-row gap-1 items-center">
+            <Ionicons name="calendar-outline" size={12} color="#6D6D78" />
+            <Text className="text-xs text-muted-foreground">{dateStr}</Text>
           </View>
-          <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
-            <Ionicons
-              name="time-outline"
-              size={12}
-              color={Colors.primary}
-            />
-            <Text
-              style={{
-                fontSize: 12,
-                color: Colors.primary,
-                fontWeight: "600",
-              }}
-            >
-              {timeStr}
-            </Text>
+          <View className="flex-row gap-1 items-center">
+            <Ionicons name="time-outline" size={12} color="#FE5D9D" />
+            <Text className="text-xs text-primary font-semibold">{timeStr}</Text>
           </View>
         </View>
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={Colors.mutedForeground}
-      />
+      <Ionicons name="chevron-forward" size={20} color="#6D6D78" />
     </Pressable>
   );
 }
 
+// ── Screen ────────────────────────────────────────────────────────────────────
 export default function ClientHome() {
   const { user } = useAuth();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
+  // ── Data queries ─────────────────────────────────────────────────────────
   const { data: proRes, isLoading: loadingPros } = useQuery({
     queryKey: ["pros", "home"],
     queryFn: () => specialistsApi.getPros({ limit: 8 }),
+    staleTime: 2 * 60_000,
   });
 
   const { data: bookingsRes } = useQuery({
     queryKey: ["client-bookings"],
     queryFn: () => clientApi.getMyBookings(),
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const { data: favRes } = useQuery({
     queryKey: ["favorites"],
     queryFn: () => favoritesApi.getAll(),
-    onSuccess: (res: { data?: unknown[] }) => {
-      const ids = new Set<number>(
-        ((res?.data as Array<{ pro_id: number }>) ?? []).map((f) => f.pro_id)
-      );
-      setFavoriteIds(ids);
-    },
-  } as Parameters<typeof useQuery>[0]);
+    enabled: !!user,
+    staleTime: 60_000,
+  });
 
+  // Sync favoriteIds from query (replaces deprecated onSuccess)
+  useEffect(() => {
+    const ids = new Set<number>(
+      ((favRes?.data as Array<{ pro_id: number }>) ?? []).map((f) => f.pro_id)
+    );
+    setFavoriteIds(ids);
+  }, [favRes]);
+
+  // ── Favorite mutation ─────────────────────────────────────────────────────
   const toggleFavMutation = useMutation({
     mutationFn: async (proId: number) => {
-      if (favoriteIds.has(proId)) {
-        await favoritesApi.remove(proId);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          next.delete(proId);
-          return next;
-        });
-      } else {
-        await favoritesApi.add(proId);
-        setFavoriteIds((prev) => new Set([...prev, proId]));
-      }
+      if (favoriteIds.has(proId)) await favoritesApi.remove(proId);
+      else await favoritesApi.add(proId);
+    },
+    onMutate: (proId: number) => {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(proId)) next.delete(proId);
+        else next.add(proId);
+        return next;
+      });
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["favorites"] });
     },
   });
 
+  // ── Derived data ──────────────────────────────────────────────────────────
   const pros = ((proRes?.data as unknown[]) ?? []) as Pro[];
   const bookings = ((bookingsRes?.data as unknown[]) ?? []) as Booking[];
-  const upcomingBookings = bookings
-    .filter(
-      (b) =>
-        (b.status === "pending" || b.status === "confirmed") &&
-        new Date(b.start_datetime) > new Date()
-    )
-    .slice(0, 2);
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 100,
-      }}
-      showsVerticalScrollIndicator={false}
+  const upcomingBookings = useMemo(
+    () =>
+      bookings
+        .filter(
+          (b) =>
+            (b.status === "pending" || b.status === "confirmed") &&
+            new Date(b.start_datetime) > new Date()
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+        )
+        .slice(0, 2),
+    [bookings]
+  );
+
+  const greeting = user?.first_name ? `Salut ${user.first_name}` : "Bienvenue";
+
+  // ── Render helpers ────────────────────────────────────────────────────────
+  const renderCategory: ListRenderItem<(typeof CATEGORIES)[number]> = ({ item }) => (
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: "/(client)/specialists", params: { search: item.query } })
+      }
+      className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
     >
-      <Animated.View entering={FadeInDown.delay(50).springify()}>
-        <View
-          style={{
-            paddingHorizontal: 24,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 8,
-          }}
-        >
-          <View>
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "900",
-                color: Colors.foreground,
-                letterSpacing: -0.5,
-              }}
-            >
-              Bonjour {user?.first_name ?? ""} 👋
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: Colors.mutedForeground,
-                marginTop: 2,
-              }}
-            >
-              Tes nails parfaites, en quelques clics ✨
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/(client)/notifications")}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 16,
-              backgroundColor: Colors.card,
-              alignItems: "center",
-              justifyContent: "center",
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 4,
-              elevation: 1,
-            }}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={20}
-              color={Colors.foreground}
-            />
-          </Pressable>
-        </View>
+      <Text style={{ fontSize: 14 }}>{item.emoji}</Text>
+      <Text className="text-xs font-semibold text-foreground">{item.label}</Text>
+    </Pressable>
+  );
 
-        <Pressable
-          onPress={() => router.push("/(client)/specialists")}
-          style={{
-            marginHorizontal: 24,
-            marginBottom: 12,
-            height: 56,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            backgroundColor: Colors.card,
-            borderWidth: 2,
-            borderColor: Colors.border,
-            borderRadius: 16,
-            paddingHorizontal: 16,
-          }}
-        >
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color={Colors.mutedForeground}
-          />
-          <Text
-            style={{
-              color: Colors.mutedForeground,
-              fontSize: 14,
-              flex: 1,
-            }}
-          >
-            Experte, ville, prestation...
-          </Text>
-        </Pressable>
-      </Animated.View>
+  const renderSpecialist: ListRenderItem<Pro> = ({ item }) => (
+    <SpecialistCard
+      pro={item}
+      isFavorite={favoriteIds.has(item.id)}
+      onToggleFav={(id) => toggleFavMutation.mutate(id)}
+    />
+  );
 
-      <Animated.View entering={FadeInDown.delay(100).springify()}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingBottom: 4 }}
-          style={{ marginBottom: 24 }}
-        >
-          {CATEGORIES.map((cat) => (
-            <Pressable
-              key={cat.query}
-              onPress={() =>
-                router.push({
-                  pathname: "/(client)/specialists",
-                  params: { search: cat.query },
-                })
-              }
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 12,
-                backgroundColor: Colors.card,
-                borderWidth: 2,
-                borderColor: Colors.border,
-              }}
-            >
-              <Text style={{ fontSize: 14 }}>{cat.emoji}</Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: "600",
-                  color: Colors.foreground,
-                }}
+  // ── Main render ───────────────────────────────────────────────────────────
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <FlatList
+        data={[]}
+        renderItem={null}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        ListHeaderComponent={
+          <>
+            {/* ── Header ─────────────────────────────────────────────────── */}
+            <View className="flex-row items-center justify-between px-6 pt-4 pb-2">
+              <View>
+                <Text className="text-2xl font-black text-foreground tracking-tight">
+                  {greeting} 👋
+                </Text>
+                <Text className="text-sm text-muted-foreground mt-0.5">
+                  Tes nails parfaites, en quelques clics ✨
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => router.push("/(client)/notifications")}
+                className="w-10 h-10 rounded-2xl bg-card border border-border items-center justify-center"
+                style={Shadows.card}
               >
-                {cat.label}
+                <Ionicons name="notifications-outline" size={20} color="#09090B" />
+              </Pressable>
+            </View>
+
+            {/* ── Search bar (tap → specialists) ─────────────────────────── */}
+            <Pressable
+              onPress={() => router.push("/(client)/specialists")}
+              className="mx-6 mb-3 h-14 flex-row items-center gap-3 bg-card border-2 border-border rounded-2xl px-4"
+              style={Shadows.card}
+            >
+              <Ionicons name="search-outline" size={20} color="#6D6D78" />
+              <Text className="text-muted-foreground text-sm flex-1">
+                Experte, ville, prestation...
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
-      </Animated.View>
 
-      <Animated.View
-        entering={FadeInDown.delay(150).springify()}
-        style={{ marginBottom: 8 }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 24,
-            marginBottom: 12,
-          }}
-        >
-          <View>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: "700",
-                  color: Colors.foreground,
-                }}
+            {/* ── Category chips ──────────────────────────────────────────── */}
+            <FlatList
+              horizontal
+              data={CATEGORIES as unknown as (typeof CATEGORIES)[number][]}
+              keyExtractor={(item) => item.query}
+              renderItem={renderCategory}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingBottom: 4 }}
+              style={{ marginBottom: 24 }}
+            />
+
+            {/* ── Sélection Blyss header ─────────────────────────────────── */}
+            <View className="flex-row items-center justify-between px-6 mb-3">
+              <View>
+                <View className="flex-row items-center gap-1.5">
+                  <Text className="text-xl font-bold text-foreground">Sélection Blyss</Text>
+                  <Ionicons name="sparkles-outline" size={18} color="#FE5D9D" />
+                </View>
+                <Text className="text-xs text-muted-foreground mt-0.5">
+                  {pros.length} experte{pros.length > 1 ? "s" : ""} disponible{pros.length > 1 ? "s" : ""}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => router.push("/(client)/specialists")}
+                className="flex-row items-center gap-1 px-4 py-2 rounded-full bg-primary"
+                style={Shadows.soft}
               >
-                Sélection Blyss
-              </Text>
-              <Ionicons
-                name="sparkles-outline"
-                size={18}
-                color={Colors.primary}
-              />
+                <Text className="text-xs font-semibold text-white">Tout voir</Text>
+                <Ionicons name="chevron-forward" size={12} color="#fff" />
+              </Pressable>
             </View>
-            <Text
-              style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}
-            >
-              {pros.length} experte(s) disponible(s)
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/(client)/specialists")}
-            style={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 999,
-              backgroundColor: Colors.primary,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Text
-              style={{ fontSize: 12, fontWeight: "600", color: "#fff" }}
-            >
-              Tout voir
-            </Text>
-            <Ionicons name="chevron-forward" size={12} color="#fff" />
-          </Pressable>
-        </View>
 
-        {loadingPros ? (
-          <View style={{ height: 280, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator color={Colors.primary} />
-          </View>
-        ) : (
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={pros}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={{ paddingHorizontal: 24, gap: 16, paddingVertical: 8 }}
-            renderItem={({ item }) => (
-              <SpecialistCard
-                pro={item}
-                isFavorite={favoriteIds.has(item.id)}
-                onToggleFav={(id) => toggleFavMutation.mutate(id)}
+            {/* ── Specialist cards (FlatList horizontal) ─────────────────── */}
+            {loadingPros ? (
+              <View className="h-64 items-center justify-center">
+                <ActivityIndicator color="#FE5D9D" />
+              </View>
+            ) : (
+              <FlatList
+                horizontal
+                data={pros}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderSpecialist}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 24, gap: 16, paddingVertical: 8 }}
               />
             )}
-          />
-        )}
-      </Animated.View>
 
-      <Animated.View
-        entering={FadeInDown.delay(200).springify()}
-        style={{ paddingHorizontal: 24, marginTop: 8, marginBottom: 12 }}
-      >
-        <Pressable
-          onPress={() => router.push("/(client)/specialists")}
-          style={{
-            paddingVertical: 14,
-            borderRadius: 16,
-            backgroundColor: Colors.primary,
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: Colors.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.25,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
-        >
-          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-            <Text
-              style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}
+            {/* ── CTA "Voir toutes les expertes" ─────────────────────────── */}
+            <Pressable
+              onPress={() => router.push("/(client)/specialists")}
+              className="mx-6 mt-3 py-3.5 rounded-2xl bg-primary items-center justify-center"
+              style={Shadows.soft}
             >
-              Voir toutes les expertes
-            </Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
-          </View>
-        </Pressable>
-      </Animated.View>
+              <View className="flex-row gap-2 items-center">
+                <Text className="text-white font-semibold text-sm">
+                  Voir toutes les expertes
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </View>
+            </Pressable>
 
-      <Animated.View
-        entering={FadeInDown.delay(250).springify()}
-        style={{ paddingHorizontal: 24, marginTop: 24 }}
-      >
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: Colors.foreground,
-          }}
-        >
-          Tes nails à venir
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: Colors.mutedForeground,
-            marginTop: 2,
-            marginBottom: 12,
-          }}
-        >
-          Tes prochains rendez-vous beauté
-        </Text>
+            {/* ── Tes nails à venir ──────────────────────────────────────── */}
+            <View className="px-6 mt-8 mb-3">
+              <Text className="text-xl font-bold text-foreground">Tes nails à venir</Text>
+              <Text className="text-xs text-muted-foreground mt-0.5">
+                Tes prochains rendez-vous beauté
+              </Text>
+            </View>
 
-        {upcomingBookings.length === 0 ? (
-          <View
-            style={{
-              padding: 20,
-              borderRadius: 16,
-              backgroundColor: `${Colors.primary}0D`,
-              borderWidth: 2,
-              borderStyle: "dashed",
-              borderColor: `${Colors.primary}4D`,
-            }}
-          >
-            <View style={{ flexDirection: "row", gap: 16, alignItems: "flex-start" }}>
+            {upcomingBookings.length === 0 ? (
               <View
+                className="mx-6 p-5 rounded-2xl"
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 16,
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  backgroundColor: "rgba(254,93,157,0.05)",
+                  borderWidth: 2,
+                  borderStyle: "dashed",
+                  borderColor: "rgba(254,93,157,0.3)",
                 }}
               >
-                <Ionicons name="calendar-outline" size={22} color="#fff" />
+                <View className="flex-row gap-4 items-start">
+                  <View className="w-12 h-12 rounded-2xl bg-primary items-center justify-center flex-shrink-0">
+                    <Ionicons name="calendar-outline" size={22} color="#fff" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-semibold text-base text-foreground">
+                      Aucun rendez-vous prévu
+                    </Text>
+                    <Text className="text-xs text-muted-foreground mt-1 leading-4">
+                      Réserve dès maintenant auprès d'une experte près de chez toi
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push("/(client)/specialists")}
+                      className="mt-3 px-4 py-2 rounded-xl bg-primary self-start"
+                    >
+                      <View className="flex-row gap-1.5 items-center">
+                        <Ionicons name="sparkles-outline" size={14} color="#fff" />
+                        <Text className="text-white text-xs font-semibold">
+                          Découvrir les expertes
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontWeight: "600",
-                    fontSize: 15,
-                    color: Colors.foreground,
-                  }}
-                >
-                  Aucun rendez-vous prévu
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: Colors.mutedForeground,
-                    marginTop: 4,
-                  }}
-                >
-                  Réserve ta prochaine séance avec une experte Blyss
-                </Text>
-                <Pressable
-                  onPress={() => router.push("/(client)/specialists")}
-                  style={{
-                    marginTop: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 12,
-                    backgroundColor: Colors.primary,
-                    alignSelf: "flex-start",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: "600",
-                    }}
-                  >
-                    Découvrir les expertes
-                  </Text>
-                </Pressable>
+            ) : (
+              <View className="px-6">
+                {upcomingBookings.map((b) => (
+                  <BookingItem key={b.id} booking={b} />
+                ))}
               </View>
-            </View>
-          </View>
-        ) : (
-          upcomingBookings.map((b) => (
-            <BookingItem key={b.id} booking={b} />
-          ))
-        )}
-      </Animated.View>
-    </ScrollView>
+            )}
+          </>
+        }
+      />
+    </SafeAreaView>
   );
 }
