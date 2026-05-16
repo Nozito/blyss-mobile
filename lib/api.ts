@@ -48,6 +48,7 @@ export interface SignupData {
   phone_number: string;
   birth_date: string;
   role: "client" | "pro";
+  accepted_terms?: boolean;
   activity_name?: string | null;
   city?: string | null;
   instagram_account?: string | null;
@@ -365,6 +366,22 @@ export const authApi = {
 
   deleteAccount: async (): Promise<ApiResponse<void>> =>
     apiCall("/api/auth/delete-account", { method: "DELETE" }),
+
+  exportData: async (): Promise<ApiResponse<string>> => {
+    try {
+      const accessToken = await storage.getAccessToken();
+      const response = await fetch(`${API_BASE_URL}/api/auth/export-data`, {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+      if (!response.ok) {
+        return { success: false, error: "Erreur lors de l'export de données" };
+      }
+      const text = await response.text();
+      return { success: true, data: text };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Erreur de connexion" };
+    }
+  },
 };
 
 // ── Bookings API ─────────────────────────────────────────────────────────────
@@ -631,6 +648,36 @@ export const usersApi = {
   getMe: (): Promise<ApiResponse<User>> => apiCall("/api/users"),
   update: (data: Record<string, unknown>): Promise<ApiResponse<User>> =>
     apiCall("/api/users/update", { method: "PUT", body: JSON.stringify(data) }),
+
+  uploadProfilePhoto: async (uri: string): Promise<ApiResponse<{ photo: string }>> => {
+    try {
+      const accessToken = await storage.getAccessToken();
+      const filename = uri.split("/").pop() ?? "photo.jpg";
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+      const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+      const formData = new FormData();
+      // @ts-expect-error — React Native FormData accepts { uri, name, type }
+      formData.append("photo", { uri, name: filename, type: mimeType });
+
+      const response = await fetch(`${API_BASE_URL}/api/users/upload-photo`, {
+        method: "POST",
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          // No Content-Type — fetch sets the multipart boundary automatically
+        },
+        body: formData,
+      });
+
+      const json = await response.json().catch(() => null) as { success?: boolean; photo?: string; message?: string } | null;
+
+      if (!response.ok || !json?.success) {
+        return { success: false, error: json?.message ?? "Erreur lors de l'upload" };
+      }
+      return { success: true, data: { photo: json.photo ?? "" } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Erreur de connexion" };
+    }
+  },
 };
 
 // ── Cancellation API ──────────────────────────────────────────────────────────

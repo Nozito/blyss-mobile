@@ -7,9 +7,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
+import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { queryClient } from "@/lib/queryClient";
+
+const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,6 +24,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <StripeProvider publishableKey={STRIPE_PK}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <NotificationProvider>
@@ -49,6 +53,7 @@ export default function RootLayout() {
             </NotificationProvider>
           </AuthProvider>
         </QueryClientProvider>
+        </StripeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

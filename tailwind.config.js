@@ -10,32 +10,64 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Blyss brand palette (from web CSS vars)
-        primary: "#FF5EA0",       // blyss-pink hsl(336 99% 68%)
-        "primary-light": "#FFE5EF", // blyss-pink-light
-        secondary: "#C9934A",     // blyss-gold hsl(32 60% 65%)
-        "secondary-light": "#FAF1E6",
-        cream: "#F7F3EF",         // blyss-cream
-        background: "#FFEAF1",    // app background
-        card: "#FFFFFF",
-        border: "#EDE7E0",        // hsl(30 20% 90%)
-        muted: "#F7F3EF",
-        "muted-foreground": "#6E7280", // hsl(240 5% 45%)
-        foreground: "#09090B",    // near-black
-        destructive: "#EF4444",
+        // Semantic tokens (mirroring web CSS vars)
+        background: "#FFEAF1",
+        foreground: "#09090B",
+        border: "#EBE6E0",
+        input: "#EBE6E0",
+        ring: "#FE5D9D",
+        primary: {
+          DEFAULT: "#FE5D9D",
+          foreground: "#FFFFFF",
+        },
+        secondary: {
+          DEFAULT: "#DBA970",
+          foreground: "#FFFFFF",
+        },
+        muted: {
+          DEFAULT: "#F8F5F1",
+          foreground: "#6D6D78",
+        },
+        accent: {
+          DEFAULT: "#FFE6F0",
+          foreground: "#FE5D9D",
+        },
+        card: {
+          DEFAULT: "#FFFFFF",
+          foreground: "#09090B",
+        },
+        popover: {
+          DEFAULT: "#FFFFFF",
+          foreground: "#09090B",
+        },
+        destructive: {
+          DEFAULT: "#EF4444",
+          foreground: "#FFFFFF",
+        },
+        // Blyss brand tokens
+        blyss: {
+          pink: "#FE5D9D",
+          "pink-light": "#FFE6F0",
+          gold: "#DBA970",
+          "gold-light": "#F7F0E8",
+          cream: "#F8F5F1",
+        },
+        // Status colors
         success: "#22C55E",
         warning: "#F59E0B",
         // Role colors
-        "client-primary": "#FF5EA0",
+        "client-primary": "#FE5D9D",
         "pro-primary": "#8B5CF6",
         "admin-primary": "#F97316",
       },
       fontFamily: {
-        sans: ["System"],
-        display: ["System"],
+        sans: ["System", "sans-serif"],
+        display: ["System", "sans-serif"],
       },
       borderRadius: {
-        "2xl": 16,
+        sm: 12,
+        md: 14,
+        lg: 16,
         "3xl": 24,
         "4xl": 32,
       },
