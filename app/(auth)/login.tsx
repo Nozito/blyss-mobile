@@ -6,90 +6,56 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  TextInput,
   Animated,
   ActivityIndicator,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
-import { Colors } from "@/constants/colors";
+import { Input } from "@/components/ui/Input";
+import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 
 const schema = z.object({
-  email: z.string().email("Email invalide"),
-  password: z.string().min(1, "Mot de passe requis"),
+  email: z
+    .string()
+    .min(1, "Email requis")
+    .email("Format d'email invalide")
+    .max(254, "Email trop long"),
+  password: z
+    .string()
+    .min(1, "Mot de passe requis")
+    .min(6, "Minimum 6 caractères")
+    .max(128, "Maximum 128 caractères"),
 });
-
 type FormData = z.infer<typeof schema>;
 
-function AnimatedInputContainer({
-  children,
-  isFocused,
-  hasError,
-}: {
-  children: React.ReactNode;
-  isFocused: boolean;
-  hasError: boolean;
-}) {
+function ScaleOnFocus({ children, focused }: { children: React.ReactNode; focused: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
-
   React.useEffect(() => {
     Animated.spring(scale, {
-      toValue: isFocused ? 1.02 : 1,
+      toValue: focused ? 1.02 : 1,
       useNativeDriver: true,
       tension: 200,
       friction: 20,
     }).start();
-  }, [isFocused, scale]);
-
-  return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <View
-        style={[
-          {
-            height: 56,
-            borderRadius: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            paddingHorizontal: 16,
-            borderWidth: 2,
-            backgroundColor: hasError
-              ? "rgba(240,58,58,0.05)"
-              : "rgba(255,255,255,0.5)",
-            borderColor: hasError
-              ? "rgba(240,58,58,0.5)"
-              : isFocused
-              ? Colors.primary
-              : Colors.border,
-          },
-          isFocused && {
-            shadowColor: Colors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 3,
-          },
-        ]}
-      >
-        {children}
-      </View>
-    </Animated.View>
-  );
+  }, [focused, scale]);
+  return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
 }
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
-  const insets = useSafeAreaInsets();
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [loggedUserName, setLoggedUserName] = useState("");
+  const [loggedUserRole, setLoggedUserRole] = useState<"pro" | "client">("client");
 
   const {
     control,
@@ -98,323 +64,219 @@ export default function LoginScreen() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
-    setError(null);
-    const res = await login(data);
+    setSubmitError(null);
+    const res = await login({ email: data.email.trim().toLowerCase(), password: data.password });
     if (!res.success) {
-      setError(res.error ?? "Identifiants incorrects");
+      setSubmitError(res.error ?? "Identifiants incorrects");
+      return;
+    }
+    const user = res.data?.user;
+    console.log("user role:", user?.role);
+
+    if (user?.is_admin) {
+      setLoggedUserName(user.first_name ?? "");
+      setLoggedUserRole(user.role === "pro" ? "pro" : "client");
+      setShowRoleModal(true);
+      return;
+    }
+
+    if (user?.role === "client") {
+      router.replace("/(client)");
+    } else {
+      router.replace("/(pro)/dashboard");
     }
   };
 
+  const handleRoleSelection = (selectedRole: AdminRole) => {
+    setShowRoleModal(false);
+    const routes: Record<AdminRole, string> = {
+      client: "/(client)",
+      pro:    "/(pro)/dashboard",
+      admin:  "/(admin)/dashboard",
+    };
+    router.replace(routes[selectedRole] as Parameters<typeof router.replace>[0]);
+  };
+
+  const handleCloseModal = () => {
+    setShowRoleModal(false);
+    router.replace(loggedUserRole === "pro" ? "/(pro)/dashboard" : "/(client)");
+  };
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <ScrollView
-        style={{ flex: 1, backgroundColor: Colors.background }}
-        contentContainerStyle={{
-          paddingTop: insets.top + 48,
-          paddingBottom: insets.bottom + 32,
-          paddingHorizontal: 24,
-        }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView className="flex-1 bg-background">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <View style={{ alignItems: "center", marginBottom: 40 }}>
-          <View style={{ position: "relative", marginBottom: 16 }}>
-            <View
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: 128,
-                height: 128,
-                borderRadius: 64,
-                backgroundColor: `${Colors.primary}33`,
-              }}
-            />
-            <Image
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              source={require("@/assets/logo.png")}
-              style={{ width: 128, height: 128 }}
-              resizeMode="contain"
-            />
-          </View>
-          <Text
-            style={{
-              fontSize: 30,
-              fontWeight: "900",
-              color: Colors.foreground,
-              letterSpacing: -0.5,
-            }}
-          >
-            Bon retour
-          </Text>
-          <Text
-            style={{
-              color: Colors.mutedForeground,
-              fontSize: 14,
-              marginTop: 4,
-              textAlign: "center",
-            }}
-          >
-            Connecte-toi pour gérer tes nails en quelques taps
-          </Text>
-        </View>
-
-        <View style={{ gap: 12 }}>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field: { onChange, value } }) => (
-              <View>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: errors.email ? Colors.destructive : Colors.foreground,
-                    marginBottom: 6,
-                  }}
-                >
-                  {errors.email ? `Email · ${errors.email.message}` : "Email"}
-                </Text>
-                <AnimatedInputContainer
-                  isFocused={focusedField === "email"}
-                  hasError={!!errors.email}
-                >
-                  <Ionicons
-                    name="mail-outline"
-                    size={20}
-                    color={
-                      focusedField === "email"
-                        ? Colors.primary
-                        : Colors.mutedForeground
-                    }
-                  />
-                  <TextInput
-                    style={{
-                      flex: 1,
-                      marginLeft: 12,
-                      fontSize: 16,
-                      color: Colors.foreground,
-                    }}
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="ton@email.com"
-                    placeholderTextColor={Colors.mutedForeground}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    onFocus={() => setFocusedField("email")}
-                    onBlur={() => setFocusedField(null)}
-                  />
-                </AnimatedInputContainer>
-              </View>
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="password"
-            render={({ field: { onChange, value } }) => (
-              <View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 6,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "600",
-                      color: errors.password
-                        ? Colors.destructive
-                        : Colors.foreground,
-                    }}
-                  >
-                    {errors.password
-                      ? `Mot de passe · ${errors.password.message}`
-                      : "Mot de passe"}
-                  </Text>
-                  <Pressable
-                    onPress={() => router.push("/(auth)/forgot-password")}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        color: Colors.primary,
-                        fontWeight: "500",
-                      }}
-                    >
-                      Oublié ?
-                    </Text>
-                  </Pressable>
-                </View>
-                <AnimatedInputContainer
-                  isFocused={focusedField === "password"}
-                  hasError={!!errors.password}
-                >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={20}
-                    color={
-                      focusedField === "password"
-                        ? Colors.primary
-                        : Colors.mutedForeground
-                    }
-                  />
-                  <TextInput
-                    style={{
-                      flex: 1,
-                      marginLeft: 12,
-                      fontSize: 16,
-                      color: Colors.foreground,
-                    }}
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="••••••••"
-                    placeholderTextColor={Colors.mutedForeground}
-                    secureTextEntry={!showPassword}
-                    autoComplete="current-password"
-                    onFocus={() => setFocusedField("password")}
-                    onBlur={() => setFocusedField(null)}
-                  />
-                  <Pressable onPress={() => setShowPassword((v) => !v)}>
-                    <Ionicons
-                      name={showPassword ? "eye-outline" : "eye-off-outline"}
-                      size={20}
-                      color={Colors.mutedForeground}
-                    />
-                  </Pressable>
-                </AnimatedInputContainer>
-              </View>
-            )}
-          />
-
-          {error && (
-            <View
-              style={{
-                backgroundColor: "rgba(240,58,58,0.1)",
-                borderRadius: 16,
-                padding: 12,
-                marginBottom: 8,
-              }}
-            >
-              <Text style={{ fontSize: 14, color: Colors.destructive }}>
-                {error}
-              </Text>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 48 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Logo & header */}
+          <View className="items-center mb-10">
+            <View style={{ position: "relative", marginBottom: 16 }}>
+              <View
+                style={{
+                  position: "absolute",
+                  width: 128,
+                  height: 128,
+                  borderRadius: 64,
+                  backgroundColor: "rgba(254,93,157,0.2)",
+                }}
+              />
+              <Image
+                source={require("@/assets/logo.png")}
+                style={{ width: 128, height: 128 }}
+                resizeMode="contain"
+              />
             </View>
-          )}
-
-          <Pressable
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            style={{ marginTop: 32 }}
-          >
-            <LinearGradient
-              colors={["#FF5EA0", "rgba(255,94,160,0.9)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                height: 56,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: "#FF5EA0",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text
-                  style={{
-                    color: "#fff",
-                    fontWeight: "700",
-                    fontSize: 16,
-                  }}
-                >
-                  Se connecter
-                </Text>
-              )}
-            </LinearGradient>
-          </Pressable>
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            marginVertical: 32,
-          }}
-        >
-          <View
-            style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
-          />
-          <Text
-            style={{
-              fontSize: 12,
-              color: Colors.mutedForeground,
-              paddingHorizontal: 12,
-            }}
-          >
-            Pas encore de compte ?
-          </Text>
-          <View
-            style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
-          />
-        </View>
-
-        <Pressable
-          onPress={() => router.push("/(auth)/register")}
-          style={{
-            height: 56,
-            borderRadius: 16,
-            backgroundColor: Colors.card,
-            borderWidth: 2,
-            borderColor: Colors.border,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-            <Ionicons
-              name="sparkles-outline"
-              size={18}
-              color={Colors.foreground}
-            />
-            <Text
-              style={{
-                color: Colors.foreground,
-                fontWeight: "600",
-                fontSize: 15,
-              }}
-            >
-              Créer un compte
+            <Text className="text-3xl font-black text-foreground tracking-tight">
+              Bon retour
+            </Text>
+            <Text className="text-sm text-muted-foreground mt-1 text-center">
+              Connecte-toi pour gérer tes nails en quelques taps
             </Text>
           </View>
-        </Pressable>
 
-        <Text
-          style={{
-            textAlign: "center",
-            fontSize: 12,
-            color: "rgba(107,114,128,0.7)",
-            marginTop: 24,
-            paddingHorizontal: 16,
-            lineHeight: 18,
-          }}
-        >
-          En te connectant, tu acceptes les Conditions générales et la Politique
-          de confidentialité
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Form */}
+          <View className="gap-3">
+            {/* Email */}
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }) => (
+                <ScaleOnFocus focused={focusedField === "email"}>
+                  <Input
+                    label="Email"
+                    value={value}
+                    onChangeText={onChange}
+                    onFocus={() => setFocusedField("email")}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="ton@email.com"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    leftIcon="mail-outline"
+                    error={errors.email?.message}
+                  />
+                </ScaleOnFocus>
+              )}
+            />
+
+            {/* Password */}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <ScaleOnFocus focused={focusedField === "password"}>
+                  <View className="gap-1.5">
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`text-sm font-semibold ${
+                          errors.password ? "text-destructive" : "text-foreground"
+                        }`}
+                      >
+                        Mot de passe
+                        {errors.password && (
+                          <Text className="text-xs font-normal">
+                            {" "}· {errors.password.message}
+                          </Text>
+                        )}
+                      </Text>
+                      <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
+                        <Text className="text-xs text-primary font-medium">Oublié ?</Text>
+                      </Pressable>
+                    </View>
+                    <Input
+                      value={value}
+                      onChangeText={onChange}
+                      onFocus={() => setFocusedField("password")}
+                      onBlur={() => setFocusedField(null)}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      leftIcon="lock-closed-outline"
+                      secure
+                    />
+                  </View>
+                </ScaleOnFocus>
+              )}
+            />
+
+            {/* Submit error banner */}
+            {submitError && (
+              <View className="bg-destructive/10 rounded-lg p-3">
+                <Text className="text-sm text-destructive">{submitError}</Text>
+              </View>
+            )}
+
+            {/* CTA */}
+            <Pressable
+              onPress={handleSubmit(onSubmit)}
+              disabled={isSubmitting}
+              style={{ marginTop: 32, opacity: isSubmitting ? 0.7 : 1 }}
+            >
+              <LinearGradient
+                colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: 56,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: "#FE5D9D",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="lock-closed-outline" size={18} color="#fff" />
+                    <Text className="text-white font-bold text-base">Se connecter</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </Pressable>
+          </View>
+
+          {/* Separator */}
+          <View className="flex-row items-center gap-3 my-8">
+            <View className="flex-1 h-px bg-border" />
+            <Text className="text-xs text-muted-foreground px-3">Pas encore de compte ?</Text>
+            <View className="flex-1 h-px bg-border" />
+          </View>
+
+          {/* Sign up */}
+          <Pressable
+            onPress={() => router.push("/(auth)/register")}
+            className="h-14 rounded-2xl bg-card border-2 border-border items-center justify-center active:opacity-70"
+          >
+            <View className="flex-row gap-2 items-center">
+              <Ionicons name="sparkles-outline" size={18} color="#09090B" />
+              <Text className="text-foreground font-semibold text-base">Créer un compte</Text>
+            </View>
+          </Pressable>
+
+          {/* Legal */}
+          <Text className="text-center text-xs text-muted-foreground mt-6 px-4 leading-relaxed">
+            En te connectant, tu acceptes les{" "}
+            <Text className="underline font-medium">Conditions générales</Text> et la{" "}
+            <Text className="underline font-medium">Politique de confidentialité</Text>
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <RoleSelectionModal
+        visible={showRoleModal}
+        userName={loggedUserName}
+        onSelectRole={handleRoleSelection}
+        onClose={handleCloseModal}
+      />
+    </SafeAreaView>
   );
 }

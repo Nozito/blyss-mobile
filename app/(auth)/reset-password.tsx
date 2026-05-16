@@ -12,7 +12,6 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { authApi } from "@/lib/api";
 
@@ -60,7 +59,7 @@ export default function ResetPasswordScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(350).springify()}>
+        <View>
           <Pressable
             onPress={() => router.back()}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mb-8"
@@ -141,7 +140,7 @@ export default function ResetPasswordScreen() {
               {isLoading ? "Enregistrement..." : "Enregistrer le mot de passe"}
             </Text>
           </Pressable>
-        </Animated.View>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
