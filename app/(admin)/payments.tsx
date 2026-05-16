@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 
@@ -87,13 +86,13 @@ export default function AdminPaymentsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+      <View className="mb-6">
         <Text className="text-2xl font-bold text-foreground">Paiements</Text>
         <Text className="text-sm text-muted-foreground mt-1">{filtered.length} transaction(s)</Text>
-      </Animated.View>
+      </View>
 
       {/* Stats */}
-      <Animated.View entering={FadeInDown.duration(300).delay(60).springify()} className="flex-row flex-wrap gap-3 mb-6">
+      <View className="flex-row flex-wrap gap-3 mb-6">
         {[
           { label: "CA total", value: `${stats.total.toLocaleString("fr-FR")} €`, color: Colors.admin, bg: "#FFF7ED" },
           { label: "Frais", value: `${stats.fees.toLocaleString("fr-FR")} €`, color: "#6B7280", bg: Colors.muted },
@@ -109,10 +108,10 @@ export default function AdminPaymentsScreen() {
             <Text className="text-xl font-black" style={{ color: stat.color }}>{stat.value}</Text>
           </View>
         ))}
-      </Animated.View>
+      </View>
 
       {/* Filters */}
-      <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-4 gap-3">
+      <View className="mb-4 gap-3">
         <View className="flex-row items-center bg-card rounded-xl px-4 h-11 border border-border gap-3">
           <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
           <TextInput
@@ -147,22 +146,21 @@ export default function AdminPaymentsScreen() {
             </Pressable>
           ))}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Transaction list */}
       <View className="gap-3">
         {filtered.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="items-center py-12">
+          <View className="items-center py-12">
             <Ionicons name="card-outline" size={48} color={Colors.border} />
             <Text className="text-muted-foreground mt-3">Aucune transaction trouvée</Text>
-          </Animated.View>
+          </View>
         ) : (
           filtered.map((tx, idx) => {
             const cfg = STATUS_CONFIG[tx.status];
             return (
-              <Animated.View
+              <View
                 key={tx.id}
-                entering={FadeInDown.duration(250).delay(140 + idx * 40).springify()}
                 className="bg-card rounded-2xl p-4 border border-border"
                 style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}
               >
@@ -195,7 +193,7 @@ export default function AdminPaymentsScreen() {
                     {new Date(tx.created_at).toLocaleDateString("fr-FR")}
                   </Text>
                 </View>
-              </Animated.View>
+              </View>
             );
           })
         )}

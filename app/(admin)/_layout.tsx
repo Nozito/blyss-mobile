@@ -1,16 +1,36 @@
-import React from "react";
-import { Tabs, Redirect } from "expo-router";
-import { Platform } from "react-native";
+import React, { useCallback } from "react";
+import { Tabs, Redirect, useRouter } from "expo-router";
+import { Platform, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export default function AdminLayout() {
   const { user, isLoading } = useAuth();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const handleLogout = useCallback(() => {
+    Alert.alert(
+      "Se déconnecter ?",
+      "Tu vas être redirigé vers l'écran de connexion.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Se déconnecter",
+          style: "destructive",
+          onPress: async () => {
+            await authApi.logout();
+            router.replace("/(auth)/login");
+          },
+        },
+      ]
+    );
+  }, [router]);
 
   if (isLoading) return <LoadingSpinner fullScreen />;
   if (!user || !user.is_admin) return <Redirect href="/(auth)/login" />;
@@ -18,7 +38,19 @@ export default function AdminLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerStyle: { backgroundColor: Colors.background },
+        headerShadowVisible: false,
+        headerTitleStyle: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
+        headerRight: () => (
+          <Pressable
+            onPress={handleLogout}
+            style={{ paddingHorizontal: 16 }}
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+          >
+            <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+          </Pressable>
+        ),
         tabBarActiveTintColor: Colors.admin,
         tabBarInactiveTintColor: Colors.mutedForeground,
         tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },

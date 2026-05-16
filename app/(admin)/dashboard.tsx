@@ -10,7 +10,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -214,8 +213,7 @@ export default function AdminDashboard() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View
-        entering={FadeInDown.delay(0).springify()}
+      <View
         style={{ marginBottom: 24 }}
       >
         <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
@@ -234,7 +232,7 @@ export default function AdminDashboard() {
         <Text style={{ fontSize: 14, color: Colors.mutedForeground, marginTop: 2 }}>
           Bonjour, {user?.first_name} 👋
         </Text>
-      </Animated.View>
+      </View>
 
       {isLoading ? (
         <View
@@ -286,8 +284,7 @@ export default function AdminDashboard() {
       ) : (
         <>
           {/* Stats Grid */}
-          <Animated.View
-            entering={FadeInDown.delay(100).springify()}
+          <View
             style={{
               flexDirection: "row",
               flexWrap: "wrap",
@@ -367,11 +364,10 @@ export default function AdminDashboard() {
                 </Text>
               </View>
             ))}
-          </Animated.View>
+          </View>
 
           {/* Recent Activity */}
-          <Animated.View
-            entering={FadeInDown.delay(200).springify()}
+          <View
             style={{
               backgroundColor: Colors.card,
               borderRadius: 24,
@@ -537,11 +533,10 @@ export default function AdminDashboard() {
                 })}
               </View>
             )}
-          </Animated.View>
+          </View>
 
           {/* Stats du jour */}
-          <Animated.View
-            entering={FadeInDown.delay(300).springify()}
+          <View
             style={{ marginBottom: 16 }}
           >
             <LinearGradient
@@ -669,11 +664,10 @@ export default function AdminDashboard() {
                 ))}
               </View>
             </LinearGradient>
-          </Animated.View>
+          </View>
 
           {/* Réservations par statut */}
-          <Animated.View
-            entering={FadeInDown.delay(400).springify()}
+          <View
             style={{
               backgroundColor: Colors.card,
               borderRadius: 24,
@@ -766,11 +760,10 @@ export default function AdminDashboard() {
                 </View>
               ))}
             </View>
-          </Animated.View>
+          </View>
 
           {/* Statut Système */}
-          <Animated.View
-            entering={FadeInDown.delay(500).springify()}
+          <View
             style={{
               backgroundColor: Colors.card,
               borderRadius: 24,
@@ -878,9 +871,9 @@ export default function AdminDashboard() {
                 </View>
               ))}
             </View>
-          </Animated.View>
+          </View>
         {/* Quick access to new admin screens */}
-        <Animated.View entering={FadeInDown.delay(400).springify()} style={{ marginTop: 24 }}>
+        <View style={{ marginTop: 24 }}>
           <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, paddingHorizontal: 4 }}>
             Accès rapide
           </Text>
@@ -914,7 +907,7 @@ export default function AdminDashboard() {
               </Pressable>
             ))}
           </View>
-        </Animated.View>
+        </View>
         </>
       )}
     </ScrollView>

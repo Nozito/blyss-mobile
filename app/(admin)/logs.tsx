@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 
@@ -99,13 +98,13 @@ export default function AdminLogsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+      <View className="mb-6">
         <Text className="text-2xl font-bold text-foreground">Logs Système</Text>
         <Text className="text-sm text-muted-foreground mt-1">{filtered.length} événement(s)</Text>
-      </Animated.View>
+      </View>
 
       {/* Stats row */}
-      <Animated.View entering={FadeInDown.duration(300).delay(60).springify()}>
+      <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
           <StatChip label="Total" value={stats.total} color={Colors.foreground} bg={Colors.muted} />
           <StatChip label="Info" value={stats.info} color="#3B82F6" bg="#EFF6FF" />
@@ -113,10 +112,10 @@ export default function AdminLogsScreen() {
           <StatChip label="Attention" value={stats.warning} color="#F59E0B" bg="#FFFBEB" />
           <StatChip label="Erreurs" value={stats.error} color="#EF4444" bg="#FEF2F2" />
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Filters */}
-      <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-4 gap-3">
+      <View className="mb-4 gap-3">
         <View className="flex-row items-center bg-card rounded-xl px-4 h-11 border border-border gap-3">
           <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
           <TextInput
@@ -168,22 +167,21 @@ export default function AdminLogsScreen() {
             </Pressable>
           ))}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Log items */}
       <View className="gap-3">
         {filtered.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="items-center py-12">
+          <View className="items-center py-12">
             <Ionicons name="pulse-outline" size={48} color={Colors.border} />
             <Text className="text-muted-foreground mt-3">Aucun log trouvé</Text>
-          </Animated.View>
+          </View>
         ) : (
           filtered.map((log, idx) => {
             const cfg = TYPE_CONFIG[log.type];
             return (
-              <Animated.View
+              <View
                 key={log.id}
-                entering={FadeInDown.duration(250).delay(140 + idx * 30).springify()}
                 className="bg-card rounded-2xl p-4 border border-border"
                 style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}
               >
@@ -224,7 +222,7 @@ export default function AdminLogsScreen() {
                     </View>
                   </View>
                 </View>
-              </Animated.View>
+              </View>
             );
           })
         )}

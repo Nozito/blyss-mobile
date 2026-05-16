@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 
@@ -132,7 +131,7 @@ export default function AdminNotificationsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+      <View className="mb-6">
         <View className="flex-row items-center gap-4">
           <View
             className="w-14 h-14 rounded-2xl items-center justify-center"
@@ -145,10 +144,10 @@ export default function AdminNotificationsScreen() {
             <Text className="text-sm text-muted-foreground">Envoi en temps réel</Text>
           </View>
         </View>
-      </Animated.View>
+      </View>
 
       {/* Stats */}
-      <Animated.View entering={FadeInDown.duration(300).delay(60).springify()} className="flex-row gap-3 mb-6">
+      <View className="flex-row gap-3 mb-6">
         <View className="flex-1 bg-card rounded-xl p-3 border border-border items-center">
           <Text className="text-xs text-muted-foreground">Utilisateurs</Text>
           <Text className="text-2xl font-black text-foreground">{users.length}</Text>
@@ -157,10 +156,10 @@ export default function AdminNotificationsScreen() {
           <Text className="text-xs" style={{ color: Colors.admin }}>Envoyées</Text>
           <Text className="text-2xl font-black" style={{ color: Colors.admin }}>{recentSent.length}</Text>
         </View>
-      </Animated.View>
+      </View>
 
       {/* Step 1: Select user */}
-      <Animated.View entering={FadeInDown.duration(300).delay(80).springify()} className="bg-card rounded-2xl p-5 border border-border mb-4">
+      <View className="bg-card rounded-2xl p-5 border border-border mb-4">
         <Text className="text-base font-bold text-foreground mb-4 flex-row">
           1. Destinataire
         </Text>
@@ -236,11 +235,11 @@ export default function AdminNotificationsScreen() {
             })
           )}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Step 2: Type */}
       {selectedUser && (
-        <Animated.View entering={FadeInDown.duration(300).springify()} className="bg-card rounded-2xl p-5 border border-border mb-4">
+        <View className="bg-card rounded-2xl p-5 border border-border mb-4">
           <Text className="text-base font-bold text-foreground mb-4">2. Type</Text>
           <View className="flex-row flex-wrap gap-2">
             {notifTypes.map((t) => (
@@ -261,12 +260,12 @@ export default function AdminNotificationsScreen() {
               </Pressable>
             ))}
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {/* Step 3: Content */}
       {selectedUser && (
-        <Animated.View entering={FadeInDown.duration(300).delay(60).springify()} className="bg-card rounded-2xl p-5 border border-border mb-4">
+        <View className="bg-card rounded-2xl p-5 border border-border mb-4">
           <Text className="text-base font-bold text-foreground mb-4">3. Contenu</Text>
 
           <View className="mb-3">
@@ -297,11 +296,11 @@ export default function AdminNotificationsScreen() {
             />
             <Text className="text-xs text-muted-foreground mt-1 text-right">{message.length}/500</Text>
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {/* Send button */}
-      <Animated.View entering={FadeInDown.duration(300).delay(120).springify()} className="mb-6">
+      <View className="mb-6">
         <Pressable
           onPress={handleSend}
           disabled={isLoading || !selectedUserId || !title || !message}
@@ -320,11 +319,11 @@ export default function AdminNotificationsScreen() {
             </>
           )}
         </Pressable>
-      </Animated.View>
+      </View>
 
       {/* Recent sent */}
       {recentSent.length > 0 && (
-        <Animated.View entering={FadeInDown.duration(300).springify()} className="bg-card rounded-2xl p-5 border border-border">
+        <View className="bg-card rounded-2xl p-5 border border-border">
           <Text className="text-sm font-bold text-foreground mb-3">Récemment envoyées</Text>
           <View className="gap-2">
             {recentSent.map((n, idx) => (
@@ -334,7 +333,7 @@ export default function AdminNotificationsScreen() {
               </View>
             ))}
           </View>
-        </Animated.View>
+        </View>
       )}
     </ScrollView>
   );
