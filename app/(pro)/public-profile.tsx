@@ -13,7 +13,6 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi } from "@/lib/api";
@@ -118,7 +117,7 @@ export default function ProPublicProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+        <View className="mb-6">
           <View className="flex-row items-center mb-2">
             <Pressable
               onPress={() => router.back()}
@@ -138,12 +137,11 @@ export default function ProPublicProfileScreen() {
           <Text className="text-sm text-muted-foreground ml-1">
             Informations visibles par tes clientes
           </Text>
-        </Animated.View>
+        </View>
 
         {/* Unsaved changes banner */}
         {hasChanges && (
-          <Animated.View
-            entering={FadeInDown.duration(200).springify()}
+          <View
             className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border"
             style={{ borderColor: `${Colors.primary}40`, backgroundColor: `${Colors.primary}08` }}
           >
@@ -152,12 +150,11 @@ export default function ProPublicProfileScreen() {
               <Text className="text-sm font-semibold text-foreground">Modifications non enregistrées</Text>
               <Text className="text-xs text-muted-foreground mt-0.5">N'oublie pas de sauvegarder tes changements</Text>
             </View>
-          </Animated.View>
+          </View>
         )}
 
         {/* Info card */}
-        <Animated.View
-          entering={FadeInDown.duration(300).delay(60).springify()}
+        <View
           className="bg-card rounded-2xl p-4 mb-6 flex-row items-start gap-4 border border-border"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
@@ -170,10 +167,10 @@ export default function ProPublicProfileScreen() {
               Un profil complet et détaillé augmente tes chances d'être réservée de 3×.
             </Text>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Section: Infos principales */}
-        <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-6">
+        <View className="mb-6">
           <SectionTitle title="Informations principales" />
           <View className="bg-card rounded-2xl p-5 border border-border gap-4">
             <FieldGroup label="Nom de l'activité *">
@@ -207,10 +204,10 @@ export default function ProPublicProfileScreen() {
               </View>
             </FieldGroup>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Section: Bio */}
-        <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="mb-6">
+        <View className="mb-6">
           <SectionTitle title="À propos de toi" />
           <View className="bg-card rounded-2xl p-5 border border-border">
             <FieldGroup label="Biographie">
@@ -234,10 +231,10 @@ export default function ProPublicProfileScreen() {
               </View>
             </FieldGroup>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Section: Réseaux sociaux */}
-        <Animated.View entering={FadeInDown.duration(300).delay(180).springify()} className="mb-6">
+        <View className="mb-6">
           <SectionTitle title="Réseaux sociaux" />
           <View className="bg-card rounded-2xl p-5 border border-border">
             <FieldGroup label="Instagram (optionnel)">
@@ -258,10 +255,10 @@ export default function ProPublicProfileScreen() {
               </Text>
             </FieldGroup>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Section: Visibilité */}
-        <Animated.View entering={FadeInDown.duration(300).delay(220).springify()} className="mb-6">
+        <View className="mb-6">
           <SectionTitle title="Visibilité du profil" />
           <View className="bg-card rounded-2xl p-5 border border-border">
             <View className="flex-row items-center justify-between gap-4">
@@ -295,12 +292,11 @@ export default function ProPublicProfileScreen() {
               />
             </View>
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       {/* Sticky save button */}
-      <Animated.View
-        entering={FadeInDown.duration(300).delay(280).springify()}
+      <View
         className="absolute bottom-0 left-0 right-0 px-5 pt-4"
         style={{ paddingBottom: insets.bottom + 12, backgroundColor: "rgba(255,234,241,0.95)" }}
       >
@@ -327,7 +323,7 @@ export default function ProPublicProfileScreen() {
             </>
           )}
         </Pressable>
-      </Animated.View>
+      </View>
 
       {/* Preview modal */}
       <Modal visible={showPreview} animationType="slide" presentationStyle="pageSheet">

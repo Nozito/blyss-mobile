@@ -31,8 +31,8 @@ type Client = {
 };
 
 const TABS = [
-  { key: "clients", label: "Clientes" },
-  { key: "blocked", label: "Bloquées" },
+  { key: "clients", label: "Clientes", icon: "people-outline" as const },
+  { key: "blocked", label: "Bloquées", icon: "shield-outline" as const },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -81,9 +81,18 @@ export default function ProClientsScreen() {
 
   const filteredClients = clients.filter((c) =>
     search
-      ? `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase())
+      ? `${c.first_name} ${c.last_name} ${c.email} ${c.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase())
       : true
   );
+
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0, 0, 0, 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const stats = {
+    total: clients.length,
+    thisWeek: clients.filter((c) => new Date((c as any).created_at) >= weekStart).length,
+    thisMonth: clients.filter((c) => new Date((c as any).created_at) >= monthStart).length,
+  };
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
@@ -94,19 +103,18 @@ export default function ProClientsScreen() {
 
         {/* Tabs */}
         <View className="flex-row bg-card rounded-2xl p-1 gap-1 mb-3">
-          {TABS.map(({ key, label }) => (
+          {TABS.map(({ key, label, icon }) => (
             <Pressable
               key={key}
               onPress={() => setTab(key)}
-              className={[
-                "flex-1 py-2 rounded-xl items-center",
-                tab === key ? "bg-primary" : "",
-              ].join(" ")}
-              style={tab === key ? { backgroundColor: Colors.primary } : {}}
+              style={{
+                flex: 1, paddingVertical: 8, borderRadius: 12,
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                backgroundColor: tab === key ? Colors.primary : "transparent",
+              }}
             >
-              <Text
-                className={`text-sm font-semibold ${tab === key ? "text-white" : "text-muted-foreground"}`}
-              >
+              <Ionicons name={icon} size={15} color={tab === key ? "#fff" : Colors.mutedForeground} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? "#fff" : Colors.mutedForeground }}>
                 {label}
               </Text>
             </Pressable>
@@ -119,7 +127,7 @@ export default function ProClientsScreen() {
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Rechercher une cliente…"
+              placeholder="Rechercher par nom ou téléphone..."
               placeholderTextColor={Colors.mutedForeground}
               className="flex-1 text-sm text-foreground"
               autoCorrect={false}
@@ -137,10 +145,32 @@ export default function ProClientsScreen() {
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
             showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View>
+                {/* Stats */}
+                <View style={{ flexDirection: "row", backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#F0F0F0", marginBottom: 20 }}>
+                  {[
+                    { label: "TOTAL",   value: stats.total },
+                    { label: "SEMAINE", value: stats.thisWeek },
+                    { label: "MOIS",    value: stats.thisMonth },
+                  ].map(({ label, value }, i) => (
+                    <View key={label} style={{ flex: 1, alignItems: "center", paddingVertical: 16, borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: "#F0F0F0" }}>
+                      <Text style={{ fontSize: 26, fontWeight: "800", color: "#111" }}>{value ?? 0}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#9CA3AF", marginTop: 2, letterSpacing: 0.5 }}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+                {/* Titre section */}
+                <Text style={{ fontSize: 16, fontWeight: "700", color: "#111", marginBottom: 12 }}>
+                  Toutes les clientes
+                </Text>
+              </View>
+            }
             ListEmptyComponent={
-              <View className="items-center py-12">
-                <Ionicons name="people-outline" size={48} color={Colors.border} />
-                <Text className="text-foreground font-semibold text-lg mt-4">Aucune cliente</Text>
+              <View style={{ backgroundColor: "#fff", borderRadius: 16, padding: 40, alignItems: "center", gap: 8 }}>
+                <Ionicons name="people-outline" size={40} color="#D1D5DB" />
+                <Text style={{ fontSize: 16, fontWeight: "700", color: "#111" }}>Aucune cliente</Text>
+                <Text style={{ fontSize: 13, color: "#9CA3AF" }}>Tes clientes apparaîtront ici</Text>
               </View>
             }
             renderItem={({ item }) => {

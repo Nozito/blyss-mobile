@@ -12,7 +12,6 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
@@ -84,8 +83,7 @@ export default function ProRGPDScreen() {
   return (
     <View className="flex-1 bg-background">
       {/* Sticky header */}
-      <Animated.View
-        entering={FadeInDown.duration(300).springify()}
+      <View
         className="bg-background border-b border-border"
         style={{ paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20 }}
       >
@@ -102,7 +100,7 @@ export default function ProRGPDScreen() {
             <Text className="text-xs text-muted-foreground">Confidentialité & compte</Text>
           </View>
         </View>
-      </Animated.View>
+      </View>
 
       <ScrollView
         className="flex-1"
@@ -110,8 +108,7 @@ export default function ProRGPDScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Intro */}
-        <Animated.View
-          entering={FadeInDown.duration(300).delay(60).springify()}
+        <View
           className="flex-row items-center gap-3 p-4 rounded-2xl mb-6"
           style={{ backgroundColor: `${Colors.primary}0D`, borderWidth: 1, borderColor: `${Colors.primary}26` }}
         >
@@ -119,10 +116,10 @@ export default function ProRGPDScreen() {
           <Text className="text-xs text-muted-foreground leading-relaxed flex-1">
             Chez Blyss, tes données t'appartiennent. Tu peux les consulter, les modifier ou les supprimer à tout moment.
           </Text>
-        </Animated.View>
+        </View>
 
         {/* Section: Mes données */}
-        <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-6">
+        <View className="mb-6">
           <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
             Mes données
           </Text>
@@ -146,10 +143,10 @@ export default function ProRGPDScreen() {
               onPress={() => router.push("/(pro)/notifications")}
             />
           </View>
-        </Animated.View>
+        </View>
 
         {/* Section: Aide */}
-        <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="mb-6">
+        <View className="mb-6">
           <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
             Une question ?
           </Text>
@@ -159,10 +156,10 @@ export default function ProRGPDScreen() {
             description="privacy@blyssapp.fr — on répond sous 48h"
             onPress={() => Linking.openURL("mailto:privacy@blyssapp.fr")}
           />
-        </Animated.View>
+        </View>
 
         {/* Section: Supprimer */}
-        <Animated.View entering={FadeInDown.duration(300).delay(180).springify()} className="mb-6">
+        <View className="mb-6">
           <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
             Supprimer mon compte
           </Text>
@@ -173,7 +170,7 @@ export default function ProRGPDScreen() {
             onPress={() => setShowDeleteModal(true)}
             variant="destructive"
           />
-        </Animated.View>
+        </View>
 
         <Text className="text-center text-xs text-muted-foreground/60 leading-relaxed">
           Politique de confidentialité Blyss

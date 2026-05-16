@@ -12,7 +12,6 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi } from "@/lib/api";
@@ -70,7 +69,7 @@ export default function ProPaymentsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+      <View className="mb-6">
         <View className="flex-row items-center mb-2">
           <Pressable
             onPress={() => router.back()}
@@ -83,10 +82,10 @@ export default function ProPaymentsScreen() {
         <Text className="text-sm text-muted-foreground ml-1">
           Configure ton mode de versement et les paiements en ligne
         </Text>
-      </Animated.View>
+      </View>
 
       {/* Stripe status */}
-      <Animated.View entering={FadeInDown.duration(300).delay(60).springify()} className="mb-4">
+      <View className="mb-4">
         <View
           className="bg-card rounded-2xl p-4 flex-row items-center gap-3 border border-border"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
@@ -102,10 +101,10 @@ export default function ProPaymentsScreen() {
             <Text className="text-xs font-bold" style={{ color: "#15803D" }}>Sécurisé</Text>
           </View>
         </View>
-      </Animated.View>
+      </View>
 
       {/* IBAN section */}
-      <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-4">
+      <View className="mb-4">
         <View
           className="bg-card rounded-2xl p-5 border border-border"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
@@ -133,10 +132,10 @@ export default function ProPaymentsScreen() {
             Tes virements seront effectués automatiquement sous 2 jours ouvrés après chaque paiement reçu.
           </Text>
         </View>
-      </Animated.View>
+      </View>
 
       {/* Online payments toggle */}
-      <Animated.View entering={FadeInDown.duration(300).delay(140).springify()} className="mb-6">
+      <View className="mb-6">
         <View
           className="bg-card rounded-2xl p-5 border border-border"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
@@ -163,8 +162,7 @@ export default function ProPaymentsScreen() {
           </View>
 
           {acceptOnline && (
-            <Animated.View
-              entering={FadeInDown.duration(200).springify()}
+            <View
               className="mt-4 p-3 rounded-xl flex-row items-center gap-2"
               style={{ backgroundColor: `${Colors.primary}0D` }}
             >
@@ -172,13 +170,13 @@ export default function ProPaymentsScreen() {
               <Text className="text-xs text-muted-foreground flex-1">
                 Les paiements en ligne sont activés. Les frais Stripe (1,5% + 0,25€) sont déduits automatiquement.
               </Text>
-            </Animated.View>
+            </View>
           )}
         </View>
-      </Animated.View>
+      </View>
 
       {/* Info cards */}
-      <Animated.View entering={FadeInDown.duration(300).delay(180).springify()} className="flex-row gap-3 mb-8">
+      <View className="flex-row gap-3 mb-8">
         <View className="flex-1 bg-card rounded-xl p-3 border border-border items-center gap-1">
           <Ionicons name="shield-checkmark-outline" size={18} color={Colors.primary} />
           <Text className="text-xs font-semibold text-foreground text-center">Stripe</Text>
@@ -194,10 +192,10 @@ export default function ProPaymentsScreen() {
           <Text className="text-xs font-semibold text-foreground text-center">0 impayé</Text>
           <Text className="text-xs text-muted-foreground text-center">Garanti</Text>
         </View>
-      </Animated.View>
+      </View>
 
       {/* Save button */}
-      <Animated.View entering={FadeInDown.duration(300).delay(220).springify()}>
+      <View>
         <Pressable
           onPress={handleSave}
           disabled={isSaving}
@@ -210,7 +208,7 @@ export default function ProPaymentsScreen() {
             <Text className="text-white font-bold text-base">Enregistrer</Text>
           )}
         </Pressable>
-      </Animated.View>
+      </View>
     </ScrollView>
   );
 }

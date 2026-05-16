@@ -1,138 +1,289 @@
-import React from "react";
-import { View, Text, FlatList, Pressable, Switch } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Switch,
+  Pressable,
+  Linking,
+  ActivityIndicator,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { proApi, notificationsApi } from "@/lib/api";
-import { Card } from "@/components/ui/Card";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useRouter } from "expo-router";
+import { proApi, ProNotificationSettings } from "@/lib/api";
 import { Colors } from "@/constants/colors";
-import type { ProNotificationSettings } from "@/lib/api";
 
-const SETTING_LABELS: Record<keyof ProNotificationSettings, string> = {
-  new_reservation: "Nouvelle réservation",
-  cancel_change: "Annulation ou modification",
-  daily_reminder: "Rappel journalier",
-  client_message: "Message cliente",
-  payment_alert: "Alerte paiement",
-  activity_summary: "Résumé d'activité",
+const DEFAULT_PREFS: ProNotificationSettings = {
+  new_reservation: true,
+  cancel_change: true,
+  daily_reminder: true,
+  client_message: true,
+  payment_alert: true,
+  activity_summary: false,
 };
+
+type PrefKey = keyof ProNotificationSettings;
+
+interface NotifItem {
+  key: PrefKey;
+  label: string;
+  subtitle: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  iconBg: string;
+  iconColor: string;
+}
+
+const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
+  {
+    title: "Rendez-vous & Clientes",
+    items: [
+      {
+        key: "new_reservation",
+        label: "Nouvelles réservations",
+        subtitle: "Dès qu'une cliente réserve un créneau",
+        icon: "notifications-outline",
+        iconBg: "#FE5D9D20",
+        iconColor: "#FE5D9D",
+      },
+      {
+        key: "cancel_change",
+        label: "Changements & annulations",
+        subtitle: "Modification d'horaire ou annulation par la cliente",
+        icon: "calendar-outline",
+        iconBg: "#F59E0B20",
+        iconColor: "#F59E0B",
+      },
+      {
+        key: "daily_reminder",
+        label: "Rappels du jour",
+        subtitle: "Récap' de tes rendez-vous du jour le matin",
+        icon: "star-outline",
+        iconBg: "#06B6D420",
+        iconColor: "#06B6D4",
+      },
+      {
+        key: "client_message",
+        label: "Messages clientes",
+        subtitle: "Quand une cliente t'envoie un message",
+        icon: "chatbubble-outline",
+        iconBg: "#10B98120",
+        iconColor: "#10B981",
+      },
+    ],
+  },
+  {
+    title: "Paiement & Activité",
+    items: [
+      {
+        key: "payment_alert",
+        label: "Acomptes & garanties",
+        subtitle: "Quand un paiement ou acompte est encaissé",
+        icon: "card-outline",
+        iconBg: "#8B5CF620",
+        iconColor: "#8B5CF6",
+      },
+      {
+        key: "activity_summary",
+        label: "Résumé d'activité",
+        subtitle: "Aperçu de ton CA et rendez-vous en fin de journée",
+        icon: "trending-up-outline",
+        iconBg: "#FE5D9D20",
+        iconColor: "#FE5D9D",
+      },
+    ],
+  },
+];
 
 export default function ProNotificationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const qc = useQueryClient();
+  const [prefs, setPrefs] = useState<ProNotificationSettings>(DEFAULT_PREFS);
+  const [loading, setLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const { data: notifData, isLoading: loadingNotifs } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: () => notificationsApi.getAll(),
-  });
+  useEffect(() => {
+    proApi.getNotificationSettings().then((res) => {
+      if (res.success && res.data) setPrefs(res.data);
+    }).finally(() => setLoading(false));
+  }, []);
 
-  const { data: settingsData, isLoading: loadingSettings } = useQuery({
-    queryKey: ["pro-notification-settings"],
-    queryFn: () => proApi.getNotificationSettings(),
-  });
+  const updatePref = async (key: PrefKey, value: boolean) => {
+    const prev = prefs;
+    setPrefs({ ...prefs, [key]: value });
+    setSaveSuccess(false);
+    const res = await proApi.updateNotificationSettings({ [key]: value });
+    if (res.success) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } else {
+      setPrefs(prev);
+    }
+  };
 
-  const updateSettingsMutation = useMutation({
-    mutationFn: (s: Partial<ProNotificationSettings>) => proApi.updateNotificationSettings(s),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pro-notification-settings"] }),
-  });
-
-  const markReadMutation = useMutation({
-    mutationFn: (id: string) => notificationsApi.markAsRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
-  });
-
-  const notifications = (notifData?.data as Array<{ id: number; message: string; is_read: boolean; created_at: string }> | undefined) ?? [];
-  const settings = settingsData?.data;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.background }}>
+        <ActivityIndicator color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center gap-3 px-5 pt-4 pb-4">
-        <Pressable onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color={Colors.foreground} />
+    <ScrollView
+      style={{ flex: 1, backgroundColor: Colors.background }}
+      contentContainerStyle={{
+        paddingTop: insets.top + 16,
+        paddingHorizontal: 20,
+        paddingBottom: 100,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 6 }}>
+        <Pressable
+          onPress={() => router.back()}
+          style={{
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: Colors.card,
+            borderWidth: 1, borderColor: Colors.border,
+            alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
         </Pressable>
-        <Text className="text-2xl font-bold text-foreground tracking-tight">
-          Notifications
+        <View>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
+            Notifications
+          </Text>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+            Préférences de réception
+          </Text>
+        </View>
+      </View>
+
+      {/* Bandeau info */}
+      <View style={{
+        flexDirection: "row", alignItems: "flex-start", gap: 12,
+        backgroundColor: "#FE5D9D15", borderRadius: 12,
+        padding: 14, marginBottom: 24, marginTop: 16,
+      }}>
+        <Ionicons name="notifications-outline" size={18} color="#FE5D9D" />
+        <Text style={{ flex: 1, fontSize: 13, color: "#FE5D9D", lineHeight: 18 }}>
+          Choisis les alertes que tu souhaites recevoir.{" "}
+          Tu peux modifier tes préférences à tout moment.
         </Text>
       </View>
 
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => String(item.id)}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
-        ListHeaderComponent={
-          settings ? (
-            <View className="px-5 mb-4">
-              <Text className="text-base font-semibold text-foreground mb-3">
-                Préférences
-              </Text>
-              <Card>
-                {(Object.keys(settings) as Array<keyof ProNotificationSettings>).map((key, idx, arr) => (
-                  <View
-                    key={key}
-                    className={[
-                      "flex-row items-center justify-between py-3",
-                      idx < arr.length - 1 ? "border-b border-border" : "",
-                    ].join(" ")}
-                  >
-                    <Text className="text-sm text-foreground flex-1 mr-3">
-                      {SETTING_LABELS[key]}
-                    </Text>
-                    <Switch
-                      value={Boolean(settings[key])}
-                      onValueChange={(v) => updateSettingsMutation.mutate({ [key]: v })}
-                      trackColor={{ true: Colors.primary, false: Colors.border }}
-                      thumbColor="white"
-                    />
-                  </View>
-                ))}
-              </Card>
-              <Text className="text-base font-semibold text-foreground mt-5 mb-3">
-                Historique
-              </Text>
-            </View>
-          ) : null
-        }
-        ListEmptyComponent={
-          loadingNotifs ? (
-            <LoadingSpinner />
-          ) : (
-            <View className="items-center py-8">
-              <Ionicons name="notifications-outline" size={48} color={Colors.border} />
-              <Text className="text-foreground font-semibold text-lg mt-4">
-                Aucune notification
-              </Text>
-            </View>
-          )
-        }
-        renderItem={({ item }) => (
+      {/* Sections toggles */}
+      {SECTIONS.map((section) => (
+        <View key={section.title} style={{ marginBottom: 24 }}>
+          <Text style={{
+            fontSize: 11, fontWeight: "700",
+            color: Colors.mutedForeground,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            marginBottom: 8,
+          }}>
+            {section.title}
+          </Text>
+          <View style={{
+            backgroundColor: "#fff",
+            borderRadius: 16,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: Colors.border,
+          }}>
+            {section.items.map((item, idx) => (
+              <View
+                key={item.key}
+                style={{
+                  flexDirection: "row", alignItems: "center",
+                  padding: 16, gap: 14,
+                  borderBottomWidth: idx < section.items.length - 1 ? 1 : 0,
+                  borderBottomColor: "#F3F4F6",
+                }}
+              >
+                <View style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  backgroundColor: item.iconBg,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Ionicons name={item.icon} size={20} color={item.iconColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+                    {item.label}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                    {item.subtitle}
+                  </Text>
+                </View>
+                <Switch
+                  value={prefs[item.key]}
+                  onValueChange={(val) => updatePref(item.key, val)}
+                  trackColor={{ false: "#E5E7EB", true: "#FE5D9D" }}
+                  thumbColor="#fff"
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+
+      {/* Section Système */}
+      <View style={{ marginBottom: 24 }}>
+        <Text style={{
+          fontSize: 11, fontWeight: "700",
+          color: Colors.mutedForeground,
+          textTransform: "uppercase",
+          letterSpacing: 1,
+          marginBottom: 8,
+        }}>
+          Système
+        </Text>
+        <View style={{
+          backgroundColor: "#fff",
+          borderRadius: 16,
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: Colors.border,
+        }}>
           <Pressable
-            onPress={() => !item.is_read && markReadMutation.mutate(String(item.id))}
-            className={[
-              "flex-row items-start gap-3 px-5 py-4 border-b border-border",
-              !item.is_read ? "bg-primary/5" : "",
-            ].join(" ")}
+            onPress={() => Linking.openSettings()}
+            style={{
+              flexDirection: "row", alignItems: "center",
+              padding: 16, gap: 14,
+            }}
           >
-            {!item.is_read && (
-              <View className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
-            )}
-            <View className={!item.is_read ? "flex-1" : "flex-1 pl-4"}>
-              <Text className="text-sm text-foreground leading-5">{item.message}</Text>
-              <Text className="text-xs text-muted-foreground mt-1">
-                {new Date(item.created_at).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+            <View style={{
+              width: 44, height: 44, borderRadius: 12,
+              backgroundColor: "#F3F4F6",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name="settings-outline" size={20} color="#6B7280" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+                Réglages système
+              </Text>
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                Activer les notifications pour Blyss
               </Text>
             </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
           </Pressable>
-        )}
-      />
-    </View>
+        </View>
+      </View>
+
+      {/* Footer */}
+      {saveSuccess && (
+        <View style={{ alignItems: "center", paddingVertical: 8 }}>
+          <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
+            Préférences à jour ✓
+          </Text>
+        </View>
+      )}
+    </ScrollView>
   );
 }

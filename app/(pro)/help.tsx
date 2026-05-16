@@ -9,7 +9,6 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 
 type Category = "agenda" | "clientes" | "paiement" | "compte";
@@ -60,7 +59,7 @@ export default function ProHelpScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+      <View className="mb-6">
         <View className="flex-row items-center mb-2">
           <Pressable
             onPress={() => router.back()}
@@ -73,11 +72,10 @@ export default function ProHelpScreen() {
         <Text className="text-sm text-muted-foreground ml-1">
           Tout ce qu'il faut savoir pour bien gérer ton activité
         </Text>
-      </Animated.View>
+      </View>
 
       {/* Intro card */}
-      <Animated.View
-        entering={FadeInDown.duration(300).delay(60).springify()}
+      <View
         className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border border-border"
         style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
       >
@@ -90,10 +88,10 @@ export default function ProHelpScreen() {
             Consulte les FAQs ou contacte directement notre équipe.
           </Text>
         </View>
-      </Animated.View>
+      </View>
 
       {/* Category pills */}
-      <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-4">
+      <View className="mb-4">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {CATEGORIES.map((cat) => (
             <Pressable
@@ -111,7 +109,7 @@ export default function ProHelpScreen() {
             </Pressable>
           ))}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* FAQ items */}
       <View className="gap-3 mb-4">
@@ -119,9 +117,8 @@ export default function ProHelpScreen() {
           const globalIdx = faqs.indexOf(faq);
           const isOpen = openIndex === globalIdx;
           return (
-            <Animated.View
+            <View
               key={globalIdx}
-              entering={FadeInDown.duration(250).delay(idx * 50).springify()}
             >
               <Pressable
                 onPress={() => setOpenIndex(isOpen ? null : globalIdx)}
@@ -142,13 +139,13 @@ export default function ProHelpScreen() {
                   </Text>
                 )}
               </Pressable>
-            </Animated.View>
+            </View>
           );
         })}
       </View>
 
       {/* Contact */}
-      <Animated.View entering={FadeInDown.duration(300).delay(200).springify()} className="gap-3">
+      <View className="gap-3">
         <Pressable
           onPress={() => Linking.openURL("mailto:pro@blyssapp.fr")}
           className="rounded-2xl p-4 flex-row items-center justify-between"
@@ -163,7 +160,7 @@ export default function ProHelpScreen() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={Colors.white} />
         </Pressable>
-      </Animated.View>
+      </View>
     </ScrollView>
   );
 }

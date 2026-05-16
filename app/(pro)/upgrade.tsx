@@ -8,7 +8,6 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 
 type PlanId = "start" | "serenite" | "signature";
@@ -55,8 +54,7 @@ export default function ProUpgradeScreen() {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <Animated.View
-        entering={FadeInDown.duration(300).springify()}
+      <View
         style={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 12 }}
         className="bg-background border-b border-border"
       >
@@ -70,7 +68,7 @@ export default function ProUpgradeScreen() {
           </Pressable>
           <Text className="text-lg font-bold text-foreground">Upgrade requis</Text>
         </View>
-      </Animated.View>
+      </View>
 
       <ScrollView
         className="flex-1"
@@ -78,8 +76,7 @@ export default function ProUpgradeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Gradient hero block */}
-        <Animated.View
-          entering={FadeInDown.duration(350).springify()}
+        <View
           className="rounded-3xl overflow-hidden mb-6"
         >
           <View
@@ -101,11 +98,10 @@ export default function ProUpgradeScreen() {
               Ton abonnement actuel ne comprend pas cet accès.
             </Text>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Target plan card */}
-        <Animated.View
-          entering={FadeInDown.duration(350).delay(80).springify()}
+        <View
           className="bg-card rounded-2xl p-5 border border-border mb-4"
           style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
@@ -124,9 +120,8 @@ export default function ProUpgradeScreen() {
 
           <View className="gap-3">
             {features.map((feature, idx) => (
-              <Animated.View
+              <View
                 key={idx}
-                entering={FadeInDown.duration(250).delay(100 + idx * 50).springify()}
                 className="flex-row items-center gap-3"
               >
                 <View
@@ -136,13 +131,13 @@ export default function ProUpgradeScreen() {
                   <View className="w-2 h-2 rounded-full" style={{ backgroundColor: gradStart }} />
                 </View>
                 <Text className="text-sm text-foreground flex-1">{feature}</Text>
-              </Animated.View>
+              </View>
             ))}
           </View>
-        </Animated.View>
+        </View>
 
         {/* CTA buttons */}
-        <Animated.View entering={FadeInDown.duration(300).delay(200).springify()} className="gap-3">
+        <View className="gap-3">
           <Pressable
             onPress={() => router.push("/(pro)/subscription")}
             className="h-14 rounded-2xl items-center justify-center"
@@ -162,7 +157,7 @@ export default function ProUpgradeScreen() {
               Retour au tableau de bord
             </Text>
           </Pressable>
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

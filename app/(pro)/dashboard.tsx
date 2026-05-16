@@ -12,7 +12,6 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
@@ -113,7 +112,7 @@ export default function ProDashboard() {
       showsVerticalScrollIndicator={false}
     >
       {/* ── HEADER ── */}
-      <Animated.View entering={FadeInDown.delay(0).springify()}>
+      <View>
         <Text
           style={{
             fontSize: 24,
@@ -124,127 +123,84 @@ export default function ProDashboard() {
         >
           Bonjour {user?.first_name ?? ""} 👋
         </Text>
-      </Animated.View>
+      </View>
 
       {/* ── WEEKLY PERFORMANCE HERO ── */}
-      <Animated.View entering={FadeInDown.delay(50).springify()}>
+      <View>
         <LinearGradient
-          colors={["#FF5EA0", "rgba(255,94,160,0.95)", "rgba(255,94,160,0.82)"]}
+          colors={["#FF4D96", "#FF5EA0", "#FF82B8"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
-            borderRadius: 20,
-            padding: 20,
-            shadowColor: Colors.primary,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-            elevation: 6,
+            borderRadius: 24,
+            padding: 22,
+            shadowColor: "#FF4D96",
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.35,
+            shadowRadius: 20,
+            elevation: 8,
             overflow: "hidden",
           }}
         >
-          {/* Glow blob */}
-          <View
-            style={{
-              position: "absolute",
-              top: -20,
-              right: -20,
-              width: 100,
-              height: 100,
-              borderRadius: 50,
-              backgroundColor: "rgba(255,255,255,0.12)",
-            }}
-          />
+          {/* Décors : cercles concentriques en coin */}
+          <View style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.10)" }} />
+          <View style={{ position: "absolute", top: -16, right: -16, width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(255,255,255,0.08)" }} />
+          <View style={{ position: "absolute", bottom: -30, left: -30, width: 110, height: 110, borderRadius: 55, backgroundColor: "rgba(255,255,255,0.06)" }} />
 
-          {/* Dot pattern overlay — mirrors web radial-gradient dots */}
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.08 }}>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <View
-                key={i}
-                style={{
-                  position: "absolute",
-                  width: 4,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: "#fff",
-                  left: (i % 4) * 60 + 10,
-                  top: Math.floor(i / 4) * 30 + 10,
-                }}
-              />
-            ))}
-          </View>
-
-          <View style={{ gap: 16 }}>
+          <View style={{ gap: 18 }}>
             {/* Label */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="pulse-outline" size={14} color="rgba(255,255,255,0.7)" />
-              <Text
-                style={{
-                  color: "rgba(255,255,255,0.8)",
-                  fontSize: 10,
-                  fontWeight: "800",
-                  letterSpacing: 1.5,
-                  textTransform: "uppercase",
-                }}
-              >
-                Cette semaine
-              </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
+                <Ionicons name="pulse-outline" size={12} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                  Cette semaine
+                </Text>
+              </View>
+              {/* Trend badge */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: weeklyStats.isUp ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}>
+                <Ionicons name={weeklyStats.isUp ? "trending-up" : "trending-down"} size={14} color="#fff" />
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13, letterSpacing: -0.2 }}>
+                  {weeklyStats.isUp ? "+" : "-"}{weeklyStats.change}%
+                </Text>
+              </View>
             </View>
 
-            {/* Stats row */}
-            <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-                <Text style={{ fontSize: 48, fontWeight: "900", color: "#fff", letterSpacing: -1 }}>
+            {/* Nombre principal */}
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}>
+                <Text style={{ fontSize: 60, fontWeight: "900", color: "#fff", letterSpacing: -2, lineHeight: 62 }}>
                   {weeklyStats.services}
                 </Text>
-                <Text style={{ fontSize: 16, fontWeight: "600", color: "rgba(255,255,255,0.9)" }}>
+                <Text style={{ fontSize: 18, fontWeight: "700", color: "rgba(255,255,255,0.85)", marginBottom: 8 }}>
                   {weeklyStats.services > 1 ? "prestations" : "prestation"}
                 </Text>
               </View>
+              {totalRevenue > 0 && (
+                <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginTop: 2 }}>
+                  {totalRevenue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} € générés
+                </Text>
+              )}
+            </View>
 
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 12,
-                  backgroundColor: "rgba(255,255,255,0.2)",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.3)",
-                }}
-              >
-                <Ionicons
-                  name={weeklyStats.isUp ? "trending-up-outline" : "trending-down-outline"}
-                  size={18}
-                  color="#fff"
-                />
-                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>
-                  {weeklyStats.isUp ? "+" : "-"}
-                  {weeklyStats.change}%
+            {/* Divider + footer */}
+            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.18)" }} />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "500" }}>
+                vs semaine dernière
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: weeklyStats.isUp ? "#A7F3D0" : "#FCA5A5" }} />
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: "700" }}>
+                  {weeklyStats.isUp ? "En progression" : "En baisse"}
                 </Text>
               </View>
             </View>
-
-            {/* Divider */}
-            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.2)" }} />
-
-            {/* Footer */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "500" }}>
-                vs semaine dernière
-              </Text>
-              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "600" }}>
-                {weeklyStats.isUp ? "En progression" : "En baisse"}
-              </Text>
-            </View>
           </View>
         </LinearGradient>
-      </Animated.View>
+      </View>
 
       {/* ── QUICK ACTIONS ── */}
-      <Animated.View entering={FadeInDown.delay(100).springify()}>
+      <View>
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
             { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: Colors.primary, iconBg: "#FFE8F3" },
@@ -288,82 +244,68 @@ export default function ProDashboard() {
             </Pressable>
           ))}
         </View>
-      </Animated.View>
+      </View>
 
       {/* ── TODAY FORECAST ── */}
-      <Animated.View entering={FadeInDown.delay(150).springify()}>
-        <View
+      <View>
+        <LinearGradient
+          colors={["#FFF0F8", "#FFDFF0", "#FFD6EB"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={{
-            borderRadius: 12,
-            padding: 16,
-            backgroundColor: "#FEF0F7",
+            borderRadius: 20,
+            padding: 18,
             borderWidth: 1,
-            borderColor: "#FFD6E8",
+            borderColor: "#FFCCE5",
             overflow: "hidden",
+            shadowColor: Colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            elevation: 3,
           }}
         >
-          <View
-            style={{
-              position: "absolute",
-              top: -20,
-              right: -20,
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: `${Colors.primary}1A`,
-            }}
-          />
+          {/* Décor coin */}
+          <View style={{ position: "absolute", top: -24, right: -24, width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(254,93,157,0.10)" }} />
+          <View style={{ position: "absolute", bottom: -12, left: 40, width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(254,93,157,0.06)" }} />
+
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: Colors.primary,
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 3,
-                }}
-              >
-                <Ionicons name="locate-outline" size={20} color="#fff" />
+            {/* Left */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }}>
+                <Ionicons name="flash" size={22} color="#fff" />
               </View>
-              <View>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "900",
-                    color: Colors.primary,
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                    marginBottom: 2,
-                  }}
-                >
-                  Prévision du jour
+              <View style={{ gap: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: "900", color: Colors.primary, letterSpacing: 1.2, textTransform: "uppercase" }}>
+                  Aujourd'hui
                 </Text>
-                <Text style={{ fontSize: 11, color: `${Colors.primary}B3` }}>Revenu estimé</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
+                  Revenu estimé
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#34C759" }} />
+                  <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>
+                    {upcomingClients.length} rdv prévu{upcomingClients.length > 1 ? "s" : ""}
+                  </Text>
+                </View>
               </View>
             </View>
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: "900",
-                color: Colors.primary,
-                letterSpacing: -0.5,
-              }}
-            >
-              {todayForecast.toFixed(2).replace(".", ",")}€
-            </Text>
+
+            {/* Right — valeur */}
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={{ fontSize: 32, fontWeight: "900", color: Colors.primary, letterSpacing: -1 }}>
+                {todayForecast.toFixed(0)}
+              </Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: `${Colors.primary}99`, marginTop: -2 }}>
+                euros
+              </Text>
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </LinearGradient>
+      </View>
 
       {/* ── STATS GRID ── */}
-      <Animated.View entering={FadeInDown.delay(200).springify()}>
+      <View>
         <View style={{ flexDirection: "row", gap: 10 }}>
           {/* Fill rate */}
           <View
@@ -514,10 +456,10 @@ export default function ProDashboard() {
             </View>
           </View>
         </View>
-      </Animated.View>
+      </View>
 
       {/* ── UPCOMING CLIENTS ── */}
-      <Animated.View entering={FadeInDown.delay(250).springify()}>
+      <View>
         <View
           style={{
             flexDirection: "row",
@@ -668,11 +610,11 @@ export default function ProDashboard() {
             })}
           </View>
         )}
-      </Animated.View>
+      </View>
 
       {/* ── TOP SERVICES ── */}
       {topServices.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <View>
           <View
             style={{
               borderRadius: 12,
@@ -745,12 +687,12 @@ export default function ProDashboard() {
               ))}
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {/* ── WEEKLY REVENUE CHART ── */}
       {weeklyRevenue.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(350).springify()}>
+        <View>
           <View
             style={{
               borderRadius: 12,
@@ -836,7 +778,7 @@ export default function ProDashboard() {
               })}
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {/* ── SLOTS MODAL ── */}

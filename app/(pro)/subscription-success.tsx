@@ -10,16 +10,6 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  FadeInDown,
-  FadeIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolate,
-  Extrapolation,
-} from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -126,12 +116,8 @@ export default function ProSubscriptionSuccessScreen() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const progressAnim = useSharedValue(0);
-
   useEffect(() => {
     if (!showOnboarding) return;
-    progressAnim.value = 0;
-    progressAnim.value = withTiming(1, { duration: 7000 });
     const id = setInterval(() => {
       setCurrentSlide((prev) => (prev < SLIDES.length - 1 ? prev + 1 : prev));
     }, 7000);
@@ -154,7 +140,7 @@ export default function ProSubscriptionSuccessScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeIn.duration(400)} className="items-center w-full">
+        <View className="items-center w-full">
           {/* Icon */}
           <View className="w-20 h-20 rounded-full items-center justify-center mb-6" style={{ backgroundColor: "#ECFDF5" }}>
             <Ionicons name="checkmark-circle-outline" size={36} color="#22C55E" />
@@ -177,16 +163,15 @@ export default function ProSubscriptionSuccessScreen() {
               </Text>
               <View className="gap-3">
                 {newFeatures.map((f, i) => (
-                  <Animated.View
+                  <View
                     key={i}
-                    entering={FadeInDown.duration(250).delay(i * 80).springify()}
                     className="flex-row items-center gap-3"
                   >
                     <View className="w-6 h-6 rounded-full items-center justify-center" style={{ backgroundColor: "#ECFDF5" }}>
                       <Ionicons name="checkmark" size={13} color="#22C55E" />
                     </View>
                     <Text className="text-sm font-medium text-foreground flex-1">{f}</Text>
-                  </Animated.View>
+                  </View>
                 ))}
               </View>
             </View>
@@ -209,7 +194,7 @@ export default function ProSubscriptionSuccessScreen() {
               <Text className="text-sm font-medium text-muted-foreground">Gérer mon abonnement</Text>
             </Pressable>
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     );
   }
@@ -226,7 +211,7 @@ export default function ProSubscriptionSuccessScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(400).springify()}>
+        <View>
           {/* Badge */}
           <View className="items-center mb-6">
             <View
@@ -255,22 +240,20 @@ export default function ProSubscriptionSuccessScreen() {
               { icon: "trending-up-outline" as const, label: "Analytics pro", color: Colors.secondary },
               { icon: "flash-outline" as const, label: "Sans limite", color: "#10B981" },
             ].map(({ icon, label, color }, i) => (
-              <Animated.View
+              <View
                 key={i}
-                entering={FadeInDown.duration(250).delay(i * 80).springify()}
                 className="flex-1 bg-card rounded-2xl p-4 items-center gap-2 border border-border"
               >
                 <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: `${color}18` }}>
                   <Ionicons name={icon} size={20} color={color} />
                 </View>
                 <Text className="text-xs font-semibold text-foreground text-center">{label}</Text>
-              </Animated.View>
+              </View>
             ))}
           </View>
 
           {/* Plan card */}
-          <Animated.View
-            entering={FadeInDown.duration(300).delay(200).springify()}
+          <View
             className="bg-card rounded-2xl p-5 mb-6 border-2"
             style={{ borderColor: `${Colors.primary}20` }}
           >
@@ -293,7 +276,7 @@ export default function ProSubscriptionSuccessScreen() {
                 <Text className="text-sm font-semibold text-foreground">{v}</Text>
               </View>
             ))}
-          </Animated.View>
+          </View>
 
           {/* CTA */}
           <View className="gap-3">
@@ -312,7 +295,7 @@ export default function ProSubscriptionSuccessScreen() {
               <Text className="text-sm font-medium text-muted-foreground">Accéder directement à l'espace</Text>
             </Pressable>
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     );
   }

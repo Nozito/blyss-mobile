@@ -10,7 +10,6 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi } from "@/lib/api";
@@ -121,7 +120,7 @@ export default function ProSubscriptionSettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300).springify()} className="mb-6">
+      <View className="mb-6">
         <View className="flex-row items-center mb-2">
           <Pressable
             onPress={() => router.back()}
@@ -134,12 +133,11 @@ export default function ProSubscriptionSettingsScreen() {
         <Text className="text-sm text-muted-foreground ml-1">
           Gérer ton plan Blyss Pro
         </Text>
-      </Animated.View>
+      </View>
 
       {/* Current plan */}
       {subscription && currentPlanId && (
-        <Animated.View
-          entering={FadeInDown.duration(300).delay(60).springify()}
+        <View
           className="bg-card rounded-2xl p-5 border border-border mb-6"
           style={{
             shadowColor: "#000",
@@ -184,11 +182,11 @@ export default function ProSubscriptionSettingsScreen() {
               Renouvellement le {new Date(subscription.endDate).toLocaleDateString("fr-FR")}
             </Text>
           )}
-        </Animated.View>
+        </View>
       )}
 
       {/* Change plan */}
-      <Animated.View entering={FadeInDown.duration(300).delay(100).springify()} className="mb-6">
+      <View className="mb-6">
         <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
           Changer de formule
         </Text>
@@ -196,9 +194,8 @@ export default function ProSubscriptionSettingsScreen() {
           {PLANS.map((plan, idx) => {
             const isCurrent = plan.id === currentPlanId;
             return (
-              <Animated.View
+              <View
                 key={plan.id}
-                entering={FadeInDown.duration(250).delay(120 + idx * 60).springify()}
               >
                 <Pressable
                   onPress={() => !isCurrent && handleUpgrade(plan.id)}
@@ -235,15 +232,15 @@ export default function ProSubscriptionSettingsScreen() {
                     )}
                   </View>
                 </Pressable>
-              </Animated.View>
+              </View>
             );
           })}
         </View>
-      </Animated.View>
+      </View>
 
       {/* Cancel subscription */}
       {subscription && (
-        <Animated.View entering={FadeInDown.duration(300).delay(280).springify()}>
+        <View>
           <Pressable
             onPress={handleCancel}
             disabled={cancelMutation.isPending}
@@ -255,7 +252,7 @@ export default function ProSubscriptionSettingsScreen() {
               <Text className="text-sm font-semibold text-muted-foreground">Annuler mon abonnement</Text>
             )}
           </Pressable>
-        </Animated.View>
+        </View>
       )}
     </ScrollView>
   );
