@@ -1,47 +1,60 @@
-import React from "react";
-import { View, Text } from "react-native";
+import React from 'react';
+import { View, Text } from 'react-native';
 
-type BadgeVariant = "default" | "success" | "warning" | "destructive" | "secondary" | "outline";
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
+type BadgeSize = 'sm' | 'md';
 
 interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
-  size?: "sm" | "md";
+  size?: BadgeSize;
+  className?: string;
 }
 
-const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-primary/10",
-  success: "bg-success/10",
-  warning: "bg-warning/10",
-  destructive: "bg-destructive/10",
-  secondary: "bg-secondary/10",
-  outline: "border border-border bg-transparent",
+const variantStyles: Record<BadgeVariant, { container: string; text: string }> = {
+  default: {
+    container: 'bg-primary border-transparent',
+    text: 'text-white',
+  },
+  secondary: {
+    container: 'bg-secondary border-transparent',
+    text: 'text-white',
+  },
+  destructive: {
+    container: 'bg-destructive border-transparent',
+    text: 'text-white',
+  },
+  outline: {
+    container: 'border border-border bg-transparent',
+    text: 'text-foreground',
+  },
+  success: {
+    container: 'bg-success/15 border-transparent',
+    text: 'text-success',
+  },
+  warning: {
+    container: 'bg-warning/15 border-transparent',
+    text: 'text-warning',
+  },
 };
 
-const textStyles: Record<BadgeVariant, string> = {
-  default: "text-primary",
-  success: "text-success",
-  warning: "text-warning",
-  destructive: "text-destructive",
-  secondary: "text-secondary",
-  outline: "text-foreground",
-};
-
-export function Badge({ children, variant = "default", size = "sm" }: BadgeProps) {
+export function Badge({ children, variant = 'default', size = 'sm', className = '' }: BadgeProps) {
+  const s = variantStyles[variant];
   return (
     <View
       className={[
-        "rounded-full items-center justify-center",
-        size === "sm" ? "px-2 py-0.5" : "px-3 py-1",
-        variantStyles[variant],
-      ].join(" ")}
+        'rounded-full items-center justify-center border',
+        size === 'sm' ? 'px-2.5 py-0.5' : 'px-3 py-1',
+        s.container,
+        className,
+      ].join(' ')}
     >
       <Text
         className={[
-          "font-medium",
-          size === "sm" ? "text-xs" : "text-sm",
-          textStyles[variant],
-        ].join(" ")}
+          'font-semibold',
+          size === 'sm' ? 'text-xs' : 'text-sm',
+          s.text,
+        ].join(' ')}
       >
         {children}
       </Text>
