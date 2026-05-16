@@ -1,0 +1,353 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  ActivityIndicator,
+  Dimensions,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Shadows } from "@/constants/shadows";
+
+const MONTH_NAMES = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+export interface Slot {
+  id: number;
+  time: string;
+  duration: number;
+}
+
+interface Props {
+  selectedDate: Date | null;
+  onSelectDate: (date: Date) => void;
+  selectedTime: string | null;
+  onSelectTime: (time: string) => void;
+  availableDates: Set<string>;
+  availableSlots: Slot[];
+  isLoadingSlots: boolean;
+  onMonthChange: (date: Date) => void;
+}
+
+const toLocalDateStr = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0 && mins > 0) return `${hours}h${mins}`;
+  if (hours > 0) return `${hours}h`;
+  return `${mins}min`;
+}
+
+function CalendarGrid({
+  selectedDate,
+  onSelectDate,
+  availableDates,
+  onMonthChange,
+}: {
+  selectedDate: Date | null;
+  onSelectDate: (date: Date) => void;
+  availableDates: Set<string>;
+  onMonthChange: (date: Date) => void;
+}) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const screenWidth = Dimensions.get("window").width;
+  // Screen paddingH: 20, card paddingH: 20 → 80 total → available = screenWidth - 80
+  const calendarWidth = screenWidth - 80;
+  const cellSize = Math.floor(calendarWidth / 7);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const isFirstDayOfCurrentMonth = () => {
+    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstOfCurrent = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    return firstOfCurrent <= firstOfMonth;
+  };
+
+  const goToPrev = () => {
+    const prev = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1);
+    setCurrentMonth(prev);
+    onMonthChange(prev);
+  };
+
+  const goToNext = () => {
+    const next = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+    setCurrentMonth(next);
+    onMonthChange(next);
+  };
+
+  const getDays = (): (Date | null)[] => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const days: (Date | null)[] = Array(firstDay).fill(null);
+    for (let d = 1; d <= lastDate; d++) {
+      days.push(new Date(year, month, d));
+    }
+    return days;
+  };
+
+  const isSelected = (date: Date) =>
+    selectedDate !== null &&
+    date.getDate() === selectedDate.getDate() &&
+    date.getMonth() === selectedDate.getMonth() &&
+    date.getFullYear() === selectedDate.getFullYear();
+
+  const isToday = (date: Date) =>
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+
+  const isPast = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+  };
+
+  const days = getDays();
+
+  return (
+    <View
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        padding: 20,
+        ...Shadows.card,
+      }}
+    >
+      {/* Month header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <Pressable
+          onPress={goToPrev}
+          disabled={isFirstDayOfCurrentMonth()}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: "#F8F5F1",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: isFirstDayOfCurrentMonth() ? 0.3 : 1,
+          }}
+        >
+          <Ionicons name="chevron-back" size={18} color="#09090B" />
+        </Pressable>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: "#09090B" }}>
+          {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </Text>
+        <Pressable
+          onPress={goToNext}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: "#F8F5F1",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="chevron-forward" size={18} color="#09090B" />
+        </Pressable>
+      </View>
+
+      {/* Day names */}
+      <View style={{ flexDirection: "row", marginBottom: 8 }}>
+        {DAY_NAMES.map((d) => (
+          <View key={d} style={{ width: cellSize, alignItems: "center" }}>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: "#6D6D78" }}>{d}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Days grid */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+        {days.map((date, i) => {
+          if (!date) {
+            return <View key={`e-${i}`} style={{ width: cellSize, height: cellSize + 12 }} />;
+          }
+
+          const past = isPast(date);
+          const available = availableDates.has(toLocalDateStr(date));
+          const selected = isSelected(date);
+          const today_ = isToday(date);
+          const selectable = !past && available;
+
+          return (
+            <View key={date.toISOString()} style={{ width: cellSize, alignItems: "center", marginBottom: 4 }}>
+              <Pressable
+                onPress={() => selectable && onSelectDate(new Date(date))}
+                disabled={!selectable}
+                style={{
+                  width: cellSize - 4,
+                  height: cellSize - 4,
+                  borderRadius: (cellSize - 4) / 2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: selected
+                    ? "#FE5D9D"
+                    : today_ && !selected
+                    ? "transparent"
+                    : "transparent",
+                  borderWidth: today_ && !selected ? 2 : 0,
+                  borderColor: today_ && !selected ? "#FE5D9D" : "transparent",
+                  opacity: past || (!past && !available) ? 0.3 : 1,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: selected ? "#fff" : past ? "#6D6D78" : "#09090B",
+                  }}
+                >
+                  {date.getDate()}
+                </Text>
+              </Pressable>
+              {/* Availability dot */}
+              {available && !selected && (
+                <View
+                  style={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: "#FE5D9D",
+                    marginTop: 2,
+                  }}
+                />
+              )}
+              {(!available || selected) && <View style={{ height: 6 }} />}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+export function DateTimeSelector({
+  selectedDate,
+  onSelectDate,
+  selectedTime,
+  onSelectTime,
+  availableDates,
+  availableSlots,
+  isLoadingSlots,
+  onMonthChange,
+}: Props) {
+  return (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <View style={{ paddingBottom: 24, gap: 20 }}>
+        {/* Header */}
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: "#09090B", letterSpacing: -0.5 }}>
+            Quand ?
+          </Text>
+          <Text style={{ fontSize: 14, color: "#6D6D78" }}>
+            Choisis la date et l'horaire qui t'arrangent
+          </Text>
+        </View>
+
+        {/* Calendar */}
+        <View style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="calendar-outline" size={18} color="#FE5D9D" />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#09090B" }}>Date</Text>
+          </View>
+          <CalendarGrid
+            selectedDate={selectedDate}
+            onSelectDate={onSelectDate}
+            availableDates={availableDates}
+            onMonthChange={onMonthChange}
+          />
+        </View>
+
+        {/* Time slots */}
+        <View style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="time-outline" size={18} color="#FE5D9D" />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#09090B" }}>Horaire</Text>
+          </View>
+
+          {isLoadingSlots ? (
+            <View style={{ alignItems: "center", paddingVertical: 32 }}>
+              <ActivityIndicator size="small" color="#FE5D9D" />
+            </View>
+          ) : availableSlots.length === 0 ? (
+            <View
+              style={{
+                alignItems: "center",
+                paddingVertical: 32,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "#EBE6E0",
+              }}
+            >
+              <Text style={{ fontSize: 13, color: "#6D6D78" }}>
+                {selectedDate
+                  ? "Aucun créneau disponible pour cette date"
+                  : "Sélectionne d'abord une date"}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {availableSlots.map((slot) => {
+                const active = selectedTime === slot.time;
+                return (
+                  <Pressable
+                    key={slot.id}
+                    onPress={() => onSelectTime(slot.time)}
+                    style={{
+                      width: "47%",
+                      borderRadius: 16,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      alignItems: "center",
+                      gap: 2,
+                      backgroundColor: active ? "#FE5D9D" : "#FFFFFF",
+                      borderWidth: active ? 0 : 1,
+                      borderColor: "#EBE6E0",
+                      ...(active ? Shadows.soft : Shadows.card),
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 17,
+                        fontWeight: "800",
+                        lineHeight: 20,
+                        color: active ? "#fff" : "#09090B",
+                      }}
+                    >
+                      {slot.time}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "500",
+                        color: active ? "rgba(255,255,255,0.7)" : "#6D6D78",
+                      }}
+                    >
+                      {formatDuration(slot.duration)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
