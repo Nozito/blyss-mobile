@@ -10,7 +10,6 @@ import {
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
@@ -99,7 +98,6 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
 ];
 
 export default function ClientNotificationsScreen() {
-  const router = useRouter();
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const [tab, setTab] = useState<Tab>("activity");
   const [savingKey, setSavingKey] = useState<PrefKey | null>(null);
@@ -153,28 +151,8 @@ export default function ClientNotificationsScreen() {
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
         {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12, paddingBottom: 16 }}>
-          <Pressable
-            onPress={() => router.back()}
-            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
-          >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Notifications</Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
-              {unreadCount > 0 ? `${unreadCount} non lue${unreadCount > 1 ? "s" : ""}` : "Tout est lu"}
-            </Text>
-          </View>
-          {unreadCount > 0 && tab === "activity" && (
-            <Pressable
-              onPress={markAllAsRead}
-              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: "#FE5D9D15" }}
-            >
-              <Ionicons name="checkmark-done-outline" size={14} color="#FE5D9D" />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#FE5D9D" }}>Tout lire</Text>
-            </Pressable>
-          )}
+        <View style={{ paddingTop: 16, paddingBottom: 16 }}>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
         </View>
 
         {/* Segmented control */}

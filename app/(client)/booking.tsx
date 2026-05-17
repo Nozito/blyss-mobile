@@ -21,6 +21,7 @@ import {
 import { DateTimeSelector, type Slot } from "@/components/screens/client/booking/DateTimeSelector";
 import { BookingSummary } from "@/components/screens/client/booking/BookingSummary";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -520,7 +521,7 @@ export default function BookingScreen() {
         {/* Header (hidden on success) */}
         {step < 5 && (
           <View style={{ paddingTop: 12, paddingBottom: 16 }}>
-            <Pressable
+            <AnimatedIconButton
               onPress={handleBack}
               style={{
                 width: 44,
@@ -535,7 +536,7 @@ export default function BookingScreen() {
               }}
             >
               <Ionicons name="chevron-back" size={20} color="#09090B" />
-            </Pressable>
+            </AnimatedIconButton>
 
             {/* Progress bar */}
             <View style={{ height: 6, backgroundColor: "#EBE6E0", borderRadius: 3, overflow: "hidden" }}>

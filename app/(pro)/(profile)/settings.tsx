@@ -19,6 +19,7 @@ import { authApi, usersApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import type { User } from "@/lib/api";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
@@ -154,12 +155,12 @@ export default function ProSettingsScreen() {
     >
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
-        <Pressable
+        <AnimatedIconButton
           onPress={() => router.back()}
           style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Paramètres</Text>
           <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Profil et sécurité</Text>
@@ -304,7 +305,7 @@ export default function ProSettingsScreen() {
         </Text>
 
         <Pressable
-          onPress={() => router.push("/(pro)/rgpd")}
+          onPress={() => router.push("/(pro)/(profile)/rgpd")}
           style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
         >
           <Ionicons name="shield-outline" size={16} color={Colors.primary} />

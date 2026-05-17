@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { proApi, ProNotificationSettings } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
@@ -97,7 +96,6 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
 
 export default function ProNotificationsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const [prefs, setPrefs] = useState<ProNotificationSettings>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -140,38 +138,12 @@ export default function ProNotificationsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 6 }}>
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            width: 40, height: 40, borderRadius: 12,
-            backgroundColor: Colors.card,
-            borderWidth: 1, borderColor: Colors.border,
-            alignItems: "center", justifyContent: "center",
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-        </Pressable>
-        <View>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
-            Notifications
-          </Text>
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
-            Préférences de réception
-          </Text>
-        </View>
-      </View>
-
-      {/* Bandeau info */}
-      <View style={{
-        flexDirection: "row", alignItems: "flex-start", gap: 12,
-        backgroundColor: "#FE5D9D15", borderRadius: 12,
-        padding: 14, marginBottom: 24, marginTop: 16,
-      }}>
-        <Ionicons name="notifications-outline" size={18} color="#FE5D9D" />
-        <Text style={{ flex: 1, fontSize: 13, color: "#FE5D9D", lineHeight: 18 }}>
-          Choisis les alertes que tu souhaites recevoir.{" "}
-          Tu peux modifier tes préférences à tout moment.
+      <View style={{ marginBottom: 24 }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
+          Notifications
+        </Text>
+        <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+          Préférences de réception
         </Text>
       </View>
 

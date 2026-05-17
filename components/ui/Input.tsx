@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, Pressable, type TextInputProps } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TextInput, Text, Pressable, Animated, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface InputProps extends TextInputProps {
@@ -12,6 +12,8 @@ interface InputProps extends TextInputProps {
   className?: string;
 }
 
+const P = '#FE5D9D';
+
 export function Input({
   label,
   error,
@@ -19,60 +21,115 @@ export function Input({
   leftIcon,
   rightElement,
   secure = false,
-  className = '',
+  value,
+  className: _,
   ...props
 }: InputProps) {
+  const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // border animation (non-native — drives color)
+  const focusAnim = useRef(new Animated.Value(0)).current;
+  // icon bounce (native — drives transform)
+  const iconScale = useRef(new Animated.Value(1)).current;
+  // eye icon bounce on toggle
+  const eyeScale = useRef(new Animated.Value(1)).current;
+
+  const bounce = (anim: Animated.Value) =>
+    Animated.sequence([
+      Animated.spring(anim, { toValue: 1.35, useNativeDriver: true, speed: 80, bounciness: 4 }),
+      Animated.spring(anim, { toValue: 1,    useNativeDriver: true, speed: 60, bounciness: 0 }),
+    ]).start();
+
+  const handleFocus = (e: Parameters<NonNullable<TextInputProps['onFocus']>>[0]) => {
+    setIsFocused(true);
+    Animated.timing(focusAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
+    if (leftIcon) bounce(iconScale);
+    props.onFocus?.(e);
+  };
+
+  const handleBlur = (e: Parameters<NonNullable<TextInputProps['onBlur']>>[0]) => {
+    setIsFocused(false);
+    Animated.timing(focusAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+    props.onBlur?.(e);
+  };
+
+  const borderColor = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [error ? '#EF4444' : '#E4E0DC', error ? '#EF4444' : P],
+  });
+
+  const iconColor = isFocused ? P : '#A1A1AA';
+
   return (
-    <View className="gap-1.5">
+    <View style={{ gap: 6 }}>
       {label && (
-        <Text className="text-sm font-medium text-foreground">{label}</Text>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: isFocused ? P : '#3F3F46', letterSpacing: 0.1 }}>
+          {label}
+        </Text>
       )}
 
-      <View
-        className={[
-          'flex-row items-center h-10 px-3 bg-background rounded-md border',
-          error ? 'border-destructive' : 'border-input',
-          className,
-        ].join(' ')}
+      <Animated.View
+        style={{
+          height: 44,
+          borderRadius: 14,
+          borderWidth: 1.5,
+          borderColor,
+          backgroundColor: isFocused ? '#FFFFFF' : '#F8F5F2',
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 14,
+          gap: 10,
+        }}
       >
         {leftIcon && (
-          <Ionicons
-            name={leftIcon}
-            size={16}
-            color="#6D6D78"
-            style={{ marginRight: 6 }}
-          />
+          <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+            <Ionicons name={leftIcon} size={18} color={iconColor} />
+          </Animated.View>
         )}
 
         <TextInput
           {...props}
+          value={value}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           secureTextEntry={secure && !showPassword}
-          className="flex-1 text-base text-foreground"
-          placeholderTextColor="#6D6D78"
+          style={{ flex: 1, fontSize: 14.5, color: '#09090B', padding: 0, margin: 0 }}
+          placeholderTextColor="#C0BAB5"
           autoCapitalize={props.autoCapitalize ?? 'none'}
           autoCorrect={props.autoCorrect ?? false}
         />
 
         {secure && (
-          <Pressable onPress={() => setShowPassword((v) => !v)} className="p-1">
-            <Ionicons
-              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={16}
-              color="#6D6D78"
-            />
+          <Pressable
+            onPress={() => {
+              setShowPassword(v => !v);
+              bounce(eyeScale);
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Animated.View style={{ transform: [{ scale: eyeScale }] }}>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={18}
+                color={iconColor}
+              />
+            </Animated.View>
           </Pressable>
         )}
 
         {!secure && rightElement}
-      </View>
+      </Animated.View>
 
       {error && (
-        <Text className="text-xs text-destructive">{error}</Text>
+        <Text style={{ fontSize: 11.5, color: '#EF4444', paddingLeft: 2, fontWeight: '500' }}>
+          {error}
+        </Text>
       )}
       {!error && hint && (
-        <Text className="text-xs text-muted-foreground">{hint}</Text>
+        <Text style={{ fontSize: 11.5, color: '#A1A1AA', paddingLeft: 2 }}>
+          {hint}
+        </Text>
       )}
     </View>
   );

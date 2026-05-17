@@ -6,15 +6,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Device from "expo-device";
 import { useAuth } from "@/contexts/AuthContext";
 import { usersApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 
 const MENU_ITEMS = [
-  { icon: "settings-outline" as const, label: "Paramètres", route: "/(client)/settings" },
+  { icon: "settings-outline" as const, label: "Paramètres", route: "/(client)/(profile)/settings" },
   { icon: "notifications-outline" as const, label: "Notifications", route: "/(client)/notifications" },
-  { icon: "help-circle-outline" as const, label: "Aide", route: "/(client)/help" },
-  { icon: "shield-outline" as const, label: "RGPD", route: "/(client)/rgpd" },
+  { icon: "help-circle-outline" as const, label: "Aide", route: "/(client)/(profile)/help" },
+  { icon: "shield-outline" as const, label: "RGPD", route: "/(client)/(profile)/rgpd" },
 ] as const;
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -43,6 +44,14 @@ export default function ProfileScreen() {
       {
         text: "Caméra",
         onPress: async () => {
+          if (!Device.isDevice) {
+            Alert.alert(
+              "Caméra indisponible",
+              "La caméra n'est pas disponible sur le simulateur. Utilise un vrai appareil ou choisis une photo depuis la galerie.",
+              [{ text: "OK", style: "cancel" }]
+            );
+            return;
+          }
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (perm.status !== "granted") {
             Alert.alert("Permission refusée", "Autorise l'accès à la caméra dans les réglages.");

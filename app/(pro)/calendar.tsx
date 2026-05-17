@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -192,17 +193,17 @@ function CalendarGrid({
     <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
       {/* Month nav */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <Pressable onPress={onPrevMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}>
+        <AnimatedIconButton onPress={onPrevMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
         <Pressable onPress={onToday}>
           <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground }}>
             {MONTHS[month]} {year}
           </Text>
         </Pressable>
-        <Pressable onPress={onNextMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}>
+        <AnimatedIconButton onPress={onNextMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
       </View>
 
       {/* Day headers */}

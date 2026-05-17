@@ -9,6 +9,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const BRAND_ICONS: Record<string, string> = {
   visa: "💳",
@@ -41,9 +42,9 @@ export default function PaymentsScreen() {
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center gap-3 px-5 pt-4 pb-4">
-        <Pressable onPress={() => router.back()} className="p-1">
+        <AnimatedIconButton onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
         <Text className="text-2xl font-bold text-foreground tracking-tight">
           Moyens de paiement
         </Text>

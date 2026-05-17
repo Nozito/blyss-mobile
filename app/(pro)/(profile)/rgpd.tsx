@@ -12,11 +12,10 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 interface RGPDRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -61,50 +60,21 @@ function RGPDRow({ icon, label, description, onPress, variant = "default" }: RGP
   );
 }
 
-export default function ClientRGPDScreen() {
+export default function ProRGPDScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
-  const settingsRoute = user?.role === "pro" ? "/(pro)/settings" : "/(client)/settings";
-  const notifRoute = user?.role === "pro" ? "/(pro)/notifications" : "/(client)/notifications";
-
-  const handleExport = async () => {
-    const isAvailable = await Sharing.isAvailableAsync();
-    if (!isAvailable) {
-      Alert.alert("Export non disponible", "L'export n'est pas disponible sur cet appareil.");
-      return;
-    }
-    setIsExporting(true);
-    try {
-      const res = await authApi.exportData();
-      if (!res.success || !res.data) {
-        Alert.alert("Erreur", res.error ?? "Erreur lors de l'export.");
-        return;
-      }
-      const filename = `blyss-export-${new Date().toISOString().slice(0, 10)}.json`;
-      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.writeAsStringAsync(fileUri, res.data, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(fileUri, { mimeType: "application/json", UTI: "public.json" });
-    } catch {
-      Alert.alert("Erreur", "Impossible de générer l'export.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await authApi.deleteAccount();
-      if (!res.success) throw new Error(res.error ?? "Erreur lors de la suppression");
+      await authApi.deleteAccount();
       await logout();
       router.replace("/(auth)/login");
-    } catch (err) {
-      Alert.alert("Erreur", err instanceof Error ? err.message : "Une erreur est survenue.");
+    } catch {
+      Alert.alert("Erreur", "Une erreur est survenue lors de la suppression.");
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -119,13 +89,13 @@ export default function ClientRGPDScreen() {
         style={{ paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20 }}
       >
         <View className="flex-row items-center gap-3">
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             className="p-2 -ml-2 rounded-xl"
             style={{ backgroundColor: Colors.muted }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
+          </AnimatedIconButton>
           <View>
             <Text className="font-semibold text-foreground text-base">Mes données personnelles</Text>
             <Text className="text-xs text-muted-foreground">Confidentialité & compte</Text>
@@ -157,21 +127,21 @@ export default function ClientRGPDScreen() {
           <View className="gap-2">
             <RGPDRow
               icon="download-outline"
-              label={isExporting ? "Export en cours…" : "Télécharger mes données"}
+              label="Télécharger mes données"
               description="Récupère une copie de tes informations au format JSON"
-              onPress={isExporting ? () => {} : handleExport}
+              onPress={() => Alert.alert("Export", "La fonctionnalité d'export sera disponible prochainement.")}
             />
             <RGPDRow
               icon="pencil-outline"
               label="Modifier mes informations"
               description="Nom, email, téléphone, photo de profil"
-              onPress={() => router.push(settingsRoute as any)}
+              onPress={() => router.push("/(pro)/(profile)/settings")}
             />
             <RGPDRow
               icon="notifications-outline"
               label="Gérer les notifications"
               description="Choisis quelles notifications tu souhaites recevoir"
-              onPress={() => router.push(notifRoute as any)}
+              onPress={() => router.push("/(pro)/notifications")}
             />
           </View>
         </View>
@@ -211,10 +181,7 @@ export default function ClientRGPDScreen() {
       {/* Delete confirmation modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade">
         <View className="flex-1 bg-black/40 items-end justify-end p-4">
-          <View
-            className="w-full bg-card rounded-3xl p-6"
-            style={{ gap: 16 }}
-          >
+          <View className="w-full bg-card rounded-3xl p-6" style={{ gap: 16 }}>
             <View className="flex-row items-center gap-3">
               <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
                 <Ionicons name="warning-outline" size={20} color="#DC2626" />
@@ -222,7 +189,7 @@ export default function ClientRGPDScreen() {
               <Text className="font-bold text-foreground text-base">Supprimer mon compte</Text>
             </View>
             <Text className="text-sm text-muted-foreground leading-relaxed">
-              Cette action est irréversible. Toutes tes données personnelles seront supprimées dans les 30 jours suivant la demande.
+              Cette action est irréversible. Toutes tes données personnelles seront supprimées dans les 30 jours.
             </Text>
             <View className="flex-row gap-3">
               <Pressable

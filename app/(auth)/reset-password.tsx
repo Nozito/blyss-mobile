@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { authApi } from "@/lib/api";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -60,12 +61,12 @@ export default function ResetPasswordScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mb-8"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
+          </AnimatedIconButton>
 
           <View className="w-16 h-16 rounded-2xl bg-primary/10 items-center justify-center mb-6">
             <Ionicons name="lock-closed-outline" size={28} color={Colors.primary} />

@@ -10,6 +10,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 type Category = "agenda" | "clientes" | "paiement" | "compte";
 
@@ -61,12 +62,12 @@ export default function ProHelpScreen() {
       {/* Header */}
       <View className="mb-6">
         <View className="flex-row items-center mb-2">
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
+          </AnimatedIconButton>
           <Text className="text-2xl font-bold text-foreground">Aide & support</Text>
         </View>
         <Text className="text-sm text-muted-foreground ml-1">

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList } from "react-native";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import {
 import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
 import { SpecialistsMapView } from "@/components/screens/client/specialists/MapView";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [d, setD] = React.useState(value);
@@ -22,35 +23,14 @@ function useDebounce<T>(value: T, delay: number): T {
   return d;
 }
 
-function SkeletonCard() {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: "#EBE6E066",
-        minHeight: 130,
-        marginBottom: 12,
-      }}
-    >
-      <View style={{ width: 108, backgroundColor: "#F8F5F1", flexShrink: 0 }} />
-      <View style={{ flex: 1, padding: 16, gap: 10 }}>
-        <View style={{ height: 16, width: "75%", backgroundColor: "#F8F5F1", borderRadius: 8 }} />
-        <View style={{ height: 12, width: "50%", backgroundColor: "#F8F5F1", borderRadius: 8 }} />
-        <View style={{ height: 12, width: "65%", backgroundColor: "#F8F5F1", borderRadius: 8 }} />
-        <View style={{ height: 36, backgroundColor: "#F8F5F1", borderRadius: 12, marginTop: "auto" }} />
-      </View>
-    </View>
-  );
-}
-
 export default function SpecialistsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ search?: string; service?: string }>();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+  }, []);
 
   const [searchInput, setSearchInput] = useState(params.search ?? "");
   const debouncedSearch = useDebounce(searchInput, 350);
@@ -162,6 +142,7 @@ export default function SpecialistsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
       <SearchHeader
         searchInput={searchInput}
         onChangeText={setSearchInput}
@@ -282,6 +263,7 @@ export default function SpecialistsScreen() {
           />
         )}
       </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

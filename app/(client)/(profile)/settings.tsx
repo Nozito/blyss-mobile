@@ -16,6 +16,7 @@ import { authApi, usersApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Shadows } from "@/constants/shadows";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
   return (
@@ -142,12 +143,12 @@ export default function SettingsScreen() {
       >
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#EBE6E0", alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="chevron-back" size={20} color="#09090B" />
-          </Pressable>
+          </AnimatedIconButton>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", color: "#09090B" }}>Paramètres</Text>
             <Text style={{ fontSize: 12, color: "#6D6D78" }}>Gère ton compte et ta sécurité</Text>
@@ -260,7 +261,7 @@ export default function SettingsScreen() {
           </Text>
 
           <Pressable
-            onPress={() => router.push("/(client)/rgpd")}
+            onPress={() => router.push("/(client)/(profile)/rgpd")}
             style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#EBE6E0" }}
           >
             <Ionicons name="shield-outline" size={16} color="#FE5D9D" />

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  Animated,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 // ── Constants (mirrored from web) ──────────────────────────────────────────
 const VALIDATION = {
@@ -161,6 +163,18 @@ export default function RegisterScreen() {
     acceptedTerms: false,
   });
   const [stepError, setStepError] = useState("");
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!stepError) return;
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8,  duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 5,  duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -5, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
+    ]).start();
+  }, [stepError, shakeAnim]);
 
   const totalSteps = useMemo(
     () => (formData.role === "pro" ? 9 : 6),
@@ -505,13 +519,13 @@ export default function RegisterScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {/* Progress header */}
       <View className="flex-row items-center gap-4 px-6 py-4">
-        <Pressable
+        <AnimatedIconButton
           onPress={handleBack}
           disabled={isLoading}
           className="p-2 -ml-2 rounded-xl active:bg-muted"
         >
           <Ionicons name="chevron-back" size={24} color="#09090B" />
-        </Pressable>
+        </AnimatedIconButton>
         <View className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
           <View
             className="h-full bg-primary rounded-full"
@@ -537,9 +551,26 @@ export default function RegisterScreen() {
           {renderContent()}
 
           {stepError ? (
-            <View className="mt-4 bg-destructive/10 rounded-lg p-3">
-              <Text className="text-sm text-destructive">{stepError}</Text>
-            </View>
+            <Animated.View
+              style={{
+                transform: [{ translateX: shakeAnim }],
+                marginTop: 16,
+                backgroundColor: "#FFF0F3",
+                borderRadius: 14,
+                borderLeftWidth: 3,
+                borderLeftColor: "#EF4444",
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
+              <Text style={{ flex: 1, fontSize: 13, color: "#EF4444", fontWeight: "500", lineHeight: 18 }}>
+                {stepError}
+              </Text>
+            </Animated.View>
           ) : null}
         </ScrollView>
 

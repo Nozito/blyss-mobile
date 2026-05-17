@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "@/components/ui/Input";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -72,13 +73,13 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Back */}
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             className="flex-row items-center gap-1.5 mb-8"
           >
             <Ionicons name="chevron-back" size={18} color="#6D6D78" />
             <Text className="text-sm text-muted-foreground">Retour</Text>
-          </Pressable>
+          </AnimatedIconButton>
 
           {sent ? (
             /* ── Success state ─────────────────────────────────────── */

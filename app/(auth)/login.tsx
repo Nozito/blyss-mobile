@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -53,6 +52,18 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!submitError) return;
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8,  duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 5,  duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -5, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
+    ]).start();
+  }, [submitError, shakeAnim]);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [loggedUserName, setLoggedUserName] = useState("");
   const [loggedUserRole, setLoggedUserRole] = useState<"pro" | "client">("client");
@@ -116,23 +127,19 @@ export default function LoginScreen() {
         >
           {/* Logo & header */}
           <View className="items-center mb-10">
-            <View style={{ position: "relative", marginBottom: 16 }}>
-              <View
-                style={{
-                  position: "absolute",
-                  width: 128,
-                  height: 128,
-                  borderRadius: 64,
-                  backgroundColor: "rgba(254,93,157,0.2)",
-                }}
-              />
-              <Image
-                source={require("@/assets/logo.png")}
-                style={{ width: 128, height: 128 }}
-                resizeMode="contain"
-              />
-            </View>
-            <Text className="text-3xl font-black text-foreground tracking-tight">
+            <Image
+              source={require("@/assets/logo.png")}
+              style={{ width: 130, height: 130, marginBottom: 12 }}
+              resizeMode="contain"
+            />
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "800",
+                color: "#FE5D9D",
+                letterSpacing: -0.5,
+              }}
+            >
               Bon retour
             </Text>
             <Text className="text-sm text-muted-foreground mt-1 text-center">
@@ -170,22 +177,18 @@ export default function LoginScreen() {
               name="password"
               render={({ field: { onChange, value } }) => (
                 <ScaleOnFocus focused={focusedField === "password"}>
-                  <View className="gap-1.5">
-                    <View className="flex-row items-center justify-between">
-                      <Text
-                        className={`text-sm font-semibold ${
-                          errors.password ? "text-destructive" : "text-foreground"
-                        }`}
-                      >
+                  <View style={{ gap: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: errors.password ? "#EF4444" : "#3F3F46", letterSpacing: 0.1 }}>
                         Mot de passe
                         {errors.password && (
-                          <Text className="text-xs font-normal">
+                          <Text style={{ fontSize: 12, fontWeight: "400" }}>
                             {" "}· {errors.password.message}
                           </Text>
                         )}
                       </Text>
                       <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-                        <Text className="text-xs text-primary font-medium">Oublié ?</Text>
+                        <Text style={{ fontSize: 12, color: "#FE5D9D", fontWeight: "500" }}>Oublié ?</Text>
                       </Pressable>
                     </View>
                     <Input
@@ -205,42 +208,56 @@ export default function LoginScreen() {
 
             {/* Submit error banner */}
             {submitError && (
-              <View className="bg-destructive/10 rounded-lg p-3">
-                <Text className="text-sm text-destructive">{submitError}</Text>
-              </View>
+              <Animated.View
+                style={{
+                  transform: [{ translateX: shakeAnim }],
+                  backgroundColor: "#FFF0F3",
+                  borderRadius: 14,
+                  borderLeftWidth: 3,
+                  borderLeftColor: "#EF4444",
+                  paddingVertical: 12,
+                  paddingHorizontal: 14,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
+                <Text style={{ flex: 1, fontSize: 13, color: "#EF4444", fontWeight: "500", lineHeight: 18 }}>
+                  {submitError}
+                </Text>
+              </Animated.View>
             )}
 
             {/* CTA */}
             <Pressable
               onPress={handleSubmit(onSubmit)}
               disabled={isSubmitting}
-              style={{ marginTop: 32, opacity: isSubmitting ? 0.7 : 1 }}
+              style={{
+                marginTop: 32,
+                opacity: isSubmitting ? 0.7 : 1,
+                backgroundColor: "#FE5D9D",
+                borderRadius: 999,
+                paddingVertical: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: "#FE5D9D",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
             >
-              <LinearGradient
-                colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  height: 56,
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: "#FE5D9D",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="lock-closed-outline" size={18} color="#fff" />
-                    <Text className="text-white font-bold text-base">Se connecter</Text>
-                  </View>
-                )}
-              </LinearGradient>
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="lock-closed-outline" size={18} color="#fff" />
+                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+                    Se connecter
+                  </Text>
+                </View>
+              )}
             </Pressable>
           </View>
 
@@ -254,19 +271,48 @@ export default function LoginScreen() {
           {/* Sign up */}
           <Pressable
             onPress={() => router.push("/(auth)/register")}
-            className="h-14 rounded-2xl bg-card border-2 border-border items-center justify-center active:opacity-70"
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              paddingVertical: 16,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <View className="flex-row gap-2 items-center">
-              <Ionicons name="sparkles-outline" size={18} color="#09090B" />
-              <Text className="text-foreground font-semibold text-base">Créer un compte</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="sparkles-outline" size={18} color="#374151" />
+              <Text style={{ color: "#374151", fontWeight: "600", fontSize: 16 }}>
+                Créer un compte
+              </Text>
             </View>
           </Pressable>
 
           {/* Legal */}
-          <Text className="text-center text-xs text-muted-foreground mt-6 px-4 leading-relaxed">
-            En te connectant, tu acceptes les{" "}
-            <Text className="underline font-medium">Conditions générales</Text> et la{" "}
-            <Text className="underline font-medium">Politique de confidentialité</Text>
+          <Text
+            style={{
+              marginTop: 24,
+              marginBottom: 32,
+              fontSize: 12,
+              color: "#9CA3AF",
+              textAlign: "center",
+              lineHeight: 20,
+              paddingHorizontal: 8,
+            }}
+          >
+            {"En continuant, tu acceptes nos "}
+            <Text style={{ textDecorationLine: "underline", color: "#6B7280" }}>
+              Conditions générales
+            </Text>
+            {" et notre "}
+            <Text style={{ textDecorationLine: "underline", color: "#6B7280" }}>
+              Politique de confidentialité
+            </Text>
+            {"\n"}
+            <Text style={{ textDecorationLine: "underline", color: "#6B7280" }}>
+              Mentions légales
+            </Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

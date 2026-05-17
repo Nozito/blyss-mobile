@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, Pressable } from "react-native";
+import React, { useRef, useCallback } from "react";
+import { View, Text, Pressable, Animated } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,11 +33,37 @@ interface Props {
 
 export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Props) {
   const photo = item.cover_image_url ?? item.profile_image_url;
+  const cardScale = useRef(new Animated.Value(1)).current;
+  const heartScale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () =>
+    Animated.spring(cardScale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+    }).start();
+
+  const handlePressOut = () =>
+    Animated.spring(cardScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+    }).start();
+
+  const handleHeartPress = useCallback(() => {
+    Animated.sequence([
+      Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 80 }),
+      Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 40 }),
+    ]).start();
+    onToggleFav();
+  }, [heartScale, onToggleFav]);
 
   return (
-    <View>
+    <Animated.View style={{ transform: [{ scale: cardScale }] }}>
       <Pressable
         onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         style={{
           flexDirection: "row",
           backgroundColor: "#FFFFFF",
@@ -69,7 +95,7 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Pro
           )}
 
           <Pressable
-            onPress={onToggleFav}
+            onPress={handleHeartPress}
             style={{
               position: "absolute",
               top: 8,
@@ -82,7 +108,9 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Pro
               justifyContent: "center",
             }}
           >
-            <Ionicons name={isFav ? "heart" : "heart-outline"} size={12} color="#fff" />
+            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+              <Ionicons name={isFav ? "heart" : "heart-outline"} size={12} color="#fff" />
+            </Animated.View>
           </Pressable>
         </View>
 
@@ -144,6 +172,6 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Pro
           </Pressable>
         </View>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }

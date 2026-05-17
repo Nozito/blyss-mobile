@@ -5,19 +5,16 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Alert,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
-import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
-import type { ClientNote, BlockedClient } from "@/lib/api";
+import type { BlockedClient } from "@/lib/api";
 
 type Client = {
   id: number;
@@ -28,6 +25,7 @@ type Client = {
   profile_photo?: string | null;
   bookings_count?: number;
   total_spent?: number;
+  created_at?: string;
 };
 
 const TABS = [
@@ -36,12 +34,14 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
+const NEW_CLIENT_DAYS = 7;
+
 export default function ProClientsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>("clients");
   const [search, setSearch] = useState("");
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const { data: clientsData, isLoading: loadingClients } = useQuery({
     queryKey: ["pro-clients"],
@@ -53,21 +53,6 @@ export default function ProClientsScreen() {
     queryFn: () => nailTechApi.getBlockedClients(),
   });
 
-  const { data: notesData } = useQuery({
-    queryKey: ["client-notes", selectedClient?.id],
-    queryFn: () => nailTechApi.getClientNotes(selectedClient!.id),
-    enabled: selectedClient != null,
-  });
-
-  const blockMutation = useMutation({
-    mutationFn: (id: number) => nailTechApi.blockClient(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pro-clients"] });
-      qc.invalidateQueries({ queryKey: ["blocked-clients"] });
-      setSelectedClient(null);
-    },
-  });
-
   const unblockMutation = useMutation({
     mutationFn: (id: number) => nailTechApi.unblockClient(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["blocked-clients"] }),
@@ -75,7 +60,6 @@ export default function ProClientsScreen() {
 
   const clients = (clientsData?.data as Client[] | undefined) ?? [];
   const blocked = (blockedData?.data as BlockedClient[] | undefined) ?? [];
-  const notes = notesData?.data as ClientNote | undefined;
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -86,23 +70,30 @@ export default function ProClientsScreen() {
   );
 
   const now = new Date();
-  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0, 0, 0, 0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
   const stats = {
     total: clients.length,
-    thisWeek: clients.filter((c) => new Date((c as any).created_at) >= weekStart).length,
-    thisMonth: clients.filter((c) => new Date((c as any).created_at) >= monthStart).length,
+    thisWeek: clients.filter((c) => c.created_at && new Date(c.created_at) >= weekStart).length,
+    thisMonth: clients.filter((c) => c.created_at && new Date(c.created_at) >= monthStart).length,
   };
 
+  const isNewClient = (c: Client) =>
+    !!c.created_at &&
+    Date.now() - new Date(c.created_at).getTime() < NEW_CLIENT_DAYS * 24 * 3600 * 1000;
+
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-      <View className="px-5 pt-4 pb-3">
-        <Text className="text-2xl font-bold text-foreground tracking-tight mb-4">
+    <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+        <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5, marginBottom: 16 }}>
           Mes clientes
         </Text>
 
         {/* Tabs */}
-        <View className="flex-row bg-card rounded-2xl p-1 gap-1 mb-3">
+        <View style={{ flexDirection: "row", backgroundColor: Colors.card, borderRadius: 16, padding: 4, gap: 4, marginBottom: 12 }}>
           {TABS.map(({ key, label, icon }) => (
             <Pressable
               key={key}
@@ -117,21 +108,36 @@ export default function ProClientsScreen() {
               <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? "#fff" : Colors.mutedForeground }}>
                 {label}
               </Text>
+              {key === "blocked" && blocked.length > 0 && (
+                <View style={{
+                  width: 16, height: 16, borderRadius: 8,
+                  backgroundColor: tab === key ? "rgba(255,255,255,0.3)" : Colors.destructive,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>{blocked.length}</Text>
+                </View>
+              )}
             </Pressable>
           ))}
         </View>
 
+        {/* Barre de recherche */}
         {tab === "clients" && (
-          <View className="flex-row items-center gap-2 bg-card border border-border rounded-2xl px-4 h-11">
-            <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: "#E4E0DC", backgroundColor: "#F8F5F2", paddingHorizontal: 14 }}>
+            <Ionicons name="search-outline" size={16} color="#A1A1AA" />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Rechercher par nom ou téléphone..."
-              placeholderTextColor={Colors.mutedForeground}
-              className="flex-1 text-sm text-foreground"
+              placeholderTextColor="#C0BAB5"
+              style={{ flex: 1, fontSize: 14.5, color: "#09090B", padding: 0 }}
               autoCorrect={false}
             />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch("")}>
+                <Ionicons name="close-circle" size={16} color="#A1A1AA" />
+              </Pressable>
+            )}
           </View>
         )}
       </View>
@@ -148,29 +154,39 @@ export default function ProClientsScreen() {
             ListHeaderComponent={
               <View>
                 {/* Stats */}
-                <View style={{ flexDirection: "row", backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#F0F0F0", marginBottom: 20 }}>
+                <View style={{
+                  flexDirection: "row", backgroundColor: Colors.card,
+                  borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
+                  marginBottom: 20, overflow: "hidden",
+                }}>
                   {[
-                    { label: "TOTAL",   value: stats.total },
+                    { label: "TOTAL", value: stats.total },
                     { label: "SEMAINE", value: stats.thisWeek },
-                    { label: "MOIS",    value: stats.thisMonth },
+                    { label: "MOIS", value: stats.thisMonth },
                   ].map(({ label, value }, i) => (
-                    <View key={label} style={{ flex: 1, alignItems: "center", paddingVertical: 16, borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: "#F0F0F0" }}>
-                      <Text style={{ fontSize: 26, fontWeight: "800", color: "#111" }}>{value ?? 0}</Text>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#9CA3AF", marginTop: 2, letterSpacing: 0.5 }}>{label}</Text>
+                    <View key={label} style={{
+                      flex: 1, alignItems: "center", paddingVertical: 16,
+                      borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: Colors.border,
+                    }}>
+                      <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground }}>{value}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, marginTop: 2, letterSpacing: 0.5 }}>{label}</Text>
                     </View>
                   ))}
                 </View>
-                {/* Titre section */}
-                <Text style={{ fontSize: 16, fontWeight: "700", color: "#111", marginBottom: 12 }}>
-                  Toutes les clientes
+                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 12 }}>
+                  {search ? `${filteredClients.length} résultat${filteredClients.length !== 1 ? "s" : ""}` : "Toutes les clientes"}
                 </Text>
               </View>
             }
             ListEmptyComponent={
-              <View style={{ backgroundColor: "#fff", borderRadius: 16, padding: 40, alignItems: "center", gap: 8 }}>
-                <Ionicons name="people-outline" size={40} color="#D1D5DB" />
-                <Text style={{ fontSize: 16, fontWeight: "700", color: "#111" }}>Aucune cliente</Text>
-                <Text style={{ fontSize: 13, color: "#9CA3AF" }}>Tes clientes apparaîtront ici</Text>
+              <View style={{ backgroundColor: Colors.card, borderRadius: 16, padding: 40, alignItems: "center", gap: 8 }}>
+                <Ionicons name="people-outline" size={40} color={Colors.border} />
+                <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>
+                  {search ? "Aucun résultat" : "Aucune cliente"}
+                </Text>
+                <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                  {search ? "Essaie un autre terme de recherche" : "Tes clientes apparaîtront ici"}
+                </Text>
               </View>
             }
             renderItem={({ item }) => {
@@ -179,26 +195,54 @@ export default function ProClientsScreen() {
                   ? item.profile_photo
                   : `${API_URL}${item.profile_photo}`
                 : undefined;
+              const isNew = isNewClient(item);
 
               return (
                 <Pressable
-                  onPress={() => setSelectedClient(item)}
-                  className="flex-row items-center gap-3 bg-card rounded-2xl p-4 mb-2"
+                  onPress={() => router.push(`/(pro)/client-detail?clientId=${item.id}`)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 12,
+                    backgroundColor: Colors.card, borderRadius: 20, padding: 14,
+                    marginBottom: 8, borderWidth: 1,
+                    borderColor: isNew ? `${Colors.primary}30` : Colors.border,
+                  }}
                 >
-                  <Avatar
-                    uri={photoUri}
-                    name={`${item.first_name} ${item.last_name}`}
-                    size={44}
-                  />
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-foreground">
+                  <View style={{ position: "relative" }}>
+                    <Avatar uri={photoUri} name={`${item.first_name} ${item.last_name}`} size={46} />
+                    {isNew && (
+                      <View style={{
+                        position: "absolute", top: -4, right: -4,
+                        backgroundColor: Colors.success, borderRadius: 8,
+                        paddingHorizontal: 5, paddingVertical: 1,
+                      }}>
+                        <Text style={{ fontSize: 8, fontWeight: "800", color: "#fff" }}>NEW</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
                       {item.first_name} {item.last_name}
                     </Text>
-                    <Text className="text-sm text-muted-foreground">{item.email}</Text>
-                    {item.bookings_count != null && (
-                      <Text className="text-xs text-muted-foreground mt-0.5">
-                        {item.bookings_count} rdv · {(item.total_spent ?? 0).toFixed(0)} €
-                      </Text>
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.email}</Text>
+                    {(item.bookings_count != null || item.total_spent != null) && (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
+                        {item.bookings_count != null && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                            <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
+                            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                              {item.bookings_count} rdv
+                            </Text>
+                          </View>
+                        )}
+                        {item.total_spent != null && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                            <Ionicons name="trending-up-outline" size={11} color={Colors.mutedForeground} />
+                            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                              {item.total_spent.toFixed(0)} €
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     )}
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
@@ -216,91 +260,48 @@ export default function ProClientsScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <Ionicons name="ban-outline" size={48} color={Colors.border} />
-              <Text className="text-foreground font-semibold text-lg mt-4">Aucune cliente bloquée</Text>
+            <View style={{ alignItems: "center", paddingVertical: 48, gap: 8 }}>
+              <Ionicons name="shield-checkmark-outline" size={48} color={Colors.border} />
+              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>
+                Aucune cliente bloquée
+              </Text>
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                Ta liste de blocage est vide
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View className="flex-row items-center gap-3 bg-card rounded-2xl p-4 mb-2">
-              <Avatar
-                name={`${item.first_name} ${item.last_name}`}
-                size={44}
-              />
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-foreground">
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 12,
+              backgroundColor: Colors.card, borderRadius: 20, padding: 14,
+              marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+            }}>
+              <Avatar name={`${item.first_name} ${item.last_name}`} size={46} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
                   {item.first_name} {item.last_name}
                 </Text>
-                <Text className="text-sm text-muted-foreground">{item.email}</Text>
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.email}</Text>
                 {item.reason && (
-                  <Text className="text-xs text-muted-foreground mt-0.5">{item.reason}</Text>
+                  <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>
+                    {item.reason}
+                  </Text>
                 )}
               </View>
               <Pressable
                 onPress={() => unblockMutation.mutate(item.client_id)}
-                className="px-3 py-1.5 bg-success/10 rounded-xl"
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 7,
+                  backgroundColor: `${Colors.success}15`,
+                  borderRadius: 12, borderWidth: 1, borderColor: `${Colors.success}30`,
+                }}
               >
-                <Text className="text-xs font-medium text-success">Débloquer</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.success }}>Débloquer</Text>
               </Pressable>
             </View>
           )}
         />
       )}
-
-      {/* Client detail modal */}
-      <Modal
-        visible={selectedClient != null}
-        onClose={() => setSelectedClient(null)}
-        title={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ""}
-        bottomSheet
-      >
-        {selectedClient && (
-          <View className="gap-4">
-            {notes && (
-              <View className="gap-2">
-                {notes.allergies && (
-                  <View>
-                    <Text className="text-xs font-semibold text-muted-foreground mb-0.5">ALLERGIES</Text>
-                    <Text className="text-sm text-foreground">{notes.allergies}</Text>
-                  </View>
-                )}
-                {notes.preferred_shape && (
-                  <View>
-                    <Text className="text-xs font-semibold text-muted-foreground mb-0.5">FORME PRÉFÉRÉE</Text>
-                    <Text className="text-sm text-foreground">{notes.preferred_shape}</Text>
-                  </View>
-                )}
-                {notes.preferred_style && (
-                  <View>
-                    <Text className="text-xs font-semibold text-muted-foreground mb-0.5">STYLE PRÉFÉRÉ</Text>
-                    <Text className="text-sm text-foreground">{notes.preferred_style}</Text>
-                  </View>
-                )}
-                {notes.patch_test_done && (
-                  <Badge variant="success" size="sm">Test patch effectué</Badge>
-                )}
-              </View>
-            )}
-
-            <Button
-              variant="destructive"
-              fullWidth
-              onPress={() =>
-                Alert.alert("Bloquer", `Bloquer ${selectedClient.first_name} ?`, [
-                  { text: "Non", style: "cancel" },
-                  {
-                    text: "Bloquer",
-                    style: "destructive",
-                    onPress: () => blockMutation.mutate(selectedClient.id),
-                  },
-                ])
-              }
-            >
-              Bloquer cette cliente
-            </Button>
-          </View>
-        )}
-      </Modal>
     </View>
   );
 }

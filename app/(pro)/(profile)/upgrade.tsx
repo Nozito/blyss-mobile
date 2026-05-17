@@ -139,7 +139,7 @@ export default function ProUpgradeScreen() {
         {/* CTA buttons */}
         <View className="gap-3">
           <Pressable
-            onPress={() => router.push("/(pro)/subscription")}
+            onPress={() => router.push("/(pro)/(profile)/subscription")}
             className="h-14 rounded-2xl items-center justify-center"
             style={{ backgroundColor: gradStart }}
           >

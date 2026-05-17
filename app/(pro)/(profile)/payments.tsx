@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi } from "@/lib/api";
+import { Input } from "@/components/ui/Input";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 export default function ProPaymentsScreen() {
   const router = useRouter();
@@ -71,12 +73,12 @@ export default function ProPaymentsScreen() {
       {/* Header */}
       <View className="mb-6">
         <View className="flex-row items-center mb-2">
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
+          </AnimatedIconButton>
           <Text className="text-2xl font-bold text-foreground">Paramètres paiement</Text>
         </View>
         <Text className="text-sm text-muted-foreground ml-1">
@@ -113,24 +115,15 @@ export default function ProPaymentsScreen() {
             Coordonnées bancaires
           </Text>
 
-          <Text className="text-xs font-semibold text-muted-foreground mb-2">IBAN</Text>
-          <View
-            className="flex-row items-center bg-muted rounded-xl px-4 h-12 mb-2 border border-border"
-          >
-            <Ionicons name="business-outline" size={16} color={Colors.mutedForeground} />
-            <TextInput
-              className="flex-1 ml-3 text-foreground text-sm"
-              placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
-              placeholderTextColor={Colors.mutedForeground}
-              value={iban}
-              onChangeText={setIban}
-              autoCapitalize="characters"
-              keyboardType="default"
-            />
-          </View>
-          <Text className="text-xs text-muted-foreground leading-relaxed">
-            Tes virements seront effectués automatiquement sous 2 jours ouvrés après chaque paiement reçu.
-          </Text>
+          <Input
+            label="IBAN"
+            value={iban}
+            onChangeText={setIban}
+            placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+            leftIcon="business-outline"
+            autoCapitalize="characters"
+            hint="Tes virements seront effectués automatiquement sous 2 jours ouvrés après chaque paiement reçu."
+          />
         </View>
       </View>
 

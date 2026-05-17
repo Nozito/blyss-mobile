@@ -10,6 +10,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import { queryClient } from "@/lib/queryClient";
 
 const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
@@ -27,6 +28,7 @@ export default function RootLayout() {
         <StripeProvider publishableKey={STRIPE_PK}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <RevenueCatProvider>
             <NotificationProvider>
               <StatusBar style="dark" />
               <Stack
@@ -51,6 +53,7 @@ export default function RootLayout() {
                 />
               </Stack>
             </NotificationProvider>
+            </RevenueCatProvider>
           </AuthProvider>
         </QueryClientProvider>
         </StripeProvider>

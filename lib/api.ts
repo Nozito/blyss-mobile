@@ -436,6 +436,8 @@ export const specialistsApi = {
   },
 
   getSpecialistById: (id: number) => apiCall("GET", `/api/client/specialists/${id}`),
+
+  getServices: (proId: number) => apiCall("GET", `/api/prestations/pro/${proId}`),
 };
 
 // ── Reviews API ───────────────────────────────────────────────────────────────
@@ -445,7 +447,7 @@ export const reviewsApi = {
     apiCall(`/api/specialists/${specialistId}/reviews`, { method: "POST", body: JSON.stringify(data) }),
 
   getBySpecialist: (specialistId: string): Promise<ApiResponse<unknown[]>> =>
-    apiCall(`/api/specialists/${specialistId}/reviews`),
+    apiCall(`/api/reviews/pro/${specialistId}`),
 };
 
 // ── Favorites API ─────────────────────────────────────────────────────────────
@@ -501,6 +503,9 @@ export const proApi = {
     } | null>("/api/pro/subscription"),
 
   cancelSubscription: () => apiCall("/api/pro/subscription/cancel", { method: "PUT" }),
+
+  createSubscription: (data: { plan: string; billingType: "monthly" | "one_time"; monthlyPrice: number; paymentId: string }) =>
+    apiCall("/api/pro/subscription", { method: "POST", body: JSON.stringify(data) }),
 
   updateSubscription: (data: { plan: string }) =>
     apiCall("/api/pro/subscription/change", { method: "PUT", body: JSON.stringify(data) }),

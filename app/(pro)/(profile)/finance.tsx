@@ -20,6 +20,7 @@ import * as Print from "expo-print";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 type Period = "week" | "month" | "year";
 
@@ -268,12 +269,12 @@ export default function ProFinanceScreen() {
       >
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...Shadows.card }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
+          </AnimatedIconButton>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Finances</Text>
             <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{monthLabel}</Text>
@@ -501,23 +502,23 @@ export default function ProFinanceScreen() {
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
-              backgroundColor: "#F8F5F1",
+              backgroundColor: "#F8F5F2",
               borderRadius: 14,
-              paddingHorizontal: 16,
-              height: 52,
+              paddingHorizontal: 14,
+              height: 44,
               borderWidth: 1.5,
-              borderColor: Colors.border,
+              borderColor: "#E4E0DC",
             }}>
               <Ionicons name="flag-outline" size={18} color={Colors.primary} />
               <TextInput
                 value={objectiveInput}
                 onChangeText={setObjectiveInput}
                 placeholder="ex. 2000"
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor="#C0BAB5"
                 keyboardType="decimal-pad"
-                style={{ flex: 1, fontSize: 18, fontWeight: "700", color: Colors.foreground }}
+                style={{ flex: 1, fontSize: 17, fontWeight: "700", color: Colors.foreground, padding: 0 }}
               />
-              <Text style={{ fontSize: 18, fontWeight: "700", color: Colors.primary }}>€</Text>
+              <Text style={{ fontSize: 17, fontWeight: "700", color: Colors.primary }}>€</Text>
             </View>
 
             <Pressable

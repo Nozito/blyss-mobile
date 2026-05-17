@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import * as ImagePicker from "expo-image-picker";
+import * as Device from "expo-device";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 
@@ -64,6 +65,14 @@ export default function ProProfileScreen() {
       {
         text: "Caméra",
         onPress: async () => {
+          if (!Device.isDevice) {
+            Alert.alert(
+              "Caméra indisponible",
+              "La caméra n'est pas disponible sur le simulateur. Utilise un vrai appareil ou choisis une photo depuis la galerie.",
+              [{ text: "OK", style: "cancel" }]
+            );
+            return;
+          }
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (perm.status !== "granted") {
             Alert.alert("Permission refusée", "Autorise l'accès à la caméra dans les réglages.");
@@ -127,14 +136,14 @@ export default function ProProfileScreen() {
   };
 
   const menuItems: Array<{ icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; route: string }> = [
-    { icon: "person-outline", label: "Modifier mon profil", route: "/(pro)/settings" },
-    { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/services" },
-    { icon: "trending-up-outline", label: "Finance", route: "/(pro)/finance" },
-    { icon: "settings-outline", label: "Paramètres", route: "/(pro)/settings" },
-    { icon: "card-outline", label: "Encaissements", route: "/(pro)/payments" },
+    { icon: "person-outline", label: "Modifier mon profil", route: "/(pro)/(profile)/settings" },
+    { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/(profile)/services" },
+    { icon: "trending-up-outline", label: "Finance", route: "/(pro)/(profile)/finance" },
+    { icon: "settings-outline", label: "Paramètres", route: "/(pro)/(profile)/settings" },
+    { icon: "card-outline", label: "Encaissements", route: "/(pro)/(profile)/payments" },
     { icon: "notifications-outline", label: "Notifications", route: "/(pro)/notifications" },
-    { icon: "help-circle-outline", label: "Aide & support", route: "/(pro)/help" },
-    { icon: "shield-outline", label: "Mes données personnelles", route: "/(pro)/rgpd" },
+    { icon: "help-circle-outline", label: "Aide & support", route: "/(pro)/(profile)/help" },
+    { icon: "shield-outline", label: "Mes données personnelles", route: "/(pro)/(profile)/rgpd" },
   ];
 
   return (
@@ -317,7 +326,7 @@ export default function ProProfileScreen() {
       <View style={{ marginBottom: 20 }}>
         <Pressable
           onPress={() =>
-            router.push(subscription ? "/(pro)/subscription-settings" : "/(pro)/subscription")
+            router.push(subscription ? "/(pro)/(profile)/subscription-settings" : "/(pro)/(profile)/subscription")
           }
           style={{ borderRadius: 16, overflow: "hidden" }}
         >
@@ -396,7 +405,7 @@ export default function ProProfileScreen() {
       {/* Profil public */}
       <View style={{ marginBottom: 20 }}>
         <Pressable
-          onPress={() => router.push("/(pro)/public-profile")}
+          onPress={() => router.push("/(pro)/(profile)/public-profile")}
           style={{
             backgroundColor: Colors.card,
             borderRadius: 16,

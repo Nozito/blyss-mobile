@@ -3,20 +3,21 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Blyss",
-  slug: "blyss-mobile",
+  slug: "blyss",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/icon.png",
+  icon: "./assets/logo.png",
   scheme: "blyss",
   userInterfaceStyle: "light",
+  backgroundColor: "#FFF0F5",
   splash: {
-    image: "./assets/splash.png",
+    image: "./assets/logo.png",
     resizeMode: "contain",
-    backgroundColor: "#FFEAF1",
+    backgroundColor: "#FFF0F5",
   },
   ios: {
     supportsTablet: false,
-    bundleIdentifier: "fr.blyssapp.mobile",
+    bundleIdentifier: "com.blyss.app",
     buildNumber: "1",
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
@@ -30,11 +31,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    package: "fr.blyssapp.mobile",
+    package: "com.blyss.app",
     versionCode: 1,
     adaptiveIcon: {
-      foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#FFEAF1",
+      foregroundImage: "./assets/logo.png",
+      backgroundColor: "#FFF0F5",
     },
     permissions: [
       "ACCESS_FINE_LOCATION",
@@ -48,7 +49,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     bundler: "metro",
     output: "static",
-    favicon: "./assets/favicon.png",
+    favicon: "./assets/logo.png",
+    title: "Blyss — Beauté. Business. Sérénité.",
   },
   plugins: [
     "expo-router",
@@ -74,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "@stripe/stripe-react-native",
       {
-        merchantIdentifier: "merchant.fr.blyssapp.mobile",
+        merchantIdentifier: "merchant.com.blyss.app",
         enableGooglePay: true,
       },
     ],
@@ -86,5 +88,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: "0e3cae8f-7b87-4e19-9fea-e8a16fa399e4",
     },
+    appDescription:
+      "La plateforme tout-en-un pour gérer ton salon de nail art comme une pro",
+    brandColor: "#FE5D9D",
   },
 });

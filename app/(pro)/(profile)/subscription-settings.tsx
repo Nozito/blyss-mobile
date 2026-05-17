@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { proApi } from "@/lib/api";
 
 type PlanId = "start" | "serenite" | "signature";
@@ -80,7 +81,7 @@ export default function ProSubscriptionSettingsScreen() {
       await proApi.updateSubscription?.({ plan: planId });
       qc.invalidateQueries({ queryKey: ["pro-subscription"] });
       router.push({
-        pathname: "/(pro)/subscription-success" as any,
+        pathname: "/(pro)/(profile)/subscription-success" as any,
         params: { plan: planId, isUpgrade: "true" },
       });
     } catch {
@@ -122,12 +123,12 @@ export default function ProSubscriptionSettingsScreen() {
       {/* Header */}
       <View className="mb-6">
         <View className="flex-row items-center mb-2">
-          <Pressable
+          <AnimatedIconButton
             onPress={() => router.back()}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </Pressable>
+          </AnimatedIconButton>
           <Text className="text-2xl font-bold text-foreground">Mon abonnement</Text>
         </View>
         <Text className="text-sm text-muted-foreground ml-1">

@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 interface ModalProps extends Omit<RNModalProps, "children"> {
   visible: boolean;
@@ -59,9 +60,9 @@ export function Modal({ visible, onClose, title, children, bottomSheet = false, 
             {title && (
               <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
                 <Text className="text-lg font-semibold text-foreground">{title}</Text>
-                <Pressable onPress={onClose} className="p-1">
+                <AnimatedIconButton onPress={onClose} className="p-1">
                   <Ionicons name="close" size={22} color={Colors.mutedForeground} />
-                </Pressable>
+                </AnimatedIconButton>
               </View>
             )}
 

@@ -13,10 +13,14 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/Input";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+
+type Service = { id: number; name: string; price: number; duration_minutes: number; active?: boolean };
 
 const MAX_BIO = 500;
 
@@ -38,6 +42,12 @@ export default function ProPublicProfileScreen() {
   const [initial, setInitial] = useState({
     activityName: "", city: "", bio: "", instagram: "", isPublic: true,
   });
+
+  const { data: servicesData } = useQuery({
+    queryKey: ["pro-services"],
+    queryFn: () => proApi.getServices(),
+  });
+  const services = ((servicesData?.data as Service[] | undefined) ?? []).filter((s) => s.active !== false);
 
   const { isLoading } = useQuery({
     queryKey: ["pro-public-profile"],
@@ -119,12 +129,12 @@ export default function ProPublicProfileScreen() {
         {/* Header */}
         <View className="mb-6">
           <View className="flex-row items-center mb-2">
-            <Pressable
+            <AnimatedIconButton
               onPress={() => router.back()}
               className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
             >
               <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-            </Pressable>
+            </AnimatedIconButton>
             <Text className="text-2xl font-bold text-foreground flex-1">Profil public</Text>
             <Pressable
               onPress={() => setShowPreview(true)}
@@ -173,36 +183,27 @@ export default function ProPublicProfileScreen() {
         <View className="mb-6">
           <SectionTitle title="Informations principales" />
           <View className="bg-card rounded-2xl p-5 border border-border gap-4">
-            <FieldGroup label="Nom de l'activité *">
-              <View className="flex-row items-center bg-muted rounded-xl px-4 h-12 border border-border">
-                <Ionicons name="person-outline" size={16} color={Colors.mutedForeground} />
-                <TextInput
-                  className="flex-1 ml-3 text-foreground text-sm"
-                  placeholder="Ex : Nails by Emma"
-                  placeholderTextColor={Colors.mutedForeground}
-                  value={activityName}
-                  onChangeText={setActivityName}
-                  maxLength={100}
-                />
-              </View>
-              <Text className="text-xs text-muted-foreground mt-1.5">
-                Le nom sous lequel tes clientes te trouveront sur Blyss.
-              </Text>
-            </FieldGroup>
-
-            <FieldGroup label="Ville / Zone *">
-              <View className="flex-row items-center bg-muted rounded-xl px-4 h-12 border border-border">
-                <Ionicons name="location-outline" size={16} color={Colors.mutedForeground} />
-                <TextInput
-                  className="flex-1 ml-3 text-foreground text-sm"
-                  placeholder="Ex : Paris 11e, Lyon centre"
-                  placeholderTextColor={Colors.mutedForeground}
-                  value={city}
-                  onChangeText={setCity}
-                  maxLength={100}
-                />
-              </View>
-            </FieldGroup>
+            <View style={{ gap: 4 }}>
+              <Input
+                label="Nom de l'activité *"
+                value={activityName}
+                onChangeText={setActivityName}
+                placeholder="Ex : Nails by Emma"
+                leftIcon="person-outline"
+                maxLength={100}
+                autoCapitalize="words"
+                hint="Le nom sous lequel tes clientes te trouveront sur Blyss."
+              />
+            </View>
+            <Input
+              label="Ville / Zone *"
+              value={city}
+              onChangeText={setCity}
+              placeholder="Ex : Paris 11e, Lyon centre"
+              leftIcon="location-outline"
+              maxLength={100}
+              autoCapitalize="words"
+            />
           </View>
         </View>
 
@@ -210,26 +211,36 @@ export default function ProPublicProfileScreen() {
         <View className="mb-6">
           <SectionTitle title="À propos de toi" />
           <View className="bg-card rounded-2xl p-5 border border-border">
-            <FieldGroup label="Biographie">
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#3F3F46", letterSpacing: 0.1 }}>Biographie</Text>
               <TextInput
-                className="bg-muted rounded-xl px-4 py-3 text-foreground text-sm border border-border"
                 placeholder="Parle de ton parcours, tes spécialités, ce qui te passionne..."
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor="#C0BAB5"
                 value={bio}
                 onChangeText={(t) => setBio(t.slice(0, MAX_BIO))}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
                 maxLength={MAX_BIO}
-                style={{ minHeight: 100 }}
+                style={{
+                  backgroundColor: "#F8F5F2",
+                  borderRadius: 14,
+                  borderWidth: 1.5,
+                  borderColor: "#E4E0DC",
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 14.5,
+                  color: "#09090B",
+                  minHeight: 100,
+                }}
               />
-              <View className="flex-row justify-between mt-1.5">
-                <Text className="text-xs text-muted-foreground">Aide tes clientes à mieux te connaître</Text>
-                <Text className="text-xs" style={{ color: bio.length > MAX_BIO - 50 ? Colors.destructive : Colors.mutedForeground }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 11.5, color: "#A1A1AA" }}>Aide tes clientes à mieux te connaître</Text>
+                <Text style={{ fontSize: 11.5, color: bio.length > MAX_BIO - 50 ? Colors.destructive : "#A1A1AA" }}>
                   {MAX_BIO - bio.length}/{MAX_BIO}
                 </Text>
               </View>
-            </FieldGroup>
+            </View>
           </View>
         </View>
 
@@ -237,23 +248,16 @@ export default function ProPublicProfileScreen() {
         <View className="mb-6">
           <SectionTitle title="Réseaux sociaux" />
           <View className="bg-card rounded-2xl p-5 border border-border">
-            <FieldGroup label="Instagram (optionnel)">
-              <View className="flex-row items-center bg-muted rounded-xl px-4 h-12 border border-border">
-                <Ionicons name="logo-instagram" size={16} color={Colors.mutedForeground} />
-                <TextInput
-                  className="flex-1 ml-3 text-foreground text-sm"
-                  placeholder="@toncompte"
-                  placeholderTextColor={Colors.mutedForeground}
-                  value={instagram}
-                  onChangeText={setInstagram}
-                  autoCapitalize="none"
-                  maxLength={50}
-                />
-              </View>
-              <Text className="text-xs text-muted-foreground mt-1.5">
-                Ton compte Instagram sera affiché sur ton profil Blyss.
-              </Text>
-            </FieldGroup>
+            <Input
+              label="Instagram (optionnel)"
+              value={instagram}
+              onChangeText={setInstagram}
+              placeholder="@toncompte"
+              leftIcon="logo-instagram"
+              autoCapitalize="none"
+              maxLength={50}
+              hint="Ton compte Instagram sera affiché sur ton profil Blyss."
+            />
           </View>
         </View>
 
@@ -375,6 +379,34 @@ export default function ProPublicProfileScreen() {
               </View>
             ) : null}
 
+            {/* Prestations */}
+            {services.length > 0 && (
+              <View className="bg-card rounded-2xl p-4 mb-4 border border-border">
+                <Text className="text-base font-bold text-foreground mb-3">Prestations</Text>
+                <View style={{ gap: 10 }}>
+                  {services.slice(0, 5).map((s) => (
+                    <View key={s.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>{s.name}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                          <Ionicons name="time-outline" size={11} color={Colors.mutedForeground} />
+                          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{s.duration_minutes} min</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.primary }}>
+                        {(typeof s.price === "number" ? s.price : parseFloat(String(s.price ?? "0"))).toFixed(2)} €
+                      </Text>
+                    </View>
+                  ))}
+                  {services.length > 5 && (
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center" }}>
+                      +{services.length - 5} autres prestations
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
             {!isPublic && (
               <View className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
                 <View className="flex-row items-center gap-3">
@@ -393,13 +425,24 @@ export default function ProPublicProfileScreen() {
 
             <Pressable
               onPress={() => setShowPreview(false)}
-              className="h-14 rounded-2xl items-center justify-center"
-              style={{ backgroundColor: Colors.primary }}
+              style={{
+                height: 56, borderRadius: 20,
+                backgroundColor: Colors.primary,
+                alignItems: "center", justifyContent: "center",
+                flexDirection: "row", gap: 8,
+                shadowColor: Colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+              }}
             >
-              <Text className="text-white font-semibold">Fermer l'aperçu</Text>
+              <Ionicons name="calendar-outline" size={18} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Réserver</Text>
             </Pressable>
-            <Text className="text-xs text-muted-foreground text-center mt-3">
-              Ceci est un aperçu. Tes vraies prestations et avis s'afficheront automatiquement.
+            <Pressable onPress={() => setShowPreview(false)} style={{ marginTop: 12, alignItems: "center" }}>
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Fermer l'aperçu</Text>
+            </Pressable>
+            <Text className="text-xs text-muted-foreground text-center mt-2">
+              Aperçu uniquement — les vraies données s'affichent sur le profil public.
             </Text>
           </ScrollView>
         </View>

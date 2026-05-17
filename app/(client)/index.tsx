@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
   FlatList,
   Pressable,
   ActivityIndicator,
+  Animated,
   type ListRenderItem,
 } from "react-native";
 import { Image } from "expo-image";
@@ -62,13 +63,31 @@ function SpecialistCard({
   onToggleFav: (id: number) => void;
 }) {
   const router = useRouter();
+  const heartScale = useRef(new Animated.Value(1)).current;
+  const cardScale = useRef(new Animated.Value(1)).current;
   const displayName = pro.activity_name ?? `${pro.first_name} ${pro.last_name}`;
   const specialty = pro.pro_specialties?.[0] ?? "Nail Artist";
   const bannerUrl = pro.banner_photo ?? pro.profile_photo;
 
+  const handleHeartPress = () => {
+    Animated.sequence([
+      Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 80 }),
+      Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 40 }),
+    ]).start();
+    onToggleFav(pro.id);
+  };
+
+  const handlePressIn = () =>
+    Animated.spring(cardScale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start();
+  const handlePressOut = () =>
+    Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
+
   return (
+    <Animated.View style={{ transform: [{ scale: cardScale }] }}>
     <Pressable
       onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: pro.id } })}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       style={[{ width: 280, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
       className="border-2 border-border bg-card"
     >
@@ -93,9 +112,9 @@ function SpecialistCard({
           style={{ position: "absolute", inset: 0 } as any}
         />
 
-        {/* Favorite button */}
+        {/* Favorite button with bounce */}
         <Pressable
-          onPress={() => onToggleFav(pro.id)}
+          onPress={handleHeartPress}
           style={{
             position: "absolute", top: 12, right: 12,
             width: 36, height: 36, borderRadius: 18,
@@ -103,11 +122,13 @@ function SpecialistCard({
             alignItems: "center", justifyContent: "center",
           }}
         >
-          <Ionicons
-            name={isFavorite ? "heart" : "heart-outline"}
-            size={18}
-            color={isFavorite ? "#EF4444" : "#6D6D78"}
-          />
+          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={18}
+              color={isFavorite ? "#EF4444" : "#6D6D78"}
+            />
+          </Animated.View>
         </Pressable>
 
         {/* Name overlay */}
@@ -165,6 +186,7 @@ function SpecialistCard({
         </View>
       </View>
     </Pressable>
+    </Animated.View>
   );
 }
 
@@ -216,6 +238,16 @@ export default function ClientHome() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+
+  // ── Entrance animation ──────────────────────────────────────────────────
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   // ── Data queries ─────────────────────────────────────────────────────────
   const { data: proRes, isLoading: loadingPros } = useQuery({
@@ -311,6 +343,9 @@ export default function ClientHome() {
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <Animated.View
+        style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+      >
       <FlatList
         data={[]}
         renderItem={null}
@@ -319,22 +354,13 @@ export default function ClientHome() {
         ListHeaderComponent={
           <>
             {/* ── Header ─────────────────────────────────────────────────── */}
-            <View className="flex-row items-center justify-between px-6 pt-4 pb-2">
-              <View>
-                <Text className="text-2xl font-black text-foreground tracking-tight">
-                  {greeting} 👋
-                </Text>
-                <Text className="text-sm text-muted-foreground mt-0.5">
-                  Tes nails parfaites, en quelques clics ✨
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => router.push("/(client)/notifications")}
-                className="w-10 h-10 rounded-2xl bg-card border border-border items-center justify-center"
-                style={Shadows.card}
-              >
-                <Ionicons name="notifications-outline" size={20} color="#09090B" />
-              </Pressable>
+            <View className="px-6 pt-4 pb-2">
+              <Text className="text-2xl font-black text-foreground tracking-tight">
+                {greeting} 👋
+              </Text>
+              <Text className="text-sm text-muted-foreground mt-0.5">
+                Tes nails parfaites, en quelques clics ✨
+              </Text>
             </View>
 
             {/* ── Search bar (tap → specialists) ─────────────────────────── */}
@@ -365,7 +391,6 @@ export default function ClientHome() {
               <View>
                 <View className="flex-row items-center gap-1.5">
                   <Text className="text-xl font-bold text-foreground">Sélection Blyss</Text>
-                  <Ionicons name="sparkles-outline" size={18} color="#FE5D9D" />
                 </View>
                 <Text className="text-xs text-muted-foreground mt-0.5">
                   {pros.length} experte{pros.length > 1 ? "s" : ""} disponible{pros.length > 1 ? "s" : ""}
@@ -464,6 +489,7 @@ export default function ClientHome() {
           </>
         }
       />
+      </Animated.View>
     </SafeAreaView>
   );
 }
