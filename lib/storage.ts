@@ -40,14 +40,18 @@ export const storage = {
   async getUserCache(): Promise<Record<string, unknown> | null> {
     try {
       const raw = await SecureStore.getItemAsync(KEYS.USER_CACHE);
-      return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { data: Record<string, unknown>; cachedAt: number };
+      // Cache expiration: 5 minutes
+      if (Date.now() - parsed.cachedAt > 5 * 60 * 1000) return null;
+      return parsed.data;
     } catch {
       return null;
     }
   },
 
   async setUserCache(data: Record<string, unknown>): Promise<void> {
-    await SecureStore.setItemAsync(KEYS.USER_CACHE, JSON.stringify(data));
+    await SecureStore.setItemAsync(KEYS.USER_CACHE, JSON.stringify({ data, cachedAt: Date.now() }));
   },
 
   async clearUserCache(): Promise<void> {

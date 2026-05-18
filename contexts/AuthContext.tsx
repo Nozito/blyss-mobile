@@ -6,6 +6,7 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 import Purchases from "react-native-purchases";
 import {
   authApi,
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const _loginSucceeded = useRef(false);
+  const _initialized = useRef(false);
 
   useEffect(() => {
     const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
@@ -99,7 +101,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    initAuth();
+    initAuth().then(() => { _initialized.current = true; });
+  }, []);
+
+  // Refetch du profil quand l'app revient au premier plan (rôle, pro_status peuvent avoir changé)
+  useEffect(() => {
+    const onAppStateChange = async (nextState: AppStateStatus) => {
+      if (nextState !== "active" || !_initialized.current) return;
+      const token = await storage.getAccessToken();
+      if (!token) return;
+      const response = await authApi.getProfile();
+      if (response.success && response.data) {
+        setUser(response.data);
+        await storage.setUserCache(toSafeCache(response.data));
+      }
+    };
+    const sub = AppState.addEventListener("change", onAppStateChange);
+    return () => sub.remove();
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<ApiResponse<{ accessToken: string; refreshToken: string; user: User }>> => {
