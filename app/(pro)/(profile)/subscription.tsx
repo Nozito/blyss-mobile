@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { Stack } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -159,6 +160,11 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF5F8" }}>
+      {/* Bloque le swipe-back iOS quand pas d'abonnement actif */}
+      <Stack.Screen options={{
+        gestureEnabled: hasActiveSubscription,
+        headerBackVisible: false,
+      }} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
