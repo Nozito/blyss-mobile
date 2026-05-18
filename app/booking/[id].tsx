@@ -256,11 +256,11 @@ export default function BookingDetailScreen() {
 
           {booking.pro_phone && (
             <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`tel:${booking.pro_phone}`)}>
+              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`tel:${booking.pro_phone}`).catch(() => {})}>
                 <Ionicons name="call-outline" size={16} color="#FE5D9D" />
                 <Text style={styles.contactBtnText}>Appeler</Text>
               </Pressable>
-              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`sms:${booking.pro_phone}`)}>
+              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`sms:${booking.pro_phone}`).catch(() => {})}>
                 <Ionicons name="chatbubble-outline" size={16} color="#FE5D9D" />
                 <Text style={styles.contactBtnText}>SMS</Text>
               </Pressable>

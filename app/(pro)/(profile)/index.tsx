@@ -139,9 +139,7 @@ export default function ProProfileScreen() {
     { icon: "person-outline", label: "Modifier mon profil", route: "/(pro)/(profile)/settings" },
     { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/(profile)/services" },
     { icon: "trending-up-outline", label: "Finance", route: "/(pro)/(profile)/finance" },
-    { icon: "settings-outline", label: "Paramètres", route: "/(pro)/(profile)/settings" },
     { icon: "card-outline", label: "Encaissements", route: "/(pro)/(profile)/payments" },
-    { icon: "notifications-outline", label: "Notifications", route: "/(pro)/notifications" },
     { icon: "help-circle-outline", label: "Aide & support", route: "/(pro)/(profile)/help" },
     { icon: "shield-outline", label: "Mes données personnelles", route: "/(pro)/(profile)/rgpd" },
   ];

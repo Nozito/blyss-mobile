@@ -190,38 +190,56 @@ export default function ClientDetailScreen() {
           </Text>
 
           {/* Boutons contact */}
-          {(displayPhone || displayEmail) ? (
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 12, width: "100%" }}>
-              {displayPhone ? (
-                <Pressable
-                  onPress={() => Linking.openURL(`tel:${displayPhone}`)}
-                  style={{
-                    flex: 1, paddingVertical: 10, borderRadius: 14,
-                    backgroundColor: `${Colors.primary}15`,
-                    borderWidth: 1, borderColor: `${Colors.primary}20`,
-                    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                  }}
-                >
-                  <Ionicons name="call-outline" size={16} color={Colors.primary} />
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Appeler</Text>
-                </Pressable>
-              ) : null}
-              {displayEmail ? (
-                <Pressable
-                  onPress={() => Linking.openURL(`mailto:${displayEmail}`)}
-                  style={{
-                    flex: 1, paddingVertical: 10, borderRadius: 14,
-                    backgroundColor: `${Colors.primary}15`,
-                    borderWidth: 1, borderColor: `${Colors.primary}20`,
-                    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                  }}
-                >
-                  <Ionicons name="mail-outline" size={16} color={Colors.primary} />
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Email</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 12, width: "100%" }}>
+            <Pressable
+              disabled={!displayPhone}
+              onPress={async () => {
+                const phone = displayPhone;
+                if (!phone) return;
+                const url = `tel:${phone.replace(/\s/g, "")}`;
+                const supported = await Linking.canOpenURL(url);
+                if (supported) {
+                  await Linking.openURL(url);
+                } else {
+                  Alert.alert("Impossible", "Aucune app téléphone disponible sur cet appareil.");
+                }
+              }}
+              style={{
+                flex: 1, paddingVertical: 10, borderRadius: 14,
+                backgroundColor: `${Colors.primary}15`,
+                borderWidth: 1, borderColor: `${Colors.primary}20`,
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                opacity: displayPhone ? 1 : 0.4,
+              }}
+            >
+              <Ionicons name="call-outline" size={16} color={Colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Appeler</Text>
+            </Pressable>
+            <Pressable
+              disabled={!displayEmail}
+              onPress={async () => {
+                const email = displayEmail;
+                if (!email) return;
+                const url = `mailto:${email}`;
+                const supported = await Linking.canOpenURL(url);
+                if (supported) {
+                  await Linking.openURL(url);
+                } else {
+                  Alert.alert("Impossible", "Aucune app mail disponible sur cet appareil.");
+                }
+              }}
+              style={{
+                flex: 1, paddingVertical: 10, borderRadius: 14,
+                backgroundColor: `${Colors.primary}15`,
+                borderWidth: 1, borderColor: `${Colors.primary}20`,
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                opacity: displayEmail ? 1 : 0.4,
+              }}
+            >
+              <Ionicons name="mail-outline" size={16} color={Colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Email</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Stats */}

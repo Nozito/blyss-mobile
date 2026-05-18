@@ -4,22 +4,26 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Blyss",
   slug: "blyss",
+  owner: "nozito",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/logo.png",
+  icon: "./assets/icon-appstore.png",
   scheme: "blyss",
   userInterfaceStyle: "light",
   backgroundColor: "#FFF0F5",
   splash: {
-    image: "./assets/logo.png",
+    image: "./assets/splash.png",
     resizeMode: "contain",
     backgroundColor: "#FFF0F5",
   },
   ios: {
     supportsTablet: false,
-    bundleIdentifier: "com.blyss.app",
+    requireFullScreen: true,
+    userInterfaceStyle: "light",
+    bundleIdentifier: "blyss.app",
     buildNumber: "1",
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
         "Blyss utilise votre localisation pour trouver des spécialistes près de vous.",
       NSCameraUsageDescription:

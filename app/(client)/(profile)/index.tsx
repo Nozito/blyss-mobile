@@ -13,7 +13,7 @@ import { Shadows } from "@/constants/shadows";
 
 const MENU_ITEMS = [
   { icon: "settings-outline" as const, label: "Paramètres", route: "/(client)/(profile)/settings" },
-  { icon: "notifications-outline" as const, label: "Notifications", route: "/(client)/notifications" },
+  { icon: "card-outline" as const, label: "Méthodes de paiement", route: "/(client)/(profile)/payments" },
   { icon: "help-circle-outline" as const, label: "Aide", route: "/(client)/(profile)/help" },
   { icon: "shield-outline" as const, label: "RGPD", route: "/(client)/(profile)/rgpd" },
 ] as const;

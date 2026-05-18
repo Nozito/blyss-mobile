@@ -737,6 +737,16 @@ export const paymentMethodsApi = {
     apiCall(`/api/client/payment-methods/${id}`, { method: "DELETE" }),
   setDefault: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/payment-methods/${id}/default`, { method: "PATCH" }),
+  createSetupIntent: async (): Promise<{ clientSecret: string }> => {
+    const res = await apiCall<{ clientSecret: string }>("/api/client/payment-methods/setup-intent", { method: "POST" });
+    return res.data as { clientSecret: string };
+  },
+  confirmSetup: async (paymentMethodId: string): Promise<void> => {
+    await apiCall("/api/client/payment-methods/confirm", {
+      method: "POST",
+      body: JSON.stringify({ paymentMethodId }),
+    });
+  },
 };
 
 // ── Admin API ─────────────────────────────────────────────────────────────────

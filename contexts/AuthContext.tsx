@@ -43,34 +43,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const _loginSucceeded = useRef(false);
 
   useEffect(() => {
+    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), ms)
+        ),
+      ]);
+
     const initAuth = async () => {
       setIsLoading(true);
       try {
-        // Try to load cached user for instant render
+        // 1. Charge le cache immédiatement pour affichage instantané
         const cached = await storage.getUserCache();
         if (cached) {
           setUser(cached as unknown as User);
         }
 
-        // Verify token is still valid
+        // 2. Vérifie que le token existe
         const accessToken = await storage.getAccessToken();
         if (!accessToken) {
           setUser(null);
           return;
         }
 
-        const response = await authApi.getProfile();
+        // 3. Appelle getProfile() pour valider/rafraîchir (5s max)
+        const response = await withTimeout(authApi.getProfile(), 5000);
         if (_loginSucceeded.current) return;
 
         if (response.success && response.data) {
           setUser(response.data);
           await storage.setUserCache(toSafeCache(response.data));
-        } else {
-          setUser(null);
-          await storage.clearAll();
         }
+        // Si !response.success → on garde le cache, l'intercepteur axios gère le refresh
       } catch {
-        // Keep cached user on network error
+        // Erreur réseau / timeout → on garde le cache, PAS de clearAll()
       } finally {
         setIsLoading(false);
       }
@@ -129,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout();
     } finally {
       setUser(null);
+      await storage.clearAll();
     }
   };
 
