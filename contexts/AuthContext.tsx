@@ -6,6 +6,7 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
+import Purchases from "react-native-purchases";
 import {
   authApi,
   type User,
@@ -15,6 +16,20 @@ import {
   type SignupResponse,
 } from "@/lib/api";
 import { storage } from "@/lib/storage";
+
+async function rcLogIn(userId: number) {
+  try {
+    await Purchases.logIn(String(userId));
+  } catch {
+    // RC non configuré (simulator / clé manquante) — on ignore silencieusement
+  }
+}
+
+async function rcLogOut() {
+  try {
+    await Purchases.logOut();
+  } catch {}
+}
 
 interface AuthContextType {
   user: User | null;
@@ -74,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.success && response.data) {
           setUser(response.data);
           await storage.setUserCache(toSafeCache(response.data));
+          await rcLogIn(response.data.id);
         }
         // Si !response.success → on garde le cache, l'intercepteur axios gère le refresh
       } catch {
@@ -97,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           _loginSucceeded.current = true;
           setUser(profile.data);
           await storage.setUserCache(toSafeCache(profile.data));
+          await rcLogIn(profile.data.id);
         }
       }
 
@@ -119,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           _loginSucceeded.current = true;
           setUser(profile.data);
           await storage.setUserCache(toSafeCache(profile.data));
+          await rcLogIn(profile.data.id);
         }
         return { success: true, message: response.message };
       }
@@ -137,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       await storage.clearAll();
+      await rcLogOut();
     }
   };
 

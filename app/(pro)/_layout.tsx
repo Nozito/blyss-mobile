@@ -13,6 +13,11 @@ export default function ProLayout() {
   if (!user) return <Redirect href="/(auth)/login" />;
   if (user.role !== "pro" && !user.is_admin) return <Redirect href="/(client)" />;
 
+  // Les admins ont accès même sans abonnement actif (pour le support)
+  if (!user.is_admin && user.pro_status !== "active") {
+    return <Redirect href="/(pro)/(profile)/subscription" />;
+  }
+
   return (
     <Tabs
       tabBar={(props) => <ProLiquidTabBar {...props} unreadCount={unreadCount} />}
