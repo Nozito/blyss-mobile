@@ -21,6 +21,10 @@
       "autoIncrement": true,
       "ios": {
         "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://app.blyssapp.fr",
+        "EXPO_PUBLIC_WS_URL": "wss://app.blyssapp.fr/ws"
       }
     }
   },
