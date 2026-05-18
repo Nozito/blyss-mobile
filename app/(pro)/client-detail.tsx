@@ -84,7 +84,7 @@ export default function ClientDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-clients"] });
       qc.invalidateQueries({ queryKey: ["blocked-clients"] });
-      router.back();
+      router.navigate("/(pro)/clients");
     },
   });
 
@@ -171,7 +171,7 @@ export default function ClientDetailScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => router.navigate("/(pro)/clients")}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
