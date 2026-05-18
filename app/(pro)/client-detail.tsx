@@ -234,19 +234,23 @@ export default function ClientDetailScreen() {
           borderRadius: 20, borderWidth: 1, borderColor: Colors.border,
           marginBottom: 20, overflow: "hidden",
         }}>
-          {([
-            { label: "VISITES", value: String(client.totalVisits ?? 0), icon: "calendar-outline" as const },
-            { label: "DERNIÈRE VISITE", value: client.lastVisit ?? "—", icon: "time-outline" as const },
-          ] as const).map(({ label, value, icon }, i) => (
-            <View key={label} style={{
-              flex: 1, alignItems: "center", paddingVertical: 18,
-              borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: Colors.border,
-            }}>
-              <Ionicons name={icon} size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
-              <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>{value}</Text>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5 }}>{label}</Text>
-            </View>
-          ))}
+          {/* Visites */}
+          <View style={{ flex: 1, alignItems: "center", paddingVertical: 18 }}>
+            <Ionicons name="calendar-outline" size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
+            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
+              {client.totalVisits ?? 0}
+            </Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5 }}>VISITES</Text>
+          </View>
+          <View style={{ width: 1, backgroundColor: Colors.border, marginVertical: 12 }} />
+          {/* Dernière visite */}
+          <View style={{ flex: 1, alignItems: "center", paddingVertical: 18, paddingHorizontal: 8 }}>
+            <Ionicons name="time-outline" size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground, textAlign: "center" }} numberOfLines={2}>
+              {client.lastVisit ?? "—"}
+            </Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5, marginTop: 2 }}>DERNIÈRE VISITE</Text>
+          </View>
         </View>
 
         {/* Notes & Préférences */}
