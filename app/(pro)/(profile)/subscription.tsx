@@ -222,7 +222,7 @@ export default function SubscriptionScreen() {
                   </View>
                 </View>
                 <Text style={{ fontSize: 30, fontWeight: "800", color: Colors.primary, marginBottom: 4 }}>
-                  {subscription.monthlyPrice.toFixed(2)} €
+                  {(Number(subscription.monthlyPrice) || 0).toFixed(2)} €
                   <Text style={{ fontSize: 14, fontWeight: "400", color: Colors.mutedForeground }}>/mois</Text>
                 </Text>
                 {subscription.endDate && (
