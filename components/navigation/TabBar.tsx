@@ -68,7 +68,8 @@ function LiquidTabBarBase({ state, navigation, tabs }: { state: any; navigation:
   const pillX = useRef(new Animated.Value(0)).current;
 
   const activeIndex = tabs.findIndex((t) => t.name === state.routes[state.index]?.name);
-  const clampedIndex = activeIndex < 0 ? 0 : activeIndex;
+  if (activeIndex < 0) return null;
+  const clampedIndex = activeIndex;
 
   const tabWidth = barWidth / tabs.length;
   const pillWidth = tabWidth - PILL_PADDING * 2;
