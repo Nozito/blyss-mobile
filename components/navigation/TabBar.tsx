@@ -68,14 +68,13 @@ function LiquidTabBarBase({ state, navigation, tabs }: { state: any; navigation:
   const pillX = useRef(new Animated.Value(0)).current;
 
   const activeIndex = tabs.findIndex((t) => t.name === state.routes[state.index]?.name);
-  if (activeIndex < 0) return null;
-  const clampedIndex = activeIndex;
+  const clampedIndex = activeIndex < 0 ? 0 : activeIndex;
 
   const tabWidth = barWidth / tabs.length;
   const pillWidth = tabWidth - PILL_PADDING * 2;
 
   useEffect(() => {
-    if (barWidth === 0) return;
+    if (barWidth === 0 || activeIndex < 0) return;
     const target = clampedIndex * tabWidth + PILL_PADDING;
     Animated.spring(pillX, {
       toValue: target,
@@ -84,6 +83,8 @@ function LiquidTabBarBase({ state, navigation, tabs }: { state: any; navigation:
       damping: 20,
     }).start();
   }, [clampedIndex, barWidth]);
+
+  if (activeIndex < 0) return null;
 
   const handleLayout = (e: LayoutChangeEvent) => {
     setBarWidth(e.nativeEvent.layout.width);
