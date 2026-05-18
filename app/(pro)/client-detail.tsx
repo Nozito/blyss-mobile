@@ -185,47 +185,43 @@ export default function ClientDetailScreen() {
           <View style={{ marginBottom: 12 }}>
             <Avatar name={displayName} size={72} />
           </View>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.foreground }}>
+          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.foreground, marginBottom: 4 }}>
             {displayName}
           </Text>
-          {displayPhone ? (
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>
-              {displayPhone}
-            </Text>
-          ) : null}
-          {displayEmail ? (
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{displayEmail}</Text>
-          ) : null}
 
           {/* Boutons contact */}
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 16, width: "100%" }}>
-            {displayPhone ? (
-              <Pressable
-                onPress={() => Linking.openURL(`tel:${displayPhone}`)}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 14,
-                  backgroundColor: `${Colors.primary}15`,
-                  flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                }}
-              >
-                <Ionicons name="call-outline" size={16} color={Colors.primary} />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.primary }}>Appeler</Text>
-              </Pressable>
-            ) : null}
-            {displayEmail ? (
-              <Pressable
-                onPress={() => Linking.openURL(`mailto:${displayEmail}`)}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 14,
-                  backgroundColor: `${Colors.primary}15`,
-                  flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                }}
-              >
-                <Ionicons name="mail-outline" size={16} color={Colors.primary} />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.primary }}>Email</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          {(displayPhone || displayEmail) ? (
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 12, width: "100%" }}>
+              {displayPhone ? (
+                <Pressable
+                  onPress={() => Linking.openURL(`tel:${displayPhone}`)}
+                  style={{
+                    flex: 1, paddingVertical: 10, borderRadius: 14,
+                    backgroundColor: `${Colors.primary}15`,
+                    borderWidth: 1, borderColor: `${Colors.primary}20`,
+                    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                  }}
+                >
+                  <Ionicons name="call-outline" size={16} color={Colors.primary} />
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Appeler</Text>
+                </Pressable>
+              ) : null}
+              {displayEmail ? (
+                <Pressable
+                  onPress={() => Linking.openURL(`mailto:${displayEmail}`)}
+                  style={{
+                    flex: 1, paddingVertical: 10, borderRadius: 14,
+                    backgroundColor: `${Colors.primary}15`,
+                    borderWidth: 1, borderColor: `${Colors.primary}20`,
+                    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                  }}
+                >
+                  <Ionicons name="mail-outline" size={16} color={Colors.primary} />
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Email</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {/* Stats */}
@@ -234,23 +230,25 @@ export default function ClientDetailScreen() {
           borderRadius: 20, borderWidth: 1, borderColor: Colors.border,
           marginBottom: 20, overflow: "hidden",
         }}>
-          {/* Visites */}
           <View style={{ flex: 1, alignItems: "center", paddingVertical: 18 }}>
             <Ionicons name="calendar-outline" size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
+            <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground }}>
               {client.totalVisits ?? 0}
             </Text>
             <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5 }}>VISITES</Text>
           </View>
-          <View style={{ width: 1, backgroundColor: Colors.border, marginVertical: 12 }} />
-          {/* Dernière visite */}
-          <View style={{ flex: 1, alignItems: "center", paddingVertical: 18, paddingHorizontal: 8 }}>
-            <Ionicons name="time-outline" size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground, textAlign: "center" }} numberOfLines={2}>
-              {client.lastVisit ?? "—"}
-            </Text>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5, marginTop: 2 }}>DERNIÈRE VISITE</Text>
-          </View>
+          {client.lastVisit ? (
+            <>
+              <View style={{ width: 1, backgroundColor: Colors.border, marginVertical: 12 }} />
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 18, paddingHorizontal: 10 }}>
+                <Ionicons name="time-outline" size={18} color={Colors.primary} style={{ marginBottom: 6 }} />
+                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5, marginBottom: 4 }}>DERNIÈRE VISITE</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.foreground, textAlign: "center" }} numberOfLines={2}>
+                  {client.lastVisit}
+                </Text>
+              </View>
+            </>
+          ) : null}
         </View>
 
         {/* Notes & Préférences */}
