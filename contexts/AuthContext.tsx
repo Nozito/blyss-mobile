@@ -45,7 +45,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SAFE_FIELDS = ["id", "first_name", "last_name", "role", "is_admin", "profile_photo", "avg_rating", "clients_count"] as const;
+const SAFE_FIELDS = ["id", "first_name", "last_name", "role", "is_admin", "pro_status", "profile_photo", "avg_rating", "clients_count"] as const;
 
 function toSafeCache(u: User): Record<string, unknown> {
   return Object.fromEntries(

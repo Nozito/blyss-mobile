@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import Purchases, { type PurchasesPackage, type CustomerInfo } from "react-native-purchases";
 import { Platform } from "react-native";
+import { proApi } from "@/lib/api";
 
 const RC_API_KEY_IOS = process.env.EXPO_PUBLIC_RC_API_KEY_IOS ?? "";
 const RC_API_KEY_ANDROID = process.env.EXPO_PUBLIC_RC_API_KEY_ANDROID ?? "";
@@ -21,28 +22,43 @@ interface RevenueCatContextType {
   isReady: boolean;
   packages: RCPackage[];
   customerInfo: CustomerInfo | null;
+  /** Plan actif : RC en priorité, backend en fallback. null = aucun abonnement. */
+  activePlan: RCPlan | null;
+  /** @deprecated Utiliser activePlan */
   activeEntitlement: string | null;
   purchase: (pkg: PurchasesPackage) => Promise<{ success: boolean; paymentId?: string; error?: string }>;
   restorePurchases: () => Promise<void>;
   refreshCustomerInfo: () => Promise<void>;
+  refreshActivePlan: () => Promise<void>;
 }
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
 const PLAN_IDENTIFIER_MAP: Record<string, RCPlan> = {
-  start_monthly:    "start",
-  start_annual:     "start",
-  serenite_monthly: "serenite",
-  serenite_annual:  "serenite",
+  start_monthly:     "start",
+  start_annual:      "start",
+  serenite_monthly:  "serenite",
+  serenite_annual:   "serenite",
   signature_monthly: "signature",
-  signature_annual: "signature",
+  signature_annual:  "signature",
 };
+
+/** Identique à la version web (services/revenuecat.ts) */
+function getActivePlanFromRC(info: CustomerInfo | null): RCPlan | null {
+  const ents = info?.entitlements?.active ?? {};
+  if ("signature" in ents) return "signature";
+  if ("serenite" in ents) return "serenite";
+  if ("start" in ents) return "start";
+  return null;
+}
 
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [packages, setPackages] = useState<RCPackage[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
+  const [backendPlan, setBackendPlan] = useState<RCPlan | null>(null);
 
+  // Initialisation RC
   useEffect(() => {
     const apiKey = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
     if (!apiKey) {
@@ -96,7 +112,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
           setPackages(built);
         }
       } catch {
-        // RC not available (simulator / no keys)
+        // RC non disponible (simulator / clé absente)
       } finally {
         setIsReady(true);
       }
@@ -108,16 +124,44 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     return () => listener.remove();
   }, []);
 
-  const activeEntitlement = customerInfo
-    ? (Object.keys(customerInfo.entitlements.active)[0] ?? null)
-    : null;
+  // Fallback backend : appelé quand RC est prêt mais sans plan actif
+  const fetchBackendPlan = useCallback(async () => {
+    try {
+      const res = await proApi.getSubscription();
+      if (res.success && res.data) {
+        const s = res.data.status as string;
+        if (s === "active" || s === "trialing") {
+          setBackendPlan(res.data.plan as RCPlan);
+          return;
+        }
+      }
+      setBackendPlan(null);
+    } catch {
+      setBackendPlan(null);
+    }
+  }, []);
+
+  // Déclenche le fallback backend dès que RC est prêt et sans plan RC
+  useEffect(() => {
+    if (!isReady) return;
+    const rcPlan = getActivePlanFromRC(customerInfo);
+    if (!rcPlan) {
+      fetchBackendPlan();
+    } else {
+      setBackendPlan(null); // RC fait foi, pas besoin du backend
+    }
+  }, [isReady, customerInfo, fetchBackendPlan]);
+
+  const rcActivePlan = getActivePlanFromRC(customerInfo);
+  // RC en priorité, backend en fallback (identique à la version web)
+  const activePlan: RCPlan | null = rcActivePlan ?? backendPlan;
+  const activeEntitlement = activePlan; // compatibilité rétrograde
 
   const purchase = useCallback(async (pkg: PurchasesPackage) => {
     try {
       const { customerInfo: info } = await Purchases.purchasePackage(pkg);
       setCustomerInfo(info);
-      const paymentId = pkg.identifier;
-      return { success: true, paymentId };
+      return { success: true, paymentId: pkg.identifier };
     } catch (e: any) {
       if (e?.userCancelled) return { success: false, error: "cancelled" };
       return { success: false, error: e?.message ?? "purchase_failed" };
@@ -138,10 +182,14 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
+  const refreshActivePlan = useCallback(async () => {
+    await Promise.all([refreshCustomerInfo(), fetchBackendPlan()]);
+  }, [refreshCustomerInfo, fetchBackendPlan]);
+
   return (
     <RevenueCatContext.Provider value={{
-      isReady, packages, customerInfo, activeEntitlement,
-      purchase, restorePurchases, refreshCustomerInfo,
+      isReady, packages, customerInfo, activePlan, activeEntitlement,
+      purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan,
     }}>
       {children}
     </RevenueCatContext.Provider>
