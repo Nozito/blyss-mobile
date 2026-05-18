@@ -19,18 +19,13 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-
 type Client = {
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number?: string | null;
-  profile_photo?: string | null;
-  bookings_count?: number;
-  total_spent?: number;
-  created_at?: string;
+  name: string;
+  phone?: string | null;
+  lastVisit?: string | null;
+  totalVisits?: number;
+  avatar?: string | null;
 };
 
 function SectionTitle({ title }: { title: string }) {
@@ -147,15 +142,12 @@ export default function ClientDetailScreen() {
     );
   }
 
-  const photoUri = client.profile_photo
-    ? client.profile_photo.startsWith("http")
-      ? client.profile_photo
-      : `${API_URL}${client.profile_photo}`
-    : undefined;
-
-  const isNew = client.created_at
-    ? Date.now() - new Date(client.created_at).getTime() < 7 * 24 * 3600 * 1000
-    : false;
+  const noteInfo = notesData?.data;
+  const displayName = (noteInfo?.first_name && noteInfo?.last_name)
+    ? `${noteInfo.first_name} ${noteInfo.last_name}`
+    : client.name;
+  const displayEmail = noteInfo?.email ?? "";
+  const displayPhone = noteInfo?.phone_number ?? client.phone ?? null;
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -190,33 +182,26 @@ export default function ClientDetailScreen() {
           backgroundColor: Colors.card, borderRadius: 20, padding: 20, marginBottom: 16,
           borderWidth: 1, borderColor: Colors.border, alignItems: "center",
         }}>
-          <View style={{ position: "relative", marginBottom: 12 }}>
-            <Avatar uri={photoUri} name={`${client.first_name} ${client.last_name}`} size={72} />
-            {isNew && (
-              <View style={{
-                position: "absolute", top: -4, right: -4,
-                backgroundColor: Colors.success, borderRadius: 10,
-                paddingHorizontal: 6, paddingVertical: 2,
-              }}>
-                <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>NOUVEAU</Text>
-              </View>
-            )}
+          <View style={{ marginBottom: 12 }}>
+            <Avatar name={displayName} size={72} />
           </View>
           <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.foreground }}>
-            {client.first_name} {client.last_name}
+            {displayName}
           </Text>
-          {client.phone_number ? (
+          {displayPhone ? (
             <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>
-              {client.phone_number}
+              {displayPhone}
             </Text>
           ) : null}
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{client.email}</Text>
+          {displayEmail ? (
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{displayEmail}</Text>
+          ) : null}
 
           {/* Boutons contact */}
           <View style={{ flexDirection: "row", gap: 10, marginTop: 16, width: "100%" }}>
-            {client.phone_number ? (
+            {displayPhone ? (
               <Pressable
-                onPress={() => Linking.openURL(`tel:${client.phone_number}`)}
+                onPress={() => Linking.openURL(`tel:${displayPhone}`)}
                 style={{
                   flex: 1, paddingVertical: 10, borderRadius: 14,
                   backgroundColor: `${Colors.primary}15`,
@@ -227,17 +212,19 @@ export default function ClientDetailScreen() {
                 <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.primary }}>Appeler</Text>
               </Pressable>
             ) : null}
-            <Pressable
-              onPress={() => Linking.openURL(`mailto:${client.email}`)}
-              style={{
-                flex: 1, paddingVertical: 10, borderRadius: 14,
-                backgroundColor: `${Colors.primary}15`,
-                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-              }}
-            >
-              <Ionicons name="mail-outline" size={16} color={Colors.primary} />
-              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.primary }}>Email</Text>
-            </Pressable>
+            {displayEmail ? (
+              <Pressable
+                onPress={() => Linking.openURL(`mailto:${displayEmail}`)}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: 14,
+                  backgroundColor: `${Colors.primary}15`,
+                  flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                }}
+              >
+                <Ionicons name="mail-outline" size={16} color={Colors.primary} />
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.primary }}>Email</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -248,8 +235,8 @@ export default function ClientDetailScreen() {
           marginBottom: 20, overflow: "hidden",
         }}>
           {([
-            { label: "RDV TOTAL", value: String(client.bookings_count ?? 0), icon: "calendar-outline" as const },
-            { label: "CA TOTAL", value: `${(client.total_spent ?? 0).toFixed(0)} €`, icon: "trending-up-outline" as const },
+            { label: "VISITES", value: String(client.totalVisits ?? 0), icon: "calendar-outline" as const },
+            { label: "DERNIÈRE VISITE", value: client.lastVisit ?? "—", icon: "time-outline" as const },
           ] as const).map(({ label, value, icon }, i) => (
             <View key={label} style={{
               flex: 1, alignItems: "center", paddingVertical: 18,
@@ -373,7 +360,7 @@ export default function ClientDetailScreen() {
           onPress={() =>
             Alert.alert(
               "Bloquer la cliente",
-              `Bloquer ${client.first_name} ${client.last_name} ? Elle ne pourra plus réserver.`,
+              `Bloquer ${displayName} ? Elle ne pourra plus réserver.`,
               [
                 { text: "Annuler", style: "cancel" },
                 { text: "Bloquer", style: "destructive", onPress: () => blockMutation.mutate() },

@@ -18,14 +18,12 @@ import type { BlockedClient } from "@/lib/api";
 
 type Client = {
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number?: string | null;
-  profile_photo?: string | null;
-  bookings_count?: number;
-  total_spent?: number;
-  created_at?: string;
+  name: string;
+  phone?: string | null;
+  lastVisit?: string | null;
+  totalVisits?: number;
+  notes?: string | null;
+  avatar?: string | null;
 };
 
 const TABS = [
@@ -61,29 +59,16 @@ export default function ProClientsScreen() {
   const clients = (clientsData?.data as Client[] | undefined) ?? [];
   const blocked = (blockedData?.data as BlockedClient[] | undefined) ?? [];
 
-  const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-
   const filteredClients = clients.filter((c) =>
     search
-      ? `${c.first_name} ${c.last_name} ${c.email} ${c.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase())
+      ? `${c.name} ${c.phone ?? ""}`.toLowerCase().includes(search.toLowerCase())
       : true
   );
 
-  const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  weekStart.setHours(0, 0, 0, 0);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
   const stats = {
     total: clients.length,
-    thisWeek: clients.filter((c) => c.created_at && new Date(c.created_at) >= weekStart).length,
-    thisMonth: clients.filter((c) => c.created_at && new Date(c.created_at) >= monthStart).length,
+    totalVisits: clients.reduce((sum, c) => sum + (c.totalVisits ?? 0), 0),
   };
-
-  const isNewClient = (c: Client) =>
-    !!c.created_at &&
-    Date.now() - new Date(c.created_at).getTime() < NEW_CLIENT_DAYS * 24 * 3600 * 1000;
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
@@ -160,9 +145,8 @@ export default function ProClientsScreen() {
                   marginBottom: 20, overflow: "hidden",
                 }}>
                   {[
-                    { label: "TOTAL", value: stats.total },
-                    { label: "SEMAINE", value: stats.thisWeek },
-                    { label: "MOIS", value: stats.thisMonth },
+                    { label: "CLIENTES", value: stats.total },
+                    { label: "VISITES", value: stats.totalVisits },
                   ].map(({ label, value }, i) => (
                     <View key={label} style={{
                       flex: 1, alignItems: "center", paddingVertical: 16,
@@ -189,66 +173,40 @@ export default function ProClientsScreen() {
                 </Text>
               </View>
             }
-            renderItem={({ item }) => {
-              const photoUri = item.profile_photo
-                ? item.profile_photo.startsWith("http")
-                  ? item.profile_photo
-                  : `${API_URL}${item.profile_photo}`
-                : undefined;
-              const isNew = isNewClient(item);
-
-              return (
-                <Pressable
-                  onPress={() => router.push(`/(pro)/client-detail?clientId=${item.id}`)}
-                  style={{
-                    flexDirection: "row", alignItems: "center", gap: 12,
-                    backgroundColor: Colors.card, borderRadius: 20, padding: 14,
-                    marginBottom: 8, borderWidth: 1,
-                    borderColor: isNew ? `${Colors.primary}30` : Colors.border,
-                  }}
-                >
-                  <View style={{ position: "relative" }}>
-                    <Avatar uri={photoUri} name={`${item.first_name} ${item.last_name}`} size={46} />
-                    {isNew && (
-                      <View style={{
-                        position: "absolute", top: -4, right: -4,
-                        backgroundColor: Colors.success, borderRadius: 8,
-                        paddingHorizontal: 5, paddingVertical: 1,
-                      }}>
-                        <Text style={{ fontSize: 8, fontWeight: "800", color: "#fff" }}>NEW</Text>
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => router.push(`/(pro)/client-detail?clientId=${item.id}`)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 12,
+                  backgroundColor: Colors.card, borderRadius: 20, padding: 14,
+                  marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+                }}
+              >
+                <Avatar name={item.name} size={46} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+                    {item.name}
+                  </Text>
+                  {item.phone ? (
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.phone}</Text>
+                  ) : null}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
+                    {item.totalVisits != null && (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
+                        <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                          {item.totalVisits} visite{item.totalVisits !== 1 ? "s" : ""}
+                        </Text>
                       </View>
                     )}
+                    {item.lastVisit ? (
+                      <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>· {item.lastVisit}</Text>
+                    ) : null}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
-                      {item.first_name} {item.last_name}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.email}</Text>
-                    {(item.bookings_count != null || item.total_spent != null) && (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
-                        {item.bookings_count != null && (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                            <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
-                            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                              {item.bookings_count} rdv
-                            </Text>
-                          </View>
-                        )}
-                        {item.total_spent != null && (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                            <Ionicons name="trending-up-outline" size={11} color={Colors.mutedForeground} />
-                            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                              {item.total_spent.toFixed(0)} €
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-                </Pressable>
-              );
-            }}
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+              </Pressable>
+            )}
           />
         )
       ) : loadingBlocked ? (
