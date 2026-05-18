@@ -16,6 +16,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 type BillingPeriod = "monthly" | "annual";
 
@@ -84,6 +85,9 @@ export default function SubscriptionScreen() {
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
   const [purchasing, setPurchasing] = useState<RCPlan | null>(null);
 
+  const { user, refreshProfile } = useAuth();
+  const hasActiveSubscription = user?.pro_status === "active";
+
   const { packages, purchase, restorePurchases } = useRevenueCat();
 
   const { data, isLoading } = useQuery({
@@ -109,22 +113,12 @@ export default function SubscriptionScreen() {
         : rcPkg.rcPackage;
 
       const result = await purchase(pkg);
-      if (result.success && result.paymentId) {
-        const monthlyPrice = billing === "annual"
-          ? rcPkg.annualMonthlyPrice
-          : rcPkg.monthlyPrice;
-        try {
-          await proApi.createSubscription({
-            plan: planKey,
-            billingType: billing === "annual" ? "one_time" : "monthly",
-            monthlyPrice,
-            paymentId: result.paymentId,
-          });
-          qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-          router.push("/(pro)/(profile)/subscription-success");
-        } catch {
-          Alert.alert("Erreur", "Achat effectué mais synchronisation échouée. Contacte le support.");
-        }
+      if (result.success) {
+        // L'activation pro_status se fait via le webhook RevenueCat côté backend.
+        // On rafraîchit le profil pour que le guard du layout soit à jour immédiatement.
+        await refreshProfile();
+        qc.invalidateQueries({ queryKey: ["pro-subscription"] });
+        router.push("/(pro)/(profile)/subscription-success");
       } else if (result.error && result.error !== "cancelled") {
         Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
       }
@@ -143,6 +137,7 @@ export default function SubscriptionScreen() {
             onPress: async () => {
               try {
                 await proApi.updateSubscription({ plan: planKey });
+                await refreshProfile();
                 qc.invalidateQueries({ queryKey: ["pro-subscription"] });
                 router.push("/(pro)/(profile)/subscription-success");
               } catch {
@@ -175,16 +170,19 @@ export default function SubscriptionScreen() {
       >
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <AnimatedIconButton
-            onPress={() => router.back()}
-            style={{
-              width: 40, height: 40, borderRadius: 12,
-              backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </AnimatedIconButton>
+          {/* Bouton retour uniquement si l'abonnement est déjà actif (accès depuis les réglages) */}
+          {hasActiveSubscription && (
+            <AnimatedIconButton
+              onPress={() => router.back()}
+              style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+                alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            </AnimatedIconButton>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
               Abonnement

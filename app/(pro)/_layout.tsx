@@ -1,20 +1,25 @@
 import React from "react";
-import { Tabs, Redirect } from "expo-router";
+import { Tabs, Redirect, usePathname } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ProLiquidTabBar } from "@/components/navigation/TabBar";
 
+// Écrans accessibles sans abonnement actif (souscription, succès)
+const SUBSCRIPTION_PATHS = ["/subscription", "/subscription-success", "/subscription-settings"];
+
 export default function ProLayout() {
   const { user, isLoading } = useAuth();
   const { unreadCount } = useNotifications();
+  const pathname = usePathname();
 
   if (isLoading) return <LoadingSpinner fullScreen />;
   if (!user) return <Redirect href="/(auth)/login" />;
   if (user.role !== "pro" && !user.is_admin) return <Redirect href="/(client)" />;
 
-  // Les admins ont accès même sans abonnement actif (pour le support)
-  if (!user.is_admin && user.pro_status !== "active") {
+  // Admins passent toujours. Écrans de souscription accessibles sans abonnement.
+  const isSubscriptionScreen = SUBSCRIPTION_PATHS.some((p) => pathname.endsWith(p));
+  if (!user.is_admin && user.pro_status !== "active" && !isSubscriptionScreen) {
     return <Redirect href="/(pro)/(profile)/subscription" />;
   }
 

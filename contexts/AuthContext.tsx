@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (_loginSucceeded.current) return;
 
         if (response.success && response.data) {
+          console.log('[AuthContext] user after initAuth:', JSON.stringify({ id: response.data.id, role: response.data.role, pro_status: response.data.pro_status }, null, 2));
           setUser(response.data);
           await storage.setUserCache(toSafeCache(response.data));
           await rcLogIn(response.data.id);
