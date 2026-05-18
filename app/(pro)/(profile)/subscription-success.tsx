@@ -22,13 +22,12 @@ export default function ProSubscriptionSuccessScreen() {
   const plan = (params.plan ?? "start") as PlanId;
 
   useEffect(() => {
-    // Lance le confetti au montage
     confettiRef.current?.start();
 
-    // Redirect automatique après 2.5s
+    // 4s : laisse le confetti se déployer complètement avant de naviguer
     const timer = setTimeout(() => {
-      router.replace("/(pro)/dashboard");
-    }, 2500);
+      router.replace("/(pro)/onboarding");
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, []);

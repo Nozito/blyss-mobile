@@ -37,6 +37,9 @@ export default function ProLayout() {
     <Tabs
       tabBar={(props) => {
         if (!hasActiveSub) return null;
+        // Masque la tab bar sur l'écran d'onboarding post-paiement
+        const currentRoute = props.state.routes[props.state.index]?.name;
+        if (currentRoute === "onboarding") return null;
         return <ProLiquidTabBar {...props} unreadCount={unreadCount} />;
       }}
       screenOptions={{ headerShown: false }}
@@ -47,6 +50,7 @@ export default function ProLayout() {
       <Tabs.Screen name="notifications" options={{ title: "Notifications" }} />
       <Tabs.Screen name="(profile)"     options={{ title: "Profil" }} />
       <Tabs.Screen name="client-detail" options={{ href: null }} />
+      <Tabs.Screen name="onboarding"    options={{ href: null }} />
     </Tabs>
   );
 }
