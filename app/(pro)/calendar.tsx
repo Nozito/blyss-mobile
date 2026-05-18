@@ -308,6 +308,11 @@ export default function ProCalendarScreen() {
   const [showPlanTimePicker, setShowPlanTimePicker] = useState(false);
   const [newPlanTime, setNewPlanTime] = useState(new Date());
 
+  // View mode
+  type ViewMode = "month" | "week" | "list";
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [showViewPicker, setShowViewPicker] = useState(false);
+
   // ── data fetching
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -547,10 +552,23 @@ export default function ProCalendarScreen() {
               <Ionicons name={isSearchOpen ? "close" : "search-outline"} size={18} color={Colors.foreground} />
             </Pressable>
             <Pressable
-              onPress={() => setShowUnavailModal(true)}
-              style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...Shadows.card }}
+              onPress={() => setShowViewPicker(true)}
+              style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: viewMode !== "month" ? Colors.primary : "#FFFFFF",
+                alignItems: "center", justifyContent: "center",
+                ...Shadows.card,
+              }}
             >
-              <Ionicons name="calendar-outline" size={18} color={Colors.foreground} />
+              <Ionicons
+                name={
+                  viewMode === "month" ? "calendar-outline"
+                  : viewMode === "week" ? "grid-outline"
+                  : "list-outline"
+                }
+                size={18}
+                color={viewMode !== "month" ? "#fff" : Colors.foreground}
+              />
             </Pressable>
           </View>
         </View>
@@ -575,20 +593,102 @@ export default function ProCalendarScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
       >
         {/* ── CALENDAR GRID ── */}
-        <CalendarGrid
-          currentDate={currentDate}
-          selectedDate={selectedDate}
-          appointments={appointments}
-          unavailabilities={unavailabilities}
-          onSelectDay={handleSelectDate}
-          onPrevMonth={() => setCurrentDate((p) => new Date(p.getFullYear(), p.getMonth() - 1, 1))}
-          onNextMonth={() => setCurrentDate((p) => new Date(p.getFullYear(), p.getMonth() + 1, 1))}
-          onToday={() => {
-            const t = new Date();
-            setSelectedDate(t);
-            setCurrentDate(new Date(t.getFullYear(), t.getMonth(), 1));
-          }}
-        />
+        {viewMode === "month" && (
+          <CalendarGrid
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            appointments={appointments}
+            unavailabilities={unavailabilities}
+            onSelectDay={handleSelectDate}
+            onPrevMonth={() => setCurrentDate((p) => new Date(p.getFullYear(), p.getMonth() - 1, 1))}
+            onNextMonth={() => setCurrentDate((p) => new Date(p.getFullYear(), p.getMonth() + 1, 1))}
+            onToday={() => {
+              const t = new Date();
+              setSelectedDate(t);
+              setCurrentDate(new Date(t.getFullYear(), t.getMonth(), 1));
+            }}
+          />
+        )}
+
+        {viewMode === "week" && (
+          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
+            {/* Header semaine : flèches + label plage */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <AnimatedIconButton
+                onPress={() => {
+                  const p = new Date(selectedDate);
+                  p.setDate(p.getDate() - 7);
+                  handleSelectDate(p);
+                }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
+              </AnimatedIconButton>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground }}>
+                {(() => {
+                  const mon = new Date(selectedDate);
+                  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+                  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+                  const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+                  return `${fmt(mon)} – ${fmt(sun)}`;
+                })()}
+              </Text>
+              <AnimatedIconButton
+                onPress={() => {
+                  const n = new Date(selectedDate);
+                  n.setDate(n.getDate() + 7);
+                  handleSelectDate(n);
+                }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
+              </AnimatedIconButton>
+            </View>
+
+            {/* 7 colonnes jours */}
+            <View style={{ flexDirection: "row", gap: 4 }}>
+              {Array.from({ length: 7 }, (_, i) => {
+                const base = new Date(selectedDate);
+                base.setDate(base.getDate() - ((base.getDay() + 6) % 7) + i);
+                const isActive = toLocalDate(base) === toLocalDate(selectedDate);
+                const isToday  = toLocalDate(base) === toLocalDate(new Date());
+                const hasApt   = appointments.some(a => toLocalDate(new Date(a.date)) === toLocalDate(base));
+                return (
+                  <Pressable
+                    key={i}
+                    onPress={() => handleSelectDate(new Date(base))}
+                    style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 14,
+                      backgroundColor: isActive ? Colors.primary : isToday ? "rgba(254,93,157,0.1)" : "transparent" }}
+                  >
+                    <Text style={{ fontSize: 9, fontWeight: "700", color: isActive ? "#fff" : Colors.mutedForeground,
+                      textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+                      {["L","M","M","J","V","S","D"][i]}
+                    </Text>
+                    <Text style={{ fontSize: 16, fontWeight: "800",
+                      color: isActive ? "#fff" : isToday ? Colors.primary : Colors.foreground }}>
+                      {base.getDate()}
+                    </Text>
+                    {hasApt && (
+                      <View style={{ width: 4, height: 4, borderRadius: 2, marginTop: 3,
+                        backgroundColor: isActive ? "#fff" : Colors.primary }} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {viewMode === "list" && (
+          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>
+              {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
+            </Text>
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>
+              Vue liste — navigue via le header de l'agenda
+            </Text>
+          </View>
+        )}
 
         {/* ── PLANNING & ABSENCES CARDS ── */}
         <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
@@ -852,6 +952,56 @@ export default function ProCalendarScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ── VIEW PICKER MODAL ── */}
+      <Modal visible={showViewPicker} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowViewPicker(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowViewPicker(false)} />
+        <View style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          backgroundColor: "#fff",
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          paddingBottom: insets.bottom + 16,
+        }}>
+          {/* Handle */}
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB",
+            alignSelf: "center", marginTop: 12, marginBottom: 8 }} />
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
+            textTransform: "uppercase", letterSpacing: 0.8, paddingHorizontal: 24, marginBottom: 8 }}>
+            Vue de l'agenda
+          </Text>
+
+          {([
+            { key: "month", icon: "calendar-outline",  label: "Mois",    sub: "Calendrier mensuel"  },
+            { key: "week",  icon: "grid-outline",       label: "Semaine", sub: "7 jours glissants"   },
+            { key: "list",  icon: "list-outline",       label: "Liste",   sub: "Créneaux du jour"    },
+          ] as const).map(({ key, icon, label, sub }) => (
+            <Pressable
+              key={key}
+              onPress={() => { setViewMode(key); setShowViewPicker(false); }}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 14,
+                paddingHorizontal: 24, paddingVertical: 14,
+                backgroundColor: viewMode === key ? "rgba(254,93,157,0.06)" : "transparent",
+              }}
+            >
+              <View style={{
+                width: 44, height: 44, borderRadius: 14,
+                backgroundColor: viewMode === key ? Colors.primary : "#F8F5F1",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name={icon} size={20} color={viewMode === key ? "#fff" : Colors.mutedForeground} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>{label}</Text>
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1 }}>{sub}</Text>
+              </View>
+              {viewMode === key && (
+                <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
+              )}
+            </Pressable>
+          ))}
+        </View>
+      </Modal>
 
       {/* ── ADD SLOT MODAL ── */}
       <Modal visible={showAddSlot} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowAddSlot(false)}>
