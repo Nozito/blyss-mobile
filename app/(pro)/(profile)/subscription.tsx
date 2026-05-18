@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 type BillingPeriod = "monthly" | "annual";
 
+// Fix 10 — wording aligné sur le web + Fix 1 — prix fallback corrigés
 const PLAN_CONFIG: Record<RCPlan, {
   label: string;
   fallbackMonthly: number;
@@ -30,40 +31,40 @@ const PLAN_CONFIG: Record<RCPlan, {
 }> = {
   start: {
     label: "Start",
-    fallbackMonthly: 49.9,
+    fallbackMonthly: 29, // Fix 1
     color: Colors.primary,
     icon: "rocket-outline",
     features: [
-      { text: "Dashboard & statistiques", icon: "grid-outline" },
-      { text: "Agenda & créneaux", icon: "calendar-outline" },
-      { text: "Gestion clientes", icon: "people-outline" },
-      { text: "Catalogue prestations", icon: "sparkles-outline" },
+      { text: "Réservation en ligne", icon: "calendar-outline" },
+      { text: "Gestion des rendez-vous", icon: "grid-outline" },
+      { text: "Notifications clientes", icon: "notifications-outline" },
+      { text: "Tableau de bord", icon: "bar-chart-outline" },
       { text: "Profil public Blyss", icon: "globe-outline" },
     ],
   },
   serenite: {
     label: "Sérénité",
-    fallbackMonthly: 39.9,
+    fallbackMonthly: 59, // Fix 1
     color: Colors.pro ?? "#7C3AED",
     icon: "shield-checkmark-outline",
     features: [
       { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
-      { text: "Portfolio Instagram", icon: "logo-instagram" },
-      { text: "Rappels automatiques clientes", icon: "notifications-outline" },
-      { text: "Statistiques avancées", icon: "analytics-outline" },
-      { text: "Facturation automatique", icon: "receipt-outline" },
+      { text: "Module finance", icon: "receipt-outline" },
+      { text: "Statistiques & Facturation", icon: "analytics-outline" },
+      { text: "Portfolio photos", icon: "camera-outline" },
+      { text: "Rappels automatiques", icon: "notifications-outline" },
     ],
   },
   signature: {
     label: "Signature",
-    fallbackMonthly: 29.9,
+    fallbackMonthly: 99, // Fix 1
     color: Colors.secondary ?? "#F59E0B",
     icon: "diamond-outline",
     features: [
       { text: "Tout Sérénité inclus", icon: "checkmark-circle-outline" },
-      { text: "Suivi post-prestation", icon: "heart-outline" },
-      { text: "Paiements en ligne", icon: "card-outline" },
-      { text: "Acomptes automatiques", icon: "cash-outline" },
+      { text: "Visibilité premium", icon: "star-outline" },
+      { text: "Encaissement en ligne", icon: "card-outline" },
+      { text: "Rappels post-prestation", icon: "heart-outline" },
       { text: "Support prioritaire", icon: "headset-outline" },
     ],
   },
@@ -79,6 +80,12 @@ function savingsPercent(monthly: number, annualMonthly: number) {
   return Math.round((1 - annualMonthly / monthly) * 100);
 }
 
+const PLAN_LABEL_MAP: Record<RCPlan, string> = {
+  start: "Start",
+  serenite: "Sérénité",
+  signature: "Signature",
+};
+
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -89,7 +96,8 @@ export default function SubscriptionScreen() {
   const { user, refreshProfile } = useAuth();
   const hasActiveSubscription = user?.pro_status === "active";
 
-  const { packages, purchase, restorePurchases } = useRevenueCat();
+  // Fix 9 — récupère isReady pour le RC loading state
+  const { packages, purchase, restorePurchases, activePlan, isReady } = useRevenueCat();
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-subscription"],
@@ -103,20 +111,23 @@ export default function SubscriptionScreen() {
 
   const subscription = data?.data;
 
+  const isAnnual = billing === "annual";
+
+  // Fix 2 — setPurchasing(null) déplacé dans le callback de confirmation
   const handlePurchase = useCallback(async (planKey: RCPlan) => {
     setPurchasing(planKey);
 
     const rcPkg = packages.find((p) => p.key === planKey);
 
     if (rcPkg) {
-      const pkg = billing === "annual" && rcPkg.annualRcPackage
+      const pkg = isAnnual && rcPkg.annualRcPackage
         ? rcPkg.annualRcPackage
         : rcPkg.rcPackage;
 
       const result = await purchase(pkg);
+      setPurchasing(null); // reset après la promesse RC
+
       if (result.success) {
-        // L'activation pro_status se fait via le webhook RevenueCat côté backend.
-        // On rafraîchit le profil pour que le guard du layout soit à jour immédiatement.
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
         router.push("/(pro)/(profile)/subscription-success");
@@ -124,15 +135,19 @@ export default function SubscriptionScreen() {
         Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
       }
     } else {
-      // Fallback when RC packages not loaded
+      // Fallback sans packages RC — Fix 2 : setPurchasing(null) DANS le callback
       const config = PLAN_CONFIG[planKey];
       const monthly = config.fallbackMonthly;
-      const price = billing === "annual" ? annualMonthlyFallback(monthly) : monthly;
+      const price = isAnnual ? annualMonthlyFallback(monthly) : monthly;
       Alert.alert(
         `Passer au plan ${config.label}`,
-        `Tu seras facturée ${price.toFixed(2)} €/mois${billing === "annual" ? ` (${(price * 12).toFixed(0)} €/an)` : ""}.`,
+        `Tu seras facturée ${price.toFixed(2)} €/mois${isAnnual ? ` (${(price * 12).toFixed(0)} €/an)` : ""}.`,
         [
-          { text: "Annuler", style: "cancel" },
+          {
+            text: "Annuler",
+            style: "cancel",
+            onPress: () => setPurchasing(null), // Fix 2
+          },
           {
             text: "Confirmer",
             onPress: async () => {
@@ -143,24 +158,30 @@ export default function SubscriptionScreen() {
                 router.push("/(pro)/(profile)/subscription-success");
               } catch {
                 Alert.alert("Erreur", "Impossible de changer de plan.");
+              } finally {
+                setPurchasing(null); // Fix 2 : reset après confirmation
               }
             },
           },
         ]
       );
     }
-
-    setPurchasing(null);
-  }, [billing, packages, purchase, qc, router]);
+  }, [isAnnual, packages, purchase, qc, router, refreshProfile]);
 
   const savings = savingsPercent(
     PLAN_CONFIG.start.fallbackMonthly,
     annualMonthlyFallback(PLAN_CONFIG.start.fallbackMonthly)
   );
 
+  // Fix 8 — titre dynamique basé sur activePlan
+  const screenTitle = activePlan ? "Modifier ta formule" : "Choisis ta formule";
+  const screenSubtitle = activePlan
+    ? `Formule actuelle : ${PLAN_LABEL_MAP[activePlan]}`
+    : "Gère ton plan Blyss Pro";
+
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFF5F8" }}>
-      {/* Bloque le swipe-back iOS quand pas d'abonnement actif */}
+    // Fix 4 — fond Colors.background au lieu de #FFF5F8
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <Stack.Screen options={{
         gestureEnabled: hasActiveSubscription,
         headerBackVisible: false,
@@ -169,14 +190,13 @@ export default function SubscriptionScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + 160,
+          paddingBottom: insets.bottom + 100,
           paddingHorizontal: 20,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header — Fix 8 : titre dynamique */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          {/* Bouton retour uniquement si l'abonnement est déjà actif (accès depuis les réglages) */}
           {hasActiveSubscription && (
             <AnimatedIconButton
               onPress={() => router.back()}
@@ -191,9 +211,9 @@ export default function SubscriptionScreen() {
           )}
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
-              Abonnement
+              {screenTitle}
             </Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Gère ton plan Blyss Pro</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{screenSubtitle}</Text>
           </View>
         </View>
 
@@ -307,7 +327,7 @@ export default function SubscriptionScreen() {
               })}
             </View>
 
-            {billing === "annual" && (
+            {isAnnual && (
               <View style={{
                 flexDirection: "row", alignItems: "center", gap: 8,
                 backgroundColor: `${Colors.success}10`, borderRadius: 14,
@@ -321,139 +341,176 @@ export default function SubscriptionScreen() {
               </View>
             )}
 
+            {/* Fix 9 — RC loading state pendant le chargement des offres */}
+            {!isReady || (!isLoading && isReady && packages.length === 0 && !subscription) ? null : null}
+
             {/* Plan cards */}
-            {(Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
-              const config = PLAN_CONFIG[planKey];
-              const isCurrent = subscription?.plan === planKey;
-              const rcPkg = packages.find((p) => p.key === planKey);
-              const isPurchasing = purchasing === planKey;
+            {!isReady ? (
+              <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
+                  Chargement des offres...
+                </Text>
+              </View>
+            ) : (
+              (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
+                // Fix 6 — Start masqué en mode annuel
+                if (isAnnual && planKey === "start") return null;
 
-              const displayStr = billing === "annual"
-                ? `${(rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)).toFixed(2)} €`
-                : (rcPkg?.priceString ?? `${config.fallbackMonthly.toFixed(2)} €`);
+                const config = PLAN_CONFIG[planKey];
+                const isCurrent = subscription?.plan === planKey;
+                const rcPkg = packages.find((p) => p.key === planKey);
+                const isPurchasing = purchasing === planKey;
 
-              const annualTotal = billing === "annual"
-                ? ((rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)) * 12).toFixed(0)
-                : null;
+                const displayStr = isAnnual
+                  ? `${(rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)).toFixed(2)} €`
+                  : (rcPkg?.priceString ?? `${config.fallbackMonthly.toFixed(2)} €`);
 
-              const planSavings = savingsPercent(
-                rcPkg?.monthlyPrice ?? config.fallbackMonthly,
-                rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)
-              );
+                const annualTotal = isAnnual
+                  ? ((rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)) * 12).toFixed(0)
+                  : null;
 
-              return (
-                <View
-                  key={planKey}
-                  style={{
-                    backgroundColor: Colors.card, borderRadius: 20,
-                    borderWidth: isCurrent ? 2.5 : 1,
-                    borderColor: isCurrent ? config.color : Colors.border,
-                    marginBottom: 16, overflow: "hidden",
-                  }}
-                >
-                  <View style={{ padding: 18 }}>
-                    {/* Card header */}
-                    <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
-                      <View style={{ flex: 1, marginRight: 12 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                          <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground }}>
-                            {config.label}
-                          </Text>
-                          {isCurrent && (
-                            <View style={{
-                              backgroundColor: `${config.color}20`,
-                              borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-                            }}>
-                              <Text style={{ fontSize: 11, fontWeight: "700", color: config.color }}>Actuel</Text>
-                            </View>
-                          )}
-                          {billing === "annual" && (
-                            <View style={{
-                              backgroundColor: `${Colors.success}20`,
-                              borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-                            }}>
-                              <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.success }}>-{planSavings}%</Text>
-                            </View>
-                          )}
-                        </View>
-                        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
-                          <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>
-                            {displayStr}
-                          </Text>
-                          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>/mois</Text>
-                        </View>
-                        {billing === "annual" && annualTotal && (
-                          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
-                            soit {annualTotal} €/an
-                          </Text>
-                        )}
-                      </View>
+                const planSavings = savingsPercent(
+                  rcPkg?.monthlyPrice ?? config.fallbackMonthly,
+                  rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)
+                );
+
+                return (
+                  <View
+                    key={planKey}
+                    style={{
+                      backgroundColor: Colors.card, borderRadius: 20,
+                      borderWidth: isCurrent ? 2.5 : 1,
+                      borderColor: isCurrent ? config.color : Colors.border,
+                      marginBottom: 16, overflow: "hidden",
+                    }}
+                  >
+                    {/* Fix 5 — Badge POPULAIRE sur Sérénité */}
+                    {planKey === "serenite" && (
                       <View style={{
-                        width: 48, height: 48, borderRadius: 14,
-                        backgroundColor: `${config.color}15`,
-                        alignItems: "center", justifyContent: "center",
+                        backgroundColor: Colors.primary,
+                        paddingVertical: 5,
+                        alignItems: "center",
                       }}>
-                        <Ionicons name={config.icon} size={24} color={config.color} />
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", letterSpacing: 1 }}>
+                          POPULAIRE
+                        </Text>
                       </View>
-                    </View>
-
-                    {/* Features */}
-                    <View style={{ gap: 9, marginBottom: isCurrent ? 0 : 16 }}>
-                      {config.features.map((f) => (
-                        <View key={f.text} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                          <View style={{
-                            width: 26, height: 26, borderRadius: 8,
-                            backgroundColor: `${config.color}15`,
-                            alignItems: "center", justifyContent: "center",
-                          }}>
-                            <Ionicons name={f.icon as any} size={14} color={config.color} />
-                          </View>
-                          <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{f.text}</Text>
-                        </View>
-                      ))}
-                    </View>
-
-                    {/* CTA */}
-                    {!isCurrent && (
-                      <Pressable
-                        onPress={() => handlePurchase(planKey)}
-                        disabled={!!purchasing}
-                        style={{
-                          height: 48, borderRadius: 14,
-                          backgroundColor: config.color,
-                          alignItems: "center", justifyContent: "center",
-                          flexDirection: "row", gap: 8,
-                          opacity: isPurchasing ? 0.7 : 1,
-                          shadowColor: config.color,
-                          shadowOffset: { width: 0, height: 4 },
-                          shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
-                        }}
-                      >
-                        {isPurchasing ? (
-                          <ActivityIndicator color="#fff" size="small" />
-                        ) : (
-                          <>
-                            <Ionicons name="arrow-up-circle-outline" size={18} color="#fff" />
-                            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
-                              Choisir {config.label}
-                            </Text>
-                          </>
-                        )}
-                      </Pressable>
                     )}
+
+                    <View style={{ padding: 18 }}>
+                      {/* Card header */}
+                      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                        <View style={{ flex: 1, marginRight: 12 }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                            <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground }}>
+                              {config.label}
+                            </Text>
+                            {isCurrent && (
+                              <View style={{
+                                backgroundColor: `${config.color}20`,
+                                borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+                              }}>
+                                <Text style={{ fontSize: 11, fontWeight: "700", color: config.color }}>Actuel</Text>
+                              </View>
+                            )}
+                            {isAnnual && (
+                              <View style={{
+                                backgroundColor: `${Colors.success}20`,
+                                borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+                              }}>
+                                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.success }}>-{planSavings}%</Text>
+                              </View>
+                            )}
+                          </View>
+                          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+                            <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>
+                              {displayStr}
+                            </Text>
+                            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>/mois</Text>
+                          </View>
+                          {isAnnual && annualTotal && (
+                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                              soit {annualTotal} €/an
+                            </Text>
+                          )}
+                        </View>
+                        <View style={{
+                          width: 48, height: 48, borderRadius: 14,
+                          backgroundColor: `${config.color}15`,
+                          alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Ionicons name={config.icon} size={24} color={config.color} />
+                        </View>
+                      </View>
+
+                      {/* Features */}
+                      <View style={{ gap: 9, marginBottom: isCurrent ? 0 : 16 }}>
+                        {config.features.map((f) => (
+                          <View key={f.text} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                            <View style={{
+                              width: 26, height: 26, borderRadius: 8,
+                              backgroundColor: `${config.color}15`,
+                              alignItems: "center", justifyContent: "center",
+                            }}>
+                              <Ionicons name={f.icon as any} size={14} color={config.color} />
+                            </View>
+                            <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{f.text}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* CTA */}
+                      {!isCurrent && (
+                        <Pressable
+                          onPress={() => handlePurchase(planKey)}
+                          disabled={!!purchasing}
+                          style={{
+                            height: 48, borderRadius: 14,
+                            backgroundColor: config.color,
+                            alignItems: "center", justifyContent: "center",
+                            flexDirection: "row", gap: 8,
+                            opacity: isPurchasing ? 0.7 : 1,
+                            shadowColor: config.color,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+                          }}
+                        >
+                          {isPurchasing ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                          ) : (
+                            <>
+                              <Ionicons name="arrow-up-circle-outline" size={18} color="#fff" />
+                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+                                Choisir {config.label}
+                              </Text>
+                            </>
+                          )}
+                        </Pressable>
+                      )}
+                    </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })
+            )}
 
             {/* Restore purchases */}
-            <View style={{ alignItems: "center", marginTop: 8, marginBottom: 8 }}>
+            <View style={{ alignItems: "center", marginTop: 8, marginBottom: 4 }}>
               <Pressable onPress={restorePurchases}>
                 <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>
                   Restaurer mes achats
                 </Text>
               </Pressable>
             </View>
+
+            {/* Fix 7 — Footer légal */}
+            <Text style={{
+              fontSize: 11, color: Colors.mutedForeground,
+              textAlign: "center", marginTop: 8,
+              lineHeight: 16,
+            }}>
+              Annule à tout moment • Paiement sécurisé
+            </Text>
           </>
         )}
       </ScrollView>
