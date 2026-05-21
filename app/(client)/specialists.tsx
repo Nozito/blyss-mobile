@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect, Suspense } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -12,8 +12,11 @@ import {
 } from "@/components/screens/client/specialists/SpecialistCard";
 import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
-import { SpecialistsMapView } from "@/components/screens/client/specialists/MapView";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
+
+const SpecialistsMapView = React.lazy(() =>
+  import("@/components/screens/client/specialists/MapView").then((m) => ({ default: m.SpecialistsMapView }))
+);
 
 function useDebounce<T>(value: T, delay: number): T {
   const [d, setD] = React.useState(value);
@@ -195,7 +198,9 @@ export default function SpecialistsScreen() {
 
       {/* ── MAP VIEW ── rendered always when viewMode=map, hidden otherwise */}
       {viewMode === "map" && (
-        <SpecialistsMapView specialists={specialists} />
+        <Suspense fallback={<ActivityIndicator color="#FE5D9D" style={{ flex: 1 }} />}>
+          <SpecialistsMapView specialists={specialists} />
+        </Suspense>
       )}
 
       {/* ── LIST VIEW ── kept mounted to avoid refetch on toggle */}
