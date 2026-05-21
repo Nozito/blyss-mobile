@@ -283,11 +283,25 @@ export default function BookingDetailScreen() {
 
           {booking.pro_phone && (
             <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`tel:${booking.pro_phone}`).catch(() => {})}>
+              <Pressable
+                style={styles.contactBtn}
+                onPress={() =>
+                  Linking.canOpenURL(`tel:${booking.pro_phone}`)
+                    .then((ok) => ok ? Linking.openURL(`tel:${booking.pro_phone}`) : Alert.alert("Indisponible", "Impossible de passer un appel sur cet appareil."))
+                    .catch(() => Alert.alert("Erreur", "Impossible d'ouvrir le téléphone."))
+                }
+              >
                 <Ionicons name="call-outline" size={16} color="#FE5D9D" />
                 <Text style={styles.contactBtnText}>Appeler</Text>
               </Pressable>
-              <Pressable style={styles.contactBtn} onPress={() => Linking.openURL(`sms:${booking.pro_phone}`).catch(() => {})}>
+              <Pressable
+                style={styles.contactBtn}
+                onPress={() =>
+                  Linking.canOpenURL(`sms:${booking.pro_phone}`)
+                    .then((ok) => ok ? Linking.openURL(`sms:${booking.pro_phone}`) : Alert.alert("Indisponible", "Impossible d'envoyer un SMS sur cet appareil."))
+                    .catch(() => Alert.alert("Erreur", "Impossible d'ouvrir les messages."))
+                }
+              >
                 <Ionicons name="chatbubble-outline" size={16} color="#FE5D9D" />
                 <Text style={styles.contactBtnText}>SMS</Text>
               </Pressable>
