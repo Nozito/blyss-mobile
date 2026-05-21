@@ -5,8 +5,12 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
+import { toLocalDate } from "@/lib/dateUtils";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +19,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+
+type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
 type UpcomingClient = {
   id: number;
@@ -55,6 +61,10 @@ export default function ProDashboard() {
   const insets = useSafeAreaInsets();
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blockDate, setBlockDate] = useState<Date>(new Date());
+  const [showBlockDatePicker, setShowBlockDatePicker] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-dashboard"],
@@ -80,6 +90,40 @@ export default function ProDashboard() {
     () => weeklyRevenue.reduce((s, d) => s + n(d.amount), 0),
     [weeklyRevenue]
   );
+
+  const isBlockedDay = (d: Date) => {
+    const s = toLocalDate(d);
+    return unavailabilities.some((u) => s >= u.start_date && s <= u.end_date);
+  };
+
+  const openBlockModal = async () => {
+    setShowBlockModal(true);
+    try {
+      const res = await proApi.getUnavailabilities();
+      if (res.success && res.data) setUnavailabilities(res.data as Unavailability[]);
+    } catch { /* silent */ }
+  };
+
+  const handleBlockDay = async () => {
+    const dayStr = toLocalDate(blockDate);
+    const existing = unavailabilities.find((u) => dayStr >= u.start_date && dayStr <= u.end_date);
+    setBlockLoading(true);
+    try {
+      if (existing) {
+        await proApi.deleteUnavailability(existing.id);
+        setUnavailabilities((prev) => prev.filter((u) => u.id !== existing.id));
+      } else {
+        await proApi.createUnavailability({ start_date: dayStr, end_date: dayStr, reason: "blocked" });
+        const res = await proApi.getUnavailabilities();
+        if (res.success && res.data) setUnavailabilities(res.data as Unavailability[]);
+      }
+      setShowBlockModal(false);
+    } catch {
+      Alert.alert("Erreur", "Impossible de modifier le statut de la journée");
+    } finally {
+      setBlockLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -204,7 +248,7 @@ export default function ProDashboard() {
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
             { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: Colors.primary, iconBg: "#FFE8F3" },
-            { label: "Bloquer",  icon: "ban-outline" as const, onPress: () => setShowBlockModal(true), color: Colors.destructive, iconBg: "#FFE8E8" },
+            { label: "Bloquer",  icon: "ban-outline" as const, onPress: openBlockModal, color: Colors.destructive, iconBg: "#FFE8E8" },
             { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: Colors.primary, iconBg: "#FFE8F3" },
           ].map(({ label, icon, onPress, color, iconBg }) => (
             <Pressable
@@ -804,9 +848,49 @@ export default function ProDashboard() {
 
       {/* ── BLOCK MODAL ── */}
       <Modal visible={showBlockModal} onClose={() => setShowBlockModal(false)} title="Bloquer une journée" bottomSheet>
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
-          Bloquez une journée complète pour ne plus recevoir de nouvelles réservations.
+        {/* Date picker */}
+        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
+          textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+          Journée à bloquer
         </Text>
+        <Pressable
+          onPress={() => setShowBlockDatePicker((v) => !v)}
+          style={{ height: 48, borderRadius: 14, borderWidth: 1.5,
+            borderColor: showBlockDatePicker ? Colors.destructive : Colors.border,
+            paddingHorizontal: 14, backgroundColor: "#FFF1F1",
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 12 }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>
+            {blockDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          </Text>
+          <Ionicons name="calendar-outline" size={18} color={Colors.destructive} />
+        </Pressable>
+
+        {showBlockDatePicker && (
+          <DateTimePicker
+            value={blockDate}
+            mode="date"
+            display={Platform.OS === "ios" ? "inline" : "default"}
+            minimumDate={new Date()}
+            onChange={(_, date) => {
+              if (Platform.OS === "android") setShowBlockDatePicker(false);
+              if (date) setBlockDate(date);
+            }}
+            themeVariant="light"
+            accentColor={Colors.destructive}
+          />
+        )}
+
+        {/* Statut de la journée sélectionnée */}
+        <Text style={{ fontSize: 12, marginBottom: 20, lineHeight: 18,
+          color: isBlockedDay(blockDate) ? Colors.destructive : Colors.mutedForeground,
+          fontWeight: isBlockedDay(blockDate) ? "700" : "400" }}>
+          {isBlockedDay(blockDate)
+            ? "Cette journée est bloquée — appuie sur Débloquer pour la réouvrir"
+            : "Cette journée est disponible à la réservation"}
+        </Text>
+
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Pressable
             onPress={() => setShowBlockModal(false)}
@@ -814,15 +898,24 @@ export default function ProDashboard() {
           >
             <Text style={{ fontWeight: "700", color: Colors.foreground, fontSize: 14 }}>Annuler</Text>
           </Pressable>
-          <Pressable onPress={() => setShowBlockModal(false)} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}>
+          <Pressable onPress={handleBlockDay} disabled={blockLoading} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}>
             <LinearGradient
               colors={[Colors.destructive, `${Colors.destructive}E6`]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+              style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center",
+                justifyContent: "center", gap: 8, opacity: blockLoading ? 0.7 : 1 }}
             >
-              <Ionicons name="ban-outline" size={18} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Bloquer</Text>
+              {blockLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color="#fff" />
+                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+                    {isBlockedDay(blockDate) ? "Débloquer" : "Bloquer"}
+                  </Text>
+                </>
+              )}
             </LinearGradient>
           </Pressable>
         </View>

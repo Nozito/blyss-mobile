@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { proApi, nailTechApi } from "@/lib/api";
+import { toLocalDate } from "@/lib/dateUtils";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
@@ -53,13 +54,6 @@ type Unavailability = {
 };
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
-
-const toLocalDate = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
 
 const parseDuration = (v: unknown): number => {
   if (typeof v === "number") return Math.abs(v);
@@ -399,7 +393,7 @@ export default function ProCalendarScreen() {
       return;
     }
     try {
-      await proApi.createSlot({ date, start_time: newSlotTime, duration: newSlotDuration } as any);
+      await proApi.createSlot({ date, time: newSlotTime, duration: newSlotDuration });
       await fetchSlots();
       setShowAddSlot(false);
     } catch {
@@ -497,14 +491,49 @@ export default function ProCalendarScreen() {
 
   // ── weekly planning
   const applyWeeklyPlanning = async () => {
+    if (activeDays.length === 0 || planningSlots.length === 0) return;
     setWeeklyPlanSaving(true);
-    try {
-      await (proApi as any).applyWeeklyTemplate({
-        days: activeDays,
-        slots: planningSlots.map((t) => ({ time: t })),
+
+    // dayNum: 1=Lun…7=Dim → JS getDay(): 0=Dim, 1=Lun…6=Sam
+    const getNextDates = (dayNum: number): string[] => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const jsDay = dayNum % 7;                        // 7→0 (Dim), reste inchangé
+      const diff = (jsDay - today.getDay() + 7) % 7;  // jours jusqu'à prochaine occurrence
+      const first = new Date(today);
+      first.setDate(today.getDate() + diff);
+      return Array.from({ length: 4 }, (_, w) => {
+        const d = new Date(first);
+        d.setDate(first.getDate() + w * 7);
+        return toLocalDate(d);
       });
-      setWeeklyPlanSuccess(true);
-      setTimeout(() => setWeeklyPlanSuccess(false), 2500);
+    };
+
+    try {
+      // TODO: picker durée dans la modale Planning
+      const results = await Promise.all(
+        activeDays.flatMap((dayNum) =>
+          getNextDates(dayNum).flatMap((date) =>
+            planningSlots.map((time) =>
+              proApi.createSlot({ date, time, duration: 60 }).catch(() => null)
+            )
+          )
+        )
+      );
+
+      const failed = results.filter((r) => r === null).length;
+      await fetchSlots();
+      qc.invalidateQueries({ queryKey: ["slots"] });
+
+      if (failed > 0) {
+        Alert.alert(
+          "Planning appliqué",
+          `${results.length - failed} créneaux créés, ${failed} ignorés (chevauchement ou passés).`
+        );
+      } else {
+        setWeeklyPlanSuccess(true);
+        setTimeout(() => setWeeklyPlanSuccess(false), 2500);
+      }
     } catch {
       Alert.alert("Erreur", "Impossible d'appliquer le planning");
     } finally {
