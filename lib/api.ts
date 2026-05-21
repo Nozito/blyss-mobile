@@ -681,6 +681,38 @@ export const usersApi = {
       return { success: false, error: error instanceof Error ? error.message : "Erreur de connexion" };
     }
   },
+
+  uploadBannerPhoto: async (uri: string): Promise<ApiResponse<{ banner_photo: string }>> => {
+    try {
+      const accessToken = await storage.getAccessToken();
+      const filename = uri.split("/").pop() ?? "banner.jpg";
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+      const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+      const formData = new FormData();
+      // @ts-expect-error — React Native FormData accepts { uri, name, type }
+      formData.append("banner", { uri, name: filename, type: mimeType });
+
+      const response = await fetch(`${API_BASE_URL}/api/users/upload-banner`, {
+        method: "POST",
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          // No Content-Type — fetch sets the multipart boundary automatically
+        },
+        body: formData,
+      });
+
+      const json = await response.json().catch(() => null) as {
+        success?: boolean; banner_photo?: string; message?: string;
+      } | null;
+
+      if (!response.ok || !json?.success) {
+        return { success: false, error: json?.message ?? "Erreur lors de l'upload de la bannière" };
+      }
+      return { success: true, data: { banner_photo: json.banner_photo ?? "" } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Erreur de connexion" };
+    }
+  },
 };
 
 // ── Cancellation API ──────────────────────────────────────────────────────────

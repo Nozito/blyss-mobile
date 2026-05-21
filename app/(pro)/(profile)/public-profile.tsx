@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   TextInput,
@@ -11,11 +12,12 @@ import {
   Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
-import { proApi } from "@/lib/api";
+import { proApi, usersApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
@@ -27,8 +29,41 @@ const MAX_BIO = 500;
 export default function ProPublicProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, patchUser, refreshProfile } = useAuth();
   const qc = useQueryClient();
+
+  const [bannerUploading, setBannerUploading] = useState(false);
+
+  const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+  const bannerUri = user?.banner_photo
+    ? user.banner_photo.startsWith("http")
+      ? user.banner_photo
+      : `${API_URL}${user.banner_photo}`
+    : undefined;
+
+  const handlePickBanner = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") {
+      Alert.alert("Permission refusée", "Autorise l'accès à la galerie dans les réglages.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setBannerUploading(true);
+    const res = await usersApi.uploadBannerPhoto(result.assets[0].uri);
+    setBannerUploading(false);
+    if (!res.success) {
+      Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la bannière.");
+      return;
+    }
+    if (res.data?.banner_photo) patchUser({ banner_photo: res.data.banner_photo });
+    await refreshProfile();
+  };
 
   const [activityName, setActivityName] = useState("");
   const [city, setCity] = useState("");
@@ -177,6 +212,51 @@ export default function ProPublicProfileScreen() {
               Un profil complet et détaillé augmente tes chances d'être réservée de 3×.
             </Text>
           </View>
+        </View>
+
+        {/* Section: Bannière */}
+        <View className="mb-6">
+          <SectionTitle title="Photo de couverture" />
+          <Pressable
+            onPress={handlePickBanner}
+            style={{
+              height: 140,
+              borderRadius: 12,
+              overflow: "hidden",
+              backgroundColor: "#F3F4F6",
+              borderWidth: 1.5,
+              borderColor: Colors.border,
+              borderStyle: "dashed",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {bannerUri ? (
+              <Image
+                source={{ uri: bannerUri }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={{ alignItems: "center", gap: 8 }}>
+                <Ionicons name="image-outline" size={32} color={Colors.mutedForeground} />
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+                  Ajouter une photo de couverture
+                </Text>
+              </View>
+            )}
+            {/* Icône crayon bas-droit */}
+            <View style={{
+              position: "absolute", bottom: 8, right: 8,
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: "rgba(0,0,0,0.45)",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              {bannerUploading
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Ionicons name="camera-outline" size={16} color="#fff" />}
+            </View>
+          </Pressable>
         </View>
 
         {/* Section: Infos principales */}
@@ -347,6 +427,13 @@ export default function ProPublicProfileScreen() {
           <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
             {/* Profile preview */}
             <View className="items-center mb-6">
+              {bannerUri && (
+                <Image
+                  source={{ uri: bannerUri }}
+                  style={{ width: "100%", height: 100, borderRadius: 12, marginBottom: 12 }}
+                  resizeMode="cover"
+                />
+              )}
               <View
                 className="w-20 h-20 rounded-2xl items-center justify-center mb-3"
                 style={{ backgroundColor: `${Colors.primary}20` }}
