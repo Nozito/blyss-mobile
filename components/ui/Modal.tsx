@@ -1,5 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
+  Animated,
+  Easing,
   Modal as RNModal,
   View,
   Text,
@@ -11,14 +13,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
-  Easing,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
@@ -48,57 +42,69 @@ export function Modal({
 }: ModalProps) {
   const insets = useSafeAreaInsets();
 
-  // Overlay opacity
-  const overlayOpacity = useSharedValue(0);
-  // Sheet translateY (pour bottomSheet) ou scale (pour modal centré)
-  const translateY = useSharedValue(SCREEN_HEIGHT);
-  const scale = useSharedValue(0.92);
-  const opacity = useSharedValue(0);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      // Overlay fade in
-      overlayOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.ease) });
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
 
       if (bottomSheet) {
-        // Sheet slide up
-        translateY.value = withSpring(0, {
+        Animated.spring(translateY, {
+          toValue: 0,
           damping: 26,
           stiffness: 280,
           mass: 0.8,
-        });
+          useNativeDriver: true,
+        }).start();
       } else {
-        // Modal centré : fade + scale
-        scale.value = withSpring(1, { damping: 22, stiffness: 300 });
-        opacity.value = withTiming(1, { duration: 200 });
+        Animated.spring(scale, {
+          toValue: 1,
+          damping: 22,
+          stiffness: 300,
+          useNativeDriver: true,
+        }).start();
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
       }
     } else {
-      overlayOpacity.value = withTiming(0, { duration: 200 });
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
 
       if (bottomSheet) {
-        translateY.value = withTiming(SCREEN_HEIGHT, {
+        Animated.timing(translateY, {
+          toValue: SCREEN_HEIGHT,
           duration: 280,
           easing: Easing.in(Easing.ease),
-        });
+          useNativeDriver: true,
+        }).start();
       } else {
-        scale.value = withTiming(0.92, { duration: 180 });
-        opacity.value = withTiming(0, { duration: 180 });
+        Animated.timing(scale, {
+          toValue: 0.92,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
       }
     }
   }, [visible]);
-
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const modalCenteredStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
 
   return (
     <RNModal
@@ -115,7 +121,7 @@ export function Modal({
       >
         {/* Overlay fixe — ne bouge JAMAIS */}
         <Animated.View
-          style={[overlayStyle, { position: "absolute", inset: 0 }]}
+          style={[{ opacity: overlayOpacity }, { position: "absolute", inset: 0 }]}
         >
           <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
           <Pressable style={{ flex: 1 }} onPress={onClose} />
@@ -125,7 +131,7 @@ export function Modal({
         {bottomSheet ? (
           <Animated.View
             style={[
-              sheetStyle,
+              { transform: [{ translateY }] },
               {
                 position: "absolute",
                 bottom: 0,
@@ -166,7 +172,7 @@ export function Modal({
           <View className="flex-1 justify-center px-4">
             <Animated.View
               style={[
-                modalCenteredStyle,
+                { transform: [{ scale }], opacity },
                 {
                   backgroundColor: "white",
                   borderRadius: 24,
