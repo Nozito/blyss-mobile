@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { specialistsApi, favoritesApi } from "@/lib/api";
 import {
   SpecialistCard,
@@ -39,9 +40,26 @@ export default function SpecialistsScreen() {
   const [showCityPanel, setShowCityPanel] = useState(false);
   const [cityFilter, setCityFilter] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      try {
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 8000,
+        });
+        setUserCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      } catch {
+        // Pas de coords → fallback silencieux, recherche sans distance
+      }
+    })();
+  }, []);
 
   const { data: specialists = [], isLoading, isFetching } = useQuery<Specialist[]>({
-    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter],
+    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter, userCoords],
     queryFn: async () => {
       const res = await specialistsApi.getPros({
         limit: 100,
@@ -49,6 +67,7 @@ export default function SpecialistsScreen() {
         ...(cityFilter ? { city: cityFilter } : {}),
         ...(serviceFilter ? { service: serviceFilter } : {}),
         ...(ratingFilter > 0 ? { min_rating: ratingFilter } : {}),
+        ...(userCoords ? { lat: userCoords.lat, lng: userCoords.lng, nearby: true } : {}),
       });
       if (!res.success || !res.data) return [];
       return (res.data as Array<Record<string, unknown>>).map((pro) => ({
