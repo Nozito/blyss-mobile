@@ -28,15 +28,13 @@ function AnimatedSplash({ onDone }: { onDone: () => void }) {
         toValue: 0,
         duration: 500,
         useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) onDone();
-      });
+      }).start(() => onDone());
     }, 300);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <Animated.View style={[styles.splash, { opacity }]}>
+    <Animated.View style={[styles.splash, { opacity }]} pointerEvents="none">
       <Image
         source={require("../assets/logo.png")}
         style={styles.splashLogo}
