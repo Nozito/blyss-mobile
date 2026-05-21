@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,14 +27,16 @@ export default function ProPaymentsScreen() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-payment-settings"],
-    queryFn: () => proApi.getPaymentSettings?.() ?? Promise.resolve({ data: null }),
-    onSuccess: (res: any) => {
-      if (res?.data) {
-        setIban(res.data.iban || "");
-        setAcceptOnline(res.data.accept_online ?? false);
-      }
-    },
-  } as any);
+    queryFn: () => proApi.getPaymentSettings(),
+  });
+
+  useEffect(() => {
+    const d = (data as any)?.data;
+    if (d) {
+      setIban(d.iban ?? d.IBAN ?? "");
+      setAcceptOnline(d.accept_online ?? Boolean(d.accept_online_payment));
+    }
+  }, [data]);
 
   const handleSave = async () => {
     if (iban && iban.length < 14) {
@@ -43,7 +45,7 @@ export default function ProPaymentsScreen() {
     }
     setIsSaving(true);
     try {
-      await proApi.updatePaymentSettings?.({ iban, accept_online: acceptOnline });
+      await proApi.updatePaymentSettings({ iban, accept_online: acceptOnline });
       Alert.alert("Succès", "Paramètres de paiement mis à jour !");
     } catch {
       Alert.alert("Erreur", "Impossible de mettre à jour les paramètres.");

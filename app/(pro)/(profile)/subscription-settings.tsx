@@ -28,7 +28,7 @@ const PLANS: Array<{
   {
     id: "start",
     label: "Start",
-    price: "49,90 €/mois",
+    price: "29,90 €/mois",
     color: Colors.primary,
     icon: "flash-outline",
     features: ["Dashboard", "Agenda", "Clientes", "Profil public"],
@@ -44,7 +44,7 @@ const PLANS: Array<{
   {
     id: "signature",
     label: "Signature",
-    price: "29,90 €/mois",
+    price: "49,90 €/mois",
     color: Colors.secondary,
     icon: "sparkles-outline",
     features: ["Tout Sérénité", "Paiements en ligne", "Visibilité premium", "Support prioritaire"],
@@ -78,7 +78,7 @@ export default function ProSubscriptionSettingsScreen() {
     if (planId === currentPlanId) return;
     setIsChanging(true);
     try {
-      await proApi.updateSubscription?.({ plan: planId });
+      await proApi.updateSubscription({ plan: planId });
       qc.invalidateQueries({ queryKey: ["pro-subscription"] });
       router.push({
         pathname: "/(pro)/(profile)/subscription-success" as any,

@@ -31,7 +31,7 @@ const PLAN_CONFIG: Record<RCPlan, {
 }> = {
   start: {
     label: "Start",
-    fallbackMonthly: 29, // Fix 1
+    fallbackMonthly: 29.9,
     color: Colors.primary,
     icon: "rocket-outline",
     features: [
@@ -44,7 +44,7 @@ const PLAN_CONFIG: Record<RCPlan, {
   },
   serenite: {
     label: "Sérénité",
-    fallbackMonthly: 59, // Fix 1
+    fallbackMonthly: 39.9,
     color: Colors.pro ?? "#7C3AED",
     icon: "shield-checkmark-outline",
     features: [
@@ -57,7 +57,7 @@ const PLAN_CONFIG: Record<RCPlan, {
   },
   signature: {
     label: "Signature",
-    fallbackMonthly: 99, // Fix 1
+    fallbackMonthly: 49.9,
     color: Colors.secondary ?? "#F59E0B",
     icon: "diamond-outline",
     features: [
@@ -340,9 +340,6 @@ export default function SubscriptionScreen() {
                 </Text>
               </View>
             )}
-
-            {/* Fix 9 — RC loading state pendant le chargement des offres */}
-            {!isReady || (!isLoading && isReady && packages.length === 0 && !subscription) ? null : null}
 
             {/* Plan cards */}
             {!isReady ? (

@@ -138,10 +138,10 @@ export default function ClientNotificationsScreen() {
   };
 
   const markAllAsRead = () => {
-    notifications.filter((n) => !n.is_read).forEach((n) => markAsRead(n.id));
-    notifications.filter((n) => !n.is_read).forEach((n) =>
-      notificationsApi.markAsRead(String(n.id)).catch(() => {})
-    );
+    notifications.filter((n) => !n.is_read).forEach((n) => {
+      markAsRead(n.id);
+      notificationsApi.markAsRead(String(n.id)).catch(() => {});
+    });
   };
 
   const grouped = useMemo(() => groupByDay(notifications), [notifications]);
