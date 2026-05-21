@@ -18,7 +18,8 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { clientApi, reviewsApi } from "@/lib/api";
+import { clientApi, reviewsApi, stripePaymentsApi } from "@/lib/api";
+import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -167,13 +168,38 @@ export default function BookingDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [reviewVisible, setReviewVisible] = useState(false);
+  const [balanceClientSecret, setBalanceClientSecret] = useState<string | null>(null);
+  const [balanceAmount, setBalanceAmount] = useState(0);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceVisible, setBalanceVisible] = useState(false);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["booking-detail", id],
     queryFn: () => clientApi.getBookingDetail(Number(id)),
     staleTime: 30_000,
     enabled: Boolean(id),
   });
+
+  const handlePayBalance = async (reservationId: number) => {
+    setBalanceLoading(true);
+    try {
+      const result = await stripePaymentsApi.createPaymentIntent({
+        reservation_id: reservationId,
+        type: "balance",
+      });
+      if (!result.success || !result.data) {
+        Alert.alert("Erreur", result.error ?? "Impossible d'initier le paiement.");
+        return;
+      }
+      setBalanceClientSecret(result.data.client_secret);
+      setBalanceAmount(result.data.amount);
+      setBalanceVisible(true);
+    } catch {
+      Alert.alert("Erreur", "Impossible d'initier le paiement. Réessaie plus tard.");
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -328,9 +354,14 @@ export default function BookingDetailScreen() {
           </View>
 
           {booking.payment_status === "deposit_paid" && remaining > 0 && (
-            <Pressable style={styles.payBtn}>
-              {/* TODO: intégrer Stripe pour le paiement du solde */}
-              <Text style={styles.payBtnText}>Payer le solde ({remaining.toFixed(2)} €)</Text>
+            <Pressable
+              style={[styles.payBtn, balanceLoading && { opacity: 0.6 }]}
+              onPress={() => void handlePayBalance(booking.id)}
+              disabled={balanceLoading}
+            >
+              {balanceLoading
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.payBtnText}>Payer le solde ({remaining.toFixed(2)} €)</Text>}
             </Pressable>
           )}
         </FadeCard>
@@ -344,6 +375,37 @@ export default function BookingDetailScreen() {
           </FadeCard>
         )}
       </ScrollView>
+
+      {/* Balance payment modal */}
+      <Modal
+        visible={balanceVisible}
+        animationType="slide"
+        transparent
+        presentationStyle="overFullScreen"
+        onRequestClose={() => setBalanceVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
+          <View style={{ backgroundColor: "#FFF5F8", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: "#09090B" }}>Paiement du solde</Text>
+              <Pressable onPress={() => setBalanceVisible(false)}>
+                <Ionicons name="close" size={24} color="#09090B" />
+              </Pressable>
+            </View>
+            <PaymentStep
+              amount={balanceAmount}
+              depositPercentage={0}
+              prestationName={booking.prestation_name ?? undefined}
+              clientSecret={balanceClientSecret}
+              onSuccess={() => {
+                setBalanceVisible(false);
+                void refetch();
+              }}
+              onError={(msg) => Alert.alert("Erreur de paiement", msg)}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <ReviewModal visible={reviewVisible} proId={booking.pro_id} onClose={() => setReviewVisible(false)} />
     </SafeAreaView>

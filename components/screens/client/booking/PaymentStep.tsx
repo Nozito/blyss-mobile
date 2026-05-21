@@ -27,43 +27,48 @@ export function PaymentStep({
   const [ready, setReady] = useState(false);
   const [initializing, setInitializing] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+
+  const initSheet = async (secret: string) => {
+    setInitializing(true);
+    setInitError(null);
+    const { error } = await initPaymentSheet({
+      paymentIntentClientSecret: secret,
+      merchantDisplayName: "Blyss",
+      style: "automatic",
+      locale: "fr",
+      appearance: {
+        colors: {
+          primary: "#FE5D9D",
+          background: "#FFFFFF",
+          componentBackground: "#F8F5F1",
+          componentBorder: "#EBE6E0",
+          componentDivider: "#EBE6E0",
+          primaryText: "#09090B",
+          secondaryText: "#6D6D78",
+          componentText: "#09090B",
+          placeholderText: "#6D6D78",
+          icon: "#6D6D78",
+          error: "#EF4444",
+        },
+      },
+    });
+    if (error) {
+      setInitError(error.message);
+      onError(error.message);
+    } else {
+      setReady(true);
+    }
+    setInitializing(false);
+  };
 
   // Init payment sheet as soon as clientSecret is available
   useEffect(() => {
     if (!clientSecret) return;
     let cancelled = false;
-
-    (async () => {
-      setInitializing(true);
-      const { error } = await initPaymentSheet({
-        paymentIntentClientSecret: clientSecret,
-        merchantDisplayName: "Blyss",
-        style: "automatic",
-        appearance: {
-          colors: {
-            primary: "#FE5D9D",
-            background: "#FFFFFF",
-            componentBackground: "#F8F5F1",
-            componentBorder: "#EBE6E0",
-            componentDivider: "#EBE6E0",
-            primaryText: "#09090B",
-            secondaryText: "#6D6D78",
-            componentText: "#09090B",
-            placeholderText: "#6D6D78",
-            icon: "#6D6D78",
-            error: "#EF4444",
-          },
-        },
-      });
-      if (cancelled) return;
-      if (error) {
-        onError(error.message);
-      } else {
-        setReady(true);
-      }
-      setInitializing(false);
+    void (async () => {
+      if (!cancelled) await initSheet(clientSecret);
     })();
-
     return () => { cancelled = true; };
   }, [clientSecret]);
 
@@ -125,13 +130,29 @@ export function PaymentStep({
       </View>
 
       {/* Payment sheet area */}
-      {clientSecret === null || initializing ? (
+      {initializing ? (
         <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 32, alignItems: "center", gap: 12, ...Shadows.card }}>
           <ActivityIndicator size="large" color="#FE5D9D" />
           <Text style={{ fontSize: 13, color: "#6D6D78" }}>Initialisation du paiement…</Text>
         </View>
+      ) : initError ? (
+        /* Init failed — show retry */
+        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, alignItems: "center", gap: 16, ...Shadows.card }}>
+          <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
+          <Text style={{ fontSize: 14, color: "#09090B", textAlign: "center", lineHeight: 20 }}>
+            Impossible d'initialiser le paiement.
+          </Text>
+          <Pressable
+            onPress={() => clientSecret && void initSheet(clientSecret)}
+            style={{
+              backgroundColor: "#FE5D9D", borderRadius: 999,
+              paddingVertical: 12, paddingHorizontal: 28,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
+          </Pressable>
+        </View>
       ) : (
-
         /* Pay button — opens Stripe Payment Sheet */
         <Pressable
           onPress={handlePay}
