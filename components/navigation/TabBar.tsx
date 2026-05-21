@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import {
   View,
+  Text,
   Pressable,
   Animated,
   StyleSheet,
@@ -13,31 +14,32 @@ import { BlurView } from "expo-blur";
 
 type TabConfig = {
   name: string;
+  label: string;
   activeIcon: string;
   inactiveIcon: string;
 };
 
 const CLIENT_TABS: TabConfig[] = [
-  { name: "index",         activeIcon: "home",          inactiveIcon: "home-outline" },
-  { name: "bookings",      activeIcon: "calendar",      inactiveIcon: "calendar-outline" },
-  { name: "favorites",     activeIcon: "heart",         inactiveIcon: "heart-outline" },
-  { name: "notifications", activeIcon: "notifications", inactiveIcon: "notifications-outline" },
-  { name: "(profile)",     activeIcon: "person",        inactiveIcon: "person-outline" },
+  { name: "index",         label: "Accueil",  activeIcon: "home",          inactiveIcon: "home-outline" },
+  { name: "bookings",      label: "Réservations", activeIcon: "calendar",      inactiveIcon: "calendar-outline" },
+  { name: "favorites",     label: "Favoris",  activeIcon: "heart",         inactiveIcon: "heart-outline" },
+  { name: "notifications", label: "Notifs",   activeIcon: "notifications", inactiveIcon: "notifications-outline" },
+  { name: "(profile)",     label: "Profil",   activeIcon: "person",        inactiveIcon: "person-outline" },
 ];
 
 const PRO_TABS: TabConfig[] = [
-  { name: "dashboard",     activeIcon: "grid",          inactiveIcon: "grid-outline" },
-  { name: "calendar",      activeIcon: "calendar",      inactiveIcon: "calendar-outline" },
-  { name: "clients",       activeIcon: "people",        inactiveIcon: "people-outline" },
-  { name: "notifications", activeIcon: "notifications", inactiveIcon: "notifications-outline" },
-  { name: "(profile)",     activeIcon: "person",        inactiveIcon: "person-outline" },
+  { name: "dashboard",     label: "Dashboard", activeIcon: "grid",          inactiveIcon: "grid-outline" },
+  { name: "calendar",      label: "Agenda",    activeIcon: "calendar",      inactiveIcon: "calendar-outline" },
+  { name: "clients",       label: "Clientes",  activeIcon: "people",        inactiveIcon: "people-outline" },
+  { name: "notifications", label: "Notifs",    activeIcon: "notifications", inactiveIcon: "notifications-outline" },
+  { name: "(profile)",     label: "Profil",    activeIcon: "person",        inactiveIcon: "person-outline" },
 ];
 
 const TAB_HEIGHT = 64;
 const PILL_HEIGHT = 44;
 const PILL_PADDING = 10; // horizontal margin inside each slot
 
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -52,12 +54,25 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
   }, [focused]);
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <Animated.View style={{ alignItems: "center", transform: [{ scale }] }}>
       <Ionicons
         name={icon as any}
         size={22}
         color={focused ? "#FE5D9D" : "rgba(0,0,0,0.35)"}
       />
+      {/* Fix 1a — label sous l'icône, opacity:0 quand inactif pour garder la largeur */}
+      <Text
+        style={{
+          fontSize: 10,
+          fontWeight: "700",
+          color: "#FE5D9D",
+          marginTop: 2,
+          opacity: focused ? 1 : 0,
+        }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
     </Animated.View>
   );
 }
@@ -123,6 +138,7 @@ function LiquidTabBarBase({ state, navigation, tabs }: { state: any; navigation:
           >
             <TabIcon
               icon={focused ? tab.activeIcon : tab.inactiveIcon}
+              label={tab.label}
               focused={focused}
             />
           </Pressable>
@@ -151,6 +167,8 @@ function LiquidTabBarBase({ state, navigation, tabs }: { state: any; navigation:
       <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFillObject} />
       {/* Border overlay */}
       <View style={styles.borderOverlay} />
+      {/* Fix 1b — ligne brillante en haut (arête de verre) */}
+      <View style={styles.topHighlight} />
       {Inner}
     </View>
   );
@@ -172,10 +190,11 @@ const styles = StyleSheet.create({
     height: TAB_HEIGHT,
     borderRadius: 30,
     overflow: "hidden",
-    shadowColor: "#FE5D9D",
+    // Fix 1b — ombre neutre iOS 26 style
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
+    shadowOpacity: 0.10,
+    shadowRadius: 24,
     elevation: 20,
   },
   androidFallback: {
@@ -200,9 +219,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: (TAB_HEIGHT - PILL_HEIGHT) / 2,
     borderRadius: 22,
-    backgroundColor: "rgba(254, 93, 157, 0.13)",
+    // Fix 1a — pill plus visible
+    backgroundColor: "rgba(254, 93, 157, 0.18)",
     borderWidth: 1,
-    borderColor: "rgba(254, 93, 157, 0.28)",
+    borderColor: "rgba(254, 93, 157, 0.45)",
     overflow: "hidden",
   },
   pillHighlight: {
@@ -210,9 +230,21 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 12,
+    // Fix 1b — highlight plus haut
+    height: 16,
     backgroundColor: "rgba(255, 255, 255, 0.4)",
     borderRadius: 22,
+  },
+  // Fix 1b — arête brillante en haut du container (effet verre)
+  topHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 8,
+    right: 8,
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 1,
+    zIndex: 10,
   },
   tabButton: {
     flex: 1,
