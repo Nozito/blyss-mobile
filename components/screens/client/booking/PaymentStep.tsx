@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useStripe } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -79,7 +79,6 @@ export function PaymentStep({
     }
     if (error.code === "Canceled") return; // user dismissed, no alert needed
     onError(error.message);
-    Alert.alert("Paiement refusé", error.message);
   };
 
   return (
@@ -126,34 +125,13 @@ export function PaymentStep({
       </View>
 
       {/* Payment sheet area */}
-      {clientSecret === null ? (
-        // TODO: remove once backend createPaymentIntent is wired up
-        <View
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: 20,
-            padding: 24,
-            alignItems: "center",
-            gap: 12,
-            borderWidth: 2,
-            borderColor: "#EBE6E0",
-            borderStyle: "dashed",
-          }}
-        >
-          <Ionicons name="construct-outline" size={36} color="#6D6D78" />
-          <Text style={{ fontSize: 14, fontWeight: "700", color: "#09090B", textAlign: "center" }}>
-            En attente du backend
-          </Text>
-          <Text style={{ fontSize: 12, color: "#6D6D78", textAlign: "center", lineHeight: 18 }}>
-            {"TODO: createPaymentIntent → clientSecret\nLe paiement en ligne sera disponible très prochainement."}
-          </Text>
-        </View>
-      ) : initializing ? (
+      {clientSecret === null || initializing ? (
         <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 32, alignItems: "center", gap: 12, ...Shadows.card }}>
           <ActivityIndicator size="large" color="#FE5D9D" />
           <Text style={{ fontSize: 13, color: "#6D6D78" }}>Initialisation du paiement…</Text>
         </View>
       ) : (
+
         /* Pay button — opens Stripe Payment Sheet */
         <Pressable
           onPress={handlePay}

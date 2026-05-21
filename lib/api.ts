@@ -435,6 +435,8 @@ export const specialistsApi = {
 
   getSpecialistById: (id: number) => apiCall("GET", `/api/client/specialists/${id}`),
 
+  getProById: (id: number) => apiCall(`/api/users/pros/${id}`),
+
   getServices: (proId: number) => apiCall("GET", `/api/prestations/pro/${proId}`),
 };
 

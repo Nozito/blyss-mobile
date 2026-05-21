@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { stripePaymentsApi } from "@/lib/api";
+import { stripePaymentsApi, specialistsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ServiceSelector,
@@ -102,28 +102,34 @@ export default function BookingScreen() {
       setIsLoading(true);
       try {
         const [proRes, prestRes] = await Promise.all([
-          fetch(`${API_URL}/api/users/pros/${proId}`, { credentials: "include" }),
-          fetch(`${API_URL}/api/prestations/pro/${proId}`, { credentials: "include" }),
+          specialistsApi.getProById(Number(proId)),
+          specialistsApi.getServices(Number(proId)),
         ]);
 
-        if (!proRes.ok || !prestRes.ok) throw new Error("Erreur lors du chargement");
-
-        const [proData, prestData] = await Promise.all([proRes.json(), prestRes.json()]);
-
-        if (proData.success && proData.data) {
-          const proResult = proData.data;
-          if (proResult.acceptance_conditions && typeof proResult.acceptance_conditions === "string") {
-            proResult.acceptance_conditions = JSON.parse(proResult.acceptance_conditions);
-          }
-          setPro(proResult);
-        } else {
+        if (!proRes.success || !proRes.data) {
           router.replace("/(client)");
           return;
         }
 
-        if (prestData.success && prestData.data) {
+        const proResult = proRes.data as Record<string, unknown>;
+        if (proResult.acceptance_conditions && typeof proResult.acceptance_conditions === "string") {
+          proResult.acceptance_conditions = JSON.parse(proResult.acceptance_conditions as string);
+        }
+        setPro({
+          id: Number(proResult.id),
+          first_name: String(proResult.first_name ?? ""),
+          last_name: String(proResult.last_name ?? ""),
+          activity_name: (proResult.activity_name as string | null) ?? null,
+          city: (proResult.city as string | null) ?? null,
+          profile_photo: (proResult.profile_photo as string | null) ?? null,
+          accept_online_payment: Boolean(proResult.accept_online_payment),
+          stripe_onboarding_complete: Boolean(proResult.stripe_onboarding_complete),
+          acceptance_conditions: (proResult.acceptance_conditions as ConditionItem[] | null) ?? null,
+        });
+
+        if (prestRes.success && prestRes.data) {
           setPrestations(
-            (prestData.data as Array<Record<string, unknown>>)
+            (prestRes.data as Array<Record<string, unknown>>)
               .filter((p) => p.active)
               .map((p) => ({
                 id: p.id as number,
@@ -518,8 +524,8 @@ export default function BookingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
-        {/* Header (hidden on success) */}
-        {step < 5 && (
+        {/* Header hidden on step 4 (reservation already created) and step 5 */}
+        {step < 4 && (
           <View style={{ paddingTop: 12, paddingBottom: 16 }}>
             <AnimatedIconButton
               onPress={handleBack}
