@@ -1,9 +1,9 @@
 import React from "react";
-import { Tabs, Redirect } from "expo-router";
+import { Redirect } from "expo-router";
+import { NativeTabs, Icon, Label, Badge } from "expo-router/unstable-native-tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { LiquidTabBar } from "@/components/navigation/TabBar";
 
 export default function ClientLayout() {
   const { user, isLoading } = useAuth();
@@ -14,20 +14,41 @@ export default function ClientLayout() {
   if (user.role !== "client" && !user.is_admin) return <Redirect href="/(pro)/dashboard" />;
 
   return (
-    <Tabs
-      tabBar={(props) => <LiquidTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+    <NativeTabs
+      blurEffect="systemUltraThinMaterialLight"
+      tintColor="#FE5D9D"
+      minimizeBehavior="automatic"
     >
-      <Tabs.Screen name="index"         options={{ title: "Accueil" }} />
-      <Tabs.Screen name="bookings"      options={{ title: "Mes réservations" }} />
-      <Tabs.Screen name="favorites"     options={{ title: "Mes favoris" }} />
-      <Tabs.Screen name="notifications" options={{ title: "Notifications" }} />
-      <Tabs.Screen name="(profile)"     options={{ title: "Profil" }} />
-      {/* Hidden screens */}
-      <Tabs.Screen name="specialists" options={{ href: null }} />
-      <Tabs.Screen name="my-bookings" options={{ href: null }} />
-      <Tabs.Screen name="booking"     options={{ href: null }} />
-      <Tabs.Screen name="payments"    options={{ href: null }} />
-    </Tabs>
+      <NativeTabs.Trigger name="index">
+        <Icon sf={{ default: "house", selected: "house.fill" }} />
+        <Label>Accueil</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="bookings">
+        <Icon sf={{ default: "calendar.circle", selected: "calendar.circle.fill" }} />
+        <Label>Réservations</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="favorites">
+        <Icon sf={{ default: "heart", selected: "heart.fill" }} />
+        <Label>Favoris</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="notifications">
+        <Icon sf={{ default: "bell", selected: "bell.fill" }} />
+        <Label>Notifs</Label>
+        <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="(profile)">
+        <Icon sf={{ default: "person", selected: "person.fill" }} />
+        <Label>Profil</Label>
+      </NativeTabs.Trigger>
+
+      {/* Routes cachées — non affichées dans la tab bar */}
+      <NativeTabs.Trigger name="specialists" hidden />
+      <NativeTabs.Trigger name="my-bookings" hidden />
+      <NativeTabs.Trigger name="booking" hidden />
+    </NativeTabs>
   );
 }

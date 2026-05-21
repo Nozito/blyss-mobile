@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
-import { Tabs, Redirect, useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
+import { NativeTabs, Icon, Label, Badge } from "expo-router/unstable-native-tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { ProLiquidTabBar } from "@/components/navigation/TabBar";
 
 export default function ProLayout() {
   const { user, isLoading: authLoading } = useAuth();
@@ -15,8 +15,6 @@ export default function ProLayout() {
   const isAdmin = user?.is_admin ?? false;
   const hasActiveSub = isAdmin || Boolean(activePlan);
 
-  // Redirige vers subscription dès que auth + RC sont prêts et qu'il n'y a pas de plan.
-  // useEffect = hors du render, pattern recommandé par Expo Router.
   useEffect(() => {
     if (authLoading || !rcReady) return;
     if (!user || isAdmin) return;
@@ -25,32 +23,48 @@ export default function ProLayout() {
     }
   }, [authLoading, rcReady, user, isAdmin, hasActiveSub]);
 
-  // Attendre que auth ET RC soient initialisés avant d'afficher quoi que ce soit
   if (authLoading || !rcReady) return <LoadingSpinner fullScreen />;
-
   if (!user) return <Redirect href="/(auth)/login" />;
   if (user.role !== "pro" && !isAdmin) return <Redirect href="/(client)" />;
 
-  // Tabs est toujours le return direct (Expo Router l'exige).
-  // Le tab bar est masqué si pas d'abonnement : aucune navigation possible.
+  // Bloque le rendu des tabs si pas d'abo — useEffect redirige vers subscription
+  if (!hasActiveSub) return <LoadingSpinner fullScreen />;
+
   return (
-    <Tabs
-      tabBar={(props) => {
-        if (!hasActiveSub) return null;
-        // Masque la tab bar sur l'écran d'onboarding post-paiement
-        const currentRoute = props.state.routes[props.state.index]?.name;
-        if (currentRoute === "onboarding") return null;
-        return <ProLiquidTabBar {...props} unreadCount={unreadCount} />;
-      }}
-      screenOptions={{ headerShown: false }}
+    <NativeTabs
+      blurEffect="systemUltraThinMaterialLight"
+      tintColor="#FE5D9D"
+      minimizeBehavior="automatic"
     >
-      <Tabs.Screen name="dashboard"     options={{ title: "Dashboard" }} />
-      <Tabs.Screen name="calendar"      options={{ title: "Agenda" }} />
-      <Tabs.Screen name="clients"       options={{ title: "Clientes" }} />
-      <Tabs.Screen name="notifications" options={{ title: "Notifications" }} />
-      <Tabs.Screen name="(profile)"     options={{ title: "Profil" }} />
-      <Tabs.Screen name="client-detail" options={{ href: null }} />
-      <Tabs.Screen name="onboarding"    options={{ href: null }} />
-    </Tabs>
+      <NativeTabs.Trigger name="dashboard">
+        <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
+        <Label>Dashboard</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="calendar">
+        <Icon sf={{ default: "calendar.circle", selected: "calendar.circle.fill" }} />
+        <Label>Agenda</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="clients">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Clientes</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="notifications">
+        <Icon sf={{ default: "bell", selected: "bell.fill" }} />
+        <Label>Notifs</Label>
+        <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="(profile)">
+        <Icon sf={{ default: "person", selected: "person.fill" }} />
+        <Label>Profil</Label>
+      </NativeTabs.Trigger>
+
+      {/* Routes cachées — non affichées dans la tab bar */}
+      <NativeTabs.Trigger name="client-detail" hidden />
+      <NativeTabs.Trigger name="onboarding" hidden />
+    </NativeTabs>
   );
 }
