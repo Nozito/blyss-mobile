@@ -6,11 +6,12 @@ import {
   Pressable,
   TextInput,
   Alert,
-  Modal,
+  Modal as RNModal,
   ActivityIndicator,
   Dimensions,
   Platform,
 } from "react-native";
+import { Modal } from "@/components/ui/Modal";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -954,7 +955,7 @@ export default function ProCalendarScreen() {
       </ScrollView>
 
       {/* ── VIEW PICKER MODAL ── */}
-      <Modal visible={showViewPicker} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowViewPicker(false)}>
+      <RNModal visible={showViewPicker} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowViewPicker(false)}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowViewPicker(false)} />
         <View style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
@@ -1001,10 +1002,10 @@ export default function ProCalendarScreen() {
             </Pressable>
           ))}
         </View>
-      </Modal>
+      </RNModal>
 
       {/* ── ADD SLOT MODAL ── */}
-      <Modal visible={showAddSlot} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowAddSlot(false)}>
+      <RNModal visible={showAddSlot} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowAddSlot(false)}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowAddSlot(false)} />
         <View style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
@@ -1089,10 +1090,10 @@ export default function ProCalendarScreen() {
             </Pressable>
           </View>
         </View>
-      </Modal>
+      </RNModal>
 
       {/* ── APPOINTMENT ACTIONS MODAL ── */}
-      <Modal visible={selectedApt != null} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSelectedApt(null)}>
+      <RNModal visible={selectedApt != null} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSelectedApt(null)}>
         {selectedApt && (
           <>
             <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setSelectedApt(null)} />
@@ -1174,19 +1175,11 @@ export default function ProCalendarScreen() {
             </View>
           </>
         )}
-      </Modal>
+      </RNModal>
 
       {/* ── UNAVAILABILITY MODAL ── */}
-      <Modal visible={showUnavailModal} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowUnavailModal(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowUnavailModal(false)} />
-        <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          backgroundColor: "#fff",
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          paddingBottom: insets.bottom + 16,
-          maxHeight: "85%",
-          overflow: "hidden",
-        }}>
+      <Modal visible={showUnavailModal} onClose={() => setShowUnavailModal(false)} bottomSheet noPadding maxHeight="85%">
+        <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
           {/* Orange header */}
@@ -1314,21 +1307,14 @@ export default function ProCalendarScreen() {
             >
               {unavailSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Bloquer la période</Text>}
             </Pressable>
+          <View style={{ height: insets.bottom + 16 }} />
           </ScrollView>
         </View>
       </Modal>
 
       {/* ── WEEKLY PLANNING MODAL ── */}
-      <Modal visible={showPlanningModal} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowPlanningModal(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowPlanningModal(false)} />
-        <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          backgroundColor: "#fff",
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          paddingBottom: insets.bottom + 16,
-          maxHeight: "85%",
-          overflow: "hidden",
-        }}>
+      <Modal visible={showPlanningModal} onClose={() => setShowPlanningModal(false)} bottomSheet noPadding maxHeight="85%">
+        <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
           {/* Green header */}
@@ -1469,6 +1455,7 @@ export default function ProCalendarScreen() {
                 <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Appliquer le planning</Text>
               )}
             </Pressable>
+          <View style={{ height: insets.bottom + 16 }} />
           </ScrollView>
         </View>
       </Modal>

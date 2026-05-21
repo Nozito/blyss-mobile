@@ -4,9 +4,9 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Modal,
   ActivityIndicator,
 } from "react-native";
+import { Modal } from "@/components/ui/Modal";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -782,136 +782,49 @@ export default function ProDashboard() {
       )}
 
       {/* ── SLOTS MODAL ── */}
-      <Modal visible={showSlotsModal} transparent animationType="slide" onRequestClose={() => setShowSlotsModal(false)}>
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" }}>
-          <View
-            style={{
-              backgroundColor: Colors.card,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 24,
-              paddingBottom: insets.bottom + 28,
-              borderTopWidth: 2,
-              borderTopColor: `${Colors.primary}33`,
-            }}
+      <Modal visible={showSlotsModal} onClose={() => setShowSlotsModal(false)} title="Ajouter des créneaux" bottomSheet>
+        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
+          Ouvrez de nouveaux créneaux depuis votre calendrier pour permettre à vos clientes de réserver.
+        </Text>
+        <Pressable
+          onPress={() => { setShowSlotsModal(false); router.push("/(pro)/calendar"); }}
+          style={{ overflow: "hidden", borderRadius: 12 }}
+        >
+          <LinearGradient
+            colors={[Colors.primary, `${Colors.primary}E6`]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.foreground }}>
-                Ajouter des créneaux
-              </Text>
-              <Pressable
-                onPress={() => setShowSlotsModal(false)}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  backgroundColor: Colors.muted,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons name="close" size={20} color={Colors.foreground} />
-              </Pressable>
-            </View>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
-              Ouvrez de nouveaux créneaux depuis votre calendrier pour permettre à vos clientes de réserver.
-            </Text>
-            <Pressable
-              onPress={() => { setShowSlotsModal(false); router.push("/(pro)/calendar"); }}
-              style={{ overflow: "hidden", borderRadius: 12 }}
-            >
-              <LinearGradient
-                colors={[Colors.primary, `${Colors.primary}E6`]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  paddingVertical: 14,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                }}
-              >
-                <Ionicons name="calendar-outline" size={18} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
-                  Aller au calendrier
-                </Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </View>
+            <Ionicons name="calendar-outline" size={18} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
+          </LinearGradient>
+        </Pressable>
       </Modal>
 
       {/* ── BLOCK MODAL ── */}
-      <Modal visible={showBlockModal} transparent animationType="slide" onRequestClose={() => setShowBlockModal(false)}>
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" }}>
-          <View
-            style={{
-              backgroundColor: Colors.card,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 24,
-              paddingBottom: insets.bottom + 28,
-              borderTopWidth: 2,
-              borderTopColor: `${Colors.destructive}33`,
-            }}
+      <Modal visible={showBlockModal} onClose={() => setShowBlockModal(false)} title="Bloquer une journée" bottomSheet>
+        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
+          Bloquez une journée complète pour ne plus recevoir de nouvelles réservations.
+        </Text>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <Pressable
+            onPress={() => setShowBlockModal(false)}
+            style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.muted, alignItems: "center" }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.foreground }}>
-                Bloquer une journée
-              </Text>
-              <Pressable
-                onPress={() => setShowBlockModal(false)}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  backgroundColor: Colors.muted,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons name="close" size={20} color={Colors.foreground} />
-              </Pressable>
-            </View>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
-              Bloquez une journée complète pour ne plus recevoir de nouvelles réservations.
-            </Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Pressable
-                onPress={() => setShowBlockModal(false)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  backgroundColor: Colors.muted,
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ fontWeight: "700", color: Colors.foreground, fontSize: 14 }}>Annuler</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setShowBlockModal(false)}
-                style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}
-              >
-                <LinearGradient
-                  colors={[Colors.destructive, `${Colors.destructive}E6`]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{
-                    paddingVertical: 14,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                  }}
-                >
-                  <Ionicons name="ban-outline" size={18} color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Bloquer</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </View>
+            <Text style={{ fontWeight: "700", color: Colors.foreground, fontSize: 14 }}>Annuler</Text>
+          </Pressable>
+          <Pressable onPress={() => setShowBlockModal(false)} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}>
+            <LinearGradient
+              colors={[Colors.destructive, `${Colors.destructive}E6`]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+            >
+              <Ionicons name="ban-outline" size={18} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Bloquer</Text>
+            </LinearGradient>
+          </Pressable>
         </View>
       </Modal>
     </ScrollView>

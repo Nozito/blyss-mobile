@@ -8,7 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  StyleSheet,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,6 +32,8 @@ interface ModalProps extends Omit<RNModalProps, "children"> {
   title?: string;
   children: React.ReactNode;
   bottomSheet?: boolean;
+  noPadding?: boolean;
+  maxHeight?: number | string;
 }
 
 export function Modal({
@@ -38,6 +42,8 @@ export function Modal({
   title,
   children,
   bottomSheet = false,
+  noPadding = false,
+  maxHeight,
   ...props
 }: ModalProps) {
   const insets = useSafeAreaInsets();
@@ -109,8 +115,9 @@ export function Modal({
       >
         {/* Overlay fixe — ne bouge JAMAIS */}
         <Animated.View
-          style={[overlayStyle, { position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.45)" }]}
+          style={[overlayStyle, { position: "absolute", inset: 0 }]}
         >
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
           <Pressable style={{ flex: 1 }} onPress={onClose} />
         </Animated.View>
 
@@ -129,24 +136,30 @@ export function Modal({
                 borderTopRightRadius: 28,
                 paddingBottom: insets.bottom + 16,
               },
+              maxHeight != null ? ({ maxHeight } as object) : undefined,
             ]}
           >
             <Pressable onPress={(e) => e.stopPropagation()}>
-              {/* Handle */}
-              <View className="items-center pt-3 pb-2">
-                <View className="w-10 h-1 rounded-full bg-border" />
-              </View>
+              {!noPadding && (
+                <>
+                  {/* Handle */}
+                  <View className="items-center pt-3 pb-2">
+                    <View className="w-10 h-1 rounded-full bg-border" />
+                  </View>
 
-              {title && (
-                <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
-                  <Text className="text-lg font-semibold text-foreground">{title}</Text>
-                  <AnimatedIconButton onPress={onClose} className="p-1">
-                    <Ionicons name="close" size={22} color={Colors.mutedForeground} />
-                  </AnimatedIconButton>
-                </View>
+                  {title && (
+                    <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
+                      <Text className="text-lg font-semibold text-foreground">{title}</Text>
+                      <AnimatedIconButton onPress={onClose} className="p-1">
+                        <Ionicons name="close" size={22} color={Colors.mutedForeground} />
+                      </AnimatedIconButton>
+                    </View>
+                  )}
+
+                  <View className="p-5">{children}</View>
+                </>
               )}
-
-              <View className="p-5">{children}</View>
+              {noPadding && children}
             </Pressable>
           </Animated.View>
         ) : (
