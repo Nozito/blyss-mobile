@@ -1,24 +1,24 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Platform,
+  Animated,
 } from "react-native";
-import MapView, { Marker, Callout, PROVIDER_DEFAULT, Region } from "react-native-maps";
-import * as Location from "expo-location";
+import { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import ClusteredMapView from "react-native-map-clustering";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Specialist } from "./SpecialistCard";
 
 const PARIS: Region = {
-  latitude: 48.8566,
-  longitude: 2.3522,
-  latitudeDelta: 0.15,
-  longitudeDelta: 0.15,
+  latitude: 46.603354,
+  longitude: 1.888334,
+  latitudeDelta: 8,
+  longitudeDelta: 8,
 };
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -71,9 +71,19 @@ function MarkerPin({ item }: { item: Specialist }) {
   );
 }
 
-// ── Callout content ───────────────────────────────────────────────────────────
+// ── Pro bottom card ───────────────────────────────────────────────────────────
 
-function CalloutCard({ item }: { item: Specialist }) {
+function ProBottomCard({
+  item,
+  slideAnim,
+  onClose,
+  onViewProfile,
+}: {
+  item: Specialist;
+  slideAnim: Animated.Value;
+  onClose: () => void;
+  onViewProfile: () => void;
+}) {
   const photo = item.profile_image_url
     ? item.profile_image_url.startsWith("http")
       ? item.profile_image_url
@@ -81,132 +91,162 @@ function CalloutCard({ item }: { item: Specialist }) {
     : null;
 
   return (
-    <View style={styles.callout}>
-      <View style={styles.calloutRow}>
-        {/* Photo */}
-        <View style={styles.calloutPhoto}>
+    <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
+      {/* Close button */}
+      <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
+        <Ionicons name="close" size={18} color="#6D6D78" />
+      </Pressable>
+
+      <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+        {/* Avatar */}
+        <View style={styles.cardAvatar}>
           {photo ? (
             <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
           ) : (
-            <View style={[styles.calloutPhoto, styles.calloutPhotoFallback]}>
-              <Text style={styles.calloutInitial}>{item.first_name?.[0] ?? "?"}</Text>
-            </View>
+            <Text style={styles.cardAvatarInitial}>{item.first_name?.[0]?.toUpperCase() ?? "?"}</Text>
           )}
         </View>
 
         {/* Info */}
         <View style={{ flex: 1 }}>
-          <Text style={styles.calloutName} numberOfLines={1}>{item.business_name}</Text>
-          <Text style={styles.calloutSpecialty} numberOfLines={1}>{item.specialty}</Text>
-
-          {item.rating > 0 && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3 }}>
-              <Ionicons name="star" size={11} color="#FBBF24" />
-              <Text style={styles.calloutRating}>{item.rating != null ? Number(item.rating).toFixed(1) : "–"}</Text>
-              {item.reviews_count > 0 && (
-                <Text style={styles.calloutReviews}>· {item.reviews_count} avis</Text>
-              )}
-            </View>
-          )}
-
-          {item.city ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3 }}>
-              <Ionicons name="location-outline" size={11} color="#6D6D78" />
-              <Text style={styles.calloutCity} numberOfLines={1}>{item.city}</Text>
-            </View>
-          ) : null}
+          <Text style={styles.cardName} numberOfLines={1}>{item.business_name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+            {item.city ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <Ionicons name="location-outline" size={12} color="#6D6D78" />
+                <Text style={styles.cardCity}>{item.city}</Text>
+              </View>
+            ) : null}
+            {item.rating > 0 && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <Ionicons name="star" size={12} color="#FBBF24" />
+                <Text style={styles.cardRating}>{Number(item.rating).toFixed(1)}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
-      <View style={styles.calloutBtn}>
-        <Text style={styles.calloutBtnText}>Voir le profil →</Text>
-      </View>
-    </View>
+      {/* CTA */}
+      <Pressable
+        onPress={onViewProfile}
+        style={({ pressed }) => [styles.cardBtn, { opacity: pressed ? 0.85 : 1 }]}
+      >
+        <Text style={styles.cardBtnText}>Voir le profil</Text>
+        <Ionicons name="arrow-forward" size={16} color="#fff" />
+      </Pressable>
+    </Animated.View>
   );
 }
 
 // ── Main MapView screen ───────────────────────────────────────────────────────
 
-export function SpecialistsMapView({ specialists }: Props) {
+function computeRegion(mapped: (Specialist & { lat: number; lng: number })[]): Region {
+  if (mapped.length === 0) return PARIS;
+
+  const lats = mapped.map((s) => s.lat);
+  const lngs = mapped.map((s) => s.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+
+  const centerLat = (minLat + maxLat) / 2;
+  const centerLng = (minLng + maxLng) / 2;
+  const deltaLat = Math.max((maxLat - minLat) * 1.4, 0.5);
+  const deltaLng = Math.max((maxLng - minLng) * 1.4, 0.5);
+
+  return {
+    latitude: centerLat,
+    longitude: centerLng,
+    latitudeDelta: deltaLat,
+    longitudeDelta: deltaLng,
+  };
+}
+
+export default function SpecialistsMapView({ specialists }: Props) {
   const router = useRouter();
-  const mapRef = useRef<MapView>(null);
-  const [region, setRegion] = useState<Region | null>(null);
-  const [locating, setLocating] = useState(true);
+  const mapRef = useRef<any>(null);
+  const [selectedPro, setSelectedPro] = useState<Specialist | null>(null);
+  const slideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
-    let cancelled = false;
+    if (selectedPro) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 70,
+        friction: 11,
+      }).start();
+    }
+  }, [selectedPro]);
 
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted" || cancelled) {
-          if (!cancelled) setRegion(PARIS);
-          return;
-        }
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        if (!cancelled) {
-          setRegion({
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            latitudeDelta: 0.12,
-            longitudeDelta: 0.12,
-          });
-        }
-      } catch {
-        if (!cancelled) setRegion(PARIS);
-      } finally {
-        if (!cancelled) setLocating(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, []);
+  const handleClose = () => {
+    Animated.timing(slideAnim, {
+      toValue: 300,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => setSelectedPro(null));
+  };
 
   // Filter specialists that have coordinates
   const mapped = specialists.filter(
     (s) => s.lat != null && s.lng != null
   ) as (Specialist & { lat: number; lng: number })[];
 
-  if (locating) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#FE5D9D" />
-        <Text style={styles.loaderText}>Localisation en cours…</Text>
-      </View>
-    );
-  }
+  const initialRegion = computeRegion(mapped);
 
   return (
     <View style={{ flex: 1 }}>
-      <MapView
+      <ClusteredMapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_DEFAULT}
-        initialRegion={region ?? PARIS}
+        initialRegion={initialRegion}
         showsUserLocation
         showsMyLocationButton={Platform.OS === "android"}
+        clusterColor="#FE5D9D"
+        clusterTextColor="#ffffff"
+        clusterFontFamily="System"
+        onPress={() => selectedPro && handleClose()}
+        renderCluster={(cluster: any) => {
+          const { geometry, onPress, properties } = cluster;
+          const count: number = properties.point_count;
+          const size = count < 5 ? 40 : count < 15 ? 50 : 60;
+          return (
+            <Marker
+              key={`cluster-${cluster.id}`}
+              coordinate={{
+                longitude: geometry.coordinates[0],
+                latitude: geometry.coordinates[1],
+              }}
+              onPress={onPress}
+              tracksViewChanges={false}
+            >
+              <View style={[styles.cluster, { width: size, height: size, borderRadius: size / 2 }]}>
+                <Text style={styles.clusterText}>{count}</Text>
+              </View>
+            </Marker>
+          );
+        }}
       >
         {mapped.map((item) => (
           <Marker
             key={item.id}
             coordinate={{ latitude: item.lat, longitude: item.lng }}
             tracksViewChanges={false}
-            onCalloutPress={() =>
-              router.push({ pathname: "/specialist/[id]", params: { id: item.id } })
-            }
+            onPress={() => {
+              slideAnim.setValue(300);
+              setSelectedPro(item);
+            }}
           >
             <MarkerPin item={item} />
-            <Callout tooltip>
-              <CalloutCard item={item} />
-            </Callout>
           </Marker>
         ))}
-      </MapView>
+      </ClusteredMapView>
 
       {/* "Aucun marqueur" hint */}
-      {mapped.length === 0 && !locating && (
+      {mapped.length === 0 && (
         <View style={styles.noMarkers}>
           <View style={styles.noMarkersCard}>
             <Ionicons name="location-outline" size={20} color="#6D6D78" />
@@ -219,10 +259,22 @@ export function SpecialistsMapView({ specialists }: Props) {
         </View>
       )}
 
+      {/* Pro bottom card */}
+      {selectedPro && (
+        <ProBottomCard
+          item={selectedPro}
+          slideAnim={slideAnim}
+          onClose={handleClose}
+          onViewProfile={() =>
+            router.push({ pathname: "/specialist/[id]", params: { id: selectedPro.id } })
+          }
+        />
+      )}
+
       {/* My location button (iOS) */}
-      {Platform.OS === "ios" && region && (
+      {Platform.OS === "ios" && (
         <Pressable
-          onPress={() => mapRef.current?.animateToRegion(region, 600)}
+          onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)}
           style={styles.locBtn}
         >
           <Ionicons name="locate-outline" size={20} color="#FE5D9D" />
@@ -235,6 +287,21 @@ export function SpecialistsMapView({ specialists }: Props) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  cluster: {
+    backgroundColor: "#FE5D9D",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#FE5D9D",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  clusterText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
   loader: {
     flex: 1,
     alignItems: "center",
@@ -308,75 +375,81 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
 
-  // Callout
-  callout: {
-    width: 220,
+  // Bottom card
+  bottomCard: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "#EBE6E0",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 10,
+    gap: 14,
   },
-  calloutRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 10,
-  },
-  calloutPhoto: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#FFE6F0",
-    flexShrink: 0,
-  },
-  calloutPhotoFallback: {
+  closeBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F4F4F5",
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 1,
   },
-  calloutInitial: {
-    fontSize: 20,
+  cardAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#FFE0EF",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    borderWidth: 2,
+    borderColor: "#FE5D9D",
+  },
+  cardAvatarInitial: {
+    fontSize: 22,
     fontWeight: "800",
     color: "#FE5D9D",
   },
-  calloutName: {
-    fontSize: 13,
+  cardName: {
+    fontSize: 16,
     fontWeight: "700",
     color: "#09090B",
   },
-  calloutSpecialty: {
-    fontSize: 11,
-    color: "#FE5D9D",
-    fontWeight: "500",
-    marginTop: 1,
-  },
-  calloutRating: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#09090B",
-  },
-  calloutReviews: {
-    fontSize: 11,
-    color: "#6D6D78",
-  },
-  calloutCity: {
-    fontSize: 11,
-    color: "#6D6D78",
-    flex: 1,
-  },
-  calloutBtn: {
-    backgroundColor: "#FE5D9D",
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  calloutBtnText: {
+  cardCity: {
     fontSize: 12,
+    color: "#6D6D78",
+  },
+  cardRating: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#09090B",
+  },
+  cardBtn: {
+    backgroundColor: "#FE5D9D",
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    shadowColor: "#FE5D9D",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  cardBtnText: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#fff",
   },

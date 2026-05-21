@@ -14,8 +14,8 @@ import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 
-const SpecialistsMapView = React.lazy(() =>
-  import("@/components/screens/client/specialists/MapView").then((m) => ({ default: m.SpecialistsMapView }))
+const SpecialistsMapView = React.lazy(
+  () => import("@/components/screens/client/specialists/MapView") as Promise<{ default: React.ComponentType<{ specialists: Specialist[] }> }>
 );
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -62,7 +62,7 @@ export default function SpecialistsScreen() {
   }, []);
 
   const { data: specialists = [], isLoading, isFetching } = useQuery<Specialist[]>({
-    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter, userCoords],
+    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter],
     queryFn: async () => {
       const res = await specialistsApi.getPros({
         limit: 100,
@@ -70,8 +70,8 @@ export default function SpecialistsScreen() {
         ...(cityFilter ? { city: cityFilter } : {}),
         ...(serviceFilter ? { service: serviceFilter } : {}),
         ...(ratingFilter > 0 ? { min_rating: ratingFilter } : {}),
-        ...(userCoords ? { lat: userCoords.lat, lng: userCoords.lng, nearby: true } : {}),
       });
+      console.log("Total specialists reçus:", res.data?.length, res);
       if (!res.success || !res.data) return [];
       return (res.data as Array<Record<string, unknown>>).map((pro) => ({
         id: pro.id as number,
@@ -88,8 +88,8 @@ export default function SpecialistsScreen() {
         cover_image_url: (pro.banner_photo as string | null) ?? null,
         first_name: pro.first_name as string,
         distance_km: (pro.distance_km as number | null) ?? null,
-        lat: (pro.lat as number | null) ?? null,
-        lng: (pro.lng as number | null) ?? null,
+        lat: (pro.latitude as number | null) ?? null,
+        lng: (pro.longitude as number | null) ?? null,
         min_price: (pro.min_price as number | null) ?? null,
       }));
     },
