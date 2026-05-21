@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,7 +18,10 @@ import {
   reviewsApi,
   favoritesApi,
   instagramApi,
+  clientApi,
 } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { ReviewModal } from "@/components/ui/ReviewModal";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
@@ -73,6 +76,9 @@ export default function SpecialistProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const heartScale = useRef(new Animated.Value(1)).current;
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["specialist", id],
@@ -104,6 +110,13 @@ export default function SpecialistProfileScreen() {
     enabled: Boolean(id),
   });
 
+  const { data: myBookingsData } = useQuery({
+    queryKey: ["my-bookings"],
+    queryFn: () => clientApi.getMyBookings(),
+    enabled: Boolean(user),
+    staleTime: 60_000,
+  });
+
   const addFavMutation = useMutation({
     mutationFn: () => favoritesApi.add(Number(id)),
     onSuccess: () => refetchFav(),
@@ -125,9 +138,18 @@ export default function SpecialistProfileScreen() {
     | Record<string, unknown>
     | undefined;
 
-  const igPhotos = (igData?.data as Record<string, unknown> | undefined)
-    ?.photos as Array<Record<string, unknown>> | undefined;
+  const igPhotos = (
+    (igData?.data as Record<string, unknown> | undefined)?.photos ??
+    (igData as Record<string, unknown> | undefined)?.photos
+  ) as Array<Record<string, unknown>> | undefined;
   const isFavorited = favData?.data?.isFavorite ?? false;
+
+  const myBookings = Array.isArray(myBookingsData?.data)
+    ? (myBookingsData.data as Array<Record<string, unknown>>)
+    : [];
+  const hasCompletedBooking = myBookings.some(
+    (b) => Number(b.pro_id) === Number(id) && b.status === "completed"
+  );
 
   const toggleFav = () => {
     Animated.sequence([
@@ -355,9 +377,13 @@ export default function SpecialistProfileScreen() {
 
         {/* BUG 2 fix — firstName fallback */}
         <Pressable
-          onPress={() =>
-            router.push({ pathname: "/(client)/booking", params: { proId: id } })
-          }
+          onPress={() => {
+            if (!user) {
+              router.push("/(auth)/login");
+              return;
+            }
+            router.push({ pathname: "/(client)/booking", params: { proId: id } });
+          }}
           style={{
             backgroundColor: "#FE5D9D",
             borderRadius: 999,
@@ -540,23 +566,32 @@ export default function SpecialistProfileScreen() {
             </View>
           )}
 
-          <Pressable
-            style={{
-              marginTop: 12,
-              borderWidth: 1,
-              borderColor: "#FE5D9D40",
-              borderRadius: 999,
-              paddingVertical: 14,
-              alignItems: "center",
-              backgroundColor: "#fff",
-            }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: "700", color: "#FE5D9D" }}>
-              Laisser un avis
-            </Text>
-          </Pressable>
+          {hasCompletedBooking && (
+            <Pressable
+              onPress={() => setShowReviewModal(true)}
+              style={{
+                marginTop: 12,
+                borderWidth: 1,
+                borderColor: "#FE5D9D40",
+                borderRadius: 999,
+                paddingVertical: 14,
+                alignItems: "center",
+                backgroundColor: "#fff",
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#FE5D9D" }}>
+                Laisser un avis
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
+      <ReviewModal
+        visible={showReviewModal}
+        proId={id!}
+        onClose={() => setShowReviewModal(false)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["reviews", id] })}
+      />
     </ScrollView>
   );
 }
