@@ -41,6 +41,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<ApiResponse<User>>;
   refreshProfile: () => Promise<void>;
+  patchUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -201,6 +202,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const patchUser = (data: Partial<User>): void => {
+    setUser((prev) => (prev ? { ...prev, ...data } : prev));
+    // best-effort cache update (no await — this is a fire-and-forget optimistic patch)
+    void storage.getUserCache().then((cached) => {
+      if (cached) void storage.setUserCache({ ...cached, ...data });
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -212,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         updateUser,
         refreshProfile,
+        patchUser,
       }}
     >
       {children}

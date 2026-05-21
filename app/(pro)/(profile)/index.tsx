@@ -41,7 +41,7 @@ function calculateBlyssAge(createdAt?: string): { value: string; unit: string } 
 }
 
 export default function ProProfileScreen() {
-  const { user, logout, refreshProfile } = useAuth();
+  const { user, logout, refreshProfile, patchUser } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
@@ -51,6 +51,11 @@ export default function ProProfileScreen() {
       {
         text: "Galerie",
         onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (perm.status !== "granted") {
+            Alert.alert("Permission refusée", "Autorise l'accès à la galerie dans les réglages.");
+            return;
+          }
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
@@ -100,6 +105,8 @@ export default function ProProfileScreen() {
       Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la photo.");
       return;
     }
+    // Fix 1b: mise à jour locale immédiate avant le refetch
+    if (res.data?.photo) patchUser({ profile_photo: res.data.photo });
     await refreshProfile();
   };
 

@@ -52,7 +52,7 @@ export default function ProPublicProfileScreen() {
   const { isLoading } = useQuery({
     queryKey: ["pro-public-profile"],
     queryFn: async () => {
-      const res = await proApi.getProfile?.();
+      const res = await proApi.getProfile();
       return res?.data ?? null;
     },
     onSuccess: (data: any) => {
@@ -90,7 +90,7 @@ export default function ProPublicProfileScreen() {
 
     setIsSaving(true);
     try {
-      await proApi.updateProfile?.({
+      await proApi.updateProfile({
         activity_name: activityName,
         city,
         bio,
