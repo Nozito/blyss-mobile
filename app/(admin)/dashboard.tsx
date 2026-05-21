@@ -15,9 +15,6 @@ import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/colors";
 
-const API_BASE_URL =
-  (process.env.EXPO_PUBLIC_API_URL as string | undefined) ??
-  "http://localhost:3001";
 
 interface Stats {
   totalUsers: number;
@@ -114,35 +111,14 @@ export default function AdminDashboard() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-dashboard"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/admin/dashboard/stats`, {
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
-        throw new Error(`HTTP ${res.status} — ${body?.message ?? "Erreur"}`);
-      }
-      return res.json() as Promise<{
-        success: boolean;
-        stats: Stats;
-        recentActivity: ActivityItem[];
-      }>;
-    },
+    queryFn: () => adminApi.getDashboardStats() as Promise<{ success: boolean; stats: Stats; recentActivity: ActivityItem[] }>,
     staleTime: 5 * 60_000,
     retry: false,
   });
 
   const { data: healthData } = useQuery({
     queryKey: ["admin-health"],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/health`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("health error");
-      return res.json() as Promise<HealthStatus>;
-    },
+    queryFn: () => adminApi.getHealth() as Promise<HealthStatus>,
     staleTime: 30_000,
     refetchInterval: 60_000,
     retry: false,

@@ -19,7 +19,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { clientApi, nailTechApi, type WaitingListEntry } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 interface Booking {
   id: number;
@@ -76,8 +75,7 @@ function RescheduleModal({
     setSelectedSlot(null);
     setLoadingSlots(true);
     try {
-      const res = await fetch(`${API_URL}/api/slots/available/${booking.pro_id}/${key}`);
-      const data = await res.json();
+      const data = await clientApi.getAvailableSlots(booking.pro_id, key);
       setSlots(data.success && Array.isArray(data.data) ? data.data.map((s: { id: number; time: string }) => ({ id: s.id, time: s.time })) : []);
     } catch {
       setSlots([]);
@@ -94,17 +92,11 @@ function RescheduleModal({
       const start = new Date(`${selectedDate}T00:00:00`);
       start.setHours(h, m, 0, 0);
       const end = new Date(start.getTime() + booking.duration_minutes * 60_000);
-      const res = await fetch(`${API_URL}/api/client/my-booking/${booking.id}/reschedule`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          start_datetime: start.toISOString().slice(0, 19).replace("T", " "),
-          end_datetime: end.toISOString().slice(0, 19).replace("T", " "),
-          slot_id: selectedSlot.id,
-        }),
+      const data = await clientApi.rescheduleBooking(booking.id, {
+        start_datetime: start.toISOString().slice(0, 19).replace("T", " "),
+        end_datetime: end.toISOString().slice(0, 19).replace("T", " "),
+        slot_id: selectedSlot.id,
       });
-      const data = await res.json();
       if (!data.success) throw new Error(data?.message || "Erreur");
       onConfirm();
     } catch (err) {

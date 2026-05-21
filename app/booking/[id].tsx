@@ -9,6 +9,7 @@ import {
   Linking,
   Animated,
   ActivityIndicator,
+  Alert,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,

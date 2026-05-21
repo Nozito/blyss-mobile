@@ -595,6 +595,10 @@ export const clientApi = {
     apiCall(`/api/client/my-booking/${id}/cancel`, { method: "PATCH" }),
   cancelReservationWithPolicy: (reservationId: number): Promise<ApiResponse<{ reservation_id: number; deadline?: string }>> =>
     apiCall(`/api/reservations/${reservationId}/cancel`, { method: "POST" }),
+  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id: number }): Promise<ApiResponse<void>> =>
+    apiCall(`/api/client/my-booking/${id}/reschedule`, { method: "PATCH", body: JSON.stringify(data) }),
+  getAvailableSlots: (proId: number, date: string): Promise<ApiResponse<Array<{ id: number; time: string }>>> =>
+    apiCall(`/api/slots/available/${proId}/${date}`),
 };
 
 // ── Payments API ──────────────────────────────────────────────────────────────
@@ -787,6 +791,8 @@ export const paymentMethodsApi = {
 
 export const adminApi = {
   getDashboard: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/dashboard"),
+  getDashboardStats: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/dashboard/stats"),
+  getHealth: (): Promise<ApiResponse<unknown>> => apiCall("/api/health"),
   getUsers: (params?: { page?: number; limit?: number; search?: string }) => {
     const q = params ? "?" + new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))
