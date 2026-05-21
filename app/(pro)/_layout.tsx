@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Redirect, useRouter } from "expo-router";
-import { NativeTabs, Icon, Label, Badge } from "expo-router/unstable-native-tabs";
+import { NativeTabs, Icon, Badge, VectorIcon } from "expo-router/unstable-native-tabs";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
@@ -35,31 +36,42 @@ export default function ProLayout() {
       blurEffect="systemUltraThinMaterialLight"
       tintColor="#FE5D9D"
       minimizeBehavior="automatic"
+      labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard">
-        <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
-        <Label>Dashboard</Label>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="grid-outline" />,
+          selected: <VectorIcon family={Ionicons} name="grid" />,
+        }} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="calendar">
-        <Icon sf={{ default: "calendar.circle", selected: "calendar.circle.fill" }} />
-        <Label>Agenda</Label>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="calendar-outline" />,
+          selected: <VectorIcon family={Ionicons} name="calendar" />,
+        }} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="clients">
-        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>Clientes</Label>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="people-outline" />,
+          selected: <VectorIcon family={Ionicons} name="people" />,
+        }} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
-        <Icon sf={{ default: "bell", selected: "bell.fill" }} />
-        <Label>Notifs</Label>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="notifications-outline" />,
+          selected: <VectorIcon family={Ionicons} name="notifications" />,
+        }} />
         <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>Profil</Label>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="person-outline" />,
+          selected: <VectorIcon family={Ionicons} name="person" />,
+        }} />
       </NativeTabs.Trigger>
 
       {/* Routes cachées — non affichées dans la tab bar */}
