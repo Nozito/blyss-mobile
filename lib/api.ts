@@ -475,6 +475,8 @@ export const notificationsApi = {
     apiCall("/api/client/notification-settings"),
   updateSettings: (settings: Partial<ClientNotificationSettings>): Promise<ApiResponse<ClientNotificationSettings>> =>
     apiCall("/api/client/notification-settings", { method: "PUT", body: JSON.stringify(settings) }),
+  savePushToken: (token: string): Promise<ApiResponse<void>> =>
+    apiCall("/api/notifications/push-token", { method: "POST", body: JSON.stringify({ token }) }),
 };
 
 // ── Pro API ───────────────────────────────────────────────────────────────────

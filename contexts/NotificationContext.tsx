@@ -8,8 +8,11 @@ import React, {
 } from "react";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { useAuth } from "./AuthContext";
 import { storage } from "@/lib/storage";
+import { notificationsApi } from "@/lib/api";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -44,6 +47,7 @@ const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? "";
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,18 +116,58 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
   }, [isAuthenticated, user]);
 
-  // Push notification permissions
+  // P0 — Load existing notifications from API on login
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setNotifications([]);
+      return;
+    }
+    notificationsApi.getAll().then((res) => {
+      if (res.success && Array.isArray(res.data)) {
+        setNotifications(res.data as NotificationItem[]);
+      }
+    }).catch(() => {});
+  }, [isAuthenticated]);
 
-    const requestPermissions = async () => {
-      if (Platform.OS === "web") return;
+  // P0 — Push permissions + Expo token registration
+  useEffect(() => {
+    if (!isAuthenticated || Platform.OS === "web") return;
+
+    const registerPushToken = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== "granted") return;
+
+      try {
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+        if (!projectId) return;
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+        await notificationsApi.savePushToken(tokenData.data);
+      } catch {
+        // Non-fatal: push token registration failure doesn't break the app
+      }
     };
 
-    requestPermissions();
+    void registerPushToken();
   }, [isAuthenticated]);
+
+  // P1 — Navigate on push notification tap
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+      const reservationId = data?.reservation_id;
+
+      if (user?.role === "client") {
+        if (reservationId) {
+          router.push(`/booking/${String(reservationId)}` as never);
+        } else {
+          router.push("/(client)/notifications" as never);
+        }
+      } else {
+        router.push("/(pro)/notifications" as never);
+      }
+    });
+    return () => sub.remove();
+  }, [user, router]);
 
   return (
     <NotificationContext.Provider
