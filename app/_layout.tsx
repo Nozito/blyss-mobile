@@ -85,6 +85,18 @@ function AppContent() {
         <Stack.Screen name="(pro)" options={{ animation: "fade" }} />
         <Stack.Screen name="(admin)" options={{ animation: "fade" }} />
         <Stack.Screen
+          name="specialists"
+          options={{ animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="booking"
+          options={{ animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="my-bookings"
+          options={{ animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
           name="specialist/[id]"
           options={{ presentation: "card", animation: "slide_from_bottom" }}
         />

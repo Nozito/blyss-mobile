@@ -202,7 +202,7 @@ function BookingItem({ booking }: { booking: Booking }) {
 
   return (
     <Pressable
-      onPress={() => router.push("/(client)/my-bookings")}
+      onPress={() => router.push("/my-bookings")}
       className="bg-card rounded-2xl border-2 mb-3 p-4 flex-row gap-4 items-center active:opacity-80"
       style={[{ borderColor: "rgba(254,93,157,0.2)" }, Shadows.soft]}
     >
@@ -323,7 +323,7 @@ export default function ClientHome() {
   const renderCategory: ListRenderItem<(typeof CATEGORIES)[number]> = ({ item }) => (
     <Pressable
       onPress={() =>
-        router.push({ pathname: "/(client)/specialists", params: { search: item.query } })
+        router.push({ pathname: "/specialists", params: { search: item.query } })
       }
       className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
     >
@@ -365,7 +365,7 @@ export default function ClientHome() {
 
             {/* ── Search bar (tap → specialists) ─────────────────────────── */}
             <Pressable
-              onPress={() => router.push("/(client)/specialists")}
+              onPress={() => router.push("/specialists")}
               className="mx-6 mb-3 h-14 flex-row items-center gap-3 bg-card border-2 border-border rounded-2xl px-4"
               style={Shadows.card}
             >
@@ -397,7 +397,7 @@ export default function ClientHome() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => router.push("/(client)/specialists")}
+                onPress={() => router.push("/specialists")}
                 className="flex-row items-center gap-1 px-4 py-2 rounded-full bg-primary"
                 style={Shadows.soft}
               >
@@ -424,7 +424,7 @@ export default function ClientHome() {
 
             {/* ── CTA "Voir toutes les expertes" ─────────────────────────── */}
             <Pressable
-              onPress={() => router.push("/(client)/specialists")}
+              onPress={() => router.push("/specialists")}
               className="mx-6 mt-3 py-3.5 rounded-2xl bg-primary items-center justify-center"
               style={Shadows.soft}
             >
@@ -466,7 +466,7 @@ export default function ClientHome() {
                       Réserve dès maintenant auprès d'une experte près de chez toi
                     </Text>
                     <Pressable
-                      onPress={() => router.push("/(client)/specialists")}
+                      onPress={() => router.push("/specialists")}
                       className="mt-3 px-4 py-2 rounded-xl bg-primary self-start"
                     >
                       <View className="flex-row gap-1.5 items-center">

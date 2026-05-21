@@ -139,7 +139,7 @@ export default function FavoritesScreen() {
 
                 <Animated.View style={{ opacity: emptyFade3, transform: [{ translateY: emptySlide3 }] }}>
                   <Pressable
-                    onPress={() => router.push("/(client)/specialists")}
+                    onPress={() => router.push("/specialists")}
                     style={({ pressed }) => ({
                       opacity: pressed ? 0.85 : 1,
                       transform: [{ scale: pressed ? 0.97 : 1 }],

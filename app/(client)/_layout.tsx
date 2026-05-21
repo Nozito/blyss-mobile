@@ -57,10 +57,6 @@ export default function ClientLayout() {
         }} />
       </NativeTabs.Trigger>
 
-      {/* Routes cachées — non affichées dans la tab bar */}
-      <NativeTabs.Trigger name="specialists" hidden />
-      <NativeTabs.Trigger name="my-bookings" hidden />
-      <NativeTabs.Trigger name="booking" hidden />
     </NativeTabs>
   );
 }

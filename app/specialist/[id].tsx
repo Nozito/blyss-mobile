@@ -382,7 +382,7 @@ export default function SpecialistProfileScreen() {
               router.push("/(auth)/login");
               return;
             }
-            router.push({ pathname: "/(client)/booking", params: { proId: id } });
+            router.push({ pathname: "/booking", params: { proId: id } });
           }}
           style={{
             backgroundColor: "#FE5D9D",

@@ -173,7 +173,7 @@ function EmptyState() {
       </Text>
       <TouchableOpacity
         style={styles.ctaButton}
-        onPress={() => router.push("/(client)/specialists")}
+        onPress={() => router.push("/specialists")}
       >
         <Text style={styles.ctaText}>Trouver une spécialiste</Text>
       </TouchableOpacity>
@@ -223,7 +223,7 @@ export default function BookingsScreen() {
           </Text>
           <TouchableOpacity
             style={styles.ctaBannerButton}
-            onPress={() => router.push("/(client)/specialists")}
+            onPress={() => router.push("/specialists")}
           >
             <Text style={styles.ctaText}>Réserve dès maintenant</Text>
           </TouchableOpacity>
