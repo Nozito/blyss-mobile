@@ -21,28 +21,28 @@ export default function ClientLayout() {
       minimizeBehavior="automatic"
       labelVisibilityMode="unlabeled"
     >
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="index" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="home-outline" />,
           selected: <VectorIcon family={Ionicons} name="home" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="bookings">
+      <NativeTabs.Trigger name="bookings" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="calendar-outline" />,
           selected: <VectorIcon family={Ionicons} name="calendar" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="favorites">
+      <NativeTabs.Trigger name="favorites" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="heart-outline" />,
           selected: <VectorIcon family={Ionicons} name="heart" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="notifications">
+      <NativeTabs.Trigger name="notifications" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="notifications-outline" />,
           selected: <VectorIcon family={Ionicons} name="notifications" />,
@@ -50,7 +50,7 @@ export default function ClientLayout() {
         <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(profile)">
+      <NativeTabs.Trigger name="(profile)" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="person-outline" />,
           selected: <VectorIcon family={Ionicons} name="person" />,

@@ -38,28 +38,28 @@ export default function ProLayout() {
       minimizeBehavior="automatic"
       labelVisibilityMode="unlabeled"
     >
-      <NativeTabs.Trigger name="dashboard">
+      <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="grid-outline" />,
           selected: <VectorIcon family={Ionicons} name="grid" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="calendar">
+      <NativeTabs.Trigger name="calendar" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="calendar-outline" />,
           selected: <VectorIcon family={Ionicons} name="calendar" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="clients">
+      <NativeTabs.Trigger name="clients" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="people-outline" />,
           selected: <VectorIcon family={Ionicons} name="people" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="notifications">
+      <NativeTabs.Trigger name="notifications" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="notifications-outline" />,
           selected: <VectorIcon family={Ionicons} name="notifications" />,
@@ -67,7 +67,7 @@ export default function ProLayout() {
         <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(profile)">
+      <NativeTabs.Trigger name="(profile)" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="person-outline" />,
           selected: <VectorIcon family={Ionicons} name="person" />,
