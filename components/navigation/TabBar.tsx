@@ -54,25 +54,27 @@ function TabIcon({ icon, label, focused }: { icon: string; label: string; focuse
   }, [focused]);
 
   return (
-    <Animated.View style={{ alignItems: "center", transform: [{ scale }] }}>
-      <Ionicons
-        name={icon as any}
-        size={22}
-        color={focused ? "#FE5D9D" : "rgba(0,0,0,0.35)"}
-      />
-      {/* Fix 1a — label sous l'icône, opacity:0 quand inactif pour garder la largeur */}
-      <Text
-        style={{
-          fontSize: 10,
-          fontWeight: "700",
-          color: "#FE5D9D",
-          marginTop: 2,
-          opacity: focused ? 1 : 0,
-        }}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      {/* Wrapper View pour le centrage horizontal — ne pas mettre alignItems sur Animated.View */}
+      <View style={{ alignItems: "center" }}>
+        <Ionicons
+          name={icon as any}
+          size={22}
+          color={focused ? "#FE5D9D" : "rgba(0,0,0,0.35)"}
+        />
+        <Text
+          style={{
+            fontSize: 10,
+            fontWeight: "700",
+            color: "#FE5D9D",
+            marginTop: 2,
+            opacity: focused ? 1 : 0,
+          }}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </View>
     </Animated.View>
   );
 }
@@ -236,6 +238,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   // Fix 1b — arête brillante en haut du container (effet verre)
+  // Pas de zIndex : évite le stacking context qui cache Inner
   topHighlight: {
     position: "absolute",
     top: 0,
@@ -244,7 +247,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 1,
-    zIndex: 10,
   },
   tabButton: {
     flex: 1,
