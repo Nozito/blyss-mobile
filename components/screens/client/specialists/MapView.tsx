@@ -44,14 +44,9 @@ function MarkerPin({ item }: { item: Specialist }) {
 
   return (
     <View style={styles.pinWrap}>
-      {/* Circle photo */}
       <View style={styles.pinCircle}>
         {photo ? (
-          <Image
-            source={{ uri: photo }}
-            style={{ width: "100%", height: "100%" }}
-            contentFit="cover"
-          />
+          <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
         ) : (
           <View style={styles.pinFallback}>
             <Text style={styles.pinInitial}>{item.first_name?.[0] ?? "?"}</Text>
@@ -60,7 +55,6 @@ function MarkerPin({ item }: { item: Specialist }) {
       </View>
 
 
-      {/* Price / rating badge */}
       <View style={styles.badge}>
         {item.min_price != null ? (
           <Text style={styles.badgeText}>~{item.min_price}€</Text>
@@ -73,7 +67,6 @@ function MarkerPin({ item }: { item: Specialist }) {
       </View>
 
 
-      {/* Pin tail */}
       <View style={styles.pinTail} />
     </View>
   );
@@ -87,13 +80,11 @@ function ProBottomCard({
   item,
   slideAnim,
   onClose,
-  onViewProfile,
   onBook,
 }: {
   item: Specialist;
   slideAnim: Animated.Value;
   onClose: () => void;
-  onViewProfile: () => void;
   onBook: () => void;
 }) {
   const photo = item.profile_image_url
@@ -105,14 +96,12 @@ function ProBottomCard({
 
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
-      {/* Close button */}
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
         <Ionicons name="close" size={18} color="#6D6D78" />
       </Pressable>
 
 
       <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
-        {/* Avatar */}
         <View style={styles.cardAvatar}>
           {photo ? (
             <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
@@ -122,7 +111,6 @@ function ProBottomCard({
         </View>
 
 
-        {/* Info */}
         <View style={{ flex: 1 }}>
           <Text style={styles.cardName} numberOfLines={1}>{item.business_name}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -143,40 +131,14 @@ function ProBottomCard({
       </View>
 
 
-      {/* CTAs */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Pressable
-          onPress={onViewProfile}
-          style={({ pressed }) => ({
-            flex: 1,
-            borderWidth: 1.5,
-            borderColor: "#FE5D9D",
-            height: 38,
-            borderRadius: 12,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Text style={{ color: "#FE5D9D", fontWeight: "600", fontSize: 13 }}>Profil</Text>
-        </Pressable>
-
-
-        <Pressable
-          onPress={onBook}
-          style={({ pressed }) => ({
-            flex: 1,
-            backgroundColor: "#FE5D9D",
-            height: 38,
-            borderRadius: 12,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Réserver</Text>
-        </Pressable>
-      </View>
+      {/* CTA – Réserver uniquement */}
+      <Pressable
+        onPress={onBook}
+        style={({ pressed }) => [styles.cardBtn, { opacity: pressed ? 0.85 : 1 }]}
+      >
+        <Ionicons name="calendar-outline" size={16} color="#fff" />
+        <Text style={styles.cardBtnText}>Réserver</Text>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -240,7 +202,6 @@ export default function SpecialistsMapView({ specialists }: Props) {
   };
 
 
-  // Filter specialists that have coordinates
   const mapped = specialists.filter(
     (s) => s.lat != null && s.lng != null
   ) as (Specialist & { lat: number; lng: number })[];
@@ -299,7 +260,6 @@ export default function SpecialistsMapView({ specialists }: Props) {
       </ClusteredMapView>
 
 
-      {/* "Aucun marqueur" hint */}
       {mapped.length === 0 && (
         <View style={styles.noMarkers}>
           <View style={styles.noMarkersCard}>
@@ -314,15 +274,11 @@ export default function SpecialistsMapView({ specialists }: Props) {
       )}
 
 
-      {/* Pro bottom card */}
       {selectedPro && (
         <ProBottomCard
           item={selectedPro}
           slideAnim={slideAnim}
           onClose={handleClose}
-          onViewProfile={() =>
-            router.push({ pathname: "/specialist/[id]", params: { id: selectedPro.id } })
-          }
           onBook={() =>
             router.push({ pathname: "/booking", params: { proId: selectedPro.id } })
           }
@@ -330,7 +286,6 @@ export default function SpecialistsMapView({ specialists }: Props) {
       )}
 
 
-      {/* My location button (iOS) */}
       {Platform.OS === "ios" && (
         <Pressable
           onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)}
@@ -375,9 +330,6 @@ const styles = StyleSheet.create({
     color: "#6D6D78",
     fontWeight: "500",
   },
-
-
-  // Marker pin
   pinWrap: {
     alignItems: "center",
   },
@@ -436,9 +388,6 @@ const styles = StyleSheet.create({
     borderTopColor: "#FE5D9D",
     marginTop: -1,
   },
-
-
-  // Bottom card
   bottomCard: {
     position: "absolute",
     bottom: 16,
@@ -516,9 +465,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
-
-
-  // No markers overlay
   noMarkers: {
     position: "absolute",
     bottom: 100,
@@ -547,9 +493,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
   },
-
-
-  // My location button
   locBtn: {
     position: "absolute",
     top: 16,
