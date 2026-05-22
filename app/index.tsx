@@ -19,7 +19,10 @@ export default function Index() {
     } else {
       router.replace("/(client)");
     }
-  }, [isLoading, isAuthenticated, user?.role, user?.is_admin]);
+  // router intentionnellement exclu : nouvel objet à chaque state change nav
+  // user?.id stable (primitive) au lieu de user (référence objet)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, isAuthenticated, user?.id, user?.role, user?.is_admin]);
 
   return (
     <View
