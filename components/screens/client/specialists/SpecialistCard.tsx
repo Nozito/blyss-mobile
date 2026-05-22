@@ -29,9 +29,10 @@ interface Props {
   index: number;
   onPress: () => void;
   onToggleFav: () => void;
+  onBook?: () => void;
 }
 
-export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Props) {
+export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBook }: Props) {
   const photo = item.cover_image_url ?? item.profile_image_url;
   const cardScale = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
@@ -158,7 +159,7 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Pro
           </View>
 
           <Pressable
-            onPress={onPress}
+            onPress={onBook ?? onPress}
             style={{
               marginTop: 12,
               height: 36,
@@ -166,8 +167,11 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav }: Pro
               backgroundColor: "#FE5D9D",
               alignItems: "center",
               justifyContent: "center",
+              flexDirection: "row",
+              gap: 6,
             }}
           >
+            <Ionicons name="calendar-outline" size={13} color="#fff" />
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Réserver</Text>
           </Pressable>
         </View>
