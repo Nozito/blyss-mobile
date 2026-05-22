@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Device from "expo-device";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useQuery } from "@tanstack/react-query";
 
 import { Card } from "@/components/ui/Card";
@@ -42,6 +43,8 @@ function calculateBlyssAge(createdAt?: string): { value: string; unit: string } 
 
 export default function ProProfileScreen() {
   const { user, logout, refreshProfile, patchUser } = useAuth();
+  // Fix 3 — RC is source of truth; backend subscription is fallback only
+  const { activePlan } = useRevenueCat();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
@@ -131,9 +134,12 @@ export default function ProProfileScreen() {
     serenite: "Sérénité",
     signature: "Signature",
   };
-  const currentPlanLabel = subscription?.plan
-    ? `Plan ${PLAN_LABELS[subscription.plan] ?? subscription.plan}`
-    : "Aucun abonnement";
+  // Fix 3 — RC activePlan is source of truth; backend is fallback for when RC hasn't loaded yet
+  const currentPlanLabel = activePlan
+    ? `Plan ${PLAN_LABELS[activePlan]}`
+    : subscription?.plan
+      ? `Plan ${PLAN_LABELS[subscription.plan] ?? subscription.plan}`
+      : "Aucun abonnement";
 
   const handleLogout = () => {
     Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [

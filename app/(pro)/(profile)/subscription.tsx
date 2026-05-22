@@ -130,7 +130,8 @@ export default function SubscriptionScreen() {
       if (result.success) {
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-        router.push("/(pro)/(profile)/subscription-success");
+        // Fix 1 — pass planKey so subscription-success shows the correct plan label
+        router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
       } else if (result.error && result.error !== "cancelled") {
         Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
       }
@@ -155,7 +156,8 @@ export default function SubscriptionScreen() {
                 await proApi.updateSubscription({ plan: planKey });
                 await refreshProfile();
                 qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-                router.push("/(pro)/(profile)/subscription-success");
+                // Fix 1 — pass planKey in fallback path too
+                router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
               } catch {
                 Alert.alert("Erreur", "Impossible de changer de plan.");
               } finally {

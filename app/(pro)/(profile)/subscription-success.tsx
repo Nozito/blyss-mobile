@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors } from "@/constants/colors";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 
@@ -37,10 +38,15 @@ export default function ProSubscriptionSuccessScreen() {
   useEffect(() => {
     confettiRef.current?.start();
 
-    // Refresh plan first so (pro)/_layout.tsx sees activePlan before navigating,
-    // preventing a flash where hasActiveSub=false re-triggers the subscription redirect.
-    const timer = setTimeout(() => {
-      void refreshActivePlan().then(() => router.replace("/(pro)/dashboard"));
+    // Fix 2 — after purchase, check if first-time pro user and send to onboarding if so
+    const timer = setTimeout(async () => {
+      await refreshActivePlan();
+      const done = await AsyncStorage.getItem("pro_onboarding_done");
+      if (!done) {
+        router.replace("/(pro)/onboarding");
+      } else {
+        router.replace("/(pro)/dashboard");
+      }
     }, 4000);
 
     return () => clearTimeout(timer);
