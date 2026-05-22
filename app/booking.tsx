@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { stripePaymentsApi, specialistsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,13 +87,6 @@ export default function BookingScreen() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.replace("/(auth)/login");
-    }
-  }, [isAuthenticated, authLoading, router]);
 
   // Fetch pro + prestations
   useEffect(() => {
@@ -520,6 +513,8 @@ export default function BookingScreen() {
         return null;
     }
   };
+
+  if (!authLoading && !isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>

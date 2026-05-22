@@ -3,6 +3,8 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useMemo,
+  useCallback,
   useRef,
   type ReactNode,
 } from "react";
@@ -122,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<ApiResponse<{ accessToken: string; refreshToken: string; user: User }>> => {
+  const login = useCallback(async (credentials: LoginCredentials): Promise<ApiResponse<{ accessToken: string; refreshToken: string; user: User }>> => {
     setIsLoading(true);
     try {
       const response = await authApi.login(credentials);
@@ -143,9 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const signup = async (data: SignupData): Promise<SignupResponse> => {
+  const signup = useCallback(async (data: SignupData): Promise<SignupResponse> => {
     setIsLoading(true);
     try {
       const response = await authApi.signup(data);
@@ -167,9 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async (): Promise<void> => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
       await authApi.logout();
     } finally {
@@ -177,20 +179,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await storage.clearAll();
       await rcLogOut();
     }
-  };
+  }, []);
 
-  const updateUser = async (data: Partial<User>): Promise<ApiResponse<User>> => {
-    if (!user) return { success: false, message: "Not authenticated" };
-
+  const updateUser = useCallback(async (data: Partial<User>): Promise<ApiResponse<User>> => {
     const response = await authApi.updateProfile(data);
     if (response.success && response.data) {
       setUser(response.data);
       await storage.setUserCache(toSafeCache(response.data));
     }
     return response;
-  };
+  }, []);
 
-  const refreshProfile = async (): Promise<void> => {
+  const refreshProfile = useCallback(async (): Promise<void> => {
     try {
       const response = await authApi.getProfile();
       if (response.success && response.data) {
@@ -200,30 +200,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // silently ignore
     }
-  };
+  }, []);
 
-  const patchUser = (data: Partial<User>): void => {
+  const patchUser = useCallback((data: Partial<User>): void => {
     setUser((prev) => (prev ? { ...prev, ...data } : prev));
     // best-effort cache update (no await — this is a fire-and-forget optimistic patch)
     void storage.getUserCache().then((cached) => {
       if (cached) void storage.setUserCache({ ...cached, ...data });
     });
-  };
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: Boolean(user),
+      login,
+      signup,
+      logout,
+      updateUser,
+      refreshProfile,
+      patchUser,
+    }),
+    [user, isLoading, login, signup, logout, updateUser, refreshProfile, patchUser]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: Boolean(user),
-        login,
-        signup,
-        logout,
-        updateUser,
-        refreshProfile,
-        patchUser,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

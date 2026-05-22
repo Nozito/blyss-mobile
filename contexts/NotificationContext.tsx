@@ -2,6 +2,8 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useMemo,
+  useCallback,
   useRef,
   useState,
   type ReactNode,
@@ -54,17 +56,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  const addNotification = (n: NotificationItem) => {
+  const addNotification = useCallback((n: NotificationItem) => {
     setNotifications((prev) => [n, ...prev.filter((p) => p.id !== n.id)]);
-  };
+  }, []);
 
-  const markAsRead = (id: number) => {
+  const markAsRead = useCallback((id: number) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
-  };
+  }, []);
 
-  const clearAll = () => setNotifications([]);
+  const clearAll = useCallback(() => setNotifications([]), []);
 
   // WebSocket connection
   useEffect(() => {
@@ -73,9 +75,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let active = true;
+
     const connect = async () => {
       const token = await storage.getAccessToken();
-      if (!token || !WS_URL) return;
+      if (!token || !WS_URL || !active) return;
 
       const ws = new WebSocket(`${WS_URL}?token=${token}`);
       wsRef.current = ws;
@@ -100,7 +104,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       };
 
       ws.onclose = () => {
-        reconnectTimeout.current = setTimeout(connect, 5000);
+        if (active) reconnectTimeout.current = setTimeout(connect, 5000);
       };
 
       ws.onerror = () => {
@@ -111,6 +115,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     connect();
 
     return () => {
+      active = false;
       if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
       wsRef.current?.close();
     };
@@ -169,10 +174,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, [user, router]);
 
+  const contextValue = useMemo(
+    () => ({ notifications, unreadCount, addNotification, markAsRead, clearAll }),
+    [notifications, unreadCount, addNotification, markAsRead, clearAll]
+  );
+
   return (
-    <NotificationContext.Provider
-      value={{ notifications, unreadCount, addNotification, markAsRead, clearAll }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

@@ -22,13 +22,16 @@ export default function ProLayout() {
     if (!hasActiveSub) {
       router.replace("/(pro)/(profile)/subscription");
     }
-  }, [authLoading, rcReady, user, isAdmin, hasActiveSub]);
+    // router is intentionally omitted — it's a stable singleton in Expo Router.
+    // user?.id replaces the full user object to avoid re-running on every object re-creation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, rcReady, user?.id, isAdmin, hasActiveSub]);
 
   if (authLoading || !rcReady) return <LoadingSpinner fullScreen />;
   if (!user) return <Redirect href="/(auth)/login" />;
   if (user.role !== "pro" && !isAdmin) return <Redirect href="/(client)" />;
 
-  // Bloque le rendu des tabs si pas d'abo — useEffect redirige vers subscription
+  // Block tab render while useEffect handles the redirect
   if (!hasActiveSub) return <LoadingSpinner fullScreen />;
 
   return (
