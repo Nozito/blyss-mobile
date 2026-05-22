@@ -139,8 +139,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       setBackendPlan(null);
     } catch {
       setBackendPlan(null);
-    } finally {
-      setBackendPlanChecked(true);
     }
   }, []);
 
@@ -151,11 +149,11 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!rcReady) return;
     const rcPlan = getActivePlanFromRC(customerInfo);
-    if (!rcPlan) {
-      fetchBackendPlanRef.current();
-    } else {
+    if (rcPlan) {
       setBackendPlan(null);
-      setBackendPlanChecked(true); // plan RC trouvé, pas de vérification backend nécessaire
+      setBackendPlanChecked(true);
+    } else {
+      fetchBackendPlanRef.current().finally(() => setBackendPlanChecked(true));
     }
   // fetchBackendPlanRef intentionnellement exclu : c'est une ref, pas une valeur reactive
   // eslint-disable-next-line react-hooks/exhaustive-deps
