@@ -4,7 +4,6 @@ import { Platform } from "react-native";
 import { proApi } from "@/lib/api";
 import { useAuth } from "./AuthContext";
 
-// Fix #1 — noms de variables corrigés pour correspondre à .env.local
 const RC_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
 const RC_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "";
 
@@ -35,9 +34,9 @@ interface RevenueCatContextType {
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
+// start_annual retiré — Start est mensuel uniquement, pas d'offre annuelle pour ce plan
 const PLAN_IDENTIFIER_MAP: Record<string, RCPlan> = {
   start_monthly:     "start",
-  start_annual:      "start",
   serenite_monthly:  "serenite",
   serenite_annual:   "serenite",
   signature_monthly: "signature",
@@ -53,7 +52,6 @@ function getActivePlanFromRC(info: CustomerInfo | null): RCPlan | null {
 }
 
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
-  // Fix #2 — guard auth avant d'appeler proApi.getSubscription()
   const { isAuthenticated } = useAuth();
 
   const [rcReady, setRcReady] = useState(false);
@@ -62,7 +60,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [backendPlan, setBackendPlan] = useState<RCPlan | null>(null);
 
-  // Reset au logout pour que le prochain login reparte d'un état propre
   useEffect(() => {
     if (!isAuthenticated) {
       setBackendPlan(null);
@@ -70,10 +67,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  // Initialisation RC
   useEffect(() => {
     const apiKey = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
-    if (!apiKey || apiKey === "appl_..." || apiKey === "goog_...") {
+    // Guard étendu : ignore les placeholders pour éviter de configurer RC avec une clé invalide
+    if (!apiKey || apiKey.includes("_KEY") || apiKey === "your_key_here") {
       setRcReady(true);
       return;
     }
@@ -126,11 +123,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       } catch {
         // RC non disponible (simulator / clé absente)
       } finally {
-        setRcReady(true); // Phase 1 seulement
+        setRcReady(true);
       }
     })();
 
-    // RC 8.x: addCustomerInfoUpdateListener returns void; cleanup via removeCustomerInfoUpdateListener
     const onCustomerInfo = (info: CustomerInfo) => setCustomerInfo(info);
     Purchases.addCustomerInfoUpdateListener(onCustomerInfo);
     return () => { Purchases.removeCustomerInfoUpdateListener(onCustomerInfo); };
@@ -156,7 +152,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
 
   fetchBackendPlanRef.current = fetchBackendPlan;
 
-  // Fix #2 — guard isAuthenticated : pas d'appel API avant que la session soit établie
   useEffect(() => {
     if (!rcReady || !isAuthenticated) return;
     const rcPlan = getActivePlanFromRC(customerInfo);
@@ -204,8 +199,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     await Promise.all([refreshCustomerInfo(), fetchBackendPlanRef.current()]);
   }, [refreshCustomerInfo]);
 
-  // Fix #3 — Provider value memoizé : évite de re-rendre tous les consumers sur chaque
-  // flip interne de rcReady/backendPlanChecked
   const contextValue = useMemo(() => ({
     isReady, packages, customerInfo, activePlan, activeEntitlement,
     purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan,
