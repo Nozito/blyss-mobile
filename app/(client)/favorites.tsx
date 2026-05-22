@@ -21,7 +21,8 @@ import {
 export default function FavoritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { favorites, isLoading, isFetching, refetch, removeFavorite } = useFavorites();
+  const { favorites, isAuthLoading, isQueryLoading, isFetching, refetch, removeFavorite } = useFavorites();
+  const isLoading = isAuthLoading || isQueryLoading;
 
   // ── Entrance animation ────────────────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -96,8 +97,8 @@ export default function FavoritesScreen() {
           </Text>
         </View>
 
-        {favorites.length === 0 ? (
-          /* ── Empty state ── */
+        {favorites.length > 0 ? null : (
+          /* ── Empty / loading state ── */
           <View style={styles.emptyContainer}>
             {isLoading ? (
               <ActivityIndicator size="large" color={Colors.primary} />
@@ -169,8 +170,10 @@ export default function FavoritesScreen() {
               </>
             )}
           </View>
-        ) : (
-          /* ── Favorites list ── */
+        )}
+
+        {/* ── Favorites list — toujours affiché si des favoris existent ── */}
+        {favorites.length > 0 && (
           <FlatList
             data={favorites}
             keyExtractor={(item) => String(item.id)}
