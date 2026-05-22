@@ -119,7 +119,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
       wsRef.current?.close();
     };
-  }, [isAuthenticated, user]);
+  // user?.id au lieu de user — évite de couper/rouvrir le WS quand AuthContext re-crée l'objet user (cache → API)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id]);
 
   // P0 — Load existing notifications from API on login
   useEffect(() => {
@@ -157,11 +159,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // P1 — Navigate on push notification tap
   useEffect(() => {
+    const userRole = user?.role;
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
       const reservationId = data?.reservation_id;
 
-      if (user?.role === "client") {
+      if (userRole === "client") {
         if (reservationId) {
           router.push(`/booking/${String(reservationId)}` as never);
         } else {
@@ -172,7 +175,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     });
     return () => sub.remove();
-  }, [user, router]);
+  // user?.role au lieu de user — seul le rôle conditionne la destination
+  // router exclu — singleton stable Expo Router, ne change pas entre navigations
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
 
   const contextValue = useMemo(
     () => ({ notifications, unreadCount, addNotification, markAsRead, clearAll }),
