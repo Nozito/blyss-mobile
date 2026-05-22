@@ -31,16 +31,12 @@ interface Props {
 }
 
 
-// ── Custom marker pin ─────────────────────────────────────────────────────────
-
-
 function MarkerPin({ item }: { item: Specialist }) {
   const photo = item.profile_image_url
     ? item.profile_image_url.startsWith("http")
       ? item.profile_image_url
       : `${API_URL}${item.profile_image_url}`
     : null;
-
 
   return (
     <View style={styles.pinWrap}>
@@ -53,8 +49,6 @@ function MarkerPin({ item }: { item: Specialist }) {
           </View>
         )}
       </View>
-
-
       <View style={styles.badge}>
         {item.min_price != null ? (
           <Text style={styles.badgeText}>~{item.min_price}€</Text>
@@ -65,15 +59,10 @@ function MarkerPin({ item }: { item: Specialist }) {
           </View>
         ) : null}
       </View>
-
-
       <View style={styles.pinTail} />
     </View>
   );
 }
-
-
-// ── Pro bottom card ───────────────────────────────────────────────────────────
 
 
 function ProBottomCard({
@@ -93,14 +82,13 @@ function ProBottomCard({
       : `${API_URL}${item.profile_image_url}`
     : null;
 
-
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
         <Ionicons name="close" size={18} color="#6D6D78" />
       </Pressable>
 
-
+      {/* Avatar + infos */}
       <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
         <View style={styles.cardAvatar}>
           {photo ? (
@@ -109,8 +97,6 @@ function ProBottomCard({
             <Text style={styles.cardAvatarInitial}>{item.first_name?.[0]?.toUpperCase() ?? "?"}</Text>
           )}
         </View>
-
-
         <View style={{ flex: 1 }}>
           <Text style={styles.cardName} numberOfLines={1}>{item.business_name}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -130,8 +116,7 @@ function ProBottomCard({
         </View>
       </View>
 
-
-      {/* CTA – Réserver uniquement */}
+      {/* Bouton Réserver */}
       <Pressable
         onPress={onBook}
         style={({ pressed }) => [styles.cardBtn, { opacity: pressed ? 0.85 : 1 }]}
@@ -144,32 +129,17 @@ function ProBottomCard({
 }
 
 
-// ── Main MapView screen ───────────────────────────────────────────────────────
-
-
 function computeRegion(mapped: (Specialist & { lat: number; lng: number })[]): Region {
   if (mapped.length === 0) return PARIS;
-
-
   const lats = mapped.map((s) => s.lat);
   const lngs = mapped.map((s) => s.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-
-
-  const centerLat = (minLat + maxLat) / 2;
-  const centerLng = (minLng + maxLng) / 2;
-  const deltaLat = Math.max((maxLat - minLat) * 1.4, 0.5);
-  const deltaLng = Math.max((maxLng - minLng) * 1.4, 0.5);
-
-
+  const minLat = Math.min(...lats); const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs); const maxLng = Math.max(...lngs);
   return {
-    latitude: centerLat,
-    longitude: centerLng,
-    latitudeDelta: deltaLat,
-    longitudeDelta: deltaLng,
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: Math.max((maxLat - minLat) * 1.4, 0.5),
+    longitudeDelta: Math.max((maxLng - minLng) * 1.4, 0.5),
   };
 }
 
@@ -180,35 +150,18 @@ export default function SpecialistsMapView({ specialists }: Props) {
   const [selectedPro, setSelectedPro] = useState<Specialist | null>(null);
   const slideAnim = useRef(new Animated.Value(300)).current;
 
-
   useEffect(() => {
     if (selectedPro) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 70,
-        friction: 11,
-      }).start();
+      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 70, friction: 11 }).start();
     }
   }, [selectedPro]);
 
-
   const handleClose = () => {
-    Animated.timing(slideAnim, {
-      toValue: 300,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => setSelectedPro(null));
+    Animated.timing(slideAnim, { toValue: 300, duration: 220, useNativeDriver: true }).start(() => setSelectedPro(null));
   };
 
-
-  const mapped = specialists.filter(
-    (s) => s.lat != null && s.lng != null
-  ) as (Specialist & { lat: number; lng: number })[];
-
-
+  const mapped = specialists.filter((s) => s.lat != null && s.lng != null) as (Specialist & { lat: number; lng: number })[];
   const initialRegion = computeRegion(mapped);
-
 
   return (
     <View style={{ flex: 1 }}>
@@ -230,10 +183,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
           return (
             <Marker
               key={`cluster-${cluster.id}`}
-              coordinate={{
-                longitude: geometry.coordinates[0],
-                latitude: geometry.coordinates[1],
-              }}
+              coordinate={{ longitude: geometry.coordinates[0], latitude: geometry.coordinates[1] }}
               onPress={onPress}
               tracksViewChanges={false}
             >
@@ -249,57 +199,41 @@ export default function SpecialistsMapView({ specialists }: Props) {
             key={item.id}
             coordinate={{ latitude: item.lat, longitude: item.lng }}
             tracksViewChanges={false}
-            onPress={() => {
-              slideAnim.setValue(300);
-              setSelectedPro(item);
-            }}
+            onPress={() => { slideAnim.setValue(300); setSelectedPro(item); }}
           >
             <MarkerPin item={item} />
           </Marker>
         ))}
       </ClusteredMapView>
 
-
       {mapped.length === 0 && (
         <View style={styles.noMarkers}>
           <View style={styles.noMarkersCard}>
             <Ionicons name="location-outline" size={20} color="#6D6D78" />
             <Text style={styles.noMarkersText}>
-              {specialists.length === 0
-                ? "Aucune experte dans cette zone"
-                : "Les expertes de cette liste n'ont pas encore de position GPS"}
+              {specialists.length === 0 ? "Aucune experte dans cette zone" : "Les expertes de cette liste n'ont pas encore de position GPS"}
             </Text>
           </View>
         </View>
       )}
-
 
       {selectedPro && (
         <ProBottomCard
           item={selectedPro}
           slideAnim={slideAnim}
           onClose={handleClose}
-          onBook={() =>
-            router.push({ pathname: "/booking", params: { proId: selectedPro.id } })
-          }
+          onBook={() => router.push({ pathname: "/booking", params: { proId: selectedPro.id } })}
         />
       )}
 
-
       {Platform.OS === "ios" && (
-        <Pressable
-          onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)}
-          style={styles.locBtn}
-        >
+        <Pressable onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)} style={styles.locBtn}>
           <Ionicons name="locate-outline" size={20} color="#FE5D9D" />
         </Pressable>
       )}
     </View>
   );
 }
-
-
-// ── Styles ────────────────────────────────────────────────────────────────────
 
 
 const styles = StyleSheet.create({
@@ -313,84 +247,32 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  clusterText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  loader: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    backgroundColor: "#FFEAF1",
-  },
-  loaderText: {
-    fontSize: 14,
-    color: "#6D6D78",
-    fontWeight: "500",
-  },
-  pinWrap: {
-    alignItems: "center",
-  },
+  clusterText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  loader: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: "#FFEAF1" },
+  loaderText: { fontSize: 14, color: "#6D6D78", fontWeight: "500" },
+  pinWrap: { alignItems: "center" },
   pinCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: "hidden",
-    borderWidth: 2.5,
-    borderColor: "#FE5D9D",
-    backgroundColor: "#FFE6F0",
-    shadowColor: "#FE5D9D",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
+    width: 44, height: 44, borderRadius: 22, overflow: "hidden",
+    borderWidth: 2.5, borderColor: "#FE5D9D", backgroundColor: "#FFE6F0",
+    shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4, elevation: 4,
   },
-  pinFallback: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFE6F0",
-  },
-  pinInitial: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#FE5D9D",
-  },
+  pinFallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFE6F0" },
+  pinInitial: { fontSize: 18, fontWeight: "800", color: "#FE5D9D" },
   badge: {
-    marginTop: 2,
-    backgroundColor: "#FE5D9D",
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 28,
-    alignItems: "center",
-    shadowColor: "#FE5D9D",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    marginTop: 2, backgroundColor: "#FE5D9D", borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 2, minWidth: 28, alignItems: "center",
+    shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 2, elevation: 2,
   },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#fff",
-  },
+  badgeText: { fontSize: 9, fontWeight: "800", color: "#fff" },
   pinTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 6,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#FE5D9D",
+    width: 0, height: 0,
+    borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 6,
+    borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: "#FE5D9D",
     marginTop: -1,
   },
   bottomCard: {
     position: "absolute",
-    bottom: 16,
+    bottom: 100,
     left: 16,
     right: 16,
     backgroundColor: "#FFFFFF",
@@ -404,52 +286,23 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   closeBtn: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#F4F4F5",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
+    position: "absolute", top: 12, right: 12, width: 28, height: 28,
+    borderRadius: 14, backgroundColor: "#F4F4F5",
+    alignItems: "center", justifyContent: "center", zIndex: 1,
   },
   cardAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#FFE0EF",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    borderWidth: 2,
-    borderColor: "#FE5D9D",
+    width: 56, height: 56, borderRadius: 28, backgroundColor: "#FFE0EF",
+    overflow: "hidden", alignItems: "center", justifyContent: "center",
+    flexShrink: 0, borderWidth: 2, borderColor: "#FE5D9D",
   },
-  cardAvatarInitial: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#FE5D9D",
-  },
-  cardName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#09090B",
-  },
-  cardCity: {
-    fontSize: 12,
-    color: "#6D6D78",
-  },
-  cardRating: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#09090B",
-  },
+  cardAvatarInitial: { fontSize: 22, fontWeight: "800", color: "#FE5D9D" },
+  cardName: { fontSize: 16, fontWeight: "700", color: "#09090B" },
+  cardCity: { fontSize: 12, color: "#6D6D78" },
+  cardRating: { fontSize: 12, fontWeight: "700", color: "#09090B" },
   cardBtn: {
     backgroundColor: "#FE5D9D",
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -460,53 +313,20 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  cardBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  noMarkers: {
-    position: "absolute",
-    bottom: 100,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
+  cardBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  noMarkers: { position: "absolute", bottom: 100, left: 0, right: 0, alignItems: "center" },
   noMarkersCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 10,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
     maxWidth: 300,
   },
-  noMarkersText: {
-    fontSize: 12,
-    color: "#6D6D78",
-    fontWeight: "500",
-    flex: 1,
-  },
+  noMarkersText: { fontSize: 12, color: "#6D6D78", fontWeight: "500", flex: 1 },
   locBtn: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    position: "absolute", top: 16, right: 16, width: 44, height: 44,
+    borderRadius: 22, backgroundColor: "#FFFFFF",
+    alignItems: "center", justifyContent: "center",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
   },
 });
