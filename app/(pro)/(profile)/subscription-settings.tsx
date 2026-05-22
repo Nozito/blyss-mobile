@@ -23,12 +23,11 @@ const PLAN_META: Record<RCPlan, {
   description: string;
   featureCount: number;
 }> = {
-  start:     { label: "Start",     icon: "flash-outline",    color: Colors.primary,   description: "Réservations & agenda",      featureCount: 5 },
-  serenite:  { label: "Sérénité",  icon: "heart-outline",    color: Colors.pro,       description: "Finance & statistiques",     featureCount: 9 },
-  signature: { label: "Signature", icon: "sparkles-outline", color: Colors.secondary, description: "Paiements & visibilité premium", featureCount: 14 },
+  start:     { label: "Start",     icon: "flash-outline",    color: Colors.primary,   description: "Réservations & agenda",          featureCount: 5 },
+  serenite:  { label: "Sérénité",  icon: "heart-outline",    color: Colors.pro,       description: "Finance & statistiques",         featureCount: 9 },
+  signature: { label: "Signature", icon: "sparkles-outline", color: Colors.secondary, description: "Paiements & visibilité premium",   featureCount: 14 },
 };
 
-// Fix 4 — used to decide upgrade vs downgrade CTA label
 const PLAN_ORDER: Record<RCPlan, number> = { start: 0, serenite: 1, signature: 2 };
 
 export default function ProSubscriptionSettingsScreen() {
@@ -37,13 +36,10 @@ export default function ProSubscriptionSettingsScreen() {
   const qc = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  // Issue 2 — billing toggle so the user can pick monthly or annual before upgrading
   const [isAnnual, setIsAnnual] = useState(false);
 
-  // activePlan from RC is the source of truth for current plan state
   const { activePlan, packages, purchase, restorePurchases, refreshActivePlan } = useRevenueCat();
 
-  // proApi.getSubscription() only for display details (endDate, billingType)
   const { data, isLoading } = useQuery({
     queryKey: ["pro-subscription"],
     queryFn: () => proApi.getSubscription(),
@@ -51,7 +47,6 @@ export default function ProSubscriptionSettingsScreen() {
 
   const subscription = data?.data;
 
-  // Issue 2 — upgrade goes through RC purchase() to hit App Store / Play Store
   const handleUpgrade = async (planId: RCPlan) => {
     if (planId === activePlan) return;
     setIsChanging(true);
@@ -64,6 +59,18 @@ export default function ProSubscriptionSettingsScreen() {
       const pkg = isAnnual && rcPkg.annualRcPackage ? rcPkg.annualRcPackage : rcPkg.rcPackage;
       const result = await purchase(pkg);
       if (result.success) {
+        try {
+          // Informer le backend du changement de plan après l'achat RC
+          await proApi.updateSubscription({
+            plan: planId,
+            billingType: isAnnual ? "one_time" : "monthly",
+            monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
+            paymentId: result.paymentId ?? pkg.identifier,
+          });
+        } catch {
+          // Backend silencieux — RC reste source de vérité
+        }
+        // refreshActivePlan avant redirect pour éviter le flash activePlan=null dans le layout
         await refreshActivePlan();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
         router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planId } });
@@ -120,7 +127,6 @@ export default function ProSubscriptionSettingsScreen() {
       }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <AnimatedIconButton
           onPress={() => router.back()}
@@ -133,16 +139,11 @@ export default function ProSubscriptionSettingsScreen() {
           <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
         </AnimatedIconButton>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
-            Mon abonnement
-          </Text>
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
-            Gérer ton plan Blyss Pro
-          </Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>Mon abonnement</Text>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Gérer ton plan Blyss Pro</Text>
         </View>
       </View>
 
-      {/* Fix 4 — hero current plan card: larger layout with badge, billing period, renewal */}
       {activePlan && (
         <View style={{
           backgroundColor: Colors.card, borderRadius: 20,
@@ -160,16 +161,11 @@ export default function ProSubscriptionSettingsScreen() {
               <Ionicons name={PLAN_META[activePlan].icon} size={28} color={PLAN_META[activePlan].color} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
-                Plan actuel
-              </Text>
-              <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>
-                Formule {PLAN_META[activePlan].label}
-              </Text>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Plan actuel</Text>
+              <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>Formule {PLAN_META[activePlan].label}</Text>
               <Text style={{ fontSize: 14, fontWeight: "700", color: PLAN_META[activePlan].color }}>
                 {packages.find((p) => p.key === activePlan)?.priceString ?? "—"}/mois
               </Text>
-              {/* Issue 5 — billing period label from proApi billingType */}
               {subscription?.billingType && (
                 <View style={{
                   alignSelf: "flex-start", marginTop: 6,
@@ -199,7 +195,6 @@ export default function ProSubscriptionSettingsScreen() {
         </View>
       )}
 
-      {/* Issue 2 — billing toggle: monthly vs annual before changing plan */}
       <View style={{
         flexDirection: "row", backgroundColor: Colors.card,
         borderRadius: 18, padding: 4, marginBottom: 16,
@@ -222,10 +217,7 @@ export default function ProSubscriptionSettingsScreen() {
                 {period === "monthly" ? "Mensuel" : "Annuel"}
               </Text>
               {period === "annual" && (
-                <View style={{
-                  backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success,
-                  borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
-                }}>
+                <View style={{ backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
                   <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>-17%</Text>
                 </View>
               )}
@@ -234,14 +226,11 @@ export default function ProSubscriptionSettingsScreen() {
         })}
       </View>
 
-      {/* Change plan */}
       <Text style={{
         fontSize: 11, fontWeight: "800", color: Colors.mutedForeground,
-        textTransform: "uppercase", letterSpacing: 1,
-        marginBottom: 12, paddingHorizontal: 2,
-      }}>
-        Changer de formule
-      </Text>
+        textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, paddingHorizontal: 2,
+      }}>Changer de formule</Text>
+
       <View style={{ gap: 10, marginBottom: 20 }}>
         {(Object.keys(PLAN_META) as RCPlan[]).map((planId) => {
           const meta = PLAN_META[planId];
@@ -261,30 +250,17 @@ export default function ProSubscriptionSettingsScreen() {
                 borderWidth: isCurrent ? 2 : 1,
                 borderColor: isCurrent ? meta.color : Colors.border,
                 opacity: isChanging && !isCurrent ? 0.7 : 1,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+                shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: `${meta.color}18`,
-                  alignItems: "center", justifyContent: "center",
-                }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${meta.color}18`, alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name={meta.icon} size={18} color={meta.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground }}>
-                    {meta.label}
-                  </Text>
-                  {/* Fix 4 — feature description line under plan name */}
-                  <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                    {meta.description} · {meta.featureCount} fonctionnalités
-                  </Text>
-                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
-                    {priceStr}{isAnnual ? "/an" : "/mois"}
-                  </Text>
+                  <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground }}>{meta.label}</Text>
+                  <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{meta.description} · {meta.featureCount} fonctionnalités</Text>
+                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{priceStr}{isAnnual ? "/an" : "/mois"}</Text>
                 </View>
                 {isCurrent ? (
                   <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: `${meta.color}18` }}>
@@ -303,19 +279,15 @@ export default function ProSubscriptionSettingsScreen() {
         })}
       </View>
 
-      {/* Restore purchases + legal footer */}
       <View style={{ alignItems: "center", marginBottom: 8 }}>
         <Pressable onPress={() => void restorePurchases()}>
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>
-            Restaurer mes achats
-          </Text>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
         </Pressable>
       </View>
       <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16, marginBottom: 24 }}>
         Annule à tout moment • Paiement sécurisé
       </Text>
 
-      {/* Fix 4 — cancel at very bottom, separated by divider, with access warning */}
       {subscription && (
         <>
           <View style={{ height: 1, backgroundColor: Colors.border, marginBottom: 20 }} />
@@ -325,18 +297,12 @@ export default function ProSubscriptionSettingsScreen() {
           <Pressable
             onPress={handleCancel}
             disabled={isCancelling}
-            style={{
-              height: 48, borderRadius: 16,
-              alignItems: "center", justifyContent: "center",
-              borderWidth: 1, borderColor: Colors.border,
-            }}
+            style={{ height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.border }}
           >
             {isCancelling ? (
               <ActivityIndicator size="small" color={Colors.mutedForeground} />
             ) : (
-              <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>
-                Annuler mon abonnement
-              </Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>Annuler mon abonnement</Text>
             )}
           </Pressable>
         </>

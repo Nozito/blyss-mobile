@@ -21,7 +21,6 @@ import { useAuth } from "@/contexts/AuthContext";
 
 type BillingPeriod = "monthly" | "annual";
 
-// Fix 10 — wording aligné sur le web + Fix 1 — prix fallback corrigés
 const PLAN_CONFIG: Record<RCPlan, {
   label: string;
   fallbackMonthly: number;
@@ -94,10 +93,10 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState<RCPlan | null>(null);
 
   const { user, refreshProfile } = useAuth();
-  const hasActiveSubscription = activePlan !== null;
+  const { packages, purchase, restorePurchases, activePlan, isReady, refreshActivePlan } = useRevenueCat();
 
-  // Fix 9 — récupère isReady pour le RC loading state
-  const { packages, purchase, restorePurchases, activePlan, isReady } = useRevenueCat();
+  // hasActiveSubscription basé sur RC, pas sur user.pro_status (backend peut être lent)
+  const hasActiveSubscription = activePlan !== null;
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-subscription"],
@@ -110,10 +109,8 @@ export default function SubscriptionScreen() {
   });
 
   const subscription = data?.data;
-
   const isAnnual = billing === "annual";
 
-  // Fix 2 — setPurchasing(null) déplacé dans le callback de confirmation
   const handlePurchase = useCallback(async (planKey: RCPlan) => {
     setPurchasing(planKey);
 
@@ -136,16 +133,17 @@ export default function SubscriptionScreen() {
             paymentId: result.paymentId ?? pkg.identifier,
           });
         } catch {
-          // L'enregistrement backend échoue silencieusement — RC reste source de vérité
+          // Backend silencieux — RC reste source de vérité
         }
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
+        // refreshActivePlan avant redirect pour éviter le flash activePlan=null dans le layout
+        await refreshActivePlan();
         router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
       } else if (result.error && result.error !== "cancelled") {
         Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
       }
     } else {
-      // Fallback sans packages RC — Fix 2 : setPurchasing(null) DANS le callback
       const config = PLAN_CONFIG[planKey];
       const monthly = config.fallbackMonthly;
       const price = isAnnual ? annualMonthlyFallback(monthly) : monthly;
@@ -153,11 +151,7 @@ export default function SubscriptionScreen() {
         `Passer au plan ${config.label}`,
         `Tu seras facturée ${price.toFixed(2)} €/mois${isAnnual ? ` (${(price * 12).toFixed(0)} €/an)` : ""}.`,
         [
-          {
-            text: "Annuler",
-            style: "cancel",
-            onPress: () => setPurchasing(null), // Fix 2
-          },
+          { text: "Annuler", style: "cancel", onPress: () => setPurchasing(null) },
           {
             text: "Confirmer",
             onPress: async () => {
@@ -174,6 +168,7 @@ export default function SubscriptionScreen() {
                 }
                 await refreshProfile();
                 qc.invalidateQueries({ queryKey: ["pro-subscription"] });
+                await refreshActivePlan();
                 router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
               } catch {
                 Alert.alert("Erreur", "Impossible de changer de plan.");
@@ -185,21 +180,19 @@ export default function SubscriptionScreen() {
         ]
       );
     }
-  }, [isAnnual, packages, purchase, qc, router, refreshProfile]);
+  }, [isAnnual, packages, purchase, qc, router, refreshProfile, refreshActivePlan, subscription]);
 
   const savings = savingsPercent(
     PLAN_CONFIG.start.fallbackMonthly,
     annualMonthlyFallback(PLAN_CONFIG.start.fallbackMonthly)
   );
 
-  // Fix 8 — titre dynamique basé sur activePlan
   const screenTitle = activePlan ? "Modifier ta formule" : "Choisis ta formule";
   const screenSubtitle = activePlan
     ? `Formule actuelle : ${PLAN_LABEL_MAP[activePlan]}`
     : "Gère ton plan Blyss Pro";
 
   return (
-    // Fix 4 — fond Colors.background au lieu de #FFF5F8
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <Stack.Screen options={{
         gestureEnabled: hasActiveSubscription,
@@ -214,7 +207,6 @@ export default function SubscriptionScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header — Fix 8 : titre dynamique */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           {hasActiveSubscription && (
             <AnimatedIconButton
@@ -240,7 +232,6 @@ export default function SubscriptionScreen() {
           <LoadingSpinner />
         ) : (
           <>
-            {/* Current subscription banner */}
             {subscription ? (
               <View style={{
                 backgroundColor: Colors.card, borderRadius: 20,
@@ -290,7 +281,6 @@ export default function SubscriptionScreen() {
                     Annuler l'abonnement
                   </Text>
                 </Pressable>
-                {/* Issue 1 — link to settings when the user already has an active plan */}
                 {activePlan !== null && (
                   <Pressable
                     onPress={() => router.push("/(pro)/(profile)/subscription-settings" as any)}
@@ -319,7 +309,6 @@ export default function SubscriptionScreen() {
               </View>
             )}
 
-            {/* Billing toggle */}
             <View style={{
               flexDirection: "row", backgroundColor: Colors.card,
               borderRadius: 18, padding: 4, marginBottom: 20,
@@ -332,8 +321,7 @@ export default function SubscriptionScreen() {
                     key={p}
                     onPress={() => setBilling(p)}
                     style={{
-                      flex: 1, paddingVertical: 11,
-                      borderRadius: 14,
+                      flex: 1, paddingVertical: 11, borderRadius: 14,
                       backgroundColor: active ? Colors.primary : "transparent",
                       alignItems: "center", flexDirection: "row",
                       justifyContent: "center", gap: 6,
@@ -347,9 +335,7 @@ export default function SubscriptionScreen() {
                         backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success,
                         borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
                       }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>
-                          -{savings}%
-                        </Text>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>-{savings}%</Text>
                       </View>
                     )}
                   </Pressable>
@@ -371,17 +357,13 @@ export default function SubscriptionScreen() {
               </View>
             )}
 
-            {/* Plan cards */}
             {!isReady ? (
               <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
                 <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
-                  Chargement des offres...
-                </Text>
+                <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>Chargement des offres...</Text>
               </View>
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
-                // Issue 4 — Start not available annually: show notice instead of hiding silently
                 if (isAnnual && planKey === "start") return (
                   <View key="start-annual-notice" style={{
                     backgroundColor: `${Colors.mutedForeground}10`, borderRadius: 14,
@@ -424,74 +406,45 @@ export default function SubscriptionScreen() {
                       marginBottom: 16, overflow: "hidden",
                     }}
                   >
-                    {/* Fix 5 — Badge POPULAIRE sur Sérénité */}
                     {planKey === "serenite" && (
-                      <View style={{
-                        backgroundColor: Colors.primary,
-                        paddingVertical: 5,
-                        alignItems: "center",
-                      }}>
-                        <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", letterSpacing: 1 }}>
-                          POPULAIRE
-                        </Text>
+                      <View style={{ backgroundColor: Colors.primary, paddingVertical: 5, alignItems: "center" }}>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", letterSpacing: 1 }}>POPULAIRE</Text>
                       </View>
                     )}
 
                     <View style={{ padding: 18 }}>
-                      {/* Card header */}
                       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
                         <View style={{ flex: 1, marginRight: 12 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                            <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground }}>
-                              {config.label}
-                            </Text>
+                            <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground }}>{config.label}</Text>
                             {isCurrent && (
-                              <View style={{
-                                backgroundColor: `${config.color}20`,
-                                borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-                              }}>
+                              <View style={{ backgroundColor: `${config.color}20`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                                 <Text style={{ fontSize: 11, fontWeight: "700", color: config.color }}>Actuel</Text>
                               </View>
                             )}
                             {isAnnual && (
-                              <View style={{
-                                backgroundColor: `${Colors.success}20`,
-                                borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-                              }}>
+                              <View style={{ backgroundColor: `${Colors.success}20`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                                 <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.success }}>-{planSavings}%</Text>
                               </View>
                             )}
                           </View>
                           <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
-                            <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>
-                              {displayStr}
-                            </Text>
+                            <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>{displayStr}</Text>
                             <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>/mois</Text>
                           </View>
                           {isAnnual && annualTotal && (
-                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
-                              soit {annualTotal} €/an
-                            </Text>
+                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>soit {annualTotal} €/an</Text>
                           )}
                         </View>
-                        <View style={{
-                          width: 48, height: 48, borderRadius: 14,
-                          backgroundColor: `${config.color}15`,
-                          alignItems: "center", justifyContent: "center",
-                        }}>
+                        <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${config.color}15`, alignItems: "center", justifyContent: "center" }}>
                           <Ionicons name={config.icon} size={24} color={config.color} />
                         </View>
                       </View>
 
-                      {/* Features */}
                       <View style={{ gap: 9, marginBottom: isCurrent ? 0 : 16 }}>
                         {config.features.map((f) => (
                           <View key={f.text} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                            <View style={{
-                              width: 26, height: 26, borderRadius: 8,
-                              backgroundColor: `${config.color}15`,
-                              alignItems: "center", justifyContent: "center",
-                            }}>
+                            <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: `${config.color}15`, alignItems: "center", justifyContent: "center" }}>
                               <Ionicons name={f.icon as any} size={14} color={config.color} />
                             </View>
                             <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{f.text}</Text>
@@ -499,20 +452,17 @@ export default function SubscriptionScreen() {
                         ))}
                       </View>
 
-                      {/* CTA */}
                       {!isCurrent && (
                         <Pressable
                           onPress={() => handlePurchase(planKey)}
                           disabled={!!purchasing}
                           style={{
-                            height: 48, borderRadius: 14,
-                            backgroundColor: config.color,
+                            height: 48, borderRadius: 14, backgroundColor: config.color,
                             alignItems: "center", justifyContent: "center",
                             flexDirection: "row", gap: 8,
                             opacity: isPurchasing ? 0.7 : 1,
                             shadowColor: config.color,
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+                            shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
                           }}
                         >
                           {isPurchasing ? (
@@ -520,9 +470,7 @@ export default function SubscriptionScreen() {
                           ) : (
                             <>
                               <Ionicons name="arrow-up-circle-outline" size={18} color="#fff" />
-                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
-                                Choisir {config.label}
-                              </Text>
+                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Choisir {config.label}</Text>
                             </>
                           )}
                         </Pressable>
@@ -533,21 +481,12 @@ export default function SubscriptionScreen() {
               })
             )}
 
-            {/* Restore purchases */}
             <View style={{ alignItems: "center", marginTop: 8, marginBottom: 4 }}>
               <Pressable onPress={restorePurchases}>
-                <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>
-                  Restaurer mes achats
-                </Text>
+                <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
               </Pressable>
             </View>
-
-            {/* Fix 7 — Footer légal */}
-            <Text style={{
-              fontSize: 11, color: Colors.mutedForeground,
-              textAlign: "center", marginTop: 8,
-              lineHeight: 16,
-            }}>
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", marginTop: 8, lineHeight: 16 }}>
               Annule à tout moment • Paiement sécurisé
             </Text>
           </>
