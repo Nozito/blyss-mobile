@@ -19,7 +19,12 @@ export function useFavorites() {
   const qc = useQueryClient();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const { data: favorites = [], isPending, isFetching, refetch } = useQuery<Specialist[]>({
+  const {
+    data: favorites = [],
+    isPending,
+    isFetching,
+    refetch,
+  } = useQuery<Specialist[]>({
     queryKey: ["favorites"],
     queryFn: async () => {
       const res = await favoritesApi.getAll();
@@ -84,9 +89,9 @@ export function useFavorites() {
 
   return {
     favorites,
+    // true uniquement tant qu'aucune donnée n'a jamais été reçue
     isLoading: authLoading || isPending,
     isAuthLoading: authLoading,
-    isQueryLoading: isPending,
     isFetching,
     refetch,
     isFavorited,
