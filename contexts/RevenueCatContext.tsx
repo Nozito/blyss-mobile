@@ -51,7 +51,8 @@ function getActivePlanFromRC(info: CustomerInfo | null): RCPlan | null {
 }
 
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
-  const [isReady, setIsReady] = useState(false);
+  const [rcReady, setRcReady] = useState(false);
+  const [backendPlanChecked, setBackendPlanChecked] = useState(false);
   const [packages, setPackages] = useState<RCPackage[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [backendPlan, setBackendPlan] = useState<RCPlan | null>(null);
@@ -60,7 +61,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const apiKey = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
     if (!apiKey) {
-      setIsReady(true);
+      setRcReady(true);
       return;
     }
 
@@ -112,7 +113,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       } catch {
         // RC non disponible (simulator / clé absente)
       } finally {
-        setIsReady(true);
+        setRcReady(true);
       }
     })();
 
@@ -138,6 +139,8 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       setBackendPlan(null);
     } catch {
       setBackendPlan(null);
+    } finally {
+      setBackendPlanChecked(true);
     }
   }, []);
 
@@ -146,16 +149,20 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
 
   // Déclenche le fallback backend via la ref stable — jamais de boucle
   useEffect(() => {
-    if (!isReady) return;
+    if (!rcReady) return;
     const rcPlan = getActivePlanFromRC(customerInfo);
     if (!rcPlan) {
       fetchBackendPlanRef.current();
     } else {
       setBackendPlan(null);
+      setBackendPlanChecked(true); // plan RC trouvé, pas de vérification backend nécessaire
     }
   // fetchBackendPlanRef intentionnellement exclu : c'est une ref, pas une valeur reactive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, customerInfo]);
+  }, [rcReady, customerInfo]);
+
+  // isReady = vrai seulement quand RC ET le plan backend sont tous les deux résolus
+  const isReady = rcReady && backendPlanChecked;
 
   const rcActivePlan = getActivePlanFromRC(customerInfo);
   const activePlan: RCPlan | null = rcActivePlan ?? backendPlan;
