@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import Purchases, { type PurchasesPackage, type CustomerInfo } from "react-native-purchases";
 import { Platform } from "react-native";
 import { proApi } from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "./AuthContext";
 
-// Noms alignés sur .env.local (EXPO_PUBLIC_REVENUECAT_*_KEY)
+// Fix #1 — noms de variables corrigés pour correspondre à .env.local
 const RC_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
 const RC_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "";
 
@@ -53,13 +53,22 @@ function getActivePlanFromRC(info: CustomerInfo | null): RCPlan | null {
 }
 
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
-  // isAuthenticated guards fetchBackendPlan — API requires a valid session
+  // Fix #2 — guard auth avant d'appeler proApi.getSubscription()
   const { isAuthenticated } = useAuth();
+
   const [rcReady, setRcReady] = useState(false);
   const [backendPlanChecked, setBackendPlanChecked] = useState(false);
   const [packages, setPackages] = useState<RCPackage[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [backendPlan, setBackendPlan] = useState<RCPlan | null>(null);
+
+  // Reset au logout pour que le prochain login reparte d'un état propre
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setBackendPlan(null);
+      setBackendPlanChecked(false);
+    }
+  }, [isAuthenticated]);
 
   // Initialisation RC
   useEffect(() => {
@@ -117,7 +126,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       } catch {
         // RC non disponible (simulator / clé absente)
       } finally {
-        setRcReady(true);
+        setRcReady(true); // Phase 1 seulement
       }
     })();
 
@@ -127,7 +136,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     return () => listener.remove();
   }, []);
 
-  // Ref stable pour fetchBackendPlan — évite de le mettre dans les deps du useEffect
   const fetchBackendPlanRef = useRef<() => Promise<void>>(async () => {});
 
   const fetchBackendPlan = useCallback(async () => {
@@ -146,31 +154,21 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Garde la ref à jour sans provoquer de re-render
   fetchBackendPlanRef.current = fetchBackendPlan;
 
-  // Déclenche le fallback backend — attend que RC ET l'auth soient prêts
+  // Fix #2 — guard isAuthenticated : pas d'appel API avant que la session soit établie
   useEffect(() => {
-    if (!rcReady) return;
-    if (!isAuthenticated) {
-      // Réinitialise l'état au logout pour forcer une nouvelle vérification au prochain login
-      setBackendPlan(null);
-      setBackendPlanChecked(false);
-      return;
-    }
+    if (!rcReady || !isAuthenticated) return;
     const rcPlan = getActivePlanFromRC(customerInfo);
     if (rcPlan) {
       setBackendPlan(null);
       setBackendPlanChecked(true);
     } else {
-      // fetchBackendPlanRef est une ref stable — pas besoin de la mettre dans les deps
       fetchBackendPlanRef.current().finally(() => setBackendPlanChecked(true));
     }
-  // fetchBackendPlanRef intentionnellement exclu : c'est une ref, pas une valeur reactive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rcReady, customerInfo, isAuthenticated]);
+  }, [rcReady, isAuthenticated, customerInfo]);
 
-  // isReady = vrai seulement quand RC ET le plan backend sont tous les deux résolus
   const isReady = rcReady && backendPlanChecked;
 
   const rcActivePlan = getActivePlanFromRC(customerInfo);
@@ -206,11 +204,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     await Promise.all([refreshCustomerInfo(), fetchBackendPlanRef.current()]);
   }, [refreshCustomerInfo]);
 
-  // Valeur mémoïsée — évite de re-rendre tous les consommateurs RC à chaque render du Provider
+  // Fix #3 — Provider value memoizé : évite de re-rendre tous les consumers sur chaque
+  // flip interne de rcReady/backendPlanChecked
   const contextValue = useMemo(() => ({
     isReady, packages, customerInfo, activePlan, activeEntitlement,
     purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan,
-  }), [isReady, packages, customerInfo, activePlan, activeEntitlement, purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan]);
+  }), [isReady, packages, customerInfo, activePlan, activeEntitlement,
+      purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan]);
 
   return (
     <RevenueCatContext.Provider value={contextValue}>

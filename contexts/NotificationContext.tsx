@@ -68,7 +68,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const clearAll = useCallback(() => setNotifications([]), []);
 
-  // WebSocket connection
+  // Fix #4 — user?.id (primitive) au lieu de user (objet) : évite de reconnecter le WS
+  // deux fois au boot quand AuthContext fait setUser(cache) puis setUser(response.data)
   useEffect(() => {
     if (!isAuthenticated || !user) {
       wsRef.current?.close();
@@ -89,7 +90,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           const data = JSON.parse(event.data as string) as { type: string; notification?: NotificationItem };
           if (data.type === "notification" && data.notification) {
             addNotification(data.notification);
-            // Show local push notification
             Notifications.scheduleNotificationAsync({
               content: {
                 title: "Blyss",
@@ -119,11 +119,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
       wsRef.current?.close();
     };
-  // user?.id au lieu de user — évite de couper/rouvrir le WS quand AuthContext re-crée l'objet user (cache → API)
+  // user?.id stable (primitive) — pas de reconnexion sur chaque re-render d'AuthContext
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id]);
 
-  // P0 — Load existing notifications from API on login
   useEffect(() => {
     if (!isAuthenticated) {
       setNotifications([]);
@@ -136,7 +135,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }).catch(() => {});
   }, [isAuthenticated]);
 
-  // P0 — Push permissions + Expo token registration
   useEffect(() => {
     if (!isAuthenticated || Platform.OS === "web") return;
 
@@ -150,21 +148,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
         await notificationsApi.savePushToken(tokenData.data);
       } catch {
-        // Non-fatal: push token registration failure doesn't break the app
+        // Non-fatal
       }
     };
 
     void registerPushToken();
   }, [isAuthenticated]);
 
-  // P1 — Navigate on push notification tap
+  // Fix #5 — [user?.role] au lieu de [user, router] : seul le rôle détermine la
+  // destination ; router est un singleton stable dans Expo Router
   useEffect(() => {
-    const userRole = user?.role;
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
       const reservationId = data?.reservation_id;
 
-      if (userRole === "client") {
+      if (user?.role === "client") {
         if (reservationId) {
           router.push(`/booking/${String(reservationId)}` as never);
         } else {
@@ -175,8 +173,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     });
     return () => sub.remove();
-  // user?.role au lieu de user — seul le rôle conditionne la destination
-  // router exclu — singleton stable Expo Router, ne change pas entre navigations
+  // router exclu : singleton stable ; user?.role seul détermine la destination
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role]);
 
