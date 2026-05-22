@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Specialist } from "./SpecialistCard";
 
+
 const PARIS: Region = {
   latitude: 46.603354,
   longitude: 1.888334,
@@ -21,13 +22,17 @@ const PARIS: Region = {
   longitudeDelta: 8,
 };
 
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+
 
 interface Props {
   specialists: Specialist[];
 }
 
+
 // ── Custom marker pin ─────────────────────────────────────────────────────────
+
 
 function MarkerPin({ item }: { item: Specialist }) {
   const photo = item.profile_image_url
@@ -35,6 +40,7 @@ function MarkerPin({ item }: { item: Specialist }) {
       ? item.profile_image_url
       : `${API_URL}${item.profile_image_url}`
     : null;
+
 
   return (
     <View style={styles.pinWrap}>
@@ -53,6 +59,7 @@ function MarkerPin({ item }: { item: Specialist }) {
         )}
       </View>
 
+
       {/* Price / rating badge */}
       <View style={styles.badge}>
         {item.min_price != null ? (
@@ -65,24 +72,29 @@ function MarkerPin({ item }: { item: Specialist }) {
         ) : null}
       </View>
 
+
       {/* Pin tail */}
       <View style={styles.pinTail} />
     </View>
   );
 }
 
+
 // ── Pro bottom card ───────────────────────────────────────────────────────────
+
 
 function ProBottomCard({
   item,
   slideAnim,
   onClose,
   onViewProfile,
+  onBook,
 }: {
   item: Specialist;
   slideAnim: Animated.Value;
   onClose: () => void;
   onViewProfile: () => void;
+  onBook: () => void;
 }) {
   const photo = item.profile_image_url
     ? item.profile_image_url.startsWith("http")
@@ -90,12 +102,14 @@ function ProBottomCard({
       : `${API_URL}${item.profile_image_url}`
     : null;
 
+
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
       {/* Close button */}
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
         <Ionicons name="close" size={18} color="#6D6D78" />
       </Pressable>
+
 
       <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
         {/* Avatar */}
@@ -106,6 +120,7 @@ function ProBottomCard({
             <Text style={styles.cardAvatarInitial}>{item.first_name?.[0]?.toUpperCase() ?? "?"}</Text>
           )}
         </View>
+
 
         {/* Info */}
         <View style={{ flex: 1 }}>
@@ -127,22 +142,52 @@ function ProBottomCard({
         </View>
       </View>
 
-      {/* CTA */}
-      <Pressable
-        onPress={onViewProfile}
-        style={({ pressed }) => [styles.cardBtn, { opacity: pressed ? 0.85 : 1 }]}
-      >
-        <Text style={styles.cardBtnText}>Voir le profil</Text>
-        <Ionicons name="arrow-forward" size={16} color="#fff" />
-      </Pressable>
+
+      {/* CTAs */}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Pressable
+          onPress={onViewProfile}
+          style={({ pressed }) => ({
+            flex: 1,
+            borderWidth: 1.5,
+            borderColor: "#FE5D9D",
+            height: 38,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text style={{ color: "#FE5D9D", fontWeight: "600", fontSize: 13 }}>Profil</Text>
+        </Pressable>
+
+
+        <Pressable
+          onPress={onBook}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: "#FE5D9D",
+            height: 38,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Réserver</Text>
+        </Pressable>
+      </View>
     </Animated.View>
   );
 }
 
+
 // ── Main MapView screen ───────────────────────────────────────────────────────
+
 
 function computeRegion(mapped: (Specialist & { lat: number; lng: number })[]): Region {
   if (mapped.length === 0) return PARIS;
+
 
   const lats = mapped.map((s) => s.lat);
   const lngs = mapped.map((s) => s.lng);
@@ -151,10 +196,12 @@ function computeRegion(mapped: (Specialist & { lat: number; lng: number })[]): R
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
 
+
   const centerLat = (minLat + maxLat) / 2;
   const centerLng = (minLng + maxLng) / 2;
   const deltaLat = Math.max((maxLat - minLat) * 1.4, 0.5);
   const deltaLng = Math.max((maxLng - minLng) * 1.4, 0.5);
+
 
   return {
     latitude: centerLat,
@@ -164,11 +211,13 @@ function computeRegion(mapped: (Specialist & { lat: number; lng: number })[]): R
   };
 }
 
+
 export default function SpecialistsMapView({ specialists }: Props) {
   const router = useRouter();
   const mapRef = useRef<any>(null);
   const [selectedPro, setSelectedPro] = useState<Specialist | null>(null);
   const slideAnim = useRef(new Animated.Value(300)).current;
+
 
   useEffect(() => {
     if (selectedPro) {
@@ -181,6 +230,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
     }
   }, [selectedPro]);
 
+
   const handleClose = () => {
     Animated.timing(slideAnim, {
       toValue: 300,
@@ -189,12 +239,15 @@ export default function SpecialistsMapView({ specialists }: Props) {
     }).start(() => setSelectedPro(null));
   };
 
+
   // Filter specialists that have coordinates
   const mapped = specialists.filter(
     (s) => s.lat != null && s.lng != null
   ) as (Specialist & { lat: number; lng: number })[];
 
+
   const initialRegion = computeRegion(mapped);
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -245,6 +298,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
         ))}
       </ClusteredMapView>
 
+
       {/* "Aucun marqueur" hint */}
       {mapped.length === 0 && (
         <View style={styles.noMarkers}>
@@ -259,6 +313,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
         </View>
       )}
 
+
       {/* Pro bottom card */}
       {selectedPro && (
         <ProBottomCard
@@ -268,8 +323,12 @@ export default function SpecialistsMapView({ specialists }: Props) {
           onViewProfile={() =>
             router.push({ pathname: "/specialist/[id]", params: { id: selectedPro.id } })
           }
+          onBook={() =>
+            router.push({ pathname: "/booking", params: { proId: selectedPro.id } })
+          }
         />
       )}
+
 
       {/* My location button (iOS) */}
       {Platform.OS === "ios" && (
@@ -284,7 +343,9 @@ export default function SpecialistsMapView({ specialists }: Props) {
   );
 }
 
+
 // ── Styles ────────────────────────────────────────────────────────────────────
+
 
 const styles = StyleSheet.create({
   cluster: {
@@ -314,6 +375,7 @@ const styles = StyleSheet.create({
     color: "#6D6D78",
     fontWeight: "500",
   },
+
 
   // Marker pin
   pinWrap: {
@@ -374,6 +436,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#FE5D9D",
     marginTop: -1,
   },
+
 
   // Bottom card
   bottomCard: {
@@ -454,6 +517,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 
+
   // No markers overlay
   noMarkers: {
     position: "absolute",
@@ -483,6 +547,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
   },
+
 
   // My location button
   locBtn: {
