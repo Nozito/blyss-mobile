@@ -264,13 +264,24 @@ export default function SubscriptionScreen() {
                   style={{
                     borderWidth: 1.5, borderColor: Colors.border,
                     borderRadius: 14, paddingVertical: 10,
-                    alignItems: "center",
+                    alignItems: "center", marginBottom: 10,
                   }}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.mutedForeground }}>
                     Annuler l'abonnement
                   </Text>
                 </Pressable>
+                {/* Issue 1 — link to settings when the user already has an active plan */}
+                {activePlan !== null && (
+                  <Pressable
+                    onPress={() => router.push("/(pro)/(profile)/subscription-settings" as any)}
+                    style={{ alignItems: "center", paddingVertical: 4 }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primary }}>
+                      Gérer mon abonnement →
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
               <View style={{
@@ -351,8 +362,20 @@ export default function SubscriptionScreen() {
               </View>
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
-                // Fix 6 — Start masqué en mode annuel
-                if (isAnnual && planKey === "start") return null;
+                // Issue 4 — Start not available annually: show notice instead of hiding silently
+                if (isAnnual && planKey === "start") return (
+                  <View key="start-annual-notice" style={{
+                    backgroundColor: `${Colors.mutedForeground}10`, borderRadius: 14,
+                    borderWidth: 1, borderColor: Colors.border,
+                    paddingVertical: 10, paddingHorizontal: 16, marginBottom: 12,
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                  }}>
+                    <Ionicons name="information-circle-outline" size={16} color={Colors.mutedForeground} />
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, flex: 1 }}>
+                      Le plan Start n'est pas disponible en annuel
+                    </Text>
+                  </View>
+                );
 
                 const config = PLAN_CONFIG[planKey];
                 const isCurrent = subscription?.plan === planKey;

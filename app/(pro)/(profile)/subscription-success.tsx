@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +22,17 @@ export default function ProSubscriptionSuccessScreen() {
   const params = useLocalSearchParams<{ plan?: string }>();
   const plan = (params.plan ?? "start") as PlanId;
   const { refreshActivePlan } = useRevenueCat();
+  // Issue 6 — pulse animation on the checkmark circle
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.12, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
   useEffect(() => {
     confettiRef.current?.start();
@@ -51,13 +62,13 @@ export default function ProSubscriptionSuccessScreen() {
       />
 
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
-        {/* Badge succès animé */}
-        <View style={styles.iconWrap}>
+        {/* Badge succès animé — Issue 6: pulse scale via Animated.loop */}
+        <Animated.View style={[styles.iconWrap, { transform: [{ scale: pulseAnim }] }]}>
           <View style={[styles.iconBg, { backgroundColor: `${Colors.success}20` }]} />
           <View style={[styles.iconCircle, { backgroundColor: Colors.success }]}>
             <Ionicons name="checkmark" size={40} color="#fff" />
           </View>
-        </View>
+        </Animated.View>
 
         {/* Texte */}
         <Text style={[styles.title, { color: Colors.foreground }]}>

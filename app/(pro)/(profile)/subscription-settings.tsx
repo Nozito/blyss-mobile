@@ -10,7 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { proApi } from "@/lib/api";
@@ -31,37 +31,40 @@ export default function ProSubscriptionSettingsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  // Issue 2 — billing toggle so the user can pick monthly or annual before upgrading
+  const [isAnnual, setIsAnnual] = useState(false);
 
   // activePlan from RC is the source of truth for current plan state
-  const { activePlan, packages } = useRevenueCat();
+  const { activePlan, packages, purchase, restorePurchases, refreshActivePlan } = useRevenueCat();
 
-  // proApi.getSubscription() only for display details (endDate, status)
+  // proApi.getSubscription() only for display details (endDate, billingType)
   const { data, isLoading } = useQuery({
     queryKey: ["pro-subscription"],
     queryFn: () => proApi.getSubscription(),
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: () => proApi.cancelSubscription(),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-      Alert.alert("Annulé", "Ton abonnement a été annulé. L'accès reste actif jusqu'à la fin de la période en cours.");
-    },
-    onError: () => Alert.alert("Erreur", "Impossible d'annuler l'abonnement pour l'instant."),
-  });
-
   const subscription = data?.data;
 
+  // Issue 2 — upgrade goes through RC purchase() to hit App Store / Play Store
   const handleUpgrade = async (planId: RCPlan) => {
     if (planId === activePlan) return;
     setIsChanging(true);
     try {
-      await proApi.updateSubscription({ plan: planId });
-      qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-      router.push({
-        pathname: "/(pro)/(profile)/subscription-success" as any,
-        params: { plan: planId, isUpgrade: "true" },
-      });
+      const rcPkg = packages.find((p) => p.key === planId);
+      if (!rcPkg) {
+        Alert.alert("Erreur", "Ce plan n'est pas disponible.");
+        return;
+      }
+      const pkg = isAnnual && rcPkg.annualRcPackage ? rcPkg.annualRcPackage : rcPkg.rcPackage;
+      const result = await purchase(pkg);
+      if (result.success) {
+        await refreshActivePlan();
+        qc.invalidateQueries({ queryKey: ["pro-subscription"] });
+        router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planId } });
+      } else if (result.error && result.error !== "cancelled") {
+        Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
+      }
     } catch {
       Alert.alert("Erreur", "Impossible de changer de plan pour l'instant.");
     } finally {
@@ -75,7 +78,21 @@ export default function ProSubscriptionSettingsScreen() {
       "Es-tu sûre de vouloir annuler ? Tu garderas l'accès jusqu'à la fin de ta période actuelle.",
       [
         { text: "Non", style: "cancel" },
-        { text: "Oui, annuler", style: "destructive", onPress: () => cancelMutation.mutate() },
+        {
+          text: "Oui, annuler", style: "destructive",
+          onPress: async () => {
+            setIsCancelling(true);
+            try {
+              await proApi.cancelSubscription();
+              qc.invalidateQueries({ queryKey: ["pro-subscription"] });
+              Alert.alert("Annulé", "Ton abonnement a été annulé. L'accès reste actif jusqu'à la fin de la période en cours.");
+            } catch {
+              Alert.alert("Erreur", "Impossible d'annuler l'abonnement pour l'instant.");
+            } finally {
+              setIsCancelling(false);
+            }
+          },
+        },
       ]
     );
   };
@@ -148,6 +165,12 @@ export default function ProSubscriptionSettingsScreen() {
               <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
                 {packages.find((p) => p.key === activePlan)?.priceString ?? "—"}/mois
               </Text>
+              {/* Issue 5 — billing period from proApi billingType field */}
+              {subscription?.billingType && (
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                  {subscription.billingType === "one_time" ? "Annuel · 2 mois offerts" : "Mensuel"}
+                </Text>
+              )}
             </View>
             <View style={{
               paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
@@ -166,6 +189,41 @@ export default function ProSubscriptionSettingsScreen() {
         </View>
       )}
 
+      {/* Issue 2 — billing toggle: monthly vs annual before changing plan */}
+      <View style={{
+        flexDirection: "row", backgroundColor: Colors.card,
+        borderRadius: 18, padding: 4, marginBottom: 16,
+        borderWidth: 1, borderColor: Colors.border,
+      }}>
+        {(["monthly", "annual"] as const).map((period) => {
+          const active = (period === "annual") === isAnnual;
+          return (
+            <Pressable
+              key={period}
+              onPress={() => setIsAnnual(period === "annual")}
+              style={{
+                flex: 1, paddingVertical: 10, borderRadius: 14,
+                backgroundColor: active ? Colors.primary : "transparent",
+                alignItems: "center", flexDirection: "row",
+                justifyContent: "center", gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : Colors.mutedForeground }}>
+                {period === "monthly" ? "Mensuel" : "Annuel"}
+              </Text>
+              {period === "annual" && (
+                <View style={{
+                  backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success,
+                  borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
+                }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>-17%</Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Change plan */}
       <Text style={{
         fontSize: 11, fontWeight: "800", color: Colors.mutedForeground,
@@ -179,6 +237,9 @@ export default function ProSubscriptionSettingsScreen() {
           const meta = PLAN_META[planId];
           const isCurrent = planId === activePlan;
           const rcPkg = packages.find((p) => p.key === planId);
+          const priceStr = isAnnual
+            ? (rcPkg?.annualPriceString ?? rcPkg?.priceString ?? "—")
+            : (rcPkg?.priceString ?? "—");
           return (
             <Pressable
               key={planId}
@@ -209,7 +270,7 @@ export default function ProSubscriptionSettingsScreen() {
                     {meta.label}
                   </Text>
                   <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-                    {rcPkg ? `${rcPkg.priceString}/mois` : "—"}
+                    {priceStr}{isAnnual ? "/an" : "/mois"}
                   </Text>
                 </View>
                 {isCurrent ? (
@@ -231,14 +292,15 @@ export default function ProSubscriptionSettingsScreen() {
       {subscription && (
         <Pressable
           onPress={handleCancel}
-          disabled={cancelMutation.isPending}
+          disabled={isCancelling}
           style={{
             height: 48, borderRadius: 16,
             alignItems: "center", justifyContent: "center",
             borderWidth: 1, borderColor: Colors.border,
+            marginBottom: 16,
           }}
         >
-          {cancelMutation.isPending ? (
+          {isCancelling ? (
             <ActivityIndicator size="small" color={Colors.mutedForeground} />
           ) : (
             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>
@@ -247,6 +309,18 @@ export default function ProSubscriptionSettingsScreen() {
           )}
         </Pressable>
       )}
+
+      {/* Issue 3 — restore purchases + legal footer */}
+      <View style={{ alignItems: "center", marginBottom: 8 }}>
+        <Pressable onPress={() => void restorePurchases()}>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>
+            Restaurer mes achats
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16 }}>
+        Annule à tout moment • Paiement sécurisé
+      </Text>
     </ScrollView>
   );
 }
