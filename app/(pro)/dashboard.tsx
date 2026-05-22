@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
 import { toLocalDate } from "@/lib/dateUtils";
@@ -65,6 +66,15 @@ export default function ProDashboard() {
   const [showBlockDatePicker, setShowBlockDatePicker] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
+
+  // Redirect new pros to onboarding if they haven't seen it yet
+  useEffect(() => {
+    AsyncStorage.getItem("pro_onboarding_done").then((done) => {
+      if (done !== "true") router.replace("/(pro)/onboarding");
+    });
+  // router is stable in Expo Router
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-dashboard"],
@@ -565,7 +575,7 @@ export default function ProDashboard() {
               return (
                 <Pressable
                   key={client.id}
-                  onPress={() => router.push("/(pro)/calendar")}
+                  onPress={() => router.push(`/(pro)/client-detail?clientId=${client.id}`)}
                   style={{
                     borderRadius: 12,
                     padding: 16,
@@ -768,59 +778,68 @@ export default function ProDashboard() {
               )}
             </View>
 
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "flex-end",
-                justifyContent: "space-between",
-                gap: 8,
-                height: 120,
-                paddingTop: 8,
-              }}
-            >
-              {weeklyRevenue.map((day, i) => {
-                const amt = n(day.amount);
-                const isMax = amt === maxRevenue && amt > 0;
-                const barH = maxRevenue > 0 ? Math.max((amt / maxRevenue) * 120, 8) : 8;
-                return (
-                  <View key={i} style={{ flex: 1, alignItems: "center", gap: 8 }}>
-                    {isMax ? (
-                      <LinearGradient
-                        colors={[Colors.primary, `${Colors.primary}B3`]}
+            {totalRevenue > 0 ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  height: 120,
+                  paddingTop: 8,
+                }}
+              >
+                {weeklyRevenue.map((day, i) => {
+                  const amt = n(day.amount);
+                  const isMax = amt === maxRevenue && amt > 0;
+                  const barH = Math.max((amt / maxRevenue) * 120, 8);
+                  return (
+                    <View key={i} style={{ flex: 1, alignItems: "center", gap: 8 }}>
+                      {isMax ? (
+                        <LinearGradient
+                          colors={[Colors.primary, `${Colors.primary}B3`]}
+                          style={{
+                            width: "100%",
+                            height: barH,
+                            borderRadius: 8,
+                            shadowColor: Colors.primary,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 4,
+                            elevation: 2,
+                          }}
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            width: "100%",
+                            height: barH,
+                            borderRadius: 8,
+                            backgroundColor: Colors.muted,
+                          }}
+                        />
+                      )}
+                      <Text
                         style={{
-                          width: "100%",
-                          height: barH,
-                          borderRadius: 8,
-                          shadowColor: Colors.primary,
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 4,
-                          elevation: 2,
+                          fontSize: 10,
+                          fontWeight: "700",
+                          color: isMax ? Colors.primary : Colors.mutedForeground,
                         }}
-                      />
-                    ) : (
-                      <View
-                        style={{
-                          width: "100%",
-                          height: barH,
-                          borderRadius: 8,
-                          backgroundColor: Colors.muted,
-                        }}
-                      />
-                    )}
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontWeight: "700",
-                        color: isMax ? Colors.primary : Colors.mutedForeground,
-                      }}
-                    >
-                      {day.day}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+                      >
+                        {day.day}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={{ paddingVertical: 28, alignItems: "center", gap: 8 }}>
+                <Ionicons name="bar-chart-outline" size={28} color={Colors.border} />
+                <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                  Aucune donnée cette semaine
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       )}

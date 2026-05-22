@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { Colors } from "@/constants/colors";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
 
 type PlanId = "start" | "serenite" | "signature";
 
@@ -20,16 +21,19 @@ export default function ProSubscriptionSuccessScreen() {
   const confettiRef = useRef<ConfettiCannon>(null);
   const params = useLocalSearchParams<{ plan?: string }>();
   const plan = (params.plan ?? "start") as PlanId;
+  const { refreshActivePlan } = useRevenueCat();
 
   useEffect(() => {
     confettiRef.current?.start();
 
-    // 4s : laisse le confetti se déployer complètement avant de naviguer
+    // Refresh plan first so (pro)/_layout.tsx sees activePlan before navigating,
+    // preventing a flash where hasActiveSub=false re-triggers the subscription redirect.
     const timer = setTimeout(() => {
-      router.replace("/(pro)/onboarding");
+      void refreshActivePlan().then(() => router.replace("/(pro)/dashboard"));
     }, 4000);
 
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

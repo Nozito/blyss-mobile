@@ -130,10 +130,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    const listener = Purchases.addCustomerInfoUpdateListener((info) => {
-      setCustomerInfo(info);
-    });
-    return () => listener?.remove();
+    // RC 8.x: addCustomerInfoUpdateListener returns void; cleanup via removeCustomerInfoUpdateListener
+    const onCustomerInfo = (info: CustomerInfo) => setCustomerInfo(info);
+    Purchases.addCustomerInfoUpdateListener(onCustomerInfo);
+    return () => { Purchases.removeCustomerInfoUpdateListener(onCustomerInfo); };
   }, []);
 
   const fetchBackendPlanRef = useRef<() => Promise<void>>(async () => {});

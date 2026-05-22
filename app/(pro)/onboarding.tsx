@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors } from "@/constants/colors";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
 
 const STORAGE_KEY = "pro_onboarding_done";
 
@@ -46,6 +47,7 @@ export default function ProOnboardingScreen() {
   const insets = useSafeAreaInsets();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [ready, setReady] = useState(false);
+  const { refreshActivePlan } = useRevenueCat();
 
   // Si déjà vu → skip direct vers le dashboard
   useEffect(() => {
@@ -66,12 +68,15 @@ export default function ProOnboardingScreen() {
       setCurrentSlide((p) => p + 1);
     } else {
       await AsyncStorage.setItem(STORAGE_KEY, "true");
+      // Ensure activePlan is up-to-date before entering the pro tabs
+      await refreshActivePlan();
       router.replace("/(pro)/dashboard");
     }
   };
 
   const handleSkip = async () => {
     await AsyncStorage.setItem(STORAGE_KEY, "true");
+    await refreshActivePlan();
     router.replace("/(pro)/dashboard");
   };
 

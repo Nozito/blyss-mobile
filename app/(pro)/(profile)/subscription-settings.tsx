@@ -10,46 +10,21 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { proApi } from "@/lib/api";
+import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 
-type PlanId = "start" | "serenite" | "signature";
-
-const PLANS: Array<{
-  id: PlanId;
+const PLAN_META: Record<RCPlan, {
   label: string;
-  price: string;
-  color: string;
   icon: keyof typeof Ionicons.glyphMap;
-  features: string[];
-}> = [
-  {
-    id: "start",
-    label: "Start",
-    price: "29,90 €/mois",
-    color: Colors.primary,
-    icon: "flash-outline",
-    features: ["Dashboard", "Agenda", "Clientes", "Profil public"],
-  },
-  {
-    id: "serenite",
-    label: "Sérénité",
-    price: "39,90 €/mois",
-    color: Colors.pro,
-    icon: "heart-outline",
-    features: ["Tout Start", "Finance & stats", "Portfolio photos", "Rappels auto"],
-  },
-  {
-    id: "signature",
-    label: "Signature",
-    price: "49,90 €/mois",
-    color: Colors.secondary,
-    icon: "sparkles-outline",
-    features: ["Tout Sérénité", "Paiements en ligne", "Visibilité premium", "Support prioritaire"],
-  },
-];
+  color: string;
+}> = {
+  start:     { label: "Start",      icon: "flash-outline",     color: Colors.primary },
+  serenite:  { label: "Sérénité",   icon: "heart-outline",     color: Colors.pro },
+  signature: { label: "Signature",  icon: "sparkles-outline",  color: Colors.secondary },
+};
 
 export default function ProSubscriptionSettingsScreen() {
   const router = useRouter();
@@ -57,6 +32,10 @@ export default function ProSubscriptionSettingsScreen() {
   const qc = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
 
+  // activePlan from RC is the source of truth for current plan state
+  const { activePlan, packages } = useRevenueCat();
+
+  // proApi.getSubscription() only for display details (endDate, status)
   const { data, isLoading } = useQuery({
     queryKey: ["pro-subscription"],
     queryFn: () => proApi.getSubscription(),
@@ -72,10 +51,9 @@ export default function ProSubscriptionSettingsScreen() {
   });
 
   const subscription = data?.data;
-  const currentPlanId = subscription?.plan as PlanId | undefined;
 
-  const handleUpgrade = async (planId: PlanId) => {
-    if (planId === currentPlanId) return;
+  const handleUpgrade = async (planId: RCPlan) => {
+    if (planId === activePlan) return;
     setIsChanging(true);
     try {
       await proApi.updateSubscription({ plan: planId });
@@ -104,7 +82,7 @@ export default function ProSubscriptionSettingsScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background items-center justify-center">
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
@@ -112,7 +90,7 @@ export default function ProSubscriptionSettingsScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top + 16,
         paddingBottom: insets.bottom + 40,
@@ -121,65 +99,67 @@ export default function ProSubscriptionSettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View className="mb-6">
-        <View className="flex-row items-center mb-2">
-          <AnimatedIconButton
-            onPress={() => router.back()}
-            className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
-          >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-          </AnimatedIconButton>
-          <Text className="text-2xl font-bold text-foreground">Mon abonnement</Text>
-        </View>
-        <Text className="text-sm text-muted-foreground ml-1">
-          Gérer ton plan Blyss Pro
-        </Text>
-      </View>
-
-      {/* Current plan */}
-      {subscription && currentPlanId && (
-        <View
-          className="bg-card rounded-2xl p-5 border border-border mb-6"
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <AnimatedIconButton
+          onPress={() => router.back()}
           style={{
-            shadowColor: "#000",
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            elevation: 2,
-            borderColor: PLANS.find((p) => p.id === currentPlanId)?.color + "40",
-            borderWidth: 2,
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+            alignItems: "center", justifyContent: "center",
           }}
         >
-          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+        </AnimatedIconButton>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
+            Mon abonnement
+          </Text>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+            Gérer ton plan Blyss Pro
+          </Text>
+        </View>
+      </View>
+
+      {/* Current plan card */}
+      {activePlan && (
+        <View style={{
+          backgroundColor: Colors.card, borderRadius: 20,
+          borderWidth: 2, borderColor: `${PLAN_META[activePlan].color}40`,
+          padding: 18, marginBottom: 20,
+        }}>
+          <Text style={{
+            fontSize: 11, fontWeight: "800", color: Colors.mutedForeground,
+            textTransform: "uppercase", letterSpacing: 1, marginBottom: 12,
+          }}>
             Plan actuel
           </Text>
-          <View className="flex-row items-center gap-3 mb-3">
-            <View
-              className="w-12 h-12 rounded-xl items-center justify-center"
-              style={{ backgroundColor: `${PLANS.find((p) => p.id === currentPlanId)?.color}18` }}
-            >
-              <Ionicons
-                name={PLANS.find((p) => p.id === currentPlanId)?.icon ?? "flash-outline"}
-                size={22}
-                color={PLANS.find((p) => p.id === currentPlanId)?.color}
-              />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: subscription?.endDate ? 10 : 0 }}>
+            <View style={{
+              width: 48, height: 48, borderRadius: 14,
+              backgroundColor: `${PLAN_META[activePlan].color}18`,
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name={PLAN_META[activePlan].icon} size={22} color={PLAN_META[activePlan].color} />
             </View>
-            <View className="flex-1">
-              <Text className="text-lg font-bold text-foreground">
-                Formule {PLANS.find((p) => p.id === currentPlanId)?.label}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground }}>
+                Formule {PLAN_META[activePlan].label}
               </Text>
-              <Text className="text-sm text-muted-foreground">
-                {PLANS.find((p) => p.id === currentPlanId)?.price}
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                {packages.find((p) => p.key === activePlan)?.priceString ?? "—"}/mois
               </Text>
             </View>
-            <View className="px-3 py-1.5 rounded-full" style={{ backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "#BBF7D0" }}>
-              <View className="flex-row items-center gap-1.5">
-                <View className="w-2 h-2 rounded-full" style={{ backgroundColor: "#22C55E" }} />
-                <Text className="text-xs font-bold" style={{ color: "#15803D" }}>Actif</Text>
-              </View>
+            <View style={{
+              paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+              backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "#BBF7D0",
+              flexDirection: "row", alignItems: "center", gap: 6,
+            }}>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success }} />
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#15803D" }}>Actif</Text>
             </View>
           </View>
-          {subscription.endDate && (
-            <Text className="text-xs text-muted-foreground">
+          {subscription?.endDate && (
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
               Renouvellement le {new Date(subscription.endDate).toLocaleDateString("fr-FR")}
             </Text>
           )}
@@ -187,73 +167,85 @@ export default function ProSubscriptionSettingsScreen() {
       )}
 
       {/* Change plan */}
-      <View className="mb-6">
-        <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
-          Changer de formule
-        </Text>
-        <View className="gap-3">
-          {PLANS.map((plan, idx) => {
-            const isCurrent = plan.id === currentPlanId;
-            return (
-              <View
-                key={plan.id}
-              >
-                <Pressable
-                  onPress={() => !isCurrent && handleUpgrade(plan.id)}
-                  disabled={isCurrent || isChanging}
-                  className="bg-card rounded-2xl p-4 border"
-                  style={{
-                    borderColor: isCurrent ? plan.color : Colors.border,
-                    borderWidth: isCurrent ? 2 : 1,
-                    opacity: isChanging ? 0.7 : 1,
-                  }}
-                >
-                  <View className="flex-row items-center gap-3">
-                    <View
-                      className="w-10 h-10 rounded-xl items-center justify-center"
-                      style={{ backgroundColor: `${plan.color}18` }}
-                    >
-                      <Ionicons name={plan.icon} size={18} color={plan.color} />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="font-bold text-foreground">{plan.label}</Text>
-                      <Text className="text-xs text-muted-foreground">{plan.price}</Text>
-                    </View>
-                    {isCurrent ? (
-                      <View className="px-3 py-1 rounded-full" style={{ backgroundColor: `${plan.color}18` }}>
-                        <Text className="text-xs font-bold" style={{ color: plan.color }}>Actuel</Text>
-                      </View>
-                    ) : (
-                      <View
-                        className="px-3 py-1 rounded-full items-center justify-center"
-                        style={{ backgroundColor: plan.color }}
-                      >
-                        <Text className="text-xs font-bold text-white">Choisir</Text>
-                      </View>
-                    )}
+      <Text style={{
+        fontSize: 11, fontWeight: "800", color: Colors.mutedForeground,
+        textTransform: "uppercase", letterSpacing: 1,
+        marginBottom: 12, paddingHorizontal: 2,
+      }}>
+        Changer de formule
+      </Text>
+      <View style={{ gap: 10, marginBottom: 20 }}>
+        {(Object.keys(PLAN_META) as RCPlan[]).map((planId) => {
+          const meta = PLAN_META[planId];
+          const isCurrent = planId === activePlan;
+          const rcPkg = packages.find((p) => p.key === planId);
+          return (
+            <Pressable
+              key={planId}
+              onPress={() => { if (!isCurrent) void handleUpgrade(planId); }}
+              disabled={isCurrent || isChanging}
+              style={{
+                backgroundColor: Colors.card, borderRadius: 16, padding: 16,
+                borderWidth: isCurrent ? 2 : 1,
+                borderColor: isCurrent ? meta.color : Colors.border,
+                opacity: isChanging && !isCurrent ? 0.7 : 1,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 4,
+                elevation: 1,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  backgroundColor: `${meta.color}18`,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Ionicons name={meta.icon} size={18} color={meta.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground }}>
+                    {meta.label}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+                    {rcPkg ? `${rcPkg.priceString}/mois` : "—"}
+                  </Text>
+                </View>
+                {isCurrent ? (
+                  <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: `${meta.color}18` }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: meta.color }}>Actuel</Text>
                   </View>
-                </Pressable>
+                ) : (
+                  <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: meta.color }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>Choisir</Text>
+                  </View>
+                )}
               </View>
-            );
-          })}
-        </View>
+            </Pressable>
+          );
+        })}
       </View>
 
-      {/* Cancel subscription */}
+      {/* Cancel */}
       {subscription && (
-        <View>
-          <Pressable
-            onPress={handleCancel}
-            disabled={cancelMutation.isPending}
-            className="h-12 rounded-2xl items-center justify-center border border-border"
-          >
-            {cancelMutation.isPending ? (
-              <ActivityIndicator size="small" color={Colors.mutedForeground} />
-            ) : (
-              <Text className="text-sm font-semibold text-muted-foreground">Annuler mon abonnement</Text>
-            )}
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={handleCancel}
+          disabled={cancelMutation.isPending}
+          style={{
+            height: 48, borderRadius: 16,
+            alignItems: "center", justifyContent: "center",
+            borderWidth: 1, borderColor: Colors.border,
+          }}
+        >
+          {cancelMutation.isPending ? (
+            <ActivityIndicator size="small" color={Colors.mutedForeground} />
+          ) : (
+            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>
+              Annuler mon abonnement
+            </Text>
+          )}
+        </Pressable>
       )}
     </ScrollView>
   );
