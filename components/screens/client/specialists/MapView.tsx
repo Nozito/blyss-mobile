@@ -119,10 +119,14 @@ function ProBottomCard({
       {/* Bouton Réserver */}
       <Pressable
         onPress={onBook}
-        style={({ pressed }) => [styles.cardBtn, { opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [
+          styles.cardBtn,
+          pressed && styles.cardBtnPressed,
+        ]}
       >
-        <Ionicons name="calendar-outline" size={16} color="#fff" />
-        <Text style={styles.cardBtnText}>Réserver</Text>
+        <View style={styles.cardBtnInner}>
+          <Text style={styles.cardBtnText}>Réserver maintenant</Text>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -300,20 +304,37 @@ const styles = StyleSheet.create({
   cardCity: { fontSize: 12, color: "#6D6D78" },
   cardRating: { fontSize: 12, fontWeight: "700", color: "#09090B" },
   cardBtn: {
+    borderRadius: 28,
+    overflow: "hidden",
     backgroundColor: "#FE5D9D",
-    borderRadius: 14,
-    paddingVertical: 14,
+    shadowColor: "#FE5D9D",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  cardBtnPressed: {
+    transform: [{ scale: 0.985 }],
+    opacity: 0.92,
+  },
+  cardBtnInner: {
+    paddingVertical: 16,
+    paddingHorizontal: 22,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
-    shadowColor: "#FE5D9D",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    gap: 8,
+    backgroundColor: "#FE5D9D",
+    borderRadius: 28,
   },
-  cardBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  cardBtnText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.4,
+  },
   noMarkers: { position: "absolute", bottom: 100, left: 0, right: 0, alignItems: "center" },
   noMarkersCard: {
     flexDirection: "row", alignItems: "center", gap: 8,
