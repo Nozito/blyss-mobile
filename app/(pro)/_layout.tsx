@@ -31,8 +31,9 @@ export default function ProLayout() {
   if (!user) return <Redirect href="/(auth)/login" />;
   if (user.role !== "pro" && !isAdmin) return <Redirect href="/(client)" />;
 
-  // Block tab render while useEffect handles the redirect
-  if (!hasActiveSub) return <LoadingSpinner fullScreen />;
+  // NativeTabs MUST be mounted before the router.replace effect fires.
+  // Returning a spinner here (no NativeTabs) caused Expo Router to re-mount
+  // the layout on each replace call, creating an infinite redirect loop.
 
   return (
     <NativeTabs

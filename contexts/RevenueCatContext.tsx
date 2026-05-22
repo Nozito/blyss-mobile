@@ -133,7 +133,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     const listener = Purchases.addCustomerInfoUpdateListener((info) => {
       setCustomerInfo(info);
     });
-    return () => listener.remove();
+    return () => listener?.remove();
   }, []);
 
   const fetchBackendPlanRef = useRef<() => Promise<void>>(async () => {});
