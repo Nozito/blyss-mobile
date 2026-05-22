@@ -250,9 +250,7 @@ export default function ProSubscriptionSettingsScreen() {
           const priceStr = isAnnual
             ? (rcPkg?.annualPriceString ?? rcPkg?.priceString ?? "—")
             : (rcPkg?.priceString ?? "—");
-          // Fix 4 — "Passer à" for upgrades, "Revenir à" for downgrades
           const isUpgrade = PLAN_ORDER[planId] > PLAN_ORDER[activePlan ?? "start"];
-          const ctaLabel = isUpgrade ? `Passer à ${meta.label}` : `Revenir à ${meta.label}`;
           return (
             <Pressable
               key={planId}
@@ -293,8 +291,10 @@ export default function ProSubscriptionSettingsScreen() {
                     <Text style={{ fontSize: 11, fontWeight: "700", color: meta.color }}>Actuel</Text>
                   </View>
                 ) : (
-                  <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: meta.color, maxWidth: 120 }}>
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }} numberOfLines={1}>{ctaLabel}</Text>
+                  <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: meta.color, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    {!isUpgrade && <Ionicons name="arrow-back" size={11} color="#fff" />}
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>{meta.label}</Text>
+                    {isUpgrade && <Ionicons name="arrow-forward" size={11} color="#fff" />}
                   </View>
                 )}
               </View>

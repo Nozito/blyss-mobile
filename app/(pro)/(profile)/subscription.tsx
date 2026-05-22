@@ -94,7 +94,7 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState<RCPlan | null>(null);
 
   const { user, refreshProfile } = useAuth();
-  const hasActiveSubscription = user?.pro_status === "active";
+  const hasActiveSubscription = activePlan !== null;
 
   // Fix 9 — récupère isReady pour le RC loading state
   const { packages, purchase, restorePurchases, activePlan, isReady } = useRevenueCat();
@@ -125,12 +125,21 @@ export default function SubscriptionScreen() {
         : rcPkg.rcPackage;
 
       const result = await purchase(pkg);
-      setPurchasing(null); // reset après la promesse RC
+      setPurchasing(null);
 
       if (result.success) {
+        try {
+          await proApi.createSubscription({
+            plan: planKey,
+            billingType: isAnnual ? "one_time" : "monthly",
+            monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
+            paymentId: result.paymentId ?? pkg.identifier,
+          });
+        } catch {
+          // L'enregistrement backend échoue silencieusement — RC reste source de vérité
+        }
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-        // Fix 1 — pass planKey so subscription-success shows the correct plan label
         router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
       } else if (result.error && result.error !== "cancelled") {
         Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
