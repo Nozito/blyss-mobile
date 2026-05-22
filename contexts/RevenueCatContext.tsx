@@ -73,7 +73,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   // Initialisation RC
   useEffect(() => {
     const apiKey = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
-    if (!apiKey) {
+    if (!apiKey || apiKey === "appl_..." || apiKey === "goog_...") {
       setRcReady(true);
       return;
     }

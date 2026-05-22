@@ -153,15 +153,23 @@ export default function SubscriptionScreen() {
             text: "Confirmer",
             onPress: async () => {
               try {
-                await proApi.updateSubscription({ plan: planKey });
+                if (subscription) {
+                  await proApi.updateSubscription({ plan: planKey });
+                } else {
+                  await proApi.createSubscription({
+                    plan: planKey,
+                    billingType: isAnnual ? "one_time" : "monthly",
+                    monthlyPrice: isAnnual ? annualMonthlyFallback(PLAN_CONFIG[planKey].fallbackMonthly) : PLAN_CONFIG[planKey].fallbackMonthly,
+                    paymentId: `manual_${planKey}_${Date.now()}`,
+                  });
+                }
                 await refreshProfile();
                 qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-                // Fix 1 — pass planKey in fallback path too
                 router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
               } catch {
                 Alert.alert("Erreur", "Impossible de changer de plan.");
               } finally {
-                setPurchasing(null); // Fix 2 : reset après confirmation
+                setPurchasing(null);
               }
             },
           },
