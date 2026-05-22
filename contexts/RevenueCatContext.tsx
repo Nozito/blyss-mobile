@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import Purchases, { type PurchasesPackage, type CustomerInfo } from "react-native-purchases";
 import { Platform } from "react-native";
 import { proApi } from "@/lib/api";
@@ -22,7 +22,6 @@ interface RevenueCatContextType {
   isReady: boolean;
   packages: RCPackage[];
   customerInfo: CustomerInfo | null;
-  /** Plan actif : RC en priorité, backend en fallback. null = aucun abonnement. */
   activePlan: RCPlan | null;
   /** @deprecated Utiliser activePlan */
   activeEntitlement: string | null;
@@ -43,7 +42,6 @@ const PLAN_IDENTIFIER_MAP: Record<string, RCPlan> = {
   signature_annual:  "signature",
 };
 
-/** Identique à la version web (services/revenuecat.ts) */
 function getActivePlanFromRC(info: CustomerInfo | null): RCPlan | null {
   const ents = info?.entitlements?.active ?? {};
   if ("signature" in ents) return "signature";
@@ -124,7 +122,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     return () => listener.remove();
   }, []);
 
-  // Fallback backend : appelé quand RC est prêt mais sans plan actif
+  // Ref stable pour fetchBackendPlan — évite de le mettre dans les deps du useEffect
+  const fetchBackendPlanRef = useRef<() => Promise<void>>(async () => {});
+
   const fetchBackendPlan = useCallback(async () => {
     try {
       const res = await proApi.getSubscription();
@@ -141,21 +141,25 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Déclenche le fallback backend dès que RC est prêt et sans plan RC
+  // Garde la ref à jour sans provoquer de re-render
+  fetchBackendPlanRef.current = fetchBackendPlan;
+
+  // Déclenche le fallback backend via la ref stable — jamais de boucle
   useEffect(() => {
     if (!isReady) return;
     const rcPlan = getActivePlanFromRC(customerInfo);
     if (!rcPlan) {
-      fetchBackendPlan();
+      fetchBackendPlanRef.current();
     } else {
-      setBackendPlan(null); // RC fait foi, pas besoin du backend
+      setBackendPlan(null);
     }
-  }, [isReady, customerInfo, fetchBackendPlan]);
+  // fetchBackendPlanRef intentionnellement exclu : c'est une ref, pas une valeur reactive
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, customerInfo]);
 
   const rcActivePlan = getActivePlanFromRC(customerInfo);
-  // RC en priorité, backend en fallback (identique à la version web)
   const activePlan: RCPlan | null = rcActivePlan ?? backendPlan;
-  const activeEntitlement = activePlan; // compatibilité rétrograde
+  const activeEntitlement = activePlan;
 
   const purchase = useCallback(async (pkg: PurchasesPackage) => {
     try {
@@ -183,8 +187,8 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshActivePlan = useCallback(async () => {
-    await Promise.all([refreshCustomerInfo(), fetchBackendPlan()]);
-  }, [refreshCustomerInfo, fetchBackendPlan]);
+    await Promise.all([refreshCustomerInfo(), fetchBackendPlanRef.current()]);
+  }, [refreshCustomerInfo]);
 
   return (
     <RevenueCatContext.Provider value={{
