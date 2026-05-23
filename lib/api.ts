@@ -793,7 +793,7 @@ export const adminApi = {
   getDashboard: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/dashboard"),
   getDashboardStats: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/dashboard/stats"),
   getHealth: (): Promise<ApiResponse<unknown>> => apiCall("/api/health"),
-  getUsers: (params?: { page?: number; limit?: number; search?: string }) => {
+  getUsers: (params?: { page?: number; limit?: number; search?: string; role?: string }) => {
     const q = params ? "?" + new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))
     ) : "";
@@ -803,18 +803,41 @@ export const adminApi = {
     apiCall(`/api/admin/users/${id}/deactivate`, { method: "PATCH" }),
   reactivateUser: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/admin/users/${id}/reactivate`, { method: "PATCH" }),
-  getBookings: (params?: { page?: number; limit?: number }) => {
+  // TODO: add to backend — DELETE /api/admin/users/:id
+  deleteUser: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/users/${id}`, { method: "DELETE" }),
+  // TODO: add to backend — POST /api/admin/users/:id/grant-subscription
+  grantSubscription: (id: number, data: { plan: string; months: number }): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/users/${id}/grant-subscription`, { method: "POST", body: JSON.stringify(data) }),
+  getBookings: (params?: { page?: number; limit?: number; status?: string }) => {
     const q = params ? "?" + new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))) : "";
     return apiCall(`/api/admin/bookings${q}`);
   },
+  // TODO: add to backend — PATCH /api/admin/bookings/:id/confirm
+  confirmBooking: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/bookings/${id}/confirm`, { method: "PATCH" }),
+  // TODO: add to backend — PATCH /api/admin/bookings/:id/cancel
+  cancelBooking: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/bookings/${id}/cancel`, { method: "PATCH" }),
   getLogs: (params?: { date?: string }): Promise<ApiResponse<unknown[]>> => {
     const q = params?.date ? `?date=${params.date}` : "";
     return apiCall(`/api/admin/logs${q}`);
   },
   getPayments: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/admin/payments"),
+  // TODO: add to backend — POST /api/admin/payments/:id/refund
+  refundPayment: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/payments/${id}/refund`, { method: "POST" }),
   sendNotification: (data: { user_id: number; type: string; title: string; message: string }): Promise<ApiResponse<void>> =>
     apiCall("/api/admin/notifications/create", { method: "POST", body: JSON.stringify(data) }),
   getAnalytics: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/analytics"),
+  // TODO: add to backend — GET/POST/DELETE /api/admin/coupons
+  getCoupons: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/admin/coupons"),
+  createCoupon: (data: { code: string; discount_type: "percent" | "fixed"; discount_value: number; applicable_plans: string[]; expires_at?: string; max_uses?: number }): Promise<ApiResponse<void>> =>
+    apiCall("/api/admin/coupons", { method: "POST", body: JSON.stringify(data) }),
+  deleteCoupon: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/coupons/${id}`, { method: "DELETE" }),
+  toggleCoupon: (id: number, active: boolean): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/coupons/${id}/toggle`, { method: "PATCH", body: JSON.stringify({ active }) }),
 };
 
 export default {

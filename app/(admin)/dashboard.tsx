@@ -1,891 +1,338 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  ActivityIndicator,
+  View, Text, ScrollView, Pressable, Animated,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Polyline, Defs, LinearGradient as SvgGradient, Stop, Polygon } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Colors } from "@/constants/colors";
 
+// ── Dark admin palette ────────────────────────────────────────────────────────
+const BG = "#0B0E14";
+const CARD = "rgba(255,255,255,0.06)";
+const BORDER = "rgba(255,255,255,0.09)";
+const TEXT = "#F8FAFC";
+const MUTED = "rgba(248,250,252,0.45)";
+const ACCENT = "#F97316";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Stats {
-  totalUsers: number;
-  totalPros: number;
-  totalClients: number;
-  totalBookings: number;
-  todayBookings: number;
-  totalRevenue: number;
-  monthRevenue: number;
-  activeUsers: number;
+  totalUsers: number; totalPros: number; totalClients: number;
+  totalBookings: number; todayBookings: number;
+  totalRevenue: number; monthRevenue: number; activeUsers: number;
   bookingsByStatus: Record<string, number>;
-  changes: {
-    clients: number | null;
-    pros: number | null;
-    users: number | null;
-    revenue: number | null;
-    bookings: number | null;
-  };
+  changes: { clients: number | null; pros: number | null; users: number | null; revenue: number | null; bookings: number | null };
 }
+interface ActivityItem { type: "booking" | "user" | "payment"; title: string; description: string; time: string }
+interface HealthStatus { status: "ok" | "degraded"; db: "ok" | "error" }
 
-interface ActivityItem {
-  type: "booking" | "user" | "payment";
-  title: string;
-  description: string;
-  time: string;
-}
 
-interface HealthStatus {
-  status: "ok" | "degraded";
-  db: "ok" | "error";
-}
-
-function ChangeBadge({ val }: { val: number | null }) {
-  if (val === null) {
-    return (
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 4,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          borderRadius: 10,
-          backgroundColor: "#F3F4F6",
-          borderWidth: 1,
-          borderColor: "#E5E7EB",
-        }}
-      >
-        <Ionicons name="remove" size={10} color="#6B7280" />
-        <Text style={{ fontSize: 10, fontWeight: "700", color: "#6B7280" }}>
-          Nouveau
-        </Text>
-      </View>
-    );
-  }
-  const positive = val >= 0;
+// ── Sparkline ─────────────────────────────────────────────────────────────────
+function Sparkline({ data, width = 280, height = 56 }: { data: number[]; width?: number; height?: number }) {
+  if (!data.length) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const pad = 4;
+  const pts = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (width - pad * 2);
+    const y = pad + (1 - (v - min) / range) * (height - pad * 2);
+    return `${x},${y}`;
+  });
+  const polyPts = pts.join(" ");
+  const fillPts = `${pad},${height - pad} ${polyPts} ${width - pad},${height - pad}`;
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 10,
-        backgroundColor: positive ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-        borderWidth: 1,
-        borderColor: positive ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)",
-      }}
-    >
-      <Ionicons
-        name={positive ? "trending-up" : "trending-down"}
-        size={12}
-        color={positive ? "#16A34A" : "#DC2626"}
-      />
-      <Text
-        style={{
-          fontSize: 10,
-          fontWeight: "700",
-          color: positive ? "#16A34A" : "#DC2626",
-        }}
-      >
-        {val > 0 ? "+" : ""}
-        {val}%
-      </Text>
+    <Svg width={width} height={height}>
+      <Defs>
+        <SvgGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={ACCENT} stopOpacity="0.3" />
+          <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
+        </SvgGradient>
+      </Defs>
+      <Polygon points={fillPts} fill="url(#sg)" />
+      <Polyline points={polyPts} fill="none" stroke={ACCENT} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function Skeleton({ w, h, radius = 10 }: { w: string | number; h: number; radius?: number }) {
+  const anim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 0.8, duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  return <Animated.View style={{ width: w as any, height: h, borderRadius: radius, backgroundColor: "rgba(255,255,255,0.12)", opacity: anim }} />;
+}
+
+// ── Change badge ──────────────────────────────────────────────────────────────
+function ChangeBadge({ val }: { val: number | null }) {
+  if (val === null) return (
+    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.08)" }}>
+      <Text style={{ fontSize: 10, fontWeight: "700", color: MUTED }}>Nouveau</Text>
+    </View>
+  );
+  const up = val >= 0;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: up ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)" }}>
+      <Ionicons name={up ? "trending-up" : "trending-down"} size={11} color={up ? "#4ADE80" : "#F87171"} />
+      <Text style={{ fontSize: 10, fontWeight: "700", color: up ? "#4ADE80" : "#F87171" }}>{val > 0 ? "+" : ""}{val}%</Text>
     </View>
   );
 }
 
+// ── KPI card (extracted to respect rules of hooks) ────────────────────────────
+function KPICard({ title, value, change, icon, color, suffix = "" }: {
+  title: string; value: number; change: number | null;
+  icon: keyof typeof Ionicons.glyphMap; color: string; suffix?: string;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = React.useState(0);
+
+  useEffect(() => {
+    if (!value) return;
+    const id = anim.addListener(({ value: v }) => setDisplay(Math.round(v)));
+    Animated.timing(anim, { toValue: value, duration: 1100, useNativeDriver: false }).start();
+    return () => anim.removeListener(id);
+  }, [value]);
+
+  return (
+    <View style={{ width: "47%", borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, padding: 18, overflow: "hidden" }}>
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: `${color}08` }} />
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: `${color}20`, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={icon} size={20} color={color} />
+        </View>
+        <ChangeBadge val={change} />
+      </View>
+      <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT, letterSpacing: -1, marginBottom: 2 }}>
+        {display.toLocaleString("fr-FR")}{suffix}
+      </Text>
+      <Text style={{ fontSize: 12, color: MUTED, fontWeight: "500" }}>{title}</Text>
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const router = useRouter();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin-dashboard"],
-    queryFn: () => adminApi.getDashboardStats() as Promise<{ success: boolean; stats: Stats; recentActivity: ActivityItem[] }>,
+    queryFn: () => adminApi.getDashboardStats() as Promise<{ success: boolean; stats: Stats; recentActivity: ActivityItem[]; revenueHistory?: number[] }>,
     staleTime: 5 * 60_000,
     retry: false,
   });
 
   const { data: healthData } = useQuery({
     queryKey: ["admin-health"],
-    queryFn: () => adminApi.getHealth() as Promise<HealthStatus>,
+    queryFn: () => adminApi.getHealth() as unknown as Promise<HealthStatus>,
     staleTime: 30_000,
     refetchInterval: 60_000,
     retry: false,
   });
 
-  const stats: Stats | null = data?.stats ?? null;
-  const changes = stats?.changes ?? {
-    clients: null,
-    pros: null,
-    users: null,
-    revenue: null,
-    bookings: null,
-  };
-  const recentActivity: ActivityItem[] = data?.recentActivity ?? [];
-  const bookingsByStatus: Record<string, number> =
-    stats?.bookingsByStatus ?? {};
-
+  const stats = data?.stats ?? null;
+  const activity = data?.recentActivity ?? [];
+  const sparkData = data?.revenueHistory ?? [];
+  const byStatus = stats?.bookingsByStatus ?? {};
+  const ch = stats?.changes ?? { clients: null, pros: null, users: null, revenue: null, bookings: null };
   const apiOk = healthData?.status === "ok";
   const dbOk = healthData?.db === "ok";
-  const wsOk = apiOk;
 
-  const statCards = [
-    {
-      title: "Clients",
-      value: stats?.totalClients ?? 0,
-      changeVal: changes.clients,
-      icon: "person-add-outline" as const,
-      gradientColors: ["#8B5CF6", "#7C3AED"] as [string, string],
-      bgColor: "rgba(139,92,246,0.1)",
-    },
-    {
-      title: "Professionnels",
-      value: stats?.totalPros ?? 0,
-      changeVal: changes.pros,
-      icon: "briefcase-outline" as const,
-      gradientColors: ["#F97316", "#D97706"] as [string, string],
-      bgColor: "rgba(249,115,22,0.1)",
-    },
-    {
-      title: "Utilisateurs",
-      value: stats?.totalUsers ?? 0,
-      changeVal: changes.users,
-      icon: "people-outline" as const,
-      gradientColors: ["#3B82F6", "#4F46E5"] as [string, string],
-      bgColor: "rgba(59,130,246,0.1)",
-    },
-    {
-      title: "CA du mois",
-      value: `${(stats?.monthRevenue ?? 0).toLocaleString("fr-FR")}€`,
-      changeVal: changes.revenue,
-      icon: "trending-up-outline" as const,
-      gradientColors: ["#22C55E", "#10B981"] as [string, string],
-      bgColor: "rgba(34,197,94,0.1)",
-    },
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+  const KPI_CARDS = [
+    { title: "Clients", value: stats?.totalClients ?? 0, change: ch.clients, icon: "person-add-outline" as const, color: "#A78BFA" },
+    { title: "Pros", value: stats?.totalPros ?? 0, change: ch.pros, icon: "briefcase-outline" as const, color: ACCENT },
+    { title: "CA mois", value: stats?.monthRevenue ?? 0, change: ch.revenue, icon: "trending-up-outline" as const, color: "#4ADE80", prefix: "", suffix: "€" },
+    { title: "RDV / jour", value: stats?.todayBookings ?? 0, change: ch.bookings, icon: "calendar-outline" as const, color: "#38BDF8" },
   ];
 
   return (
     <ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: Colors.background,
-      }}
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 100,
-        paddingHorizontal: 20,
-      }}
+      style={{ flex: 1, backgroundColor: BG }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 80, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <View
-        style={{ marginBottom: 24 }}
+      {/* Hero banner */}
+      <LinearGradient
+        colors={["rgba(249,115,22,0.18)", "rgba(249,115,22,0.04)", "transparent"]}
+        style={{ borderRadius: 24, borderWidth: 1, borderColor: "rgba(249,115,22,0.25)", padding: 20, marginBottom: 24 }}
       >
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-          Administration
-        </Text>
-        <Text
-          style={{
-            fontSize: 28,
-            fontWeight: "900",
-            color: Colors.foreground,
-            letterSpacing: -0.5,
-          }}
-        >
-          Dashboard
-        </Text>
-        <Text style={{ fontSize: 14, color: Colors.mutedForeground, marginTop: 2 }}>
-          Bonjour, {user?.first_name} 👋
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: ACCENT, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>
+              Admin · Blyss
+            </Text>
+            <Text style={{ fontSize: 24, fontWeight: "900", color: TEXT, letterSpacing: -0.5 }}>
+              Bonjour, {user?.first_name} 👋
+            </Text>
+            <Text style={{ fontSize: 13, color: MUTED, marginTop: 2, textTransform: "capitalize" }}>{dateStr}</Text>
+          </View>
+          <View style={{ alignItems: "flex-end", gap: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: apiOk ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)" }}>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: apiOk ? "#4ADE80" : "#F87171" }} />
+              <Text style={{ fontSize: 11, fontWeight: "700", color: apiOk ? "#4ADE80" : "#F87171" }}>
+                {apiOk ? "Systèmes OK" : "Dégradé"}
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, backgroundColor: dbOk ? "rgba(56,189,248,0.12)" : "rgba(248,113,113,0.12)" }}>
+              <Ionicons name="server-outline" size={11} color={dbOk ? "#38BDF8" : "#F87171"} />
+              <Text style={{ fontSize: 10, fontWeight: "600", color: dbOk ? "#38BDF8" : "#F87171" }}>DB</Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* KPI Cards */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+        {isLoading
+          ? [0, 1, 2, 3].map((i) => (
+              <View key={i} style={{ width: "47%", borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, padding: 20, gap: 12 }}>
+                <Skeleton w={40} h={40} radius={12} />
+                <Skeleton w="60%" h={28} />
+                <Skeleton w="80%" h={12} />
+              </View>
+            ))
+          : KPI_CARDS.map((card) => (
+              <KPICard key={card.title} title={card.title} value={card.value} change={card.change} icon={card.icon} color={card.color} suffix={card.suffix} />
+            ))}
       </View>
 
-      {isLoading ? (
-        <View
-          style={{ alignItems: "center", justifyContent: "center", height: 300 }}
-        >
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text
-            style={{
-              fontSize: 14,
-              color: Colors.mutedForeground,
-              marginTop: 12,
-            }}
-          >
-            Chargement du dashboard...
-          </Text>
-        </View>
-      ) : error ? (
-        <View
-          style={{ alignItems: "center", justifyContent: "center", padding: 32 }}
-        >
-          <Ionicons name="close-circle-outline" size={40} color={Colors.destructive} />
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "600",
-              color: Colors.foreground,
-              textAlign: "center",
-              marginTop: 12,
-            }}
-          >
-            Impossible de charger les données
-          </Text>
-          <Text
-            style={{
-              fontSize: 12,
-              color: Colors.mutedForeground,
-              textAlign: "center",
-              marginTop: 8,
-              fontFamily: "monospace",
-              backgroundColor: Colors.muted,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 8,
-            }}
-          >
-            {(error as Error).message}
-          </Text>
-        </View>
-      ) : (
-        <>
-          {/* Stats Grid */}
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              gap: 12,
-              marginBottom: 24,
-            }}
-          >
-            {statCards.map((card, index) => (
-              <View
-                key={index}
-                style={{
-                  width: "47%",
-                  borderRadius: 24,
-                  backgroundColor: Colors.card,
-                  borderWidth: 1,
-                  borderColor: Colors.border,
-                  overflow: "hidden",
-                  padding: 20,
-                }}
-              >
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: card.bgColor,
-                  }}
-                />
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    marginBottom: 16,
-                  }}
-                >
-                  <LinearGradient
-                    colors={card.gradientColors}
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Ionicons name={card.icon} size={22} color="#fff" />
-                  </LinearGradient>
-                  <ChangeBadge val={card.changeVal} />
-                </View>
-                <Text
-                  style={{
-                    fontSize: 32,
-                    fontWeight: "900",
-                    color: Colors.foreground,
-                    letterSpacing: -1,
-                    marginBottom: 4,
-                  }}
-                >
-                  {card.value}
-                </Text>
-                <Text
-                  style={{ fontSize: 13, color: Colors.mutedForeground, fontWeight: "500" }}
-                >
-                  {card.title}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: `${Colors.mutedForeground}99`,
-                    marginTop: 2,
-                  }}
-                >
-                  vs mois précédent
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Recent Activity */}
-          <View
-            style={{
-              backgroundColor: Colors.card,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: Colors.border,
-              padding: 20,
-              marginBottom: 16,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 20,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    backgroundColor: `${Colors.primary}1A`,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons
-                    name="pulse-outline"
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </View>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: "700",
-                    color: Colors.foreground,
-                  }}
-                >
-                  Activité Récente
-                </Text>
-              </View>
-              <View
-                style={{
-                  backgroundColor: `${Colors.muted}80`,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 8,
-                }}
-              >
-                <Text
-                  style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "500" }}
-                >
-                  Dernières 24h
-                </Text>
-              </View>
-            </View>
-
-            {recentActivity.length === 0 ? (
-              <View style={{ alignItems: "center", paddingVertical: 48 }}>
-                <View
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 16,
-                    backgroundColor: Colors.muted,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 16,
-                  }}
-                >
-                  <Ionicons
-                    name="sparkles-outline"
-                    size={32}
-                    color={`${Colors.mutedForeground}4D`}
-                  />
-                </View>
-                <Text style={{ color: Colors.mutedForeground, textAlign: "center" }}>
-                  Aucune activité récente
-                </Text>
-              </View>
-            ) : (
-              <View style={{ gap: 8 }}>
-                {recentActivity.slice(0, 8).map((activity, index) => {
-                  const actBg =
-                    activity.type === "booking"
-                      ? "rgba(139,92,246,0.1)"
-                      : activity.type === "user"
-                      ? "rgba(59,130,246,0.1)"
-                      : "rgba(34,197,94,0.1)";
-                  const actColor =
-                    activity.type === "booking"
-                      ? "#7C3AED"
-                      : activity.type === "user"
-                      ? "#2563EB"
-                      : "#16A34A";
-                  const actIcon =
-                    activity.type === "booking"
-                      ? ("calendar-outline" as const)
-                      : activity.type === "user"
-                      ? ("person-add-outline" as const)
-                      : ("cash-outline" as const);
-                  return (
-                    <View
-                      key={index}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: 16,
-                        borderRadius: 16,
-                        backgroundColor: `${Colors.muted}80`,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 12,
-                          backgroundColor: actBg,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Ionicons name={actIcon} size={20} color={actColor} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            fontWeight: "600",
-                            color: Colors.foreground,
-                            fontSize: 14,
-                          }}
-                          numberOfLines={1}
-                        >
-                          {activity.title}
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            color: Colors.mutedForeground,
-                          }}
-                          numberOfLines={1}
-                        >
-                          {activity.description}
-                        </Text>
-                      </View>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: Colors.mutedForeground,
-                          fontWeight: "500",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {activity.time}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-
-          {/* Stats du jour */}
-          <View
-            style={{ marginBottom: 16 }}
-          >
-            <LinearGradient
-              colors={[
-                `${Colors.primary}1A`,
-                "rgba(139,92,246,0.1)",
-                "transparent",
-              ]}
-              style={{
-                borderRadius: 24,
-                borderWidth: 1,
-                borderColor: Colors.border,
-                padding: 20,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                  marginBottom: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    backgroundColor: `${Colors.primary}33`,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </View>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: "700",
-                    color: Colors.foreground,
-                  }}
-                >
-                  Statistiques
-                </Text>
-              </View>
-
-              <View style={{ gap: 8 }}>
-                {[
-                  {
-                    label: "RDV aujourd'hui",
-                    sub:
-                      changes.bookings !== null
-                        ? `${changes.bookings >= 0 ? "+" : ""}${changes.bookings}% vs hier`
-                        : null,
-                    subColor:
-                      (changes.bookings ?? 0) >= 0 ? "#16A34A" : "#DC2626",
-                    value: String(stats?.todayBookings ?? 0),
-                    valueSize: 28,
-                  },
-                  {
-                    label: "Revenus totaux",
-                    sub: "Tous temps",
-                    subColor: `${Colors.mutedForeground}99`,
-                    value: `${(stats?.totalRevenue ?? 0).toLocaleString("fr-FR")}€`,
-                    valueSize: 20,
-                    valueColor: "#16A34A",
-                  },
-                  {
-                    label: "Utilisateurs actifs",
-                    sub: "7 derniers jours",
-                    subColor: `${Colors.mutedForeground}99`,
-                    value: String(stats?.activeUsers ?? 0),
-                    valueSize: 28,
-                  },
-                ].map((row) => (
-                  <View
-                    key={row.label}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: 16,
-                      borderRadius: 16,
-                      backgroundColor: `${Colors.card}80`,
-                    }}
-                  >
-                    <View>
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: Colors.mutedForeground,
-                          fontWeight: "500",
-                        }}
-                      >
-                        {row.label}
-                      </Text>
-                      {row.sub && (
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            fontWeight: "600",
-                            color: row.subColor,
-                            marginTop: 2,
-                          }}
-                        >
-                          {row.sub}
-                        </Text>
-                      )}
-                    </View>
-                    <Text
-                      style={{
-                        fontSize: row.valueSize,
-                        fontWeight: "900",
-                        color: row.valueColor ?? Colors.foreground,
-                        letterSpacing: -0.5,
-                      }}
-                    >
-                      {row.value}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </LinearGradient>
-          </View>
-
-          {/* Réservations par statut */}
-          <View
-            style={{
-              backgroundColor: Colors.card,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: Colors.border,
-              padding: 20,
-              marginBottom: 16,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 16,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  backgroundColor: "rgba(139,92,246,0.1)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color="#7C3AED"
-                />
-              </View>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "700",
-                  color: Colors.foreground,
-                }}
-              >
-                Réservations
+      {/* Sparkline revenus */}
+      {(sparkData.length > 1 || !isLoading) && (
+        <View style={{ backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "800", color: TEXT }}>Revenus — 30 jours</Text>
+              <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+                {isLoading ? "—" : `${(stats?.monthRevenue ?? 0).toLocaleString("fr-FR")} €`}
               </Text>
             </View>
-            <View style={{ gap: 8 }}>
-              {[
-                {
-                  key: "pending",
-                  label: "En attente",
-                  color: "#D97706",
-                  bg: "rgba(245,158,11,0.1)",
-                },
-                {
-                  key: "confirmed",
-                  label: "Confirmées",
-                  color: "#2563EB",
-                  bg: "rgba(59,130,246,0.1)",
-                },
-                {
-                  key: "completed",
-                  label: "Terminées",
-                  color: "#16A34A",
-                  bg: "rgba(34,197,94,0.1)",
-                },
-                {
-                  key: "cancelled",
-                  label: "Annulées",
-                  color: "#DC2626",
-                  bg: "rgba(239,68,68,0.1)",
-                },
-              ].map(({ key, label, color, bg }) => (
-                <View
-                  key={key}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: 12,
-                    borderRadius: 12,
-                    backgroundColor: bg,
-                  }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: "500", color }}>
-                    {label}
-                  </Text>
-                  <Text
-                    style={{ fontSize: 18, fontWeight: "900", color }}
-                  >
-                    {bookingsByStatus[key] ?? 0}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Statut Système */}
-          <View
-            style={{
-              backgroundColor: Colors.card,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: Colors.border,
-              padding: 20,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 20,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  backgroundColor: apiOk
-                    ? "rgba(34,197,94,0.1)"
-                    : "rgba(239,68,68,0.1)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons
-                  name={apiOk ? "checkmark-circle-outline" : "close-circle-outline"}
-                  size={20}
-                  color={apiOk ? "#16A34A" : "#DC2626"}
-                />
-              </View>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "700",
-                  color: Colors.foreground,
-                }}
-              >
-                Statut Système
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: "rgba(74,222,128,0.12)" }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#4ADE80" }}>
+                {ch.revenue !== null ? `${ch.revenue >= 0 ? "+" : ""}${ch.revenue}% vs M-1` : "—"}
               </Text>
             </View>
-            <View style={{ gap: 8 }}>
-              {[
-                { label: "API", ok: apiOk },
-                { label: "Base de données", ok: dbOk },
-                { label: "WebSocket", ok: wsOk },
-              ].map(({ label, ok }) => (
-                <View
-                  key={label}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: 12,
-                    borderRadius: 12,
-                    backgroundColor: `${Colors.muted}80`,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Ionicons
-                      name="wifi-outline"
-                      size={14}
-                      color={ok ? "#16A34A" : "#DC2626"}
-                    />
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        color: Colors.mutedForeground,
-                        fontWeight: "500",
-                      }}
-                    >
-                      {label}
-                    </Text>
-                  </View>
-                  <View
-                    style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                  >
-                    <View
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: ok === undefined ? "#9CA3AF" : ok ? "#22C55E" : "#EF4444",
-                      }}
-                    />
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: "600",
-                        color: ok === undefined ? "#9CA3AF" : ok ? "#16A34A" : "#DC2626",
-                      }}
-                    >
-                      {ok === undefined ? "…" : ok ? "Opérationnel" : "Dégradé"}
-                    </Text>
-                  </View>
-                </View>
-              ))}
+          </View>
+          {isLoading ? (
+            <Skeleton w="100%" h={56} radius={8} />
+          ) : sparkData.length > 1 ? (
+            <Sparkline data={sparkData} width={280} height={56} />
+          ) : (
+            <View style={{ height: 56, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 12, color: MUTED }}>Données sparkline non disponibles</Text>
             </View>
-          </View>
-        {/* Quick access to new admin screens */}
-        <View style={{ marginTop: 24 }}>
-          <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, paddingHorizontal: 4 }}>
-            Accès rapide
-          </Text>
-          <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-            {[
-              { icon: "card-outline" as const, label: "Paiements", route: "/(admin)/payments" },
-              { icon: "pulse-outline" as const, label: "Logs", route: "/(admin)/logs" },
-              { icon: "notifications-outline" as const, label: "Notifications", route: "/(admin)/notifications" },
-            ].map((item) => (
-              <Pressable
-                key={item.route}
-                onPress={() => router.push(item.route as any)}
-                style={{
-                  flex: 1,
-                  minWidth: "28%",
-                  backgroundColor: Colors.card,
-                  borderRadius: 16,
-                  padding: 16,
-                  alignItems: "center",
-                  gap: 8,
-                  borderWidth: 1,
-                  borderColor: Colors.border,
-                }}
-              >
-                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.admin}15`, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name={item.icon} size={20} color={Colors.admin} />
-                </View>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.foreground, textAlign: "center" }}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          )}
         </View>
-        </>
       )}
+
+      {/* Activité récente */}
+      <View style={{ backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 20 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(167,139,250,0.15)", alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="pulse-outline" size={18} color="#A78BFA" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: TEXT }}>Activité récente</Text>
+            <Text style={{ fontSize: 11, color: MUTED }}>Dernières 24h</Text>
+          </View>
+        </View>
+        {isLoading ? (
+          <View style={{ gap: 10 }}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.03)" }}>
+                <Skeleton w={38} h={38} radius={11} />
+                <View style={{ flex: 1, gap: 8 }}>
+                  <Skeleton w="70%" h={12} />
+                  <Skeleton w="50%" h={10} />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : activity.length === 0 ? (
+          <View style={{ alignItems: "center", paddingVertical: 32 }}>
+            <Ionicons name="sparkles-outline" size={32} color="rgba(255,255,255,0.1)" />
+            <Text style={{ fontSize: 13, color: MUTED, marginTop: 10 }}>Aucune activité récente</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 8 }}>
+            {activity.slice(0, 8).map((item, i) => {
+              const cfg = item.type === "booking"
+                ? { color: "#A78BFA", bg: "rgba(167,139,250,0.12)", icon: "calendar-outline" as const }
+                : item.type === "user"
+                ? { color: "#38BDF8", bg: "rgba(56,189,248,0.12)", icon: "person-add-outline" as const }
+                : { color: "#4ADE80", bg: "rgba(74,222,128,0.12)", icon: "cash-outline" as const };
+              return (
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.03)" }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: cfg.bg, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Ionicons name={cfg.icon} size={17} color={cfg.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: TEXT }} numberOfLines={1}>{item.title}</Text>
+                    <Text style={{ fontSize: 11, color: MUTED }} numberOfLines={1}>{item.description}</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, color: MUTED, flexShrink: 0 }}>{item.time}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+
+      {/* Réservations par statut */}
+      <View style={{ backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 20 }}>
+        <Text style={{ fontSize: 15, fontWeight: "800", color: TEXT, marginBottom: 14 }}>Réservations</Text>
+        <View style={{ gap: 8 }}>
+          {[
+            { key: "pending", label: "En attente", color: "#FBBF24", bg: "rgba(251,191,36,0.12)" },
+            { key: "confirmed", label: "Confirmées", color: "#38BDF8", bg: "rgba(56,189,248,0.12)" },
+            { key: "completed", label: "Terminées", color: "#4ADE80", bg: "rgba(74,222,128,0.12)" },
+            { key: "cancelled", label: "Annulées", color: "#F87171", bg: "rgba(248,113,113,0.12)" },
+          ].map(({ key, label, color, bg }) => (
+            <View key={key} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14, borderRadius: 14, backgroundColor: bg }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color }}>{label}</Text>
+              <Text style={{ fontSize: 22, fontWeight: "900", color }}>{byStatus[key] ?? 0}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Accès rapide */}
+      <Text style={{ fontSize: 11, fontWeight: "800", color: MUTED, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 12, paddingHorizontal: 2 }}>
+        Accès rapide
+      </Text>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        {[
+          { icon: "analytics-outline" as const, label: "Analytics", route: "/(admin)/analytics" },
+          { icon: "pulse-outline" as const, label: "Logs", route: "/(admin)/logs" },
+          { icon: "notifications-outline" as const, label: "Notifs", route: "/(admin)/notifications" },
+          { icon: "pricetag-outline" as const, label: "Coupons", route: "/(admin)/coupons" },
+        ].map((item) => (
+          <Pressable
+            key={item.route}
+            onPress={() => router.push(item.route as any)}
+            style={{ flex: 1, backgroundColor: CARD, borderRadius: 16, padding: 14, alignItems: "center", gap: 8, borderWidth: 1, borderColor: BORDER }}
+          >
+            <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: "rgba(249,115,22,0.12)", alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name={item.icon} size={18} color={ACCENT} />
+            </View>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT, textAlign: "center" }}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
     </ScrollView>
   );
 }

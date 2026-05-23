@@ -1,36 +1,18 @@
-import React, { useCallback } from "react";
-import { Tabs, Redirect, useRouter } from "expo-router";
-import { Platform, Pressable, Alert } from "react-native";
+import React from "react";
+import { Tabs, Redirect } from "expo-router";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+
+const ACCENT = "#F97316";
+const BG = "#0B0E14";
 
 export default function AdminLayout() {
   const { user, isLoading } = useAuth();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-
-  const handleLogout = useCallback(() => {
-    Alert.alert(
-      "Se déconnecter ?",
-      "Tu vas être redirigé vers l'écran de connexion.",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Se déconnecter",
-          style: "destructive",
-          onPress: async () => {
-            await authApi.logout();
-            router.replace("/(auth)/login");
-          },
-        },
-      ]
-    );
-  }, [router]);
 
   if (isLoading) return <LoadingSpinner fullScreen />;
   if (!user || !user.is_admin) return <Redirect href="/(auth)/login" />;
@@ -38,33 +20,21 @@ export default function AdminLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
-        headerStyle: { backgroundColor: Colors.background },
-        headerShadowVisible: false,
-        headerTitleStyle: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
-        headerRight: () => (
-          <Pressable
-            onPress={handleLogout}
-            style={{ paddingHorizontal: 16 }}
-            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-          >
-            <Ionicons name="log-out-outline" size={22} color="#EF4444" />
-          </Pressable>
-        ),
-        tabBarActiveTintColor: Colors.admin,
-        tabBarInactiveTintColor: Colors.mutedForeground,
+        headerShown: false,
+        tabBarActiveTintColor: ACCENT,
+        tabBarInactiveTintColor: "rgba(248,250,252,0.4)",
         tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },
         tabBarStyle: {
           position: "absolute",
-          borderTopWidth: 0.5,
-          borderTopColor: Colors.border,
-          height: 60 + insets.bottom,
+          borderTopWidth: 0,
+          borderTopColor: "rgba(255,255,255,0.08)",
+          height: 56 + insets.bottom,
           paddingBottom: insets.bottom,
-          backgroundColor: Platform.OS === "android" ? "rgba(255,255,255,0.95)" : "transparent",
+          backgroundColor: Platform.OS === "android" ? BG : "transparent",
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
-            <BlurView intensity={80} tint="light" style={{ flex: 1 }} />
+            <BlurView intensity={60} tint="dark" style={{ flex: 1, borderTopWidth: 0.5, borderTopColor: "rgba(255,255,255,0.08)" }} />
           ) : null,
       }}
     >
@@ -72,42 +42,42 @@ export default function AdminLayout() {
         name="dashboard"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
           title: "Utilisateurs",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
           title: "Réservations",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="payments"
         options={{
-          title: "Analytics",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
-          ),
+          title: "Paiements",
+          tabBarIcon: ({ color, size }) => <Ionicons name="card-outline" size={size} color={color} />,
         }}
       />
-      {/* Hidden screens */}
-      <Tabs.Screen name="payments" options={{ href: null }} />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: "Plus",
+          tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal-outline" size={size} color={color} />,
+        }}
+      />
+      {/* Hidden screens — accessible via More hub */}
+      <Tabs.Screen name="analytics" options={{ href: null }} />
       <Tabs.Screen name="logs" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="coupons" options={{ href: null }} />
     </Tabs>
   );
 }
