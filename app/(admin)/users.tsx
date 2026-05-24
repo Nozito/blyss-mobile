@@ -17,8 +17,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { Colors } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 
-const A_BG     = "#F4F4F5";
-const A_BORDER = "#E4E4E7";
+const BORDER = Colors.border; // #EDE7E0 — warm beige, cohérent avec Blyss
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
@@ -74,25 +73,31 @@ function Avatar({ name, size = 44 }: { name: string; size?: number }) {
     <LinearGradient
       colors={[s, e]}
       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.27), alignItems: "center", justifyContent: "center" }}
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), alignItems: "center", justifyContent: "center" }}
     >
-      <Text style={{ color: "#fff", fontWeight: "900", fontSize: Math.round(size * 0.32) }}>{initials(name)}</Text>
+      <Text style={{ color: "#fff", fontWeight: "900", fontSize: Math.round(size * 0.33) }}>{initials(name)}</Text>
     </LinearGradient>
   );
 }
 
-// ── Skeleton list ─────────────────────────────────────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 function UserSkeleton() {
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 10, gap: 10 }}>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: A_BORDER }}>
-          <SkeletonBox width={44} height={44} borderRadius={12} />
+    <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 10 }}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <View key={i} style={{
+          flexDirection: "row", alignItems: "center", gap: 12,
+          backgroundColor: Colors.card, borderRadius: 18, padding: 14,
+          borderWidth: 1, borderColor: BORDER,
+          shadowColor: Colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 1,
+        }}>
+          <SkeletonBox width={44} height={44} borderRadius={13} />
           <View style={{ flex: 1, gap: 8 }}>
-            <SkeletonBox width="55%" height={13} borderRadius={6} />
-            <SkeletonBox width="75%" height={10} borderRadius={5} />
+            <SkeletonBox width="60%" height={13} borderRadius={6} />
+            <SkeletonBox width="80%" height={10} borderRadius={5} />
+            <SkeletonBox width="38%" height={10} borderRadius={5} />
           </View>
-          <SkeletonBox width={12} height={12} borderRadius={6} />
+          <SkeletonBox width={48} height={20} borderRadius={10} />
         </View>
       ))}
     </View>
@@ -121,8 +126,9 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
     <Modal transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: Colors.background }]}>
           <View style={styles.handle} />
+
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
             <Avatar name={`${user.first_name} ${user.last_name}`} size={44} />
             <View style={{ flex: 1 }}>
@@ -140,8 +146,8 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
               <Pressable key={p}
                 onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{ flex: 1, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, alignItems: "center",
-                  borderColor: plan === p ? Colors.admin : A_BORDER,
-                  backgroundColor: plan === p ? `${Colors.admin}12` : A_BG }}>
+                  borderColor: plan === p ? Colors.admin : BORDER,
+                  backgroundColor: plan === p ? `${Colors.admin}12` : Colors.card }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: plan === p ? Colors.admin : Colors.mutedForeground }}>
                   {PLAN_LABELS[p]}
                 </Text>
@@ -155,8 +161,8 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
               <Pressable key={m}
                 onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{ flex: 1, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, alignItems: "center",
-                  borderColor: months === m ? Colors.admin : A_BORDER,
-                  backgroundColor: months === m ? `${Colors.admin}12` : A_BG }}>
+                  borderColor: months === m ? Colors.admin : BORDER,
+                  backgroundColor: months === m ? `${Colors.admin}12` : Colors.card }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: months === m ? Colors.admin : Colors.mutedForeground }}>
                   {m}m
                 </Text>
@@ -164,8 +170,11 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
             ))}
           </View>
 
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
-            disabled={grantMut.isPending} style={{ opacity: grantMut.isPending ? 0.7 : 1 }}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
+            disabled={grantMut.isPending}
+            style={{ opacity: grantMut.isPending ? 0.7 : 1 }}
+          >
             <LinearGradient
               colors={["#EA6000", "#F97316", "#FBAB6A"]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -192,11 +201,10 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
     queryFn: () => adminApi.getUser(user.id),
     staleTime: 60_000,
   });
-  const full  = (fullData?.data as AdminUser | undefined) ?? user;
-  const stats = full.stats;
-  const rc    = roleColor(full);
+  const full    = (fullData?.data as AdminUser | undefined) ?? user;
+  const stats   = full.stats;
+  const planStr = getActivePlan(full);
   const [ac, ac2] = avatarColors(`${full.first_name} ${full.last_name}`);
-  const plan  = getActivePlan(full);
 
   const banMut = useMutation({
     mutationFn: () => adminApi.banUser(user.id),
@@ -244,7 +252,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <ScrollView
-          style={{ backgroundColor: A_BG, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: "92%" }}
+          style={{ backgroundColor: Colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: "92%" }}
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
@@ -252,24 +260,24 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
           <LinearGradient
             colors={[ac, ac2]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 18, paddingBottom: 28, paddingHorizontal: 24, alignItems: "center" }}
+            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 16, paddingBottom: 28, paddingHorizontal: 24, alignItems: "center" }}
           >
-            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)", marginBottom: 20 }} />
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)", marginBottom: 18 }} />
             <LinearGradient
-              colors={["rgba(255,255,255,0.35)", "rgba(255,255,255,0.15)"]}
+              colors={["rgba(255,255,255,0.3)", "rgba(255,255,255,0.12)"]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={{ width: 62, height: 62, borderRadius: 19, alignItems: "center", justifyContent: "center", marginBottom: 14, borderWidth: 2, borderColor: "rgba(255,255,255,0.45)" }}
+              style={{ width: 64, height: 64, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 12, borderWidth: 2, borderColor: "rgba(255,255,255,0.4)" }}
             >
               <Text style={{ fontSize: 24, fontWeight: "900", color: "#fff" }}>{initials(`${full.first_name} ${full.last_name}`)}</Text>
             </LinearGradient>
-            <Text style={{ fontSize: 19, fontWeight: "800", color: "#fff", marginBottom: 6 }}>{full.first_name} {full.last_name}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            <Text style={{ fontSize: 20, fontWeight: "800", color: "#fff", marginBottom: 8 }}>{full.first_name} {full.last_name}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 8 }}>
               <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.25)" }}>
                 <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", textTransform: "uppercase" }}>{full.is_admin ? "ADMIN" : full.role}</Text>
               </View>
-              {plan && (
+              {planStr && (
                 <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)" }}>
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>⭐ {plan}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>⭐ {planStr}</Text>
                 </View>
               )}
               {!full.is_active && (
@@ -278,7 +286,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 </View>
               )}
             </View>
-            <Pressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10, opacity: 0.85 }}>
+            <Pressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6, opacity: 0.85 }}>
               <Ionicons name="mail-outline" size={13} color="#fff" />
               <Text style={{ fontSize: 12, color: "#fff" }}>{full.email}</Text>
               <Ionicons name="share-outline" size={12} color="rgba(255,255,255,0.7)" />
@@ -288,18 +296,18 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
             </Pressable>
           </LinearGradient>
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 12 }}>
             {/* Stats bento */}
             {stats && (
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", gap: 8 }}>
                 {[
-                  { label: "RDV",     value: stats.total_bookings,                                    color: Colors.info },
-                  { label: "Terminés",value: stats.completed,                                         color: Colors.success },
-                  { label: "Annulés", value: stats.cancelled,                                         color: Colors.destructive },
-                  { label: "Dépensé", value: `${Number(stats.total_spent ?? 0).toFixed(0)}€`,         color: Colors.admin },
+                  { label: "RDV",      value: stats.total_bookings,                            color: Colors.info },
+                  { label: "Terminés", value: stats.completed,                                 color: Colors.success },
+                  { label: "Annulés",  value: stats.cancelled,                                 color: Colors.destructive },
+                  { label: "Dépensé",  value: `${Number(stats.total_spent ?? 0).toFixed(0)}€`, color: Colors.admin },
                 ].map(({ label, value, color: c }) => (
-                  <View key={label} style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 14, padding: 10, alignItems: "center", borderWidth: 1, borderColor: A_BORDER }}>
-                    <Text style={{ fontSize: 15, fontWeight: "900", color: c }}>{value}</Text>
+                  <View key={label} style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 10, alignItems: "center", borderWidth: 1, borderColor: BORDER, shadowColor: c, shadowOpacity: 0.07, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: c }}>{value}</Text>
                     <Text style={{ fontSize: 9, color: Colors.mutedForeground, marginTop: 2, textAlign: "center" }}>{label}</Text>
                   </View>
                 ))}
@@ -308,24 +316,18 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
 
             {/* Subscription history */}
             {((full as any).subscription_history ?? []).length > 0 && (
-              <View style={{ backgroundColor: Colors.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: A_BORDER, marginBottom: 16 }}>
-                <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.foreground, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Abonnements
-                </Text>
+              <View style={{ backgroundColor: Colors.card, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: BORDER }}>
+                <Text style={styles.sectionLabel}>Abonnements</Text>
                 {((full as any).subscription_history ?? []).slice(0, 4).map((sub: any, i: number) => (
                   <View key={sub.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                    paddingVertical: 8, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: A_BORDER }}>
+                    paddingVertical: 8, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: BORDER }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: sub.status === "active" ? Colors.success : A_BORDER }} />
-                      <Text style={{ fontSize: 13, color: Colors.foreground, fontWeight: "600", textTransform: "capitalize" }}>
-                        {PLAN_LABELS[sub.plan] ?? sub.plan}
-                      </Text>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: sub.status === "active" ? Colors.success : BORDER }} />
+                      <Text style={{ fontSize: 13, color: Colors.foreground, fontWeight: "600" }}>{PLAN_LABELS[sub.plan] ?? sub.plan}</Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                        {new Date(sub.start_date).toLocaleDateString("fr-FR")}
-                      </Text>
-                      <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: sub.status === "active" ? `${Colors.success}18` : A_BG }}>
+                      <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{new Date(sub.start_date).toLocaleDateString("fr-FR")}</Text>
+                      <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: sub.status === "active" ? `${Colors.success}18` : Colors.muted }}>
                         <Text style={{ fontSize: 9, fontWeight: "800", color: sub.status === "active" ? Colors.success : Colors.mutedForeground, textTransform: "uppercase" }}>
                           {sub.status}
                         </Text>
@@ -337,10 +339,9 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
             )}
 
             {/* Actions */}
-            <View style={{ backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: A_BORDER, overflow: "hidden", marginBottom: 10 }}>
-              {/* Copier l'email */}
+            <View style={{ backgroundColor: Colors.card, borderRadius: 18, borderWidth: 1, borderColor: BORDER, overflow: "hidden" }}>
               <Pressable onPress={handleShareEmail}
-                style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: A_BORDER, opacity: pressed ? 0.7 : 1 }]}>
+                style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: BORDER, opacity: pressed ? 0.7 : 1 }]}>
                 <View style={[styles.actionIcon, { backgroundColor: `${Colors.info}12` }]}>
                   <Ionicons name="mail-outline" size={18} color={Colors.info} />
                 </View>
@@ -348,9 +349,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 <Ionicons name="share-outline" size={14} color={Colors.mutedForeground} />
               </Pressable>
 
-              {/* Offrir abonnement */}
               <Pressable onPress={() => { onClose(); onGrant(); }}
-                style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: A_BORDER, opacity: pressed ? 0.7 : 1 }]}>
+                style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: BORDER, opacity: pressed ? 0.7 : 1 }]}>
                 <View style={[styles.actionIcon, { backgroundColor: `${Colors.admin}12` }]}>
                   <Ionicons name="gift-outline" size={18} color={Colors.admin} />
                 </View>
@@ -358,7 +358,6 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
               </Pressable>
 
-              {/* Modifier le rôle */}
               {!full.is_admin && (
                 <Pressable onPress={() => {
                   const newRole = full.role === "pro" ? "client" : "pro";
@@ -366,7 +365,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                     { text: "Annuler", style: "cancel" },
                     { text: "Confirmer", onPress: () => updateRoleMut.mutate(newRole) },
                   ]);
-                }} style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: A_BORDER, opacity: pressed ? 0.7 : 1 }]}>
+                }} style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: BORDER, opacity: pressed ? 0.7 : 1 }]}>
                   <View style={[styles.actionIcon, { backgroundColor: `${Colors.pro}12` }]}>
                     <Ionicons name="swap-horizontal-outline" size={18} color={Colors.pro} />
                   </View>
@@ -380,12 +379,11 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 </Pressable>
               )}
 
-              {/* Ban / Réactiver */}
               {full.is_active ? (
                 <Pressable onPress={() => Alert.alert("Bannir", `Bannir ${full.first_name} ?`, [
                   { text: "Annuler", style: "cancel" },
                   { text: "Bannir", style: "destructive", onPress: () => banMut.mutate() },
-                ])} style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: A_BORDER, opacity: pressed ? 0.7 : 1 }]}>
+                ])} style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: BORDER, opacity: pressed ? 0.7 : 1 }]}>
                   <View style={[styles.actionIcon, { backgroundColor: `${Colors.warning}12` }]}>
                     <Ionicons name="ban-outline" size={18} color={Colors.warning} />
                   </View>
@@ -394,7 +392,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 </Pressable>
               ) : (
                 <Pressable onPress={() => unbanMut.mutate()}
-                  style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: A_BORDER, opacity: pressed ? 0.7 : 1 }]}>
+                  style={({ pressed }) => [styles.actionRow, { borderBottomWidth: 1, borderBottomColor: BORDER, opacity: pressed ? 0.7 : 1 }]}>
                   <View style={[styles.actionIcon, { backgroundColor: `${Colors.success}12` }]}>
                     <Ionicons name="checkmark-circle-outline" size={18} color={Colors.success} />
                   </View>
@@ -403,7 +401,6 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 </Pressable>
               )}
 
-              {/* Supprimer */}
               <Pressable onPress={() => Alert.alert("Supprimer", `Supprimer ${full.first_name} définitivement ?`, [
                 { text: "Annuler", style: "cancel" },
                 { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate() },
@@ -440,7 +437,7 @@ function UserCard({
   const swipeRef = useRef<Swipeable>(null);
 
   const renderRightActions = () => (
-    <View style={{ flexDirection: "row", marginBottom: 10, marginLeft: 6, borderRadius: 16, overflow: "hidden", width: 152 }}>
+    <View style={{ flexDirection: "row", marginBottom: 10, marginLeft: 6, borderRadius: 18, overflow: "hidden", width: 152 }}>
       <Pressable
         onPress={() => { swipeRef.current?.close(); onBan(); }}
         style={{ flex: 1, backgroundColor: Colors.warning, alignItems: "center", justifyContent: "center", gap: 4 }}
@@ -461,7 +458,7 @@ function UserCard({
   const renderLeftActions = () => (
     <Pressable
       onPress={() => { swipeRef.current?.close(); onGrant(); }}
-      style={{ width: 88, marginBottom: 10, marginRight: 6, borderRadius: 16, overflow: "hidden" }}
+      style={{ width: 88, marginBottom: 10, marginRight: 6, borderRadius: 18, overflow: "hidden" }}
     >
       <LinearGradient
         colors={["#EA6000", "#F97316"]}
@@ -489,33 +486,38 @@ function UserCard({
         delayLongPress={380}
         style={({ pressed }) => ({
           backgroundColor: Colors.card,
-          borderRadius: 16,
+          borderRadius: 18,
           marginBottom: 10,
           borderWidth: 1,
           borderLeftWidth: 3,
-          borderColor: A_BORDER,
+          borderColor: BORDER,
           borderLeftColor: item.is_active ? rc : Colors.destructive,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
-          paddingHorizontal: 14, paddingVertical: 13,
-          flexDirection: "row", alignItems: "center", gap: 12,
-          opacity: pressed ? 0.88 : item.is_active ? 1 : 0.72,
+          shadowColor: item.is_active ? rc : Colors.destructive,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: pressed ? 0.14 : 0.07,
+          shadowRadius: 8,
+          elevation: 2,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          opacity: pressed ? 0.88 : item.is_active ? 1 : 0.68,
         })}
       >
-        {/* Avatar */}
         <Avatar name={name} size={44} />
 
-        {/* Info */}
-        <View style={{ flex: 1, gap: 3 }}>
+        <View style={{ flex: 1, gap: 2 }}>
           {/* Row 1: name + role badge */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Text style={{ fontWeight: "800", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
               {name}
             </Text>
-            <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, backgroundColor: `${rc}18` }}>
-              <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase" }}>{roleName(item)}</Text>
+            <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: `${rc}18`, borderWidth: 1, borderColor: `${rc}28` }}>
+              <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase", letterSpacing: 0.5 }}>{roleName(item)}</Text>
             </View>
             {!item.is_active && (
-              <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: `${Colors.destructive}14` }}>
+              <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 7, backgroundColor: `${Colors.destructive}14` }}>
                 <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
               </View>
             )}
@@ -525,25 +527,22 @@ function UserCard({
           <Text style={{ fontSize: 11, color: Colors.mutedForeground }} numberOfLines={1}>{item.email}</Text>
 
           {/* Row 3: plan badge OR joined date */}
-          {(plan || joined) && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 1 }}>
-              {plan ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A" }}>
-                  <Text style={{ fontSize: 9 }}>⭐</Text>
-                  <Text style={{ fontSize: 9, fontWeight: "800", color: "#92400E" }}>{plan.toUpperCase()}</Text>
-                </View>
-              ) : joined ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Ionicons name="time-outline" size={10} color={Colors.mutedForeground} />
-                  <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>Depuis {joined}</Text>
-                </View>
-              ) : null}
-            </View>
-          )}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+            {plan ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A" }}>
+                <Text style={{ fontSize: 9 }}>⭐</Text>
+                <Text style={{ fontSize: 9, fontWeight: "800", color: "#92400E" }}>{plan.toUpperCase()}</Text>
+              </View>
+            ) : joined ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <Ionicons name="time-outline" size={10} color={Colors.mutedForeground} />
+                <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>Depuis {joined}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
 
-        {/* Chevron */}
-        <Ionicons name="chevron-forward" size={14} color={A_BORDER} />
+        <Ionicons name="chevron-forward" size={13} color={BORDER} />
       </Pressable>
     </Swipeable>
   );
@@ -553,8 +552,8 @@ function UserCard({
 export default function AdminUsersScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const [search, setSearch]           = useState("");
-  const [roleFilter, setRoleFilter]   = useState<RoleFilter>("all");
+  const [search, setSearch]             = useState("");
+  const [roleFilter, setRoleFilter]     = useState<RoleFilter>("all");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantTarget, setGrantTarget]   = useState<AdminUser | null>(null);
   const [refreshing, setRefreshing]     = useState(false);
@@ -586,8 +585,10 @@ export default function AdminUsersScreen() {
     },
   });
 
-  const users = (data?.data as AdminUser[] | undefined) ?? [];
-  const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
+  const users       = (data?.data as AdminUser[] | undefined) ?? [];
+  const activeCount = users.filter((u) =>  u.is_active).length;
+  const bannedCount = users.filter((u) => !u.is_active).length;
+  const onRefresh   = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
   const handleLongPress = useCallback((item: AdminUser) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {});
@@ -596,13 +597,7 @@ export default function AdminUsersScreen() {
         {
           title: `${item.first_name} ${item.last_name}`,
           message: item.email,
-          options: [
-            "Annuler",
-            "👁  Voir le profil",
-            "🎁  Offrir un abonnement",
-            item.is_active ? "⚠️  Bannir" : "✅  Réactiver",
-            "🗑  Supprimer",
-          ],
+          options: ["Annuler", "👁  Voir le profil", "🎁  Offrir un abonnement", item.is_active ? "⚠️  Bannir" : "✅  Réactiver", "🗑  Supprimer"],
           cancelButtonIndex: 0,
           destructiveButtonIndex: item.is_active ? [3, 4] : [4],
         },
@@ -613,8 +608,7 @@ export default function AdminUsersScreen() {
             const action = item.is_active ? "Bannir" : "Réactiver";
             Alert.alert(action, `${action} ${item.first_name} ?`, [
               { text: "Annuler", style: "cancel" },
-              { text: action, style: item.is_active ? "destructive" : "default",
-                onPress: () => banMut.mutate(item.id) },
+              { text: action, style: item.is_active ? "destructive" : "default", onPress: () => banMut.mutate(item.id) },
             ]);
           } else if (idx === 4) {
             Alert.alert("Supprimer", `Supprimer ${item.first_name} définitivement ?`, [
@@ -629,17 +623,17 @@ export default function AdminUsersScreen() {
     }
   }, [banMut, deleteMut]);
 
-  const FILTERS: { value: RoleFilter; label: string }[] = [
-    { value: "all",    label: "Tous" },
-    { value: "pro",    label: "Pros" },
-    { value: "client", label: "Clients" },
-    { value: "banned", label: "Bannis" },
+  const FILTERS: { value: RoleFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { value: "all",    label: "Tous",    icon: "people-outline" },
+    { value: "pro",    label: "Pros",    icon: "briefcase-outline" },
+    { value: "client", label: "Clients", icon: "person-outline" },
+    { value: "banned", label: "Bannis",  icon: "ban-outline" },
   ];
 
   const emptyMessage: Record<RoleFilter, { title: string; sub: string }> = {
-    all:    { title: "Aucun utilisateur",   sub: "Modifiez la recherche." },
+    all:    { title: "Aucun utilisateur",   sub: "Modifiez la recherche pour voir des résultats." },
     pro:    { title: "Aucun pro trouvé",    sub: "Il n'y a pas encore de pros inscrits." },
-    client: { title: "Aucun client trouvé", sub: "Aucun client correspond à votre recherche." },
+    client: { title: "Aucun client trouvé", sub: "Aucun client ne correspond à votre recherche." },
     banned: { title: "Aucun banni",         sub: "Aucun utilisateur n'est actuellement banni." },
   };
 
@@ -652,8 +646,7 @@ export default function AdminUsersScreen() {
         const action = item.is_active ? "Bannir" : "Réactiver";
         Alert.alert(action, `${action} ${item.first_name} ?`, [
           { text: "Annuler", style: "cancel" },
-          { text: action, style: item.is_active ? "destructive" : "default",
-            onPress: () => banMut.mutate(item.id) },
+          { text: action, style: item.is_active ? "destructive" : "default", onPress: () => banMut.mutate(item.id) },
         ]);
       }}
       onDelete={() => Alert.alert("Supprimer", `Supprimer ${item.first_name} définitivement ?`, [
@@ -668,31 +661,51 @@ export default function AdminUsersScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: A_BG }}>
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+
         {/* ── Header ── */}
-        <View style={{ paddingHorizontal: 16, paddingTop: insets.top + 14, paddingBottom: 12, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: A_BORDER }}>
-          {/* Title row */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.admin }} />
-              <View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>Utilisateurs</Text>
-                {!isLoading && users.length > 0 && (
-                  <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>
-                    {users.filter((u) => u.is_active).length} actifs · {users.filter((u) => !u.is_active).length} bannis
-                  </Text>
-                )}
-              </View>
+        <LinearGradient
+          colors={["#FFEAF1", "#FFF2F7", "#FFEAF1"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{
+            paddingTop: insets.top + 18,
+            paddingHorizontal: 20,
+            paddingBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: BORDER,
+          }}
+        >
+          {/* Title + counter */}
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+            <View>
+              <Text style={{ fontSize: 28, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.8 }}>
+                Utilisateurs
+              </Text>
+              {!isLoading && users.length > 0 && (
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 3 }}>
+                  {activeCount} actif{activeCount !== 1 ? "s" : ""} · {bannedCount} banni{bannedCount !== 1 ? "s" : ""}
+                </Text>
+              )}
             </View>
             {!isLoading && (
-              <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: `${Colors.admin}12`, borderWidth: 1, borderColor: `${Colors.admin}30` }}>
-                <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.admin }}>{users.length}</Text>
+              <View style={{
+                paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+                backgroundColor: `${Colors.admin}14`, borderWidth: 1, borderColor: `${Colors.admin}30`,
+              }}>
+                <Text style={{ fontSize: 15, fontWeight: "900", color: Colors.admin }}>{users.length}</Text>
               </View>
             )}
           </View>
 
           {/* Search */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: A_BG, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: A_BORDER, marginBottom: 12 }}>
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 10,
+            backgroundColor: Colors.card, borderRadius: 16,
+            paddingHorizontal: 14, height: 48,
+            borderWidth: 1, borderColor: BORDER,
+            marginBottom: 14,
+            shadowColor: Colors.primary, shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1,
+          }}>
             <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
             <TextInput
               value={search}
@@ -713,41 +726,30 @@ export default function AdminUsersScreen() {
           </View>
 
           {/* Filter pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 10 }}>
-            {FILTERS.map(({ value, label }) => {
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {FILTERS.map(({ value, label, icon }) => {
               const active = roleFilter === value;
+              const pillColor = value === "pro" ? Colors.pro : value === "banned" ? Colors.destructive : Colors.admin;
               return (
                 <Pressable key={value}
                   onPress={() => { setRoleFilter(value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                    backgroundColor: active ? `${Colors.admin}14` : A_BG,
-                    borderColor: active ? `${Colors.admin}40` : A_BORDER }}>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.admin : Colors.mutedForeground }}>
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 5,
+                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                    backgroundColor: active ? `${pillColor}14` : Colors.card,
+                    borderColor: active ? `${pillColor}40` : BORDER,
+                    shadowColor: active ? pillColor : "transparent",
+                    shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: active ? 2 : 0,
+                  }}>
+                  <Ionicons name={icon} size={13} color={active ? pillColor : Colors.mutedForeground} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: active ? pillColor : Colors.mutedForeground }}>
                     {label}
                   </Text>
                 </Pressable>
               );
             })}
           </ScrollView>
-
-          {/* Hint bar */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: A_BG, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: A_BORDER }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <Ionicons name="arrow-back-outline" size={12} color={Colors.admin} />
-              <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>Glisser → abonnement</Text>
-            </View>
-            <View style={{ width: 1, height: 12, backgroundColor: A_BORDER }} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <Ionicons name="arrow-forward-outline" size={12} color={Colors.warning} />
-              <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>Glisser ← ban · suppr.</Text>
-            </View>
-            <View style={{ width: 1, height: 12, backgroundColor: A_BORDER }} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <Text style={{ fontSize: 10 }}>⭐</Text>
-              <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>= plan actif</Text>
-            </View>
-          </View>
-        </View>
+        </LinearGradient>
 
         {/* ── List ── */}
         {isLoading ? (
@@ -757,8 +759,14 @@ export default function AdminUsersScreen() {
             data={users}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
+            // @ts-ignore — estimatedItemSize est valide en runtime
             estimatedItemSize={82}
-            contentContainerStyle={{ backgroundColor: A_BG, paddingHorizontal: 16, paddingTop: 10, paddingBottom: insets.bottom + 100 }}
+            contentContainerStyle={{
+              backgroundColor: Colors.background,
+              paddingHorizontal: 16,
+              paddingTop: 12,
+              paddingBottom: insets.bottom + 100,
+            }}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
             refreshControl={
@@ -766,11 +774,14 @@ export default function AdminUsersScreen() {
             }
             ListEmptyComponent={
               <View style={{ alignItems: "center", paddingVertical: 80 }}>
-                <View style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                  <Ionicons name="people-outline" size={32} color={A_BORDER} />
-                </View>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>{msg.title}</Text>
-                <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", paddingHorizontal: 32 }}>{msg.sub}</Text>
+                <LinearGradient
+                  colors={[`${Colors.primary}22`, `${Colors.primary}08`]}
+                  style={{ width: 80, height: 80, borderRadius: 26, alignItems: "center", justifyContent: "center", marginBottom: 16 }}
+                >
+                  <Ionicons name="people-outline" size={34} color={Colors.primary} />
+                </LinearGradient>
+                <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground, marginBottom: 6 }}>{msg.title}</Text>
+                <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", paddingHorizontal: 32, lineHeight: 20 }}>{msg.sub}</Text>
               </View>
             }
           />
@@ -791,20 +802,24 @@ export default function AdminUsersScreen() {
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1, backgroundColor: Colors.overlay, justifyContent: "flex-end",
+    flex: 1,
+    backgroundColor: Colors.overlay,
+    justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: Colors.card,
-    borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    paddingHorizontal: 24, paddingBottom: 36,
-    borderTopWidth: 1, borderColor: A_BORDER,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    borderTopWidth: 1,
+    borderColor: BORDER,
   },
   handle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: A_BORDER,
+    width: 36, height: 4, borderRadius: 2, backgroundColor: BORDER,
     alignSelf: "center", marginTop: 12, marginBottom: 24,
   },
   closeBtn: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: A_BG,
+    width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.muted,
     alignItems: "center", justifyContent: "center",
   },
   sectionLabel: {
