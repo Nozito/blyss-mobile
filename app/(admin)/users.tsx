@@ -427,7 +427,7 @@ function UserCard({
           marginBottom: 10,
           borderWidth: 1,
           borderColor: A_BORDER,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
           paddingHorizontal: 14, paddingVertical: 13,
           flexDirection: "row", alignItems: "center", gap: 12,
           opacity: pressed ? 0.9 : 1,
@@ -464,7 +464,7 @@ function UserCard({
         {/* Ban/Réactiver button */}
         <Pressable
           onPress={onBan}
-          style={{ width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center",
+          style={{ width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center",
             backgroundColor: item.is_active ? `${Colors.warning}14` : `${Colors.success}14` }}
         >
           <Ionicons
@@ -474,7 +474,7 @@ function UserCard({
           />
         </Pressable>
         {/* Chevron */}
-        <Ionicons name="chevron-forward" size={13} color={Colors.mutedForeground} />
+        <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
       </Pressable>
     </Swipeable>
   );
@@ -660,7 +660,7 @@ export default function AdminUsersScreen() {
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
             estimatedItemSize={88}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
+            contentContainerStyle={{ backgroundColor: A_BG, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
             ListEmptyComponent={
