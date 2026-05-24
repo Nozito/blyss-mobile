@@ -17,7 +17,12 @@ export default function AdminLayout() {
       blurEffect="systemUltraThinMaterialLight"
       tintColor={Colors.admin}
       minimizeBehavior="automatic"
-      labelVisibilityMode="unlabeled"
+      labelVisibilityMode="always"
+      tabBarStyle={{
+        backgroundColor: Colors.card,
+        borderTopWidth: 1,
+        borderTopColor: "#E4E4E7",
+      }}
     >
       <NativeTabs.Trigger name="dashboard">
         <Icon src={{ default: <VectorIcon family={Ionicons} name="grid-outline" />, selected: <VectorIcon family={Ionicons} name="grid" /> }} />
