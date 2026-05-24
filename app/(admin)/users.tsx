@@ -265,63 +265,52 @@ function UserRow({
       onLongPress={onLongPress}
       delayLongPress={350}
       style={({ pressed }) => [{
-        flexDirection: "row", alignItems: "center", gap: 14,
+        flexDirection: "row", alignItems: "center",
         backgroundColor: Colors.card,
-        borderRadius: 16, padding: 14,
-        marginBottom: 10, borderWidth: 1, borderColor: Colors.border,
-        opacity: pressed ? 0.82 : 1,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
+        borderRadius: 14, borderWidth: 1, borderColor: Colors.border,
+        paddingHorizontal: 14, paddingVertical: 12,
+        marginBottom: 8, opacity: pressed ? 0.85 : 1,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2,
       }]}
     >
-      {/* Avatar */}
-      <Avatar name={`${item.first_name} ${item.last_name}`} size={52} />
+      <Avatar name={`${item.first_name} ${item.last_name}`} size={42} />
 
-      {/* Contenu */}
-      <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-        {/* Ligne 1 : nom + badge rôle */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
             {item.first_name} {item.last_name}
           </Text>
-          <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: `${rc}15`, borderWidth: 1, borderColor: `${rc}25` }}>
-            <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase", letterSpacing: 0.6 }}>
+          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${rc}15` }}>
+            <Text style={{ fontSize: 9, fontWeight: "800", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
               {item.is_admin ? "admin" : item.role}
             </Text>
           </View>
           {!item.is_active && (
-            <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: `${Colors.destructive}12`, borderWidth: 1, borderColor: `${Colors.destructive}25` }}>
-              <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.destructive }}>BANNI</Text>
+            <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${Colors.destructive}12` }}>
+              <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
             </View>
           )}
         </View>
-        {/* Ligne 2 : email */}
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground }} numberOfLines={1}>{item.email}</Text>
+        <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{item.email}</Text>
       </View>
 
-      {/* Actions */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         {!item.is_admin && (
           <Pressable
             onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBan(); }}
             hitSlop={10}
             style={{
-              width: 36, height: 36, borderRadius: 10,
+              width: 32, height: 32, borderRadius: 9,
               backgroundColor: item.is_active ? `${Colors.destructive}10` : `${Colors.success}10`,
               borderWidth: 1,
-              borderColor: item.is_active ? `${Colors.destructive}25` : `${Colors.success}25`,
+              borderColor: item.is_active ? `${Colors.destructive}20` : `${Colors.success}20`,
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <Ionicons
-              name={item.is_active ? "ban-outline" : "checkmark-circle-outline"}
-              size={16}
-              color={item.is_active ? Colors.destructive : Colors.success}
-            />
+            <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={15} color={item.is_active ? Colors.destructive : Colors.success} />
           </Pressable>
         )}
-        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="chevron-forward" size={13} color={Colors.mutedForeground} />
-        </View>
+        <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
       </View>
     </Pressable>
   );
