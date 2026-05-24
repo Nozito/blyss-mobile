@@ -12,6 +12,9 @@ import * as Haptics from "expo-haptics";
 import { adminApi, AdminCoupon } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
+
 type DiscountType = "percent" | "fixed";
 type CouponStatus = "active" | "expired" | "disabled";
 
@@ -239,7 +242,7 @@ function CouponCard({
   return (
     <Animated.View style={{
       backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1,
-      borderColor: st === "active" ? `${Colors.success}30` : Colors.border,
+      borderColor: st === "active" ? `${Colors.success}30` : A_BORDER,
       overflow: "hidden", marginBottom: 12,
       shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
       opacity, transform: [{ translateY }],
@@ -397,9 +400,9 @@ export default function AdminCouponsScreen() {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: A_BG }}>
       {/* Filter strip */}
-      <View style={{ paddingTop: insets.top + 10, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+      <View style={{ paddingTop: insets.top + 10, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: A_BORDER }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {STATUS_FILTERS.map((f) => {
             const active = statusFilter === f.key;
@@ -407,7 +410,7 @@ export default function AdminCouponsScreen() {
               <Pressable key={f.key}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f.key); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? f.color : Colors.muted, borderColor: active ? f.color : Colors.border }}>
+                  backgroundColor: active ? f.color : A_BG, borderColor: active ? f.color : A_BORDER }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>{f.label}</Text>
               </Pressable>
             );

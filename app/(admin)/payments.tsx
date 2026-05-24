@@ -13,6 +13,9 @@ import * as Sharing from "expo-sharing";
 import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
+
 
 
 
@@ -53,13 +56,13 @@ function TxCard({
   return (
     <Animated.View style={{
       backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1,
-      borderColor: Colors.border, overflow: "hidden", marginBottom: 10,
+      borderColor: A_BORDER, overflow: "hidden", marginBottom: 10,
       shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
       opacity, transform: [{ translateY }],
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>
         {/* Icon */}
-        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? `${cfg.color}15` : Colors.background, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? `${cfg.color}15` : A_BG, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Ionicons name={cfg ? cfg.icon : "card-outline"} size={18} color={cfg ? cfg.color : Colors.mutedForeground} />
         </View>
 
@@ -225,14 +228,14 @@ export default function AdminPaymentsScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ flex: 1, backgroundColor: A_BG, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color={Colors.admin} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: A_BG }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
@@ -260,7 +263,7 @@ export default function AdminPaymentsScreen() {
             { label: "Net total",  value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
             { label: "En attente", value: String(pending), color: Colors.warning },
           ].map(({ label, value, color }) => (
-            <View key={label} style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
+            <View key={label} style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: A_BORDER, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
               <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{label}</Text>
               <Text style={{ fontSize: 18, fontWeight: "900", color, letterSpacing: -0.5 }}>{value}</Text>
             </View>
@@ -269,7 +272,7 @@ export default function AdminPaymentsScreen() {
 
         {/* Section header + search + export */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.card, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: Colors.border }}>
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.card, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: A_BORDER }}>
             <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
             <TextInput
               value={search}
@@ -292,7 +295,7 @@ export default function AdminPaymentsScreen() {
             disabled={exporting || thisMonth.length === 0}
             style={({ pressed }) => [{
               width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.card,
-              borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center",
+              borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center",
               opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
               shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
             }]}
@@ -314,7 +317,7 @@ export default function AdminPaymentsScreen() {
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
                   backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.card,
-                  borderColor: active ? (cfg?.color ?? Colors.admin) : Colors.border }}
+                  borderColor: active ? (cfg?.color ?? Colors.admin) : A_BORDER }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                   {f === "all" ? "Tous" : cfg?.label}
@@ -328,7 +331,7 @@ export default function AdminPaymentsScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <View style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: Colors.admin }} />
           <Text style={{ fontSize: 13, fontWeight: "900", color: Colors.foreground }}>Transactions</Text>
-          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border }}>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: A_BG, borderWidth: 1, borderColor: A_BORDER }}>
             <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground }}>{filtered.length}</Text>
           </View>
         </View>
@@ -336,8 +339,8 @@ export default function AdminPaymentsScreen() {
         {/* Transactions */}
         {filtered.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 80 }}>
-            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-              <Ionicons name="card-outline" size={32} color={Colors.border} />
+            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Ionicons name="card-outline" size={32} color={A_BORDER} />
             </View>
             <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucune transaction</Text>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Rien à afficher pour ce filtre.</Text>

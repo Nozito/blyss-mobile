@@ -10,6 +10,9 @@ import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
+
 type Target = "all" | "pros" | "clients" | "user_id";
 
 const TARGET_OPTS: { value: Target; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
@@ -56,7 +59,7 @@ export default function AdminNotificationsScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: A_BG }}
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
@@ -79,7 +82,7 @@ export default function AdminNotificationsScreen() {
       )}
 
       {/* Cible */}
-      <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+      <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: A_BORDER, padding: 20, marginBottom: 16,
         shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground, marginBottom: 14 }}>1. Cible</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -124,7 +127,7 @@ export default function AdminNotificationsScreen() {
       </View>
 
       {/* Contenu */}
-      <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+      <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: A_BORDER, padding: 20, marginBottom: 16,
         shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground, marginBottom: 14 }}>2. Contenu</Text>
 
@@ -155,7 +158,7 @@ export default function AdminNotificationsScreen() {
 
       {/* Prévisualisation iOS */}
       {(title || body) && (
-        <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+        <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: A_BORDER, padding: 20, marginBottom: 16,
           shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
           <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Aperçu push</Text>
           <View style={{ backgroundColor: Colors.muted, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: Colors.border }}>

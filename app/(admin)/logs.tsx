@@ -9,6 +9,9 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
+
 
 
 
@@ -98,9 +101,9 @@ export default function AdminLogsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: A_BG }}>
       {/* Header card */}
-      <View style={{ backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 16 }}>
+      <View style={{ backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: A_BORDER, paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.info }} />
           <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>Logs Système</Text>
@@ -108,7 +111,7 @@ export default function AdminLogsScreen() {
         <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 16, paddingLeft: 14 }}>{filtered.length} événement(s)</Text>
 
         {/* Search */}
-        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: Colors.background, borderRadius: 12, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: Colors.border, gap: 10, marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: A_BG, borderRadius: 12, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: A_BORDER, gap: 10, marginBottom: 12 }}>
           <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
           <TextInput
             value={searchQuery}
@@ -136,8 +139,8 @@ export default function AdminLogsScreen() {
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setTypeFilter(f.id); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? Colors.admin : Colors.background,
-                  borderColor: active ? Colors.admin : Colors.border }}
+                  backgroundColor: active ? Colors.admin : A_BG,
+                  borderColor: active ? Colors.admin : A_BORDER }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                   {f.label}
@@ -156,8 +159,8 @@ export default function AdminLogsScreen() {
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setDateFilter(f.id); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? `${Colors.admin}15` : Colors.background,
-                  borderColor: active ? Colors.admin : Colors.border }}
+                  backgroundColor: active ? `${Colors.admin}15` : A_BG,
+                  borderColor: active ? Colors.admin : A_BORDER }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.admin : Colors.mutedForeground }}>
                   {f.label}
