@@ -272,7 +272,7 @@ export default function AdminPaymentsScreen() {
               width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.card,
               borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center",
               opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
-              shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+              shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
             }]}
           >
             {exporting

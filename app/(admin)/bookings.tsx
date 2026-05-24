@@ -58,60 +58,60 @@ function BookingCard({
   return (
     <View style={{
       backgroundColor: Colors.card,
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 8,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 10,
       borderWidth: 1,
       borderColor: Colors.border,
       borderLeftWidth: 3,
       borderLeftColor: cfg ? cfg.color : Colors.border,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
     }}>
-      {/* Header */}
-      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-        <View style={{ flex: 1, marginRight: 10 }}>
-          <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>#{booking.id}</Text>
-          {booking.service_name ? (
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{booking.service_name}</Text>
-          ) : null}
+      {/* Pro-style row */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+        {/* Icon avatar 48×48 */}
+        <View style={{
+          width: 48, height: 48, borderRadius: 12,
+          backgroundColor: `${cfg ? cfg.color : Colors.admin}15`,
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <Ionicons name={cfg ? cfg.icon : "calendar-outline"} size={22} color={cfg ? cfg.color : Colors.admin} />
         </View>
-        <StatusBadge status={booking.status} />
-      </View>
 
-      {/* Info rows */}
-      <View style={{ gap: 5, marginBottom: 10 }}>
-        {booking.client_name ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="person-outline" size={13} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 12, color: Colors.foreground }}>{booking.client_name}</Text>
+        {/* Info */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+              {booking.client_name ?? `#${booking.id}`}
+            </Text>
+            <StatusBadge status={booking.status} />
           </View>
-        ) : null}
-        {booking.pro_name ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="briefcase-outline" size={13} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 12, color: Colors.foreground }}>{booking.pro_name}</Text>
-          </View>
-        ) : null}
-      </View>
 
-      {/* Footer: time + price */}
-      <View style={{ flexDirection: "row", alignItems: "center", paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border }}>
-        <Ionicons name="time-outline" size={13} color={Colors.mutedForeground} />
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginLeft: 6 }}>{time}</Text>
-        <Text style={{ fontSize: 16, fontWeight: "900", color: Colors.success, marginLeft: "auto" as any }}>
-          {price.toFixed(2)} €
-        </Text>
+          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }} numberOfLines={1}>
+            {[booking.service_name, booking.pro_name].filter(Boolean).join(" · ")}
+          </Text>
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "600" }}>{time}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+              <Ionicons name="cash-outline" size={14} color={Colors.success} />
+              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.success }}>
+                {price.toFixed(2).replace(".", ",")}
+              </Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       {/* Action buttons */}
-      {(canConfirm || canCancel) ? (
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+      {(canConfirm || canCancel) && (
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border }}>
           {canConfirm && (
             <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                onConfirm(booking);
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onConfirm(booking); }}
               style={({ pressed }) => [{
                 flex: 1, height: 36, borderRadius: 10,
                 backgroundColor: `${Colors.info}15`, borderWidth: 1, borderColor: `${Colors.info}35`,
@@ -125,10 +125,7 @@ function BookingCard({
           )}
           {canCancel && (
             <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                onCancel(booking);
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onCancel(booking); }}
               style={({ pressed }) => [{
                 flex: 1, height: 36, borderRadius: 10,
                 backgroundColor: `${Colors.destructive}12`, borderWidth: 1, borderColor: `${Colors.destructive}28`,
@@ -141,7 +138,7 @@ function BookingCard({
             </Pressable>
           )}
         </View>
-      ) : null}
+      )}
     </View>
   );
 }

@@ -126,8 +126,8 @@ export default function AdminMoreScreen() {
       <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 12 }}>
         Informations
       </Text>
-      <View style={{ backgroundColor: Colors.card, borderRadius: 18, borderWidth: 1, borderColor: Colors.border, marginBottom: 24, overflow: "hidden",
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}>
+      <View style={{ backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, marginBottom: 24, overflow: "hidden",
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         {INFO_ROWS.map(({ label, value }, i) => (
           <View key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0, borderBottomColor: Colors.border }}>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{label}</Text>
@@ -143,8 +143,8 @@ export default function AdminMoreScreen() {
           logout();
         }}
         style={({ pressed }) => [{
-          height: 54, borderRadius: 16, backgroundColor: `${Colors.destructive}10`,
-          borderWidth: 1, borderColor: `${Colors.destructive}28`,
+          height: 52, borderRadius: 14, backgroundColor: "rgba(240,58,58,0.08)",
+          borderWidth: 1, borderColor: "rgba(240,58,58,0.15)",
           alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
           opacity: pressed ? 0.75 : 1,
         }]}

@@ -80,7 +80,7 @@ export default function AdminNotificationsScreen() {
 
       {/* Cible */}
       <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}>
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground, marginBottom: 14 }}>1. Cible</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {TARGET_OPTS.map((opt) => {
@@ -125,7 +125,7 @@ export default function AdminNotificationsScreen() {
 
       {/* Contenu */}
       <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}>
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground, marginBottom: 14 }}>2. Contenu</Text>
 
         <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Titre</Text>
@@ -156,7 +156,7 @@ export default function AdminNotificationsScreen() {
       {/* Prévisualisation iOS */}
       {(title || body) && (
         <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-          shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}>
+          shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
           <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Aperçu push</Text>
           <View style={{ backgroundColor: Colors.muted, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: Colors.border }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
