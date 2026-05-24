@@ -424,10 +424,10 @@ function UserCard({
         style={({ pressed }) => [{
           backgroundColor: Colors.card,
           borderRadius: 16,
-          marginBottom: 10,
+          marginBottom: 8,
           borderWidth: 1,
           borderColor: A_BORDER,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
           paddingHorizontal: 14, paddingVertical: 13,
           flexDirection: "row", alignItems: "center", gap: 12,
           opacity: pressed ? 0.9 : 1,
