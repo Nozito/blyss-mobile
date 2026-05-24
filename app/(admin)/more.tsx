@@ -87,7 +87,7 @@ export default function AdminMoreScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
-      contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 80, paddingHorizontal: 20 }}
+      contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
       showsVerticalScrollIndicator={false}
     >
       {/* Admin identity card */}

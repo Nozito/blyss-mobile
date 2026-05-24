@@ -34,7 +34,7 @@ function avatarColor(name: string) {
 function roleColor(user: Pick<AdminUser, "is_admin" | "role">) {
   if (user.is_admin) return Colors.admin;
   if (user.role === "pro") return Colors.pro;
-  return Colors.client;
+  return Colors.primary;
 }
 
 function Avatar({ name, size = 44 }: { name: string; size?: number }) {
@@ -422,7 +422,7 @@ export default function AdminUsersScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Search + filters */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.muted, borderRadius: 16, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border, marginBottom: 12 }}>
           <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
           <TextInput
@@ -468,7 +468,7 @@ export default function AdminUsersScreen() {
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           estimatedItemSize={70}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
           ListEmptyComponent={

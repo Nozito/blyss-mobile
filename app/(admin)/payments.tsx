@@ -75,9 +75,11 @@ function TxCard({
 
   return (
     <Animated.View style={{
-      backgroundColor: Colors.card, borderRadius: 18, borderWidth: 1,
-      borderColor: cfg ? `${cfg.color}20` : Colors.border, overflow: "hidden", marginBottom: 10,
-      shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1,
+      backgroundColor: Colors.card, borderRadius: 14, borderWidth: 1,
+      borderColor: Colors.border, borderLeftWidth: 3,
+      borderLeftColor: cfg ? cfg.color : Colors.border,
+      overflow: "hidden", marginBottom: 8,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
       opacity, transform: [{ translateY }],
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", padding: 16 }}>
@@ -251,12 +253,12 @@ export default function AdminPaymentsScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} colors={[Colors.admin]} />}
       >
         {/* KPI strip + export button */}
         <View style={{ flexDirection: "row", alignItems: "center", paddingRight: 16 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}>
             {kpis.map((k, i) => (
               <KpiCard key={k.label} label={k.label} value={k.value} color={k.color} index={i} />
             ))}
@@ -278,7 +280,7 @@ export default function AdminPaymentsScreen() {
         </View>
 
         {/* Search */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border }}>
             <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
             <TextInput
@@ -300,7 +302,7 @@ export default function AdminPaymentsScreen() {
         </View>
 
         {/* Status filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, marginBottom: 20 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, marginBottom: 20 }}>
           {TX_FILTERS.map((f) => {
             const cfg    = f !== "all" ? STATUS_CFG[f] : null;
             const active = statusFilter === f;
@@ -321,7 +323,7 @@ export default function AdminPaymentsScreen() {
         </ScrollView>
 
         {/* Transactions */}
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={{ paddingHorizontal: 16 }}>
           {filtered.length === 0 ? (
             <View style={{ alignItems: "center", paddingVertical: 80 }}>
               <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>

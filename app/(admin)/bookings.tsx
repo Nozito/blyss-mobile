@@ -58,12 +58,14 @@ function BookingCard({
   return (
     <View style={{
       backgroundColor: Colors.card,
-      borderRadius: 18,
-      padding: 16,
+      borderRadius: 14,
+      padding: 14,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: cfg ? `${cfg.color}25` : Colors.border,
-      shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1,
+      borderColor: Colors.border,
+      borderLeftWidth: 3,
+      borderLeftColor: cfg ? cfg.color : Colors.border,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
     }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
@@ -242,7 +244,7 @@ export default function AdminBookingsScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 90 }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled
           refreshControl={

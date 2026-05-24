@@ -399,7 +399,7 @@ export default function AdminCouponsScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Filter strip */}
       <View style={{ paddingVertical: 12, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {STATUS_FILTERS.map((f) => {
             const active = statusFilter === f.key;
             return (
@@ -420,7 +420,7 @@ export default function AdminCouponsScreen() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: insets.bottom + 120 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 110 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} colors={[Colors.admin]} />}
         >
@@ -447,18 +447,19 @@ export default function AdminCouponsScreen() {
         </ScrollView>
       )}
 
-      {/* Floating Action Button */}
+      {/* FAB */}
       <Pressable
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); setShowCreate(true); }}
         style={({ pressed }) => [{
-          position: "absolute", bottom: insets.bottom + 20, right: 20,
-          width: 60, height: 60, borderRadius: 30, backgroundColor: Colors.admin,
-          alignItems: "center", justifyContent: "center",
-          shadowColor: Colors.admin, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 12,
-          transform: [{ scale: pressed ? 0.92 : 1 }],
+          position: "absolute", bottom: insets.bottom + 20, right: 16,
+          height: 56, paddingHorizontal: 20, borderRadius: 28, backgroundColor: Colors.admin,
+          flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+          shadowColor: Colors.admin, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
+          transform: [{ scale: pressed ? 0.95 : 1 }],
         }]}
       >
-        <Ionicons name="add" size={28} color={Colors.white} />
+        <Ionicons name="add" size={20} color={Colors.white} />
+        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Nouveau</Text>
       </Pressable>
 
       {showCreate && <CreateModal onClose={() => setShowCreate(false)} />}
