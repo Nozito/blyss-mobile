@@ -6,7 +6,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { adminApi } from "@/lib/api";
+import * as Haptics from "expo-haptics";
+import { adminApi, AdminBooking } from "@/lib/api";
 
 const BG = "#0B0E14";
 const CARD = "rgba(255,255,255,0.06)";
@@ -18,10 +19,7 @@ const ACCENT = "#F97316";
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 type StatusFilter = "all" | BookingStatus;
 
-type Booking = {
-  id: number; status: string; start_datetime: string; price: number;
-  client_name?: string; pro_name?: string; service_name?: string;
-};
+type Booking = AdminBooking;
 
 const STATUS_CFG: Record<BookingStatus, { label: string; color: string; bg: string; icon: string }> = {
   pending:   { label: "En attente", color: "#FBBF24", bg: "rgba(251,191,36,0.12)",  icon: "time-outline" },
@@ -54,13 +52,19 @@ export default function AdminBookingsScreen() {
 
   const confirmMut = useMutation({
     mutationFn: (id: number) => adminApi.confirmBooking(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-bookings"] }),
+    onSuccess: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+    },
     onError: () => Alert.alert("Erreur", "Impossible de confirmer."),
   });
 
   const cancelMut = useMutation({
     mutationFn: (id: number) => adminApi.cancelBooking(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-bookings"] }),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+    },
     onError: () => Alert.alert("Erreur", "Impossible d'annuler."),
   });
 

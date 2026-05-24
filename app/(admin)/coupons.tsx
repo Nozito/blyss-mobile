@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  ActivityIndicator, Alert, Modal, Switch,
+  ActivityIndicator, Alert, Modal, Switch, Share,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Share } from "react-native";
-import { adminApi } from "@/lib/api";
+import * as Haptics from "expo-haptics";
+import { adminApi, AdminCoupon } from "@/lib/api";
 import { useRouter } from "expo-router";
 
 const BG = "#0B0E14";
@@ -20,11 +20,7 @@ const ACCENT = "#F97316";
 type DiscountType = "percent" | "fixed";
 type CouponStatus = "active" | "expired" | "disabled";
 
-interface Coupon {
-  id: number; code: string; discount_type: DiscountType; discount_value: number;
-  applicable_plans: string[]; expires_at?: string | null; max_uses?: number | null;
-  uses_count: number; is_active: boolean; created_at: string;
-}
+type Coupon = AdminCoupon;
 
 const PLAN_OPTS = ["start", "serenite", "signature"] as const;
 const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérénité", signature: "Signature" };
@@ -32,7 +28,7 @@ const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérén
 function couponStatus(c: Coupon): CouponStatus {
   if (!c.is_active) return "disabled";
   if (c.expires_at && new Date(c.expires_at) < new Date()) return "expired";
-  if (c.max_uses != null && c.uses_count >= c.max_uses) return "expired";
+  if (c.max_uses != null && c.used_count >= c.max_uses) return "expired";
   return "active";
 }
 
@@ -210,16 +206,28 @@ export default function AdminCouponsScreen() {
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => adminApi.deleteCoupon(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-coupons"] }),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      qc.invalidateQueries({ queryKey: ["admin-coupons"] });
+    },
     onError: () => Alert.alert("Erreur", "Suppression impossible."),
   });
 
   const toggleMut = useMutation({
     mutationFn: ({ id, active }: { id: number; active: boolean }) => adminApi.toggleCoupon(id, active),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-coupons"] }),
+    onSuccess: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      qc.invalidateQueries({ queryKey: ["admin-coupons"] });
+    },
   });
 
-  const coupons = (data?.data as Coupon[] | undefined) ?? [];
+  const rawCoupons = (data?.data as Coupon[] | undefined) ?? [];
+  const coupons = rawCoupons.map((c) => ({
+    ...c,
+    applicable_plans: Array.isArray(c.applicable_plans)
+      ? c.applicable_plans
+      : (typeof c.applicable_plans === "string" ? JSON.parse(c.applicable_plans) as string[] : [] as string[]),
+  }));
   const filtered = statusFilter === "all" ? coupons : coupons.filter((c) => couponStatus(c) === statusFilter);
 
   const copyCode = async (code: string) => {
@@ -318,7 +326,7 @@ export default function AdminCouponsScreen() {
                         -{c.discount_value}{c.discount_type === "percent" ? "%" : "€"}
                       </Text>
                     </View>
-                    {c.applicable_plans.map((p) => (
+                    {c.applicable_plans.map((p: string) => (
                       <View key={p} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER }}>
                         <Text style={{ fontSize: 11, fontWeight: "600", color: MUTED }}>{PLAN_LABELS[p] ?? p}</Text>
                       </View>
@@ -328,7 +336,7 @@ export default function AdminCouponsScreen() {
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <View style={{ gap: 3 }}>
                       <Text style={{ fontSize: 11, color: MUTED }}>
-                        Utilisations : {c.uses_count}{c.max_uses != null ? ` / ${c.max_uses}` : ""}
+                        Utilisations : {c.used_count}{c.max_uses != null ? ` / ${c.max_uses}` : ""}
                       </Text>
                       {c.expires_at && (
                         <Text style={{ fontSize: 11, color: MUTED }}>

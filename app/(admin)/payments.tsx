@@ -6,7 +6,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { adminApi } from "@/lib/api";
+import * as Haptics from "expo-haptics";
+import { adminApi, AdminPayment } from "@/lib/api";
 
 const BG = "#0B0E14";
 const CARD = "rgba(255,255,255,0.06)";
@@ -15,18 +16,15 @@ const TEXT = "#F8FAFC";
 const MUTED = "rgba(248,250,252,0.45)";
 const ACCENT = "#F97316";
 
-type TxStatus = "success" | "pending" | "failed" | "refunded";
-interface Transaction {
-  id: number; booking_id: number; client_name: string; pro_name: string;
-  amount: number; fee: number; net_amount: number;
-  status: TxStatus; created_at: string;
-}
+type TxStatus = "pending" | "processing" | "succeeded" | "failed" | "refunded";
+type Transaction = AdminPayment;
 
 const STATUS_CFG: Record<TxStatus, { label: string; color: string; bg: string; icon: string }> = {
-  success:  { label: "Réussi",     color: "#4ADE80", bg: "rgba(74,222,128,0.12)",  icon: "checkmark-circle-outline" },
-  pending:  { label: "En attente", color: "#FBBF24", bg: "rgba(251,191,36,0.12)",   icon: "time-outline" },
-  failed:   { label: "Échoué",     color: "#F87171", bg: "rgba(248,113,113,0.12)",  icon: "close-circle-outline" },
-  refunded: { label: "Remboursé",  color: "#38BDF8", bg: "rgba(56,189,248,0.12)",   icon: "refresh-outline" },
+  succeeded:  { label: "Réussi",     color: "#4ADE80", bg: "rgba(74,222,128,0.12)",  icon: "checkmark-circle-outline" },
+  processing: { label: "En cours",   color: "#A78BFA", bg: "rgba(167,139,250,0.12)", icon: "reload-outline" },
+  pending:    { label: "En attente", color: "#FBBF24", bg: "rgba(251,191,36,0.12)",   icon: "time-outline" },
+  failed:     { label: "Échoué",     color: "#F87171", bg: "rgba(248,113,113,0.12)",  icon: "close-circle-outline" },
+  refunded:   { label: "Remboursé",  color: "#38BDF8", bg: "rgba(56,189,248,0.12)",   icon: "refresh-outline" },
 };
 
 export default function AdminPaymentsScreen() {
@@ -44,6 +42,7 @@ export default function AdminPaymentsScreen() {
   const refundMut = useMutation({
     mutationFn: (id: number) => adminApi.refundPayment(id),
     onSuccess: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-payments"] });
       Alert.alert("✅", "Remboursement initié.");
     },
@@ -59,12 +58,12 @@ export default function AdminPaymentsScreen() {
     return matchStatus && matchSearch;
   });
 
-  const successful = transactions.filter((t) => t.status === "success");
+  const successful = transactions.filter((t) => t.status === "succeeded");
   const kpis = {
-    total: successful.reduce((s, t) => s + t.amount, 0),
-    fees:  successful.reduce((s, t) => s + t.fee, 0),
-    net:   successful.reduce((s, t) => s + t.net_amount, 0),
-    pending: transactions.filter((t) => t.status === "pending").length,
+    total: successful.reduce((s, t) => s + Number(t.amount), 0),
+    fees:  successful.reduce((s, t) => s + Number(t.fee ?? 0), 0),
+    net:   successful.reduce((s, t) => s + Number(t.net_amount ?? 0), 0),
+    pending: transactions.filter((t) => t.status === "pending" || t.status === "processing").length,
   };
 
   const confirmRefund = (tx: Transaction) =>
@@ -119,7 +118,7 @@ export default function AdminPaymentsScreen() {
 
       {/* Status filter */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 20 }}>
-        {(["all", "success", "pending", "failed", "refunded"] as const).map((f) => {
+        {(["all", "succeeded", "pending", "failed", "refunded"] as const).map((f) => {
           const cfg = f !== "all" ? STATUS_CFG[f] : null;
           const active = statusFilter === f;
           return (
@@ -172,7 +171,7 @@ export default function AdminPaymentsScreen() {
                   </Text>
                 </View>
 
-                {tx.status === "success" && (
+                {tx.status === "succeeded" && (
                   <Pressable
                     onPress={() => confirmRefund(tx)}
                     style={{ marginTop: 10, height: 34, borderRadius: 10, backgroundColor: "rgba(56,189,248,0.10)", borderWidth: 1, borderColor: "rgba(56,189,248,0.25)", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
