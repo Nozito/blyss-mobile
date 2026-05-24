@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Pressable, TextInput,
   ActivityIndicator, Alert, RefreshControl, Animated,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,6 +12,9 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
 
 type TxStatus = "pending" | "processing" | "succeeded" | "failed" | "refunded";
 
@@ -24,35 +28,6 @@ const STATUS_CFG: Record<TxStatus, { label: string; color: string; icon: React.C
 
 const TX_FILTERS = ["all", "succeeded", "pending", "failed", "refunded"] as const;
 type TxFilter = typeof TX_FILTERS[number];
-
-function KpiCard({ label, value, color, index }: { label: string; value: string; color: string; index: number }) {
-  const opacity    = useRef(new Animated.Value(0)).current;
-  const translateX = useRef(new Animated.Value(20)).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.delay(index * 70),
-      Animated.parallel([
-        Animated.timing(opacity,    { toValue: 1, duration: 280, useNativeDriver: true }),
-        Animated.timing(translateX, { toValue: 0, duration: 280, useNativeDriver: true }),
-      ]),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{
-      backgroundColor: Colors.card, borderRadius: 12, padding: 16,
-      borderWidth: 1, borderColor: Colors.border, marginRight: 12, width: 140, minHeight: 88,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
-      overflow: "hidden",
-      opacity, transform: [{ translateX }],
-    }}>
-      <View style={{ position: "absolute", top: -16, right: -16, width: 56, height: 56, borderRadius: 28, backgroundColor: `${color}0D` }} />
-      <Text style={{ fontSize: 9, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
-      <Text style={{ fontSize: 22, fontWeight: "900", color, letterSpacing: -0.5 }}>{value}</Text>
-    </Animated.View>
-  );
-}
 
 function TxCard({
   tx, index, onRefund,
@@ -77,54 +52,63 @@ function TxCard({
 
   return (
     <Animated.View style={{
-      backgroundColor: Colors.card, borderRadius: 14, borderWidth: 1,
-      borderColor: Colors.border, borderLeftWidth: 3,
-      borderLeftColor: cfg ? cfg.color : Colors.border,
-      overflow: "hidden", marginBottom: 8,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+      backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1,
+      borderColor: A_BORDER, overflow: "hidden", marginBottom: 10,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
       opacity, transform: [{ translateY }],
     }}>
-      <View style={{ flexDirection: "row", alignItems: "center", padding: 16 }}>
-        <View style={{ flex: 1, marginRight: 12 }}>
-          <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>{tx.client_name}</Text>
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 6 }}>Pro · {tx.pro_name}</Text>
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-            {new Date(tx.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-          </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>
+        {/* Icon */}
+        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? `${cfg.color}15` : A_BG, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Ionicons name={cfg ? cfg.icon : "card-outline"} size={18} color={cfg ? cfg.color : Colors.mutedForeground} />
         </View>
-        <View style={{ alignItems: "flex-end", gap: 8 }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: isSucceeded ? Colors.success : Colors.foreground, letterSpacing: -0.8 }}>
-            {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
-          </Text>
-          {cfg ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: `${cfg.color}18` }}>
-              <Ionicons name={cfg.icon} size={11} color={cfg.color} />
-              <Text style={{ fontSize: 10, fontWeight: "800", color: cfg.color }}>{cfg.label}</Text>
-            </View>
-          ) : null}
+
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground, flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: isSucceeded ? Colors.success : Colors.foreground, letterSpacing: -0.5, marginLeft: 8 }}>
+              {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+              {tx.pro_name} · {new Date(tx.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+            </Text>
+            {cfg ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: `${cfg.color}18` }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", color: cfg.color }}>{cfg.label}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
 
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, gap: 16 }}>
-        <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-          Frais : {tx.fee != null ? `${Number(tx.fee).toFixed(2)} €` : "—"}
-        </Text>
-        <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-          Net : {tx.net_amount != null ? `${Number(tx.net_amount).toFixed(2)} €` : "—"}
-        </Text>
-        {isSucceeded && (
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onRefund(tx);
-            }}
-            style={{ marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: `${Colors.destructive}10`, borderWidth: 1, borderColor: `${Colors.destructive}28` }}
-          >
-            <Ionicons name="refresh-outline" size={12} color={Colors.destructive} />
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.destructive }}>Rembourser</Text>
-          </Pressable>
-        )}
-      </View>
+      {(tx.fee != null || isSucceeded) && (
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 12, paddingTop: 2, gap: 12 }}>
+          {tx.fee != null && (
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+              Frais : {Number(tx.fee).toFixed(2)} €
+            </Text>
+          )}
+          {tx.net_amount != null && (
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+              Net : {Number(tx.net_amount).toFixed(2)} €
+            </Text>
+          )}
+          {isSucceeded && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onRefund(tx);
+              }}
+              style={{ marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, backgroundColor: `${Colors.destructive}10`, borderWidth: 1, borderColor: `${Colors.destructive}28` }}
+            >
+              <Ionicons name="refresh-outline" size={12} color={Colors.destructive} />
+              <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.destructive }}>Rembourser</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -174,13 +158,10 @@ export default function AdminPaymentsScreen() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
-  const kpis = [
-    { label: "CA total",    value: `${succeeded.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.admin },
-    { label: "CA ce mois",  value: `${thisMonth.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.pro },
-    { label: "Transactions", value: String(transactions.length), color: Colors.info },
-    { label: "En attente",  value: String(transactions.filter((t) => t.status === "pending" || t.status === "processing").length), color: Colors.warning },
-    { label: "Net total",   value: `${succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.success },
-  ];
+  const caTotal  = succeeded.reduce((s, t) => s + Number(t.amount), 0);
+  const caMois   = thisMonth.reduce((s, t) => s + Number(t.amount), 0);
+  const netTotal = succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0);
+  const pending  = transactions.filter((t) => t.status === "pending" || t.status === "processing").length;
 
   const confirmRefund = (tx: AdminPayment) =>
     Alert.alert(
@@ -192,7 +173,6 @@ export default function AdminPaymentsScreen() {
       ],
     );
 
-  // Native PDF export — expo-print + expo-sharing
   const handleExportPDF = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setExporting(true);
@@ -245,45 +225,51 @@ export default function AdminPaymentsScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ flex: 1, backgroundColor: A_BG, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color={Colors.admin} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: A_BG }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 90 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} colors={[Colors.admin]} />}
       >
-        {/* KPI strip + export button */}
-        <View style={{ flexDirection: "row", alignItems: "center", paddingRight: 16 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}>
-            {kpis.map((k, i) => (
-              <KpiCard key={k.label} label={k.label} value={k.value} color={k.color} index={i} />
-            ))}
-          </ScrollView>
-          <Pressable
-            onPress={handleExportPDF}
-            disabled={exporting || thisMonth.length === 0}
-            style={({ pressed }) => [{
-              width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.card,
-              borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center",
-              opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
-            }]}
-          >
-            {exporting
-              ? <ActivityIndicator size="small" color={Colors.admin} />
-              : <Ionicons name="share-outline" size={18} color={Colors.admin} />}
-          </Pressable>
+        {/* Hero CA total */}
+        <LinearGradient
+          colors={["#EA6000", "#F97316", "#FBAB6A"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ borderRadius: 20, padding: 20, marginBottom: 14, overflow: "hidden" }}
+        >
+          <View style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.08)" }} />
+          <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CA Total</Text>
+          <Text style={{ fontSize: 40, fontWeight: "900", color: Colors.white, letterSpacing: -1 }}>
+            {caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+          </Text>
+          <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>{transactions.length} transaction(s) au total</Text>
+        </LinearGradient>
+
+        {/* 3 mini-cards */}
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
+          {[
+            { label: "Ce mois",    value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.pro },
+            { label: "Net total",  value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
+            { label: "En attente", value: String(pending), color: Colors.warning },
+          ].map(({ label, value, color }) => (
+            <View key={label} style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: A_BORDER, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{label}</Text>
+              <Text style={{ fontSize: 18, fontWeight: "900", color, letterSpacing: -0.5 }}>{value}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Search */}
-        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border }}>
+        {/* Section header + search + export */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.card, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: A_BORDER }}>
             <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
             <TextInput
               value={search}
@@ -301,10 +287,24 @@ export default function AdminPaymentsScreen() {
               </Pressable>
             )}
           </View>
+          <Pressable
+            onPress={handleExportPDF}
+            disabled={exporting || thisMonth.length === 0}
+            style={({ pressed }) => [{
+              width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.card,
+              borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center",
+              opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
+              shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+            }]}
+          >
+            {exporting
+              ? <ActivityIndicator size="small" color={Colors.admin} />
+              : <Ionicons name="share-outline" size={18} color={Colors.admin} />}
+          </Pressable>
         </View>
 
         {/* Status filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, marginBottom: 20 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 16 }}>
           {TX_FILTERS.map((f) => {
             const cfg    = f !== "all" ? STATUS_CFG[f] : null;
             const active = statusFilter === f;
@@ -313,8 +313,8 @@ export default function AdminPaymentsScreen() {
                 key={f}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.muted,
-                  borderColor: active ? (cfg?.color ?? Colors.admin) : Colors.border }}
+                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.card,
+                  borderColor: active ? (cfg?.color ?? Colors.admin) : A_BORDER }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                   {f === "all" ? "Tous" : cfg?.label}
@@ -324,22 +324,29 @@ export default function AdminPaymentsScreen() {
           })}
         </ScrollView>
 
-        {/* Transactions */}
-        <View style={{ paddingHorizontal: 16 }}>
-          {filtered.length === 0 ? (
-            <View style={{ alignItems: "center", paddingVertical: 80 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                <Ionicons name="card-outline" size={32} color={Colors.border} />
-              </View>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucune transaction</Text>
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Rien à afficher pour ce filtre.</Text>
-            </View>
-          ) : (
-            filtered.map((tx, i) => (
-              <TxCard key={tx.id} tx={tx} index={i} onRefund={confirmRefund} />
-            ))
-          )}
+        {/* Section label */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <View style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: Colors.admin }} />
+          <Text style={{ fontSize: 13, fontWeight: "900", color: Colors.foreground }}>Transactions</Text>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: A_BG, borderWidth: 1, borderColor: A_BORDER }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground }}>{filtered.length}</Text>
+          </View>
         </View>
+
+        {/* Transactions */}
+        {filtered.length === 0 ? (
+          <View style={{ alignItems: "center", paddingVertical: 80 }}>
+            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Ionicons name="card-outline" size={32} color={A_BORDER} />
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucune transaction</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Rien à afficher pour ce filtre.</Text>
+          </View>
+        ) : (
+          filtered.map((tx, i) => (
+            <TxCard key={tx.id} tx={tx} index={i} onRefund={confirmRefund} />
+          ))
+        )}
       </ScrollView>
     </View>
   );
