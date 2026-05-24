@@ -713,7 +713,7 @@ export default function AdminUsersScreen() {
           </View>
 
           {/* Filter pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 10 }}>
             {FILTERS.map(({ value, label }) => {
               const active = roleFilter === value;
               return (
@@ -729,6 +729,24 @@ export default function AdminUsersScreen() {
               );
             })}
           </ScrollView>
+
+          {/* Hint bar */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: A_BG, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: A_BORDER }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Ionicons name="arrow-back-outline" size={12} color={Colors.admin} />
+              <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>Glisser → abonnement</Text>
+            </View>
+            <View style={{ width: 1, height: 12, backgroundColor: A_BORDER }} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Ionicons name="arrow-forward-outline" size={12} color={Colors.warning} />
+              <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>Glisser ← ban · suppr.</Text>
+            </View>
+            <View style={{ width: 1, height: 12, backgroundColor: A_BORDER }} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Text style={{ fontSize: 10 }}>⭐</Text>
+              <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>= plan actif</Text>
+            </View>
+          </View>
         </View>
 
         {/* ── List ── */}
