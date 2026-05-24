@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import {
   View, Text, SectionList, Pressable, ScrollView,
-  ActivityIndicator, Alert, RefreshControl, Platform,
+  ActivityIndicator, Alert, RefreshControl,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,8 +10,8 @@ import * as Haptics from "expo-haptics";
 import { adminApi, AdminBooking } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
-
-
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
 
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 type StatusFilter  = "all" | BookingStatus;
@@ -52,6 +52,7 @@ function BookingCard({
   onCancel:  (b: AdminBooking) => void;
 }) {
   const cfg   = STATUS_CFG[booking.status as BookingStatus];
+  const statusColor = cfg?.color ?? Colors.admin;
   const price = typeof booking.price === "number" ? booking.price : parseFloat(String(booking.price ?? "0"));
   const time  = new Date(booking.start_datetime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
@@ -60,34 +61,35 @@ function BookingCard({
 
   return (
     <View style={{
-      backgroundColor: Colors.card,
-      borderRadius: 16,
-      padding: 14,
+      backgroundColor: `${statusColor}07`,
+      borderRadius: 18,
+      padding: 18,
       marginBottom: 10,
       borderWidth: 1,
-      borderColor: Colors.border,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3,
+      borderColor: `${statusColor}18`,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        {/* Icon avatar 52×52 */}
+        {/* Icon avatar 56×56 */}
         <View style={{
-          width: 52, height: 52, borderRadius: 14,
-          backgroundColor: `${cfg ? cfg.color : Colors.admin}15`,
+          width: 56, height: 56, borderRadius: 16,
+          backgroundColor: `${statusColor}15`,
           alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
         }}>
-          <Ionicons name={cfg ? cfg.icon : "calendar-outline"} size={24} color={cfg ? cfg.color : Colors.admin} />
+          <Ionicons name={cfg ? cfg.icon : "calendar-outline"} size={26} color={statusColor} />
         </View>
 
         {/* Info */}
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+            <Text style={{ fontWeight: "800", fontSize: 15, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
               {booking.client_name ?? `#${booking.id}`}
             </Text>
             <StatusBadge status={booking.status} />
           </View>
 
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }} numberOfLines={1}>
+          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }} numberOfLines={1}>
             {[booking.service_name, booking.pro_name].filter(Boolean).join(" · ")}
           </Text>
 
@@ -108,12 +110,12 @@ function BookingCard({
 
       {/* Action buttons */}
       {(canConfirm || canCancel) && (
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border }}>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: `${statusColor}18` }}>
           {canConfirm && (
             <Pressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onConfirm(booking); }}
               style={({ pressed }) => [{
-                flex: 1, height: 40, borderRadius: 12,
+                flex: 1, height: 42, borderRadius: 13,
                 backgroundColor: `${Colors.info}15`, borderWidth: 1, borderColor: `${Colors.info}35`,
                 alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
                 opacity: pressed ? 0.7 : 1,
@@ -127,7 +129,7 @@ function BookingCard({
             <Pressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onCancel(booking); }}
               style={({ pressed }) => [{
-                flex: 1, height: 40, borderRadius: 12,
+                flex: 1, height: 42, borderRadius: 13,
                 backgroundColor: `${Colors.destructive}12`, borderWidth: 1, borderColor: `${Colors.destructive}28`,
                 alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
                 opacity: pressed ? 0.7 : 1,
@@ -203,36 +205,43 @@ export default function AdminBookingsScreen() {
       { text: "Annuler", style: "destructive", onPress: () => cancelMut.mutate(b.id) },
     ]);
 
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      {/* Status filter strip */}
-      <View style={{ paddingTop: insets.top + 10, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-          {FILTERS.map((f) => {
-            const cfg    = f.key !== "all" ? STATUS_CFG[f.key as BookingStatus] : null;
-            const active = statusFilter === f.key;
-            return (
-              <Pressable
-                key={f.key}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setStatusFilter(f.key);
-                }}
-                style={{
-                  paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.background,
-                  borderColor:     active ? (cfg?.color ?? Colors.admin) : Colors.border,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
-                  {f.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+  const listHeader = (
+    <View style={{ paddingBottom: 16 }}>
+      {/* Title */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.admin }} />
+        <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>Réservations</Text>
       </View>
+      {/* Filter pills */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        {FILTERS.map((f) => {
+          const cfg    = f.key !== "all" ? STATUS_CFG[f.key as BookingStatus] : null;
+          const active = statusFilter === f.key;
+          return (
+            <Pressable
+              key={f.key}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setStatusFilter(f.key);
+              }}
+              style={{
+                paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                backgroundColor: active ? (cfg?.color ?? Colors.admin) : A_BG,
+                borderColor:     active ? (cfg?.color ?? Colors.admin) : A_BORDER,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
+                {f.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 
+  return (
+    <View style={{ flex: 1, backgroundColor: A_BG }}>
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={Colors.admin} />
@@ -241,9 +250,10 @@ export default function AdminBookingsScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 90 }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled
+          ListHeaderComponent={listHeader}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -253,23 +263,23 @@ export default function AdminBookingsScreen() {
             />
           }
           renderSectionHeader={({ section }) => (
-            <View style={{ backgroundColor: Colors.background, paddingVertical: 10 }}>
+            <View style={{ backgroundColor: A_BG, paddingVertical: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{ height: 1, flex: 1, backgroundColor: Colors.border }} />
+                <View style={{ height: 1, flex: 1, backgroundColor: A_BORDER }} />
                 <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "capitalize", letterSpacing: 0.8 }}>
                   {section.title}
                 </Text>
-                <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border }}>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER }}>
                   <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground }}>{section.data.length}</Text>
                 </View>
-                <View style={{ height: 1, flex: 1, backgroundColor: Colors.border }} />
+                <View style={{ height: 1, flex: 1, backgroundColor: A_BORDER }} />
               </View>
             </View>
           )}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 80 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                <Ionicons name="calendar-outline" size={32} color={Colors.border} />
+              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                <Ionicons name="calendar-outline" size={32} color={A_BORDER} />
               </View>
               <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucune réservation</Text>
               <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Rien à afficher pour ce filtre.</Text>
