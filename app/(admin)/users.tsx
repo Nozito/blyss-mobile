@@ -414,22 +414,24 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
   onDelete:    () => void;
   onGrant:     () => void;
 }) {
-  const rc      = roleColor(item);
-  const name    = `${item.first_name} ${item.last_name}`;
-  const plan    = getActivePlan(item);
-  const joined  = joinedDate(item);
+  const rc       = roleColor(item);
+  const accentL  = item.is_active ? rc : Colors.destructive;
+  const name     = `${item.first_name} ${item.last_name}`;
+  const plan     = getActivePlan(item);
+  const joined   = joinedDate(item);
+  const stats    = (item as any).stats as AdminUser["stats"] | undefined;
   const swipeRef = useRef<Swipeable>(null);
 
   const renderRightActions = () => (
-    <View style={{ flexDirection: "row", marginBottom: 10, marginLeft: 6, borderRadius: 18, overflow: "hidden", width: 148 }}>
+    <View style={{ flexDirection: "row", marginBottom: 10, marginLeft: 6, borderRadius: 16, overflow: "hidden", width: 148 }}>
       <Pressable onPress={() => { swipeRef.current?.close(); onBan(); }}
         style={{ flex: 1, backgroundColor: Colors.warning, alignItems: "center", justifyContent: "center", gap: 3 }}>
-        <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={20} color="#fff" />
+        <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={19} color="#fff" />
         <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>{item.is_active ? "Bannir" : "Réactiver"}</Text>
       </Pressable>
       <Pressable onPress={() => { swipeRef.current?.close(); onDelete(); }}
         style={{ flex: 1, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", gap: 3 }}>
-        <Ionicons name="trash-outline" size={20} color="#fff" />
+        <Ionicons name="trash-outline" size={19} color="#fff" />
         <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>Suppr.</Text>
       </Pressable>
     </View>
@@ -437,10 +439,10 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
 
   const renderLeftActions = () => (
     <Pressable onPress={() => { swipeRef.current?.close(); onGrant(); }}
-      style={{ width: 84, marginBottom: 10, marginRight: 6, borderRadius: 18, overflow: "hidden" }}>
+      style={{ width: 82, marginBottom: 10, marginRight: 6, borderRadius: 16, overflow: "hidden" }}>
       <LinearGradient colors={["#EA6000", "#F97316"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 3 }}>
-        <Ionicons name="gift-outline" size={20} color="#fff" />
+        <Ionicons name="gift-outline" size={19} color="#fff" />
         <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>Abonnement</Text>
       </LinearGradient>
     </Pressable>
@@ -455,60 +457,98 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
         onPress={onPress}
         onLongPress={onLongPress}
         delayLongPress={380}
-        style={({ pressed }) => [
-          styles.card,
-          {
-            borderLeftWidth: 3,
-            borderLeftColor: item.is_active ? rc : Colors.destructive,
-            shadowColor: item.is_active ? rc : Colors.destructive,
-            shadowOpacity: pressed ? 0.16 : 0.08,
-            flexDirection: "row", alignItems: "center", gap: 12,
-            opacity: pressed ? 0.9 : item.is_active ? 1 : 0.66,
-          },
-        ]}
+        style={({ pressed }) => ({
+          backgroundColor: CARD_BG,
+          borderRadius: 16,
+          marginBottom: 10,
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: BORDER,
+          shadowColor: accentL,
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: pressed ? 0.15 : 0.07,
+          shadowRadius: 10,
+          elevation: 3,
+          opacity: pressed ? 0.91 : item.is_active ? 1 : 0.62,
+        })}
       >
-        {/* Avatar */}
-        <Avatar name={name} size={46} />
+        {/* ── Corps principal ── */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {/* Barre colorée gauche */}
+          <View style={{ width: 3, alignSelf: "stretch", backgroundColor: accentL }} />
 
-        {/* Content */}
-        <View style={{ flex: 1, gap: 3 }}>
-          {/* Row 1: name + role badge */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={{ fontWeight: "800", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
-              {name}
-            </Text>
-            <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: `${rc}18`, borderWidth: 1, borderColor: `${rc}28` }}>
-              <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                {roleName(item)}
-              </Text>
-            </View>
-            {!item.is_active && (
-              <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 7, backgroundColor: `${Colors.destructive}14` }}>
-                <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
-              </View>
-            )}
+          {/* Avatar */}
+          <View style={{ paddingLeft: 13, paddingVertical: 14 }}>
+            <Avatar name={name} size={46} />
           </View>
 
-          {/* Row 2: email */}
-          <Text style={{ fontSize: 11.5, color: Colors.mutedForeground }} numberOfLines={1}>{item.email}</Text>
+          {/* Infos */}
+          <View style={{ flex: 1, paddingLeft: 12, paddingVertical: 14, gap: 3 }}>
+            {/* Ligne 1 : nom + badges */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ fontWeight: "800", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+                {name}
+              </Text>
+              <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: `${rc}18`, borderWidth: 1, borderColor: `${rc}28` }}>
+                <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                  {roleName(item)}
+                </Text>
+              </View>
+              {!item.is_active && (
+                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 7, backgroundColor: `${Colors.destructive}14` }}>
+                  <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
+                </View>
+              )}
+            </View>
 
-          {/* Row 3: plan OR joined date */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 1 }}>
-            {plan ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A" }}>
-                <Text style={{ fontSize: 9 }}>⭐</Text>
-                <Text style={{ fontSize: 9, fontWeight: "800", color: "#92400E" }}>{plan.toUpperCase()}</Text>
-              </View>
-            ) : joined ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Ionicons name="time-outline" size={10} color={Colors.mutedForeground} />
-                <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>Depuis {joined}</Text>
-              </View>
-            ) : null}
+            {/* Ligne 2 : email */}
+            <Text style={{ fontSize: 11.5, color: Colors.mutedForeground, lineHeight: 16 }} numberOfLines={1}>
+              {item.email}
+            </Text>
+
+            {/* Ligne 3 : plan + date (les deux si dispo) */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 1 }}>
+              {plan && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A" }}>
+                  <Text style={{ fontSize: 9 }}>⭐</Text>
+                  <Text style={{ fontSize: 9, fontWeight: "800", color: "#92400E" }}>{plan.toUpperCase()}</Text>
+                </View>
+              )}
+              {joined && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                  <Ionicons name="time-outline" size={10} color={Colors.mutedForeground} />
+                  <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>Depuis {joined}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Chevron */}
+          <View style={{ paddingRight: 14 }}>
+            <Ionicons name="chevron-forward" size={14} color={BORDER} />
           </View>
         </View>
 
-        <Ionicons name="chevron-forward" size={14} color={BORDER} />
+        {/* ── Ligne de métriques (si stats présentes) ── */}
+        {stats && (
+          <>
+            <View style={{ height: 1, backgroundColor: BORDER, marginHorizontal: 14 }} />
+            <View style={{ flexDirection: "row", paddingVertical: 9 }}>
+              {([
+                { icon: "calendar-outline"  as const, value: stats.total_bookings,                           label: "RDV",      color: Colors.info },
+                { icon: "checkmark-outline" as const, value: stats.completed,                                label: "Terminés", color: Colors.success },
+                { icon: "close-outline"     as const, value: stats.cancelled,                                label: "Annulés",  color: Colors.destructive },
+                { icon: "card-outline"      as const, value: `${Number(stats.total_spent ?? 0).toFixed(0)}€`, label: "Dépensé",  color: Colors.admin },
+              ]).map(({ icon, value, label, color: c }, idx, arr) => (
+                <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: idx < arr.length - 1 ? 1 : 0, borderRightColor: BORDER }}>
+                  <Ionicons name={icon} size={11} color={c} />
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: c, marginTop: 2 }}>{value}</Text>
+                  <Text style={{ fontSize: 9, color: Colors.mutedForeground, marginTop: 1 }}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </Pressable>
     </Swipeable>
   );
