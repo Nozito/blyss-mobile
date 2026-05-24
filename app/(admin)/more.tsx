@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import {
-  View, Text, ScrollView, Pressable, Animated, Platform,
+  View, Text, ScrollView, Pressable, Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,18 +9,17 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { SymbolView } from "expo-symbols";
 import { adminApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
 const A_BG     = "#F4F4F5";
 const A_BORDER = "#E4E4E7";
 
-const GRID_ITEMS = [
-  { route: "/(admin)/analytics",     icon: "analytics-outline"     as const, symbol: "chart.bar.xaxis" as const, label: "Analytics", description: "Métriques & revenus",    color: Colors.pro },
-  { route: "/(admin)/logs",          icon: "pulse-outline"         as const, symbol: "waveform"        as const, label: "Logs",      description: "Événements système",     color: Colors.info },
-  { route: "/(admin)/notifications", icon: "notifications-outline" as const, symbol: "bell"            as const, label: "Notifs",    description: "Push ciblées",           color: Colors.success },
-  { route: "/(admin)/coupons",       icon: "pricetag-outline"      as const, symbol: "tag"             as const, label: "Coupons",   description: "Codes promo",            color: Colors.primary },
+const TOOLS = [
+  { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  icon: "bar-chart"     as const, color: Colors.pro,     route: "/(admin)/analytics" },
+  { key: "logs",      label: "Logs",      sub: "Événements système",   icon: "pulse"         as const, color: Colors.info,    route: "/(admin)/logs" },
+  { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         icon: "notifications" as const, color: Colors.success, route: "/(admin)/notifications" },
+  { key: "coupons",   label: "Coupons",   sub: "Codes promo",          icon: "pricetag"      as const, color: Colors.warning, route: "/(admin)/coupons" },
 ];
 
 const INFO_ROWS = [
@@ -28,52 +27,6 @@ const INFO_ROWS = [
   { label: "Plateforme",  value: "React Native / Expo" },
   { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—" },
 ] as const;
-
-type GridItem = { route: string; icon: React.ComponentProps<typeof Ionicons>["name"]; symbol: string; label: string; description: string; color: string };
-
-function ToolRow({ item, index, isLast }: { item: GridItem; index: number; isLast?: boolean }) {
-  const router  = useRouter();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.delay(index * 70),
-      Animated.parallel([
-        Animated.timing(opacity,    { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.spring(translateY, { toValue: 0, damping: 18, stiffness: 200, useNativeDriver: true }),
-      ]),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          router.push(item.route as any);
-        }}
-        style={({ pressed }) => [{
-          paddingHorizontal: 16, paddingVertical: 14,
-          flexDirection: "row", alignItems: "center", gap: 14,
-          borderBottomWidth: isLast ? 0 : 1, borderBottomColor: A_BORDER,
-          opacity: pressed ? 0.85 : 1,
-        }]}
-      >
-        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${item.color}14`, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {Platform.OS === "ios"
-            ? <SymbolView name={item.symbol} size={20} tintColor={item.color} />
-            : <Ionicons name={item.icon} size={20} color={item.color} />}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>{item.label}</Text>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1 }}>{item.description}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
-      </Pressable>
-    </Animated.View>
-  );
-}
 
 export default function AdminMoreScreen() {
   const insets = useSafeAreaInsets();
@@ -168,11 +121,60 @@ export default function AdminMoreScreen() {
         <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
           Outils admin
         </Text>
-        <View style={{ backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: A_BORDER, overflow: "hidden", marginBottom: 20 }}>
-          {GRID_ITEMS.map((item, i) => (
-            <ToolRow key={item.route} item={item} index={i} isLast={i === GRID_ITEMS.length - 1} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+          {TOOLS.map((tool) => (
+            <Pressable
+              key={tool.key}
+              onPress={() => router.push(tool.route as any)}
+              style={({ pressed }) => [{
+                width: "47%",
+                backgroundColor: Colors.card,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: A_BORDER,
+                padding: 18,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                elevation: 2,
+                opacity: pressed ? 0.85 : 1,
+              }]}
+            >
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${tool.color}14`, alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                <Ionicons name={tool.icon} size={22} color={tool.color} />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground, marginBottom: 3 }}>{tool.label}</Text>
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{tool.sub}</Text>
+            </Pressable>
           ))}
         </View>
+
+        {/* ── Logout ── */}
+        <Pressable
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            logout();
+          }}
+          style={({ pressed }) => [{
+            backgroundColor: `${Colors.destructive}0A`,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: `${Colors.destructive}25`,
+            paddingHorizontal: 16,
+            paddingVertical: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+            marginBottom: 28,
+            opacity: pressed ? 0.75 : 1,
+          }]}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}14`, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
+          </View>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.destructive, flex: 1 }}>Se déconnecter</Text>
+        </Pressable>
 
         {/* ── App info ── */}
         <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
@@ -186,32 +188,6 @@ export default function AdminMoreScreen() {
             </View>
           ))}
         </View>
-
-        {/* ── Logout ── */}
-        <Pressable
-          onPress={() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-            logout();
-          }}
-          style={({ pressed }) => [{
-            marginTop: 8,
-            backgroundColor: `${Colors.destructive}0A`,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: `${Colors.destructive}25`,
-            paddingHorizontal: 16,
-            paddingVertical: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 14,
-            opacity: pressed ? 0.75 : 1,
-          }]}
-        >
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}14`, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
-          </View>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.destructive, flex: 1 }}>Se déconnecter</Text>
-        </Pressable>
       </View>
     </ScrollView>
   );
