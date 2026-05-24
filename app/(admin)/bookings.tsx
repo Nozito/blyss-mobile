@@ -206,13 +206,7 @@ export default function AdminBookingsScreen() {
     ]);
 
   const listHeader = (
-    <View style={{ paddingBottom: 16 }}>
-      {/* Title */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.admin }} />
-        <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>Réservations</Text>
-      </View>
-      {/* Filter pills */}
+    <View style={{ backgroundColor: A_BG, paddingHorizontal: 16, paddingTop: insets.top + 14, paddingBottom: 12 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {FILTERS.map((f) => {
           const cfg    = f.key !== "all" ? STATUS_CFG[f.key as BookingStatus] : null;
@@ -250,7 +244,7 @@ export default function AdminBookingsScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 90 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 90 }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled
           ListHeaderComponent={listHeader}
