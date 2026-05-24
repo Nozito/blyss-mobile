@@ -424,10 +424,10 @@ function UserCard({
         style={({ pressed }) => [{
           backgroundColor: Colors.card,
           borderRadius: 16,
-          marginBottom: 8,
+          marginBottom: 10,
           borderWidth: 1,
           borderColor: A_BORDER,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
           paddingHorizontal: 14, paddingVertical: 13,
           flexDirection: "row", alignItems: "center", gap: 12,
           opacity: pressed ? 0.9 : 1,
@@ -455,15 +455,24 @@ function UserCard({
             )}
           </View>
 
-          {/* Ligne 2 : email + date */}
+          {/* Ligne 2 : email */}
           <Text style={{ fontSize: 11, color: Colors.mutedForeground }} numberOfLines={1}>
             {item.email}
-            {(item as any).created_at
-              ? ` · depuis ${new Date((item as any).created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}`
-              : ""}
           </Text>
         </View>
 
+        {/* Ban/Réactiver button */}
+        <Pressable
+          onPress={onBan}
+          style={{ width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center",
+            backgroundColor: item.is_active ? `${Colors.warning}14` : `${Colors.success}14` }}
+        >
+          <Ionicons
+            name={item.is_active ? "ban-outline" : "checkmark-circle-outline"}
+            size={16}
+            color={item.is_active ? Colors.warning : Colors.success}
+          />
+        </Pressable>
         {/* Chevron */}
         <Ionicons name="chevron-forward" size={13} color={Colors.mutedForeground} />
       </Pressable>
@@ -651,7 +660,7 @@ export default function AdminUsersScreen() {
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
             estimatedItemSize={88}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: insets.bottom + 90 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
             ListEmptyComponent={
