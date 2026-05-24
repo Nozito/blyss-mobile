@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from "react";
 import {
-  View, Text, FlatList, Pressable, TextInput, Alert,
+  View, Text, Pressable, TextInput, Alert,
   ActivityIndicator, Modal, ScrollView, RefreshControl,
+  ActionSheetIOS, Platform,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -75,7 +77,8 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Plan</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
             {PLAN_OPTS.map((p) => (
-              <Pressable key={p} onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
+              <Pressable key={p}
+                onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 14, borderWidth: 1.5, alignItems: "center",
                   borderColor: plan === p ? Colors.admin : Colors.border, backgroundColor: plan === p ? `${Colors.admin}15` : Colors.muted }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: plan === p ? Colors.admin : Colors.mutedForeground }}>{PLAN_LABELS[p]}</Text>
@@ -86,7 +89,8 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Durée</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 24 }}>
             {MONTHS_OPTS.map((m) => (
-              <Pressable key={m} onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
+              <Pressable key={m}
+                onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 14, borderWidth: 1.5, alignItems: "center",
                   borderColor: months === m ? Colors.admin : Colors.border, backgroundColor: months === m ? `${Colors.admin}15` : Colors.muted }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: months === m ? Colors.admin : Colors.mutedForeground }}>{m}m</Text>
@@ -154,7 +158,6 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
           contentContainerStyle={{ padding: 24 }}
           onStartShouldSetResponder={() => true}
         >
-          {/* Header */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 }}>
             <Avatar name={`${full.first_name} ${full.last_name}`} size={54} />
             <View style={{ flex: 1 }}>
@@ -176,7 +179,6 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
             <Pressable onPress={onClose}><Ionicons name="close" size={22} color={Colors.mutedForeground} /></Pressable>
           </View>
 
-          {/* Stats row */}
           {stats && (
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
               {[
@@ -193,7 +195,6 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
             </View>
           )}
 
-          {/* Subscription history */}
           {(full.subscription_history ?? []).length > 0 && (
             <View style={{ backgroundColor: Colors.muted, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: Colors.border, marginBottom: 20 }}>
               <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground, marginBottom: 10 }}>Historique abonnements</Text>
@@ -212,7 +213,6 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
             </View>
           )}
 
-          {/* Actions */}
           <View style={{ gap: 10, paddingBottom: 20 }}>
             <Pressable onPress={() => { onClose(); onGrant(); }}
               style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 16, backgroundColor: `${Colors.success}12`, borderWidth: 1, borderColor: `${Colors.success}30` }}>
@@ -249,12 +249,21 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
 }
 
 // ── User row ──────────────────────────────────────────────────────────────────
-function UserRow({ item, onPress, onBan }: { item: AdminUser; onPress: () => void; onBan: () => void }) {
+function UserRow({
+  item, onPress, onLongPress, onBan,
+}: {
+  item: AdminUser;
+  onPress: () => void;
+  onLongPress: () => void;
+  onBan: () => void;
+}) {
   const rc = roleColor(item);
 
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [{
         flexDirection: "row", alignItems: "center", gap: 12,
         backgroundColor: Colors.card,
@@ -326,8 +335,63 @@ export default function AdminUsersScreen() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => adminApi.deleteUser(id),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
   const users = (data?.data as AdminUser[] | undefined) ?? [];
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
+
+  // iOS native context menu — long press on a user row
+  const handleLongPress = useCallback((item: AdminUser) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {});
+
+    if (Platform.OS === "ios") { // iOS only
+      const options = [
+        "Annuler",
+        "👁  Voir le profil",
+        "🎁  Offrir un abonnement",
+        item.is_active ? "⚠️  Bannir" : "✅  Réactiver",
+        "🗑  Supprimer",
+      ];
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: `${item.first_name} ${item.last_name}`,
+          message: item.email,
+          options,
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: item.is_active ? [3, 4] : [4],
+        },
+        (idx) => {
+          if (idx === 1) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setSelectedUser(item);
+          } else if (idx === 2) {
+            setGrantTarget(item);
+          } else if (idx === 3) {
+            const action = item.is_active ? "Bannir" : "Réactiver";
+            Alert.alert(action, `${action} ${item.first_name} ?`, [
+              { text: "Annuler", style: "cancel" },
+              { text: action, style: item.is_active ? "destructive" : "default",
+                onPress: () => banMut.mutate(item.id) },
+            ]);
+          } else if (idx === 4) {
+            Alert.alert("Supprimer", `Supprimer ${item.first_name} définitivement ?`, [
+              { text: "Annuler", style: "cancel" },
+              { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(item.id) },
+            ]);
+          }
+        }
+      );
+    } else {
+      // Android: open detail sheet directly
+      setSelectedUser(item);
+    }
+  }, [banMut, deleteMut]);
 
   const FILTERS: { value: RoleFilter; label: string }[] = [
     { value: "all",    label: "Tous" },
@@ -343,15 +407,17 @@ export default function AdminUsersScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         setSelectedUser(item);
       }}
+      onLongPress={() => handleLongPress(item)}
       onBan={() => {
         const action = item.is_active ? "Bannir" : "Réactiver";
         Alert.alert(action, `${action} ${item.first_name} ?`, [
           { text: "Annuler", style: "cancel" },
-          { text: action, style: item.is_active ? "destructive" : "default", onPress: () => banMut.mutate(item.id) },
+          { text: action, style: item.is_active ? "destructive" : "default",
+            onPress: () => banMut.mutate(item.id) },
         ]);
       }}
     />
-  ), [banMut]);
+  ), [banMut, handleLongPress]);
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -360,14 +426,20 @@ export default function AdminUsersScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.muted, borderRadius: 16, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border, marginBottom: 12 }}>
           <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
           <TextInput
-            value={search} onChangeText={setSearch}
+            value={search}
+            onChangeText={setSearch}
             placeholder="Nom, email…"
             placeholderTextColor={Colors.mutedForeground}
             style={{ flex: 1, fontSize: 14, color: Colors.foreground }}
             autoCorrect={false}
+            spellCheck={false}
+            returnKeyType="search"
+            clearButtonMode={Platform.OS === "ios" ? "while-editing" : "never"} // iOS only
           />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={16} color={Colors.mutedForeground} /></Pressable>
+          {Platform.OS !== "ios" && search.length > 0 && (
+            <Pressable onPress={() => setSearch("")}>
+              <Ionicons name="close-circle" size={16} color={Colors.mutedForeground} />
+            </Pressable>
           )}
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -375,9 +447,9 @@ export default function AdminUsersScreen() {
             <Pressable key={value}
               onPress={() => { setRoleFilter(value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
               style={{ paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1,
-                backgroundColor: roleFilter === value ? Colors.admin : Colors.muted,
-                borderColor: roleFilter === value ? Colors.admin : Colors.border }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: roleFilter === value ? Colors.white : Colors.mutedForeground }}>{label}</Text>
+                backgroundColor: roleFilter === value ? `${Colors.admin}15` : Colors.muted,
+                borderColor: roleFilter === value ? `${Colors.admin}40` : Colors.border }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: roleFilter === value ? Colors.admin : Colors.mutedForeground }}>{label}</Text>
             </Pressable>
           ))}
           <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.muted, borderWidth: 1, borderColor: Colors.border }}>
@@ -391,10 +463,11 @@ export default function AdminUsersScreen() {
           <ActivityIndicator size="large" color={Colors.admin} />
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={users}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
+          estimatedItemSize={70}
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}

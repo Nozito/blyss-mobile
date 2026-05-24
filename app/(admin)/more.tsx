@@ -1,20 +1,21 @@
 import React, { useRef, useEffect } from "react";
 import {
-  View, Text, ScrollView, Pressable, Animated,
+  View, Text, ScrollView, Pressable, Animated, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
+import { SymbolView } from "expo-symbols";
 import { Colors } from "@/constants/colors";
 
 const GRID_ITEMS = [
-  { route: "/(admin)/analytics",     icon: "analytics-outline"     as const, label: "Analytics", description: "Métriques & revenus",    color: Colors.pro },
-  { route: "/(admin)/logs",          icon: "pulse-outline"         as const, label: "Logs",      description: "Événements système",     color: Colors.info },
-  { route: "/(admin)/notifications", icon: "notifications-outline" as const, label: "Notifs",    description: "Push ciblées",           color: Colors.success },
-  { route: "/(admin)/coupons",       icon: "pricetag-outline"      as const, label: "Coupons",   description: "Codes promo",            color: Colors.admin },
-] as const;
+  { route: "/(admin)/analytics",     icon: "analytics-outline"     as const, symbol: "chart.bar.xaxis" as const, label: "Analytics", description: "Métriques & revenus",    color: Colors.pro },
+  { route: "/(admin)/logs",          icon: "pulse-outline"         as const, symbol: "waveform"        as const, label: "Logs",      description: "Événements système",     color: Colors.info },
+  { route: "/(admin)/notifications", icon: "notifications-outline" as const, symbol: "bell"            as const, label: "Notifs",    description: "Push ciblées",           color: Colors.success },
+  { route: "/(admin)/coupons",       icon: "pricetag-outline"      as const, symbol: "tag"             as const, label: "Coupons",   description: "Codes promo",            color: Colors.admin },
+];
 
 const INFO_ROWS = [
   { label: "Application", value: "Blyss Admin" },
@@ -22,7 +23,8 @@ const INFO_ROWS = [
   { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—" },
 ] as const;
 
-function GridCard({ item, index }: { item: typeof GRID_ITEMS[number]; index: number }) {
+type GridItem = { route: string; icon: React.ComponentProps<typeof Ionicons>["name"]; symbol: string; label: string; description: string; color: string };
+function GridCard({ item, index }: { item: GridItem; index: number }) {
   const router  = useRouter();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale   = useRef(new Animated.Value(0.88)).current;
@@ -52,7 +54,9 @@ function GridCard({ item, index }: { item: typeof GRID_ITEMS[number]; index: num
         }]}
       >
         <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${item.color}18`, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={item.icon} size={24} color={item.color} />
+          {Platform.OS === "ios"
+            ? <SymbolView name={item.symbol} size={24} tintColor={item.color} />
+            : <Ionicons name={item.icon} size={24} color={item.color} />}
         </View>
         <View>
           <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground, marginBottom: 3 }}>{item.label}</Text>

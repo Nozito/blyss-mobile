@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
-  Animated, Easing,
+  Animated, Easing, Platform,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Svg, { Polyline, Polygon, Defs, LinearGradient as SvgGrad, Stop } from "react-native-svg";
 import * as Haptics from "expo-haptics";
+import { SymbolView } from "expo-symbols";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/colors";
@@ -138,10 +139,10 @@ function KPICard({
 
 // ── Quick links ───────────────────────────────────────────────────────────────
 const QUICK_LINKS = [
-  { icon: "analytics-outline"     as const, label: "Analytics", route: "/(admin)/analytics",     color: Colors.pro },
-  { icon: "notifications-outline" as const, label: "Push",      route: "/(admin)/notifications", color: Colors.info },
-  { icon: "pricetag-outline"      as const, label: "Coupons",   route: "/(admin)/coupons",       color: Colors.success },
-  { icon: "pulse-outline"         as const, label: "Logs",      route: "/(admin)/logs",          color: Colors.admin },
+  { icon: "analytics-outline"     as const, symbol: "chart.bar.xaxis" as const, label: "Analytics", route: "/(admin)/analytics",     color: Colors.pro },
+  { icon: "notifications-outline" as const, symbol: "bell"            as const, label: "Push",      route: "/(admin)/notifications", color: Colors.info },
+  { icon: "pricetag-outline"      as const, symbol: "tag"             as const, label: "Coupons",   route: "/(admin)/coupons",       color: Colors.success },
+  { icon: "pulse-outline"         as const, symbol: "waveform"        as const, label: "Logs",      route: "/(admin)/logs",          color: Colors.admin },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -388,7 +389,9 @@ export default function AdminDashboard() {
             }]}
           >
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${item.color}14`, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name={item.icon} size={19} color={item.color} />
+              {Platform.OS === "ios"
+                ? <SymbolView name={item.symbol} size={19} tintColor={item.color} />
+                : <Ionicons name={item.icon} size={19} color={item.color} />}
             </View>
             <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.foreground }}>{item.label}</Text>
           </Pressable>

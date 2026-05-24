@@ -7,6 +7,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
@@ -69,6 +71,7 @@ function TxCard({
   }, []);
 
   const cfg = STATUS_CFG[tx.status];
+  const isSucceeded = tx.status === "succeeded";
 
   return (
     <Animated.View style={{
@@ -77,7 +80,6 @@ function TxCard({
       shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1,
       opacity, transform: [{ translateY }],
     }}>
-      {/* Main row */}
       <View style={{ flexDirection: "row", alignItems: "center", padding: 16 }}>
         <View style={{ flex: 1, marginRight: 12 }}>
           <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>{tx.client_name}</Text>
@@ -87,7 +89,7 @@ function TxCard({
           </Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 8 }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.8 }}>
+          <Text style={{ fontSize: 26, fontWeight: "900", color: isSucceeded ? Colors.success : Colors.foreground, letterSpacing: -0.8 }}>
             {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
           </Text>
           {cfg ? (
@@ -99,7 +101,6 @@ function TxCard({
         </View>
       </View>
 
-      {/* Footer row */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, gap: 16 }}>
         <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
           Frais : {tx.fee != null ? `${Number(tx.fee).toFixed(2)} €` : "—"}
@@ -107,16 +108,16 @@ function TxCard({
         <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
           Net : {tx.net_amount != null ? `${Number(tx.net_amount).toFixed(2)} €` : "—"}
         </Text>
-        {tx.status === "succeeded" && (
+        {isSucceeded && (
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               onRefund(tx);
             }}
-            style={{ marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: `${Colors.info}12`, borderWidth: 1, borderColor: `${Colors.info}30` }}
+            style={{ marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: `${Colors.destructive}10`, borderWidth: 1, borderColor: `${Colors.destructive}28` }}
           >
-            <Ionicons name="refresh-outline" size={12} color={Colors.info} />
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.info }}>Rembourser</Text>
+            <Ionicons name="refresh-outline" size={12} color={Colors.destructive} />
+            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.destructive }}>Rembourser</Text>
           </Pressable>
         )}
       </View>
@@ -130,6 +131,7 @@ export default function AdminPaymentsScreen() {
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<TxFilter>("all");
   const [refreshing, setRefreshing]     = useState(false);
+  const [exporting, setExporting]       = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-payments"],
@@ -169,11 +171,11 @@ export default function AdminPaymentsScreen() {
   });
 
   const kpis = [
-    { label: "CA total",     value: `${succeeded.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.admin },
-    { label: "CA ce mois",   value: `${thisMonth.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.pro },
-    { label: "Transactions",  value: String(transactions.length), color: Colors.info },
-    { label: "En attente",   value: String(transactions.filter((t) => t.status === "pending" || t.status === "processing").length), color: Colors.warning },
-    { label: "Net total",    value: `${succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.success },
+    { label: "CA total",    value: `${succeeded.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.admin },
+    { label: "CA ce mois",  value: `${thisMonth.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.pro },
+    { label: "Transactions", value: String(transactions.length), color: Colors.info },
+    { label: "En attente",  value: String(transactions.filter((t) => t.status === "pending" || t.status === "processing").length), color: Colors.warning },
+    { label: "Net total",   value: `${succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`, color: Colors.success },
   ];
 
   const confirmRefund = (tx: AdminPayment) =>
@@ -185,6 +187,57 @@ export default function AdminPaymentsScreen() {
         { text: "Rembourser", style: "destructive", onPress: () => refundMut.mutate(tx.id) },
       ],
     );
+
+  // Native PDF export — expo-print + expo-sharing
+  const handleExportPDF = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setExporting(true);
+    try {
+      const monthLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      const total = thisMonth.reduce((s, t) => s + Number(t.amount), 0).toFixed(2);
+
+      const rows = thisMonth.map((tx) => `
+        <tr>
+          <td>${tx.client_name}</td>
+          <td>${tx.pro_name}</td>
+          <td>${new Date(tx.created_at).toLocaleDateString("fr-FR")}</td>
+          <td style="text-align:right;font-weight:700;color:#22C55E">${Number(tx.amount).toFixed(2)} €</td>
+          <td>${tx.status}</td>
+        </tr>
+      `).join("");
+
+      const html = `
+        <!DOCTYPE html><html><head><meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, Arial, sans-serif; padding: 32px; color: #09090B; }
+          h1 { color: #F97316; font-size: 24px; margin-bottom: 4px; }
+          .sub { color: #6B7280; font-size: 13px; margin-bottom: 24px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          thead { background: #F7F3EF; }
+          th { padding: 10px 8px; text-align: left; font-weight: 700; color: #6B7280; text-transform: uppercase; font-size: 10px; letter-spacing: 0.8px; }
+          td { padding: 10px 8px; border-bottom: 1px solid #EDE7E0; }
+          .total { margin-top: 20px; text-align: right; font-size: 15px; font-weight: 700; color: #F97316; }
+          .footer { margin-top: 40px; font-size: 10px; color: #9CA3AF; text-align: center; }
+        </style></head><body>
+        <h1>Blyss Admin — Transactions</h1>
+        <p class="sub">${monthLabel} · ${thisMonth.length} transactions</p>
+        <table>
+          <thead><tr><th>Client</th><th>Pro</th><th>Date</th><th style="text-align:right">Montant</th><th>Statut</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="total">Total : ${total} €</p>
+        <p class="footer">Généré par Blyss Admin · ${new Date().toLocaleString("fr-FR")}</p>
+        </body></html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      await Sharing.shareAsync(uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Exporter les transactions" });
+    } catch {
+      Alert.alert("Erreur", "Impossible de générer le PDF.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -201,18 +254,43 @@ export default function AdminPaymentsScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} colors={[Colors.admin]} />}
       >
-        {/* KPI strip */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 }}>
-          {kpis.map((k, i) => (
-            <KpiCard key={k.label} label={k.label} value={k.value} color={k.color} index={i} />
-          ))}
-        </ScrollView>
+        {/* KPI strip + export button */}
+        <View style={{ flexDirection: "row", alignItems: "center", paddingRight: 16 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 }}>
+            {kpis.map((k, i) => (
+              <KpiCard key={k.label} label={k.label} value={k.value} color={k.color} index={i} />
+            ))}
+          </ScrollView>
+          <Pressable
+            onPress={handleExportPDF}
+            disabled={exporting || thisMonth.length === 0}
+            style={({ pressed }) => [{
+              width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.card,
+              borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center",
+              opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
+              shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+            }]}
+          >
+            {exporting
+              ? <ActivityIndicator size="small" color={Colors.admin} />
+              : <Ionicons name="share-outline" size={18} color={Colors.admin} />}
+          </Pressable>
+        </View>
 
         {/* Search */}
         <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border }}>
             <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
-            <TextInput value={search} onChangeText={setSearch} placeholder="Rechercher client ou pro…" placeholderTextColor={Colors.mutedForeground} style={{ flex: 1, fontSize: 13, color: Colors.foreground }} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Rechercher client ou pro…"
+              placeholderTextColor={Colors.mutedForeground}
+              style={{ flex: 1, fontSize: 13, color: Colors.foreground }}
+              autoCorrect={false}
+              spellCheck={false}
+              returnKeyType="search"
+            />
             {search.length > 0 && (
               <Pressable onPress={() => setSearch("")}>
                 <Ionicons name="close-circle" size={16} color={Colors.mutedForeground} />
@@ -230,7 +308,9 @@ export default function AdminPaymentsScreen() {
               <Pressable
                 key={f}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.muted, borderColor: active ? (cfg?.color ?? Colors.admin) : Colors.border }}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.muted,
+                  borderColor: active ? (cfg?.color ?? Colors.admin) : Colors.border }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                   {f === "all" ? "Tous" : cfg?.label}

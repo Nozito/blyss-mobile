@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, Pressable, TextInput,
   ActivityIndicator, Alert, Modal, Switch, Share, RefreshControl,
-  Animated,
+  Animated, ActionSheetIOS, Platform,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -41,12 +41,12 @@ function couponStatus(c: AdminCoupon): CouponStatus {
 // ── Create bottom-sheet modal ─────────────────────────────────────────────────
 function CreateModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
-  const [code, setCode]                 = useState("");
-  const [discountType, setDiscountType] = useState<DiscountType>("percent");
+  const [code, setCode]                   = useState("");
+  const [discountType, setDiscountType]   = useState<DiscountType>("percent");
   const [discountValue, setDiscountValue] = useState("");
-  const [plans, setPlans]               = useState<string[]>(["start", "serenite", "signature"]);
-  const [expiresAt, setExpiresAt]       = useState("");
-  const [maxUses, setMaxUses]           = useState("");
+  const [plans, setPlans]                 = useState<string[]>(["start", "serenite", "signature"]);
+  const [expiresAt, setExpiresAt]         = useState("");
+  const [maxUses, setMaxUses]             = useState("");
 
   const translateY     = useRef(new Animated.Value(600)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -109,23 +109,29 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               </Pressable>
             </View>
 
-            {/* Code */}
             <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>Code</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <TextInput value={code} onChangeText={(v) => setCode(v.toUpperCase())} placeholder="EX: BLYSS20" placeholderTextColor={Colors.mutedForeground} autoCapitalize="characters"
-                style={{ flex: 1, backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 17, fontWeight: "900", color: Colors.admin, letterSpacing: 2, borderWidth: 1, borderColor: Colors.border }} />
+              <TextInput
+                value={code}
+                onChangeText={(v) => setCode(v.toUpperCase())}
+                placeholder="EX: BLYSS20"
+                placeholderTextColor={Colors.mutedForeground}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                style={{ flex: 1, backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 17, fontWeight: "900", color: Colors.admin, letterSpacing: 2, borderWidth: 1, borderColor: Colors.border, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}
+              />
               <Pressable onPress={generate} style={{ height: 48, paddingHorizontal: 14, borderRadius: 14, backgroundColor: `${Colors.admin}15`, borderWidth: 1, borderColor: `${Colors.admin}35`, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="shuffle-outline" size={20} color={Colors.admin} />
               </Pressable>
             </View>
 
-            {/* Type */}
             <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>Type de réduction</Text>
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 20, backgroundColor: Colors.muted, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: Colors.border }}>
               {(["percent", "fixed"] as DiscountType[]).map((t) => {
                 const active = discountType === t;
                 return (
-                  <Pressable key={t} onPress={() => { setDiscountType(t); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
+                  <Pressable key={t}
+                    onPress={() => { setDiscountType(t); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                     style={{ flex: 1, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: active ? Colors.admin : "transparent" }}>
                     <Text style={{ fontSize: 13, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                       {t === "percent" ? "Pourcentage %" : "Montant fixe €"}
@@ -135,20 +141,25 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               })}
             </View>
 
-            {/* Value */}
             <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
               Valeur ({discountType === "percent" ? "%" : "€"})
             </Text>
-            <TextInput value={discountValue} onChangeText={setDiscountValue} placeholder={discountType === "percent" ? "20" : "5.00"} placeholderTextColor={Colors.mutedForeground} keyboardType="decimal-pad"
-              style={{ backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 20, fontWeight: "900", color: Colors.foreground, borderWidth: 1, borderColor: Colors.border, marginBottom: 20 }} />
+            <TextInput
+              value={discountValue}
+              onChangeText={setDiscountValue}
+              placeholder={discountType === "percent" ? "20" : "5.00"}
+              placeholderTextColor={Colors.mutedForeground}
+              keyboardType="decimal-pad"
+              style={{ backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 20, fontWeight: "900", color: Colors.foreground, borderWidth: 1, borderColor: Colors.border, marginBottom: 20 }}
+            />
 
-            {/* Plans */}
             <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>Plans concernés</Text>
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
               {PLAN_OPTS.map((p) => {
                 const selected = plans.includes(p);
                 return (
-                  <Pressable key={p} onPress={() => { togglePlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
+                  <Pressable key={p}
+                    onPress={() => { togglePlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                     style={{ flex: 1, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, alignItems: "center", borderColor: selected ? Colors.admin : Colors.border, backgroundColor: selected ? `${Colors.admin}15` : Colors.muted }}>
                     <Text style={{ fontSize: 12, fontWeight: "700", color: selected ? Colors.admin : Colors.mutedForeground }}>{PLAN_LABELS[p]}</Text>
                   </Pressable>
@@ -156,19 +167,28 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               })}
             </View>
 
-            {/* Expiry */}
             <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
               Date expiration (YYYY-MM-DD, optionnel)
             </Text>
-            <TextInput value={expiresAt} onChangeText={setExpiresAt} placeholder="2025-12-31" placeholderTextColor={Colors.mutedForeground}
-              style={{ backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 14, color: Colors.foreground, borderWidth: 1, borderColor: Colors.border, marginBottom: 20 }} />
+            <TextInput
+              value={expiresAt}
+              onChangeText={setExpiresAt}
+              placeholder="2025-12-31"
+              placeholderTextColor={Colors.mutedForeground}
+              style={{ backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 14, color: Colors.foreground, borderWidth: 1, borderColor: Colors.border, marginBottom: 20 }}
+            />
 
-            {/* Max uses */}
             <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
               Utilisations max (optionnel)
             </Text>
-            <TextInput value={maxUses} onChangeText={setMaxUses} placeholder="100" placeholderTextColor={Colors.mutedForeground} keyboardType="number-pad"
-              style={{ backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 14, color: Colors.foreground, borderWidth: 1, borderColor: Colors.border, marginBottom: 28 }} />
+            <TextInput
+              value={maxUses}
+              onChangeText={setMaxUses}
+              placeholder="100"
+              placeholderTextColor={Colors.mutedForeground}
+              keyboardType="number-pad"
+              style={{ backgroundColor: Colors.muted, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 14, color: Colors.foreground, borderWidth: 1, borderColor: Colors.border, marginBottom: 28 }}
+            />
 
             <Pressable
               onPress={() => { if (isValid) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); createMut.mutate(); } }}
@@ -188,13 +208,14 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 
 // ── Coupon card ───────────────────────────────────────────────────────────────
 function CouponCard({
-  coupon, index, onToggle, onDelete, onShare,
+  coupon, index, onToggle, onDelete, onShare, onLongPress,
 }: {
   coupon: AdminCoupon & { applicable_plans: string[] };
   index: number;
   onToggle: (id: number, active: boolean) => void;
   onDelete: (c: AdminCoupon) => void;
   onShare:  (code: string) => void;
+  onLongPress: (c: AdminCoupon) => void;
 }) {
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
@@ -222,12 +243,19 @@ function CouponCard({
       shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
       opacity, transform: [{ translateY }],
     }}>
-      <View style={{ padding: 18 }}>
+      <Pressable
+        onLongPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {});
+          onLongPress(coupon);
+        }}
+        delayLongPress={350}
+        style={{ padding: 18 }}
+      >
         {/* Top row: code + toggle */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onShare(coupon.code); }}
             style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text style={{ fontSize: 20, fontWeight: "900", color: Colors.admin, letterSpacing: 2 }}>{coupon.code}</Text>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: Colors.admin, letterSpacing: 2, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>{coupon.code}</Text>
             <Ionicons name="copy-outline" size={14} color={Colors.mutedForeground} />
           </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -237,8 +265,8 @@ function CouponCard({
             <Switch
               value={coupon.is_active}
               onValueChange={(v) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onToggle(coupon.id, v); }}
-              trackColor={{ false: Colors.border, true: `${Colors.admin}80` }}
-              thumbColor={coupon.is_active ? Colors.admin : Colors.mutedForeground}
+              trackColor={{ false: Colors.border, true: Colors.admin }}
+              thumbColor={Colors.white}
               ios_backgroundColor={Colors.border}
             />
           </View>
@@ -284,12 +312,13 @@ function CouponCard({
               <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Pas d'expiration</Text>
             )}
           </View>
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onDelete(coupon); }}
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onDelete(coupon); }}
             style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.destructive}12`, borderWidth: 1, borderColor: `${Colors.destructive}28`, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
           </Pressable>
         </View>
-      </View>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -339,6 +368,26 @@ export default function AdminCouponsScreen() {
       { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(c.id) },
     ]);
 
+  // iOS native context menu — long press on coupon card
+  const handleCouponLongPress = useCallback((coupon: AdminCoupon) => {
+    if (Platform.OS === "ios") { // iOS only
+      const isActive = coupon.is_active;
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: coupon.code,
+          options: ["Annuler", "📋  Copier le code", isActive ? "⛔  Désactiver" : "✅  Activer", "🗑  Supprimer"],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: [3],
+        },
+        async (idx) => {
+          if (idx === 1) { await Share.share({ message: coupon.code }); }
+          else if (idx === 2) { toggleMut.mutate({ id: coupon.id, active: !isActive }); }
+          else if (idx === 3) { handleDelete(coupon); }
+        }
+      );
+    }
+  }, [toggleMut]);
+
   const STATUS_FILTERS = [
     { key: "all"      as const, label: "Tous",       color: Colors.admin },
     { key: "active"   as const, label: "Actifs",     color: Colors.success },
@@ -356,7 +405,8 @@ export default function AdminCouponsScreen() {
             return (
               <Pressable key={f.key}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f.key); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, backgroundColor: active ? f.color : Colors.muted, borderColor: active ? f.color : Colors.border }}>
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                  backgroundColor: active ? f.color : Colors.muted, borderColor: active ? f.color : Colors.border }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>{f.label}</Text>
               </Pressable>
             );
@@ -390,6 +440,7 @@ export default function AdminCouponsScreen() {
                 onToggle={(id, active) => toggleMut.mutate({ id, active })}
                 onDelete={handleDelete}
                 onShare={handleShare}
+                onLongPress={handleCouponLongPress}
               />
             ))
           )}
@@ -400,7 +451,7 @@ export default function AdminCouponsScreen() {
       <Pressable
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); setShowCreate(true); }}
         style={({ pressed }) => [{
-          position: "absolute", bottom: insets.bottom + 24, right: 24,
+          position: "absolute", bottom: insets.bottom + 20, right: 20,
           width: 60, height: 60, borderRadius: 30, backgroundColor: Colors.admin,
           alignItems: "center", justifyContent: "center",
           shadowColor: Colors.admin, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 12,
