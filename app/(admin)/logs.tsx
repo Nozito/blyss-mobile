@@ -35,7 +35,7 @@ const DATE_FILTERS = [
 
 function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <View style={{ borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: Colors.border }}>
+    <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: Colors.border }}>
       <Text style={{ fontSize: 10, color, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
       <Text style={{ fontSize: 22, fontWeight: "900", color }}>{value}</Text>
     </View>
@@ -52,7 +52,7 @@ function SkeletonRow() {
       ])
     ).start();
   }, []);
-  return <Animated.View style={{ height: 80, borderRadius: 18, backgroundColor: Colors.border, marginBottom: 10, opacity: anim }} />;
+  return <Animated.View style={{ height: 80, borderRadius: 12, backgroundColor: Colors.border, marginBottom: 10, opacity: anim }} />;
 }
 
 export default function AdminLogsScreen() {
@@ -116,7 +116,7 @@ export default function AdminLogsScreen() {
       </ScrollView>
 
       {/* Search */}
-      <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border, gap: 10, marginBottom: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: Colors.card, borderRadius: 12, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border, gap: 10, marginBottom: 12 }}>
         <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
         <TextInput
           value={searchQuery}
@@ -196,9 +196,9 @@ export default function AdminLogsScreen() {
               <View
                 key={log.id}
                 style={{
-                  backgroundColor: Colors.card, borderRadius: 18, padding: 16,
+                  backgroundColor: Colors.card, borderRadius: 12, padding: 16,
                   borderWidth: 1, borderColor: Colors.border,
-                  shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+                  shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>

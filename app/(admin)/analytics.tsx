@@ -77,8 +77,8 @@ function BarChart({ data, color, width = 300, height = 80 }: { data: number[]; c
 
 function KPICard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: Colors.border,
-      shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+    <View style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: Colors.border,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
       <Text style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "600", marginBottom: 6 }}>{label}</Text>
       <Text style={{ fontSize: 22, fontWeight: "900", color, marginBottom: 2 }}>
         {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
@@ -179,8 +179,8 @@ export default function AdminAnalyticsScreen() {
       )}
 
       {/* Revenue chart */}
-      <View style={{ backgroundColor: Colors.card, borderRadius: 22, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+      <View style={{ backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <View>
             <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>Revenus</Text>
@@ -200,8 +200,8 @@ export default function AdminAnalyticsScreen() {
       </View>
 
       {/* Users chart */}
-      <View style={{ backgroundColor: Colors.card, borderRadius: 22, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+      <View style={{ backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <View>
             <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>Nouveaux utilisateurs</Text>
@@ -221,8 +221,8 @@ export default function AdminAnalyticsScreen() {
       </View>
 
       {/* Bookings chart */}
-      <View style={{ backgroundColor: Colors.card, borderRadius: 22, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+      <View style={{ backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <View>
             <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>Réservations</Text>
@@ -243,8 +243,8 @@ export default function AdminAnalyticsScreen() {
 
       {/* Bookings breakdown */}
       {a && (
-        <View style={{ backgroundColor: Colors.card, borderRadius: 22, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
-          shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+        <View style={{ backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 20, marginBottom: 16,
+          shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
           <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground, marginBottom: 14 }}>Répartition des statuts</Text>
           {[
             { label: "Confirmées", value: a.bookings.confirmed, color: Colors.info },

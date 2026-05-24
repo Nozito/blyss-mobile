@@ -37,11 +37,14 @@ function roleColor(user: Pick<AdminUser, "is_admin" | "role">) {
   return Colors.primary;
 }
 
-function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+function Avatar({ name, size = 48 }: { name: string; size?: number }) {
   const color = avatarColor(name);
+  const br = Math.round(size / 3.5);
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: `${color}22`, borderWidth: 1.5, borderColor: `${color}44`, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ fontSize: size * 0.33, fontWeight: "800", color }}>{initials(name)}</Text>
+    <View style={{ width: size, height: size, borderRadius: br, backgroundColor: color,
+      alignItems: "center", justifyContent: "center",
+      shadowColor: color, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.20, shadowRadius: 6, elevation: 2 }}>
+      <Text style={{ color: "#fff", fontWeight: "900", fontSize: Math.round(size * 0.29) }}>{initials(name)}</Text>
     </View>
   );
 }
@@ -265,53 +268,65 @@ function UserRow({
       onLongPress={onLongPress}
       delayLongPress={350}
       style={({ pressed }) => [{
-        flexDirection: "row", alignItems: "center",
-        backgroundColor: Colors.card,
-        borderRadius: 14, borderWidth: 1, borderColor: Colors.border,
-        paddingHorizontal: 14, paddingVertical: 12,
-        marginBottom: 8, opacity: pressed ? 0.85 : 1,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2,
+        borderRadius: 12, padding: 16,
+        backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+        flexDirection: "row", alignItems: "center", gap: 14,
+        marginBottom: 10, opacity: pressed ? 0.85 : 1,
       }]}
     >
-      <Avatar name={`${item.first_name} ${item.last_name}`} size={42} />
+      <Avatar name={`${item.first_name} ${item.last_name}`} size={48} />
 
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
             {item.first_name} {item.last_name}
           </Text>
-          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${rc}15` }}>
-            <Text style={{ fontSize: 9, fontWeight: "800", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
-              {item.is_admin ? "admin" : item.role}
-            </Text>
-          </View>
-          {!item.is_active && (
-            <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${Colors.destructive}12` }}>
-              <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: `${rc}18` }}>
+              <Text style={{ fontSize: 9, fontWeight: "700", color: rc, textTransform: "uppercase" }}>
+                {item.is_admin ? "admin" : item.role}
+              </Text>
             </View>
+            {!item.is_active && (
+              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: `${Colors.destructive}18` }}>
+                <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.destructive }}>BANNI</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }} numberOfLines={1}>
+          {item.email}
+        </Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+            {(item as any).created_at
+              ? `Inscrit le ${new Date((item as any).created_at).toLocaleDateString("fr-FR")}`
+              : item.role}
+          </Text>
+          {!item.is_admin && (
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBan(); }}
+              hitSlop={10}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 4,
+                paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10,
+                backgroundColor: item.is_active ? `${Colors.destructive}10` : `${Colors.success}10`,
+                borderWidth: 1, borderColor: item.is_active ? `${Colors.destructive}20` : `${Colors.success}20`,
+              }}
+            >
+              <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={12} color={item.is_active ? Colors.destructive : Colors.success} />
+              <Text style={{ fontSize: 10, fontWeight: "700", color: item.is_active ? Colors.destructive : Colors.success }}>
+                {item.is_active ? "Bannir" : "Réactiver"}
+              </Text>
+            </Pressable>
           )}
         </View>
-        <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{item.email}</Text>
       </View>
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        {!item.is_admin && (
-          <Pressable
-            onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBan(); }}
-            hitSlop={10}
-            style={{
-              width: 32, height: 32, borderRadius: 9,
-              backgroundColor: item.is_active ? `${Colors.destructive}10` : `${Colors.success}10`,
-              borderWidth: 1,
-              borderColor: item.is_active ? `${Colors.destructive}20` : `${Colors.success}20`,
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={15} color={item.is_active ? Colors.destructive : Colors.success} />
-          </Pressable>
-        )}
-        <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
-      </View>
+      <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
     </Pressable>
   );
 }
@@ -485,7 +500,7 @@ export default function AdminUsersScreen() {
           data={users}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          estimatedItemSize={70}
+          estimatedItemSize={96}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 90 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}

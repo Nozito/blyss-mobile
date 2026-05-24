@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, Modal, Switch, Share, RefreshControl,
   Animated, ActionSheetIOS, Platform,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -237,10 +238,10 @@ function CouponCard({
 
   return (
     <Animated.View style={{
-      backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1,
+      backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1,
       borderColor: st === "active" ? `${Colors.success}30` : Colors.border,
       overflow: "hidden", marginBottom: 12,
-      shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
       opacity, transform: [{ translateY }],
     }}>
       <Pressable
@@ -452,14 +453,19 @@ export default function AdminCouponsScreen() {
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); setShowCreate(true); }}
         style={({ pressed }) => [{
           position: "absolute", bottom: insets.bottom + 20, right: 16,
-          height: 56, paddingHorizontal: 20, borderRadius: 28, backgroundColor: Colors.admin,
-          flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-          shadowColor: Colors.admin, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
+          borderRadius: 28, overflow: "hidden",
+          shadowColor: Colors.admin, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
           transform: [{ scale: pressed ? 0.95 : 1 }],
         }]}
       >
-        <Ionicons name="add" size={20} color={Colors.white} />
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Nouveau</Text>
+        <LinearGradient
+          colors={["#EA6000", "#F97316"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={{ height: 56, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Nouveau coupon</Text>
+        </LinearGradient>
       </Pressable>
 
       {showCreate && <CreateModal onClose={() => setShowCreate(false)} />}

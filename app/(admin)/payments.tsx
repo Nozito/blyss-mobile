@@ -41,12 +41,14 @@ function KpiCard({ label, value, color, index }: { label: string; value: string;
 
   return (
     <Animated.View style={{
-      backgroundColor: Colors.card, borderRadius: 18, padding: 16,
-      borderWidth: 1, borderColor: `${color}25`, marginRight: 12, minWidth: 140,
-      shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+      backgroundColor: Colors.card, borderRadius: 12, padding: 16,
+      borderWidth: 1, borderColor: Colors.border, marginRight: 12, width: 140, minHeight: 88,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+      overflow: "hidden",
       opacity, transform: [{ translateX }],
     }}>
-      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 6, fontWeight: "600" }}>{label}</Text>
+      <View style={{ position: "absolute", top: -16, right: -16, width: 56, height: 56, borderRadius: 28, backgroundColor: `${color}0D` }} />
+      <Text style={{ fontSize: 9, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
       <Text style={{ fontSize: 22, fontWeight: "900", color, letterSpacing: -0.5 }}>{value}</Text>
     </Animated.View>
   );
