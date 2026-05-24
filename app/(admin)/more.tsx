@@ -13,6 +13,9 @@ import { SymbolView } from "expo-symbols";
 import { adminApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
+
 const GRID_ITEMS = [
   { route: "/(admin)/analytics",     icon: "analytics-outline"     as const, symbol: "chart.bar.xaxis" as const, label: "Analytics", description: "Métriques & revenus",    color: Colors.pro },
   { route: "/(admin)/logs",          icon: "pulse-outline"         as const, symbol: "waveform"        as const, label: "Logs",      description: "Événements système",     color: Colors.info },
@@ -28,7 +31,7 @@ const INFO_ROWS = [
 
 type GridItem = { route: string; icon: React.ComponentProps<typeof Ionicons>["name"]; symbol: string; label: string; description: string; color: string };
 
-function GridCard({ item, index }: { item: GridItem; index: number }) {
+function ToolRow({ item, index }: { item: GridItem; index: number }) {
   const router  = useRouter();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
@@ -44,33 +47,29 @@ function GridCard({ item, index }: { item: GridItem; index: number }) {
   }, []);
 
   return (
-    <Animated.View style={{ flex: 1, opacity, transform: [{ translateY }] }}>
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           router.push(item.route as any);
         }}
         style={({ pressed }) => [{
-          backgroundColor: Colors.card, borderRadius: 20, padding: 18,
-          borderWidth: 1, borderColor: Colors.border,
+          backgroundColor: Colors.card, borderRadius: 14, padding: 16,
+          borderWidth: 1, borderColor: A_BORDER,
           opacity: pressed ? 0.85 : 1,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+          flexDirection: "row", alignItems: "center", gap: 14,
         }]}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: `${item.color}12`, alignItems: "center", justifyContent: "center" }}>
-            {Platform.OS === "ios"
-              ? <SymbolView name={item.symbol} size={24} tintColor={item.color} />
-              : <Ionicons name={item.icon} size={24} color={item.color} />}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>{item.label}</Text>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>{item.description}</Text>
-          </View>
-          <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: `${item.color}10`, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="chevron-forward" size={14} color={item.color} />
-          </View>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${item.color}12`, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {Platform.OS === "ios"
+            ? <SymbolView name={item.symbol} size={22} tintColor={item.color} />
+            : <Ionicons name={item.icon} size={22} color={item.color} />}
         </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>{item.label}</Text>
+          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>{item.description}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} style={{ opacity: 0.5 }} />
       </Pressable>
     </Animated.View>
   );
@@ -110,12 +109,12 @@ export default function AdminMoreScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
+      style={{ flex: 1, backgroundColor: A_BG }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       showsVerticalScrollIndicator={false}
     >
       {/* ── Hero profile card ── */}
-      <Animated.View style={{ opacity: profileOpacity, transform: [{ translateY: profileTranslateY }] }}>
+      <Animated.View style={{ opacity: profileOpacity, transform: [{ translateY: profileTranslateY }], marginBottom: 20 }}>
         <LinearGradient
           colors={["#EA6000", "#F97316", "#FBAB6A"]}
           start={{ x: 0, y: 0 }}
@@ -150,10 +149,10 @@ export default function AdminMoreScreen() {
         </LinearGradient>
 
         {/* Stats strip — floats over the gradient */}
-        <View style={{ marginHorizontal: 20, marginTop: -24, backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 16, flexDirection: "row",
+        <View style={{ marginHorizontal: 20, marginTop: -24, backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: A_BORDER, padding: 16, flexDirection: "row",
           shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 12, elevation: 6 }}>
           {stats.map(({ label, value, icon, color }, i) => (
-            <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: i < stats.length - 1 ? 1 : 0, borderRightColor: Colors.border }}>
+            <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: i < stats.length - 1 ? 1 : 0, borderRightColor: A_BORDER }}>
               <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${color}12`, alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
                 <Ionicons name={icon} size={16} color={color} />
               </View>
@@ -164,14 +163,14 @@ export default function AdminMoreScreen() {
         </View>
       </Animated.View>
 
-      <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
+      <View style={{ paddingHorizontal: 20 }}>
         {/* ── Outils ── */}
         <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
           Outils admin
         </Text>
         <View style={{ gap: 10, marginBottom: 28 }}>
           {GRID_ITEMS.map((item, i) => (
-            <GridCard key={item.route} item={item} index={i} />
+            <ToolRow key={item.route} item={item} index={i} />
           ))}
         </View>
 
@@ -179,10 +178,9 @@ export default function AdminMoreScreen() {
         <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
           À propos
         </Text>
-        <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, marginBottom: 24, overflow: "hidden",
-          shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
+        <View style={{ backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: A_BORDER, marginBottom: 24, overflow: "hidden" }}>
           {INFO_ROWS.map(({ label, value }, i) => (
-            <View key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0, borderBottomColor: Colors.border }}>
+            <View key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0, borderBottomColor: A_BORDER }}>
               <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>{label}</Text>
               <Text numberOfLines={1} style={{ maxWidth: 200, fontSize: 13, fontWeight: "700", color: Colors.foreground }}>{value}</Text>
             </View>
@@ -190,25 +188,28 @@ export default function AdminMoreScreen() {
         </View>
 
         {/* ── Logout ── */}
-        <View style={{ backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, overflow: "hidden",
-          shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1, marginBottom: 12 }}>
-          <Pressable
-            onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-              logout();
-            }}
-            style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 18, paddingVertical: 16, opacity: pressed ? 0.75 : 1 }]}
-          >
-            <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: `${Colors.destructive}10`, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Se déconnecter</Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Retour à la page de connexion</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.destructive} style={{ opacity: 0.5 }} />
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            logout();
+          }}
+          style={({ pressed }) => [{
+            backgroundColor: `${Colors.destructive}08`,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: `${Colors.destructive}25`,
+            padding: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+            opacity: pressed ? 0.75 : 1,
+          }]}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}14`, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
+          </View>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Se déconnecter</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
