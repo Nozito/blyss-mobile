@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  TextInput,
-  ActivityIndicator,
+  View, Text, ScrollView, Pressable, TextInput,
+  ActivityIndicator, Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 
@@ -31,15 +28,37 @@ const TYPE_CONFIG = {
 
 const DATE_FILTERS = [
   { id: "today", label: "Aujourd'hui" },
-  { id: "week", label: "Cette semaine" },
+  { id: "week",  label: "Cette semaine" },
   { id: "month", label: "Ce mois" },
-  { id: "all", label: "Tout" },
+  { id: "all",   label: "Tout" },
 ];
+
+function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
+  return (
+    <View style={{ borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: Colors.border }}>
+      <Text style={{ fontSize: 10, color, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
+      <Text style={{ fontSize: 22, fontWeight: "900", color }}>{value}</Text>
+    </View>
+  );
+}
+
+function SkeletonRow() {
+  const anim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  return <Animated.View style={{ height: 80, borderRadius: 18, backgroundColor: Colors.border, marginBottom: 10, opacity: anim }} />;
+}
 
 export default function AdminLogsScreen() {
   const insets = useSafeAreaInsets();
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs]             = useState<Log[]>([]);
+  const [loading, setLoading]       = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("today");
@@ -61,162 +80,160 @@ export default function AdminLogsScreen() {
   };
 
   const filtered = logs.filter((log) => {
-    const matchesType = typeFilter === "all" || log.type === typeFilter;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !q ||
-      log.action.toLowerCase().includes(q) ||
-      log.description.toLowerCase().includes(q) ||
-      log.user_name?.toLowerCase().includes(q);
+    const matchesType   = typeFilter === "all" || log.type === typeFilter;
+    const q             = searchQuery.toLowerCase();
+    const matchesSearch = !q || log.action.toLowerCase().includes(q) || log.description.toLowerCase().includes(q) || log.user_name?.toLowerCase().includes(q);
     return matchesType && matchesSearch;
   });
 
   const stats = {
-    total: logs.length,
-    info: logs.filter((l) => l.type === "info").length,
+    total:   logs.length,
+    info:    logs.filter((l) => l.type === "info").length,
     success: logs.filter((l) => l.type === "success").length,
     warning: logs.filter((l) => l.type === "warning").length,
-    error: logs.filter((l) => l.type === "error").length,
+    error:   logs.filter((l) => l.type === "error").length,
   };
-
-  if (loading) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.admin} />
-      </View>
-    );
-  }
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 80,
-        paddingHorizontal: 20,
-      }}
+      style={{ flex: 1, backgroundColor: Colors.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 80, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View className="mb-6">
-        <Text className="text-2xl font-bold text-foreground">Logs Système</Text>
-        <Text className="text-sm text-muted-foreground mt-1">{filtered.length} événement(s)</Text>
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 26, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>Logs Système</Text>
+        <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>{filtered.length} événement(s)</Text>
       </View>
 
-      {/* Stats row */}
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
-          <StatChip label="Total"     value={stats.total}   color={Colors.foreground} bg={Colors.muted} />
-          <StatChip label="Info"      value={stats.info}    color={Colors.info}        bg={`${Colors.info}15`} />
-          <StatChip label="Succès"    value={stats.success} color={Colors.success}     bg={`${Colors.success}15`} />
-          <StatChip label="Attention" value={stats.warning} color={Colors.warning}     bg={`${Colors.warning}15`} />
-          <StatChip label="Erreurs"   value={stats.error}   color={Colors.destructive} bg={`${Colors.destructive}12`} />
-        </ScrollView>
+      {/* Stats chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
+        <StatChip label="Total"     value={stats.total}   color={Colors.foreground}  bg={Colors.muted} />
+        <StatChip label="Info"      value={stats.info}    color={Colors.info}        bg={`${Colors.info}15`} />
+        <StatChip label="Succès"    value={stats.success} color={Colors.success}     bg={`${Colors.success}15`} />
+        <StatChip label="Attention" value={stats.warning} color={Colors.warning}     bg={`${Colors.warning}15`} />
+        <StatChip label="Erreurs"   value={stats.error}   color={Colors.destructive} bg={`${Colors.destructive}12`} />
+      </ScrollView>
+
+      {/* Search */}
+      <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border, gap: 10, marginBottom: 12 }}>
+        <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Rechercher…"
+          placeholderTextColor={Colors.mutedForeground}
+          autoCorrect={false}
+          spellCheck={false}
+          returnKeyType="search"
+          style={{ flex: 1, fontSize: 14, color: Colors.foreground }}
+        />
+        {searchQuery.length > 0 && (
+          <Pressable onPress={() => setSearchQuery("")}>
+            <Ionicons name="close-circle" size={16} color={Colors.mutedForeground} />
+          </Pressable>
+        )}
       </View>
 
-      {/* Filters */}
-      <View className="mb-4 gap-3">
-        <View className="flex-row items-center bg-card rounded-xl px-4 h-11 border border-border gap-3">
-          <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
-          <TextInput
-            className="flex-1 text-foreground text-sm"
-            placeholder="Rechercher..."
-            placeholderTextColor={Colors.mutedForeground}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-
-        {/* Type filter */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {[{ id: "all", label: "Tous" }, ...Object.entries(TYPE_CONFIG).map(([id, c]) => ({ id, label: c.label }))].map((f) => (
+      {/* Type filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 10 }}>
+        {[{ id: "all", label: "Tous" }, ...Object.entries(TYPE_CONFIG).map(([id, c]) => ({ id, label: c.label }))].map((f) => {
+          const active = typeFilter === f.id;
+          return (
             <Pressable
               key={f.id}
-              onPress={() => setTypeFilter(f.id)}
-              className="px-4 py-2 rounded-full"
-              style={{ backgroundColor: typeFilter === f.id ? Colors.admin : Colors.muted }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setTypeFilter(f.id); }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                backgroundColor: active ? Colors.admin : Colors.muted,
+                borderColor: active ? Colors.admin : Colors.border }}
             >
-              <Text
-                className="text-xs font-semibold"
-                style={{ color: typeFilter === f.id ? Colors.white : Colors.mutedForeground }}
-              >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                 {f.label}
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          );
+        })}
+      </ScrollView>
 
-        {/* Date filter */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {DATE_FILTERS.map((f) => (
+      {/* Date filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 20 }}>
+        {DATE_FILTERS.map((f) => {
+          const active = dateFilter === f.id;
+          return (
             <Pressable
               key={f.id}
-              onPress={() => setDateFilter(f.id)}
-              className="px-4 py-2 rounded-full border"
-              style={{
-                backgroundColor: dateFilter === f.id ? `${Colors.admin}15` : Colors.card,
-                borderColor: dateFilter === f.id ? Colors.admin : Colors.border,
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setDateFilter(f.id); }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                backgroundColor: active ? `${Colors.admin}15` : Colors.card,
+                borderColor: active ? Colors.admin : Colors.border }}
             >
-              <Text
-                className="text-xs font-semibold"
-                style={{ color: dateFilter === f.id ? Colors.admin : Colors.mutedForeground }}
-              >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.admin : Colors.mutedForeground }}>
                 {f.label}
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+          );
+        })}
+      </ScrollView>
 
       {/* Log items */}
-      <View className="gap-3">
-        {filtered.length === 0 ? (
-          <View className="items-center py-12">
-            <Ionicons name="pulse-outline" size={48} color={Colors.border} />
-            <Text className="text-muted-foreground mt-3">Aucun log trouvé</Text>
+      {loading ? (
+        <View style={{ gap: 10 }}>
+          {[0, 1, 2, 3].map((i) => <SkeletonRow key={i} />)}
+        </View>
+      ) : filtered.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 60 }}>
+          <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+            <Ionicons name="pulse-outline" size={32} color={Colors.border} />
           </View>
-        ) : (
-          filtered.map((log, idx) => {
+          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucun log trouvé</Text>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Modifiez les filtres pour voir d'autres résultats.</Text>
+        </View>
+      ) : (
+        <View style={{ gap: 10 }}>
+          {filtered.map((log) => {
             const cfg = TYPE_CONFIG[log.type];
             return (
               <View
                 key={log.id}
-                className="bg-card rounded-2xl p-4 border border-border"
-                style={{ shadowColor: Colors.foreground, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}
+                style={{
+                  backgroundColor: Colors.card, borderRadius: 18, padding: 16,
+                  borderWidth: 1, borderColor: Colors.border,
+                  shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+                }}
               >
-                <View className="flex-row items-start gap-3">
-                  <View
-                    className="w-10 h-10 rounded-xl items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: cfg.bg }}
-                  >
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: cfg.bg, flexShrink: 0 }}>
                     <Ionicons name={cfg.icon} size={20} color={cfg.color} />
                   </View>
-                  <View className="flex-1">
-                    <View className="flex-row items-start justify-between mb-1">
-                      <Text className="text-sm font-semibold text-foreground flex-1 mr-2">{log.action}</Text>
-                      <View className="px-2 py-0.5 rounded-lg" style={{ backgroundColor: cfg.bg }}>
-                        <Text className="text-xs font-bold" style={{ color: cfg.color }}>{cfg.label}</Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground, flex: 1, marginRight: 10 }} numberOfLines={2}>
+                        {log.action}
+                      </Text>
+                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: cfg.bg }}>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: cfg.color }}>{cfg.label}</Text>
                       </View>
                     </View>
-                    <Text className="text-xs text-muted-foreground leading-relaxed mb-2">{log.description}</Text>
-                    <View className="flex-row items-center gap-3 flex-wrap">
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 18, marginBottom: 8 }} numberOfLines={2}>
+                      {log.description}
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                       {log.user_name && (
-                        <View className="flex-row items-center gap-1">
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                           <Ionicons name="person-outline" size={11} color={Colors.mutedForeground} />
-                          <Text className="text-xs text-muted-foreground">{log.user_name}</Text>
+                          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{log.user_name}</Text>
                         </View>
                       )}
-                      <View className="flex-row items-center gap-1">
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <Ionicons name="time-outline" size={11} color={Colors.mutedForeground} />
-                        <Text className="text-xs text-muted-foreground">
+                        <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
                           {new Date(log.created_at).toLocaleString("fr-FR")}
                         </Text>
                       </View>
                       {log.ip_address && (
-                        <View className="flex-row items-center gap-1">
-                          <Ionicons name="pulse-outline" size={11} color={Colors.mutedForeground} />
-                          <Text className="text-xs text-muted-foreground">{log.ip_address}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                          <Ionicons name="globe-outline" size={11} color={Colors.mutedForeground} />
+                          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{log.ip_address}</Text>
                         </View>
                       )}
                     </View>
@@ -224,18 +241,9 @@ export default function AdminLogsScreen() {
                 </View>
               </View>
             );
-          })
-        )}
-      </View>
+          })}
+        </View>
+      )}
     </ScrollView>
-  );
-}
-
-function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
-  return (
-    <View className="rounded-xl px-4 py-3 border border-border" style={{ backgroundColor: bg }}>
-      <Text className="text-xs mb-0.5" style={{ color }}>{label}</Text>
-      <Text className="text-2xl font-black" style={{ color }}>{value}</Text>
-    </View>
   );
 }

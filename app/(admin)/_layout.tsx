@@ -19,42 +19,21 @@ export default function AdminLayout() {
       minimizeBehavior="automatic"
       labelVisibilityMode="unlabeled"
     >
-      <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>
-        <Icon src={{
-          default:  <VectorIcon family={Ionicons} name="grid-outline" />,
-          selected: <VectorIcon family={Ionicons} name="grid" />,
-        }} />
+      <NativeTabs.Trigger name="dashboard">
+        <Icon src={{ default: <VectorIcon family={Ionicons} name="grid-outline" />, selected: <VectorIcon family={Ionicons} name="grid" /> }} />
       </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="users" options={{ title: "" }}>
-        <Icon src={{
-          default:  <VectorIcon family={Ionicons} name="people-outline" />,
-          selected: <VectorIcon family={Ionicons} name="people" />,
-        }} />
+      <NativeTabs.Trigger name="users">
+        <Icon src={{ default: <VectorIcon family={Ionicons} name="people-outline" />, selected: <VectorIcon family={Ionicons} name="people" /> }} />
       </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="bookings" options={{ title: "" }}>
-        <Icon src={{
-          default:  <VectorIcon family={Ionicons} name="calendar-outline" />,
-          selected: <VectorIcon family={Ionicons} name="calendar" />,
-        }} />
+      <NativeTabs.Trigger name="bookings">
+        <Icon src={{ default: <VectorIcon family={Ionicons} name="calendar-outline" />, selected: <VectorIcon family={Ionicons} name="calendar" /> }} />
       </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="payments" options={{ title: "" }}>
-        <Icon src={{
-          default:  <VectorIcon family={Ionicons} name="card-outline" />,
-          selected: <VectorIcon family={Ionicons} name="card" />,
-        }} />
+      <NativeTabs.Trigger name="payments">
+        <Icon src={{ default: <VectorIcon family={Ionicons} name="card-outline" />, selected: <VectorIcon family={Ionicons} name="card" /> }} />
       </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="more" options={{ title: "" }}>
-        <Icon src={{
-          default:  <VectorIcon family={Ionicons} name="ellipsis-horizontal-outline" />,
-          selected: <VectorIcon family={Ionicons} name="ellipsis-horizontal" />,
-        }} />
+      <NativeTabs.Trigger name="more">
+        <Icon src={{ default: <VectorIcon family={Ionicons} name="ellipsis-horizontal-outline" />, selected: <VectorIcon family={Ionicons} name="ellipsis-horizontal" /> }} />
       </NativeTabs.Trigger>
-
-      {/* Routes cachées — non affichées dans la tab bar */}
       <NativeTabs.Trigger name="analytics"     hidden />
       <NativeTabs.Trigger name="logs"          hidden />
       <NativeTabs.Trigger name="notifications" hidden />
