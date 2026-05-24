@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Colors } from "@/constants/colors";
 
 export type AdminRole = "client" | "pro" | "admin";
 
@@ -22,22 +23,22 @@ const ROLES: Array<{
   label: string;
   subtitle: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
   bg: string;
   border: string;
-  iconColor: string;
   badge?: string;
 }> = [
   {
     key: "client", label: "Espace Client", subtitle: "Réservations & favoris",
-    icon: "heart-outline", bg: "rgba(254,93,157,0.07)", border: "rgba(254,93,157,0.22)", iconColor: "#FE5D9D",
+    icon: "heart-outline", color: Colors.primary, bg: Colors.primaryLight, border: `${Colors.primary}35`,
   },
   {
     key: "pro", label: "Espace Pro", subtitle: "Gestion clients & RDV",
-    icon: "briefcase-outline", bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.22)", iconColor: "#8B5CF6",
+    icon: "briefcase-outline", color: Colors.pro, bg: `${Colors.pro}10`, border: `${Colors.pro}35`,
   },
   {
     key: "admin", label: "Administration", subtitle: "Gestion plateforme complète",
-    icon: "shield-checkmark-outline", bg: "#0B0E14", border: "rgba(249,115,22,0.4)", iconColor: "#F97316", badge: "ACCÈS TOTAL",
+    icon: "shield-checkmark-outline", color: Colors.admin, bg: `${Colors.admin}0D`, border: `${Colors.admin}40`, badge: "ACCÈS TOTAL",
   },
 ];
 
@@ -80,19 +81,19 @@ function AnimatedCard({
           pressed && { opacity: 0.8, transform: [{ scale: 0.983 }] },
         ]}
       >
-        <View style={[styles.iconWrap, { backgroundColor: `${role.iconColor}1A` }]}>
-          <Ionicons name={role.icon} size={22} color={role.iconColor} />
+        <View style={[styles.iconWrap, { backgroundColor: `${role.color}1A` }]}>
+          <Ionicons name={role.icon} size={22} color={role.color} />
         </View>
         <View style={styles.cardContent}>
-          <Text style={[styles.cardLabel, role.key === "admin" && { color: "#F8FAFC" }]}>{role.label}</Text>
-          <Text style={[styles.cardSub,   role.key === "admin" && { color: "rgba(248,250,252,0.48)" }]}>{role.subtitle}</Text>
+          <Text style={[styles.cardLabel]}>{role.label}</Text>
+          <Text style={[styles.cardSub]}>{role.subtitle}</Text>
         </View>
         {role.badge ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{role.badge}</Text>
+          <View style={[styles.badge, { backgroundColor: `${role.color}20`, borderColor: `${role.color}40` }]}>
+            <Text style={[styles.badgeText, { color: role.color }]}>{role.badge}</Text>
           </View>
         ) : (
-          <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
         )}
       </Pressable>
     </Animated.View>
@@ -123,7 +124,7 @@ export default function RoleSelectionModal({ visible, userName, userInitials, on
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 20, 28) }, { opacity: sheetOpacity, transform: [{ translateY: sheetTranslateY }] }]}>
           <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={16} color="#9CA3AF" />
+            <Ionicons name="close" size={16} color={Colors.mutedForeground} />
           </Pressable>
 
           <View style={styles.header}>
@@ -148,21 +149,21 @@ export default function RoleSelectionModal({ visible, userName, userInitials, on
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
-  sheet: { width: "100%", maxWidth: 400, backgroundColor: "#FFFFFF", borderRadius: 32, padding: 24, shadowColor: "#000", shadowOffset: { width: 0, height: 24 }, shadowOpacity: 0.28, shadowRadius: 48, elevation: 24 },
-  closeBtn: { position: "absolute", top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", zIndex: 10 },
+  overlay: { flex: 1, backgroundColor: Colors.overlay, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  sheet: { width: "100%", maxWidth: 400, backgroundColor: Colors.card, borderRadius: 32, padding: 24, shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 24 }, shadowOpacity: 0.14, shadowRadius: 48, elevation: 24 },
+  closeBtn: { position: "absolute", top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center", zIndex: 10 },
   header: { alignItems: "center", marginBottom: 22 },
-  avatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: "rgba(249,115,22,0.12)", borderWidth: 2, borderColor: "rgba(249,115,22,0.25)", alignItems: "center", justifyContent: "center", marginBottom: 14 },
-  avatarText: { fontSize: 22, fontWeight: "800", color: "#F97316" },
-  greeting: { fontSize: 22, fontWeight: "800", color: "#09090B", letterSpacing: -0.4, marginBottom: 3 },
-  subHeading: { fontSize: 14, color: "#6B7280", fontWeight: "500" },
+  avatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: `${Colors.admin}18`, borderWidth: 2, borderColor: `${Colors.admin}35`, alignItems: "center", justifyContent: "center", marginBottom: 14 },
+  avatarText: { fontSize: 22, fontWeight: "800", color: Colors.admin },
+  greeting: { fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.4, marginBottom: 3 },
+  subHeading: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
   list: { gap: 10, marginBottom: 18 },
   card: { flexDirection: "row", alignItems: "center", gap: 14, padding: 15, borderRadius: 18, borderWidth: 1.5 },
   iconWrap: { width: 44, height: 44, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   cardContent: { flex: 1 },
-  cardLabel: { fontSize: 15, fontWeight: "700", color: "#09090B", marginBottom: 2 },
-  cardSub: { fontSize: 12, color: "#6B7280", fontWeight: "500" },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(249,115,22,0.16)", borderWidth: 1, borderColor: "rgba(249,115,22,0.32)" },
-  badgeText: { fontSize: 8, fontWeight: "800", color: "#F97316", letterSpacing: 0.8, textTransform: "uppercase" },
-  footer: { fontSize: 11, color: "#9CA3AF", textAlign: "center", lineHeight: 16, paddingHorizontal: 8 },
+  cardLabel: { fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 2 },
+  cardSub: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "500" },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
+  badgeText: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" },
+  footer: { fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16, paddingHorizontal: 8 },
 });

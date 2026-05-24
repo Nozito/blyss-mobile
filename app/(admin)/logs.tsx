@@ -23,10 +23,10 @@ interface Log {
 }
 
 const TYPE_CONFIG = {
-  info: { icon: "information-circle-outline" as const, color: "#3B82F6", bg: "#EFF6FF", label: "Info" },
-  success: { icon: "checkmark-circle-outline" as const, color: "#22C55E", bg: "#F0FDF4", label: "Succès" },
-  warning: { icon: "warning-outline" as const, color: "#F59E0B", bg: "#FFFBEB", label: "Attention" },
-  error: { icon: "close-circle-outline" as const, color: "#EF4444", bg: "#FEF2F2", label: "Erreur" },
+  info:    { icon: "information-circle-outline" as const, color: Colors.info,        bg: `${Colors.info}15`,        label: "Info" },
+  success: { icon: "checkmark-circle-outline"   as const, color: Colors.success,     bg: `${Colors.success}15`,     label: "Succès" },
+  warning: { icon: "warning-outline"            as const, color: Colors.warning,     bg: `${Colors.warning}15`,     label: "Attention" },
+  error:   { icon: "close-circle-outline"       as const, color: Colors.destructive, bg: `${Colors.destructive}12`, label: "Erreur" },
 };
 
 const DATE_FILTERS = [
@@ -106,11 +106,11 @@ export default function AdminLogsScreen() {
       {/* Stats row */}
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
-          <StatChip label="Total" value={stats.total} color={Colors.foreground} bg={Colors.muted} />
-          <StatChip label="Info" value={stats.info} color="#3B82F6" bg="#EFF6FF" />
-          <StatChip label="Succès" value={stats.success} color="#22C55E" bg="#F0FDF4" />
-          <StatChip label="Attention" value={stats.warning} color="#F59E0B" bg="#FFFBEB" />
-          <StatChip label="Erreurs" value={stats.error} color="#EF4444" bg="#FEF2F2" />
+          <StatChip label="Total"     value={stats.total}   color={Colors.foreground} bg={Colors.muted} />
+          <StatChip label="Info"      value={stats.info}    color={Colors.info}        bg={`${Colors.info}15`} />
+          <StatChip label="Succès"    value={stats.success} color={Colors.success}     bg={`${Colors.success}15`} />
+          <StatChip label="Attention" value={stats.warning} color={Colors.warning}     bg={`${Colors.warning}15`} />
+          <StatChip label="Erreurs"   value={stats.error}   color={Colors.destructive} bg={`${Colors.destructive}12`} />
         </ScrollView>
       </View>
 
@@ -183,7 +183,7 @@ export default function AdminLogsScreen() {
               <View
                 key={log.id}
                 className="bg-card rounded-2xl p-4 border border-border"
-                style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}
+                style={{ shadowColor: Colors.foreground, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}
               >
                 <View className="flex-row items-start gap-3">
                   <View
