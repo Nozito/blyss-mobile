@@ -17,11 +17,15 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { Colors } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 
-// Warm-neutral aliases cohérents avec le design system Blyss
-const CARD_BG = "#FFFCFD";   // blanc très légèrement rosé — contraste doux sur #FFEAF1
+const CARD_BG = "#FFFCFD"; // blanc très légèrement rosé — contraste doux sur #FFEAF1
 const BORDER  = Colors.border; // #EDE7E0 — beige chaud
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
+
+// Item discriminé pour FlashList : header de section ou user
+type ListItem =
+  | { _type: "header"; label: string; count: number; color: string; icon: keyof typeof Ionicons.glyphMap }
+  | { _type: "user";   data: AdminUser };
 
 const PLAN_OPTS   = ["start", "serenite", "signature"] as const;
 const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérénité", signature: "Signature" };
@@ -81,6 +85,23 @@ function Avatar({ name, size = 44 }: { name: string; size?: number }) {
         {initials(name)}
       </Text>
     </LinearGradient>
+  );
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+function SectionHeader({ label, count, color, icon }: { label: string; count: number; color: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, marginBottom: 8, marginTop: 6 }}>
+      <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: `${color}16`, alignItems: "center", justifyContent: "center" }}>
+        <Ionicons name={icon} size={13} color={color} />
+      </View>
+      <Text style={{ fontSize: 12, fontWeight: "800", color, textTransform: "uppercase", letterSpacing: 0.6, flex: 1 }}>
+        {label}
+      </Text>
+      <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: `${color}14`, borderWidth: 1, borderColor: `${color}28` }}>
+        <Text style={{ fontSize: 10, fontWeight: "800", color }}>{count}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -422,6 +443,11 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
   const stats    = (item as any).stats as AdminUser["stats"] | undefined;
   const swipeRef = useRef<Swipeable>(null);
 
+  // Fond de card très légèrement teinté par rôle — renforce la lisibilité en section
+  const cardTint = item.is_active
+    ? item.is_admin ? `${Colors.admin}05` : item.role === "pro" ? `${Colors.pro}05` : "#FFFCFD"
+    : `${Colors.destructive}05`;
+
   const renderRightActions = () => (
     <View style={{ flexDirection: "row", marginBottom: 10, marginLeft: 6, borderRadius: 16, overflow: "hidden", width: 148 }}>
       <Pressable onPress={() => { swipeRef.current?.close(); onBan(); }}
@@ -458,56 +484,57 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
         onLongPress={onLongPress}
         delayLongPress={380}
         style={({ pressed }) => ({
-          backgroundColor: CARD_BG,
+          backgroundColor: cardTint,
           borderRadius: 16,
           marginBottom: 10,
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: BORDER,
+          borderColor: `${accentL}22`,
           shadowColor: accentL,
           shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: pressed ? 0.15 : 0.07,
+          shadowOpacity: pressed ? 0.16 : 0.08,
           shadowRadius: 10,
           elevation: 3,
-          opacity: pressed ? 0.91 : item.is_active ? 1 : 0.62,
+          opacity: pressed ? 0.91 : item.is_active ? 1 : 0.58,
         })}
       >
-        {/* ── Corps principal ── */}
+        {/* ── Corps ── */}
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           {/* Barre colorée gauche */}
-          <View style={{ width: 3, alignSelf: "stretch", backgroundColor: accentL }} />
+          <View style={{ width: 3, alignSelf: "stretch", backgroundColor: accentL, opacity: 0.85 }} />
 
           {/* Avatar */}
-          <View style={{ paddingLeft: 13, paddingVertical: 14 }}>
-            <Avatar name={name} size={46} />
+          <View style={{ paddingLeft: 13, paddingVertical: 13 }}>
+            <Avatar name={name} size={48} />
           </View>
 
           {/* Infos */}
-          <View style={{ flex: 1, paddingLeft: 12, paddingVertical: 14, gap: 3 }}>
-            {/* Ligne 1 : nom + badges */}
+          <View style={{ flex: 1, paddingLeft: 12, paddingVertical: 13, gap: 4 }}>
+            {/* Ligne 1 : nom + badge rôle + banni */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Text style={{ fontWeight: "800", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+              <Text style={{ fontWeight: "800", fontSize: 14.5, color: Colors.foreground, flex: 1, letterSpacing: -0.2 }} numberOfLines={1}>
                 {name}
               </Text>
-              <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: `${rc}18`, borderWidth: 1, borderColor: `${rc}28` }}>
-                <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                  {roleName(item)}
-                </Text>
-              </View>
-              {!item.is_active && (
-                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 7, backgroundColor: `${Colors.destructive}14` }}>
-                  <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
+              {!item.is_active ? (
+                <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7, backgroundColor: `${Colors.destructive}16`, borderWidth: 1, borderColor: `${Colors.destructive}30` }}>
+                  <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.destructive, letterSpacing: 0.3 }}>BANNI</Text>
+                </View>
+              ) : (
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: `${rc}16`, borderWidth: 1, borderColor: `${rc}28` }}>
+                  <Text style={{ fontSize: 9, fontWeight: "900", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                    {roleName(item)}
+                  </Text>
                 </View>
               )}
             </View>
 
             {/* Ligne 2 : email */}
-            <Text style={{ fontSize: 11.5, color: Colors.mutedForeground, lineHeight: 16 }} numberOfLines={1}>
+            <Text style={{ fontSize: 11.5, color: Colors.mutedForeground, lineHeight: 15 }} numberOfLines={1}>
               {item.email}
             </Text>
 
-            {/* Ligne 3 : plan + date (les deux si dispo) */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 1 }}>
+            {/* Ligne 3 : plan + date d'inscription */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               {plan && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A" }}>
                   <Text style={{ fontSize: 9 }}>⭐</Text>
@@ -523,24 +550,23 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
             </View>
           </View>
 
-          {/* Chevron */}
           <View style={{ paddingRight: 14 }}>
-            <Ionicons name="chevron-forward" size={14} color={BORDER} />
+            <Ionicons name="chevron-forward" size={14} color={`${accentL}50`} />
           </View>
         </View>
 
-        {/* ── Ligne de métriques (si stats présentes) ── */}
+        {/* ── Métriques (si stats présentes sur l'item) ── */}
         {stats && (
           <>
-            <View style={{ height: 1, backgroundColor: BORDER, marginHorizontal: 14 }} />
-            <View style={{ flexDirection: "row", paddingVertical: 9 }}>
+            <View style={{ height: 1, backgroundColor: `${accentL}18`, marginHorizontal: 14 }} />
+            <View style={{ flexDirection: "row", paddingVertical: 8 }}>
               {([
-                { icon: "calendar-outline"  as const, value: stats.total_bookings,                           label: "RDV",      color: Colors.info },
-                { icon: "checkmark-outline" as const, value: stats.completed,                                label: "Terminés", color: Colors.success },
-                { icon: "close-outline"     as const, value: stats.cancelled,                                label: "Annulés",  color: Colors.destructive },
+                { icon: "calendar-outline"  as const, value: stats.total_bookings,                            label: "RDV",      color: Colors.info },
+                { icon: "checkmark-outline" as const, value: stats.completed,                                 label: "Terminés", color: Colors.success },
+                { icon: "close-outline"     as const, value: stats.cancelled,                                 label: "Annulés",  color: Colors.destructive },
                 { icon: "card-outline"      as const, value: `${Number(stats.total_spent ?? 0).toFixed(0)}€`, label: "Dépensé",  color: Colors.admin },
               ]).map(({ icon, value, label, color: c }, idx, arr) => (
-                <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: idx < arr.length - 1 ? 1 : 0, borderRightColor: BORDER }}>
+                <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: idx < arr.length - 1 ? 1 : 0, borderRightColor: `${accentL}18` }}>
                   <Ionicons name={icon} size={11} color={c} />
                   <Text style={{ fontSize: 12, fontWeight: "800", color: c, marginTop: 2 }}>{value}</Text>
                   <Text style={{ fontSize: 9, color: Colors.mutedForeground, marginTop: 1 }}>{label}</Text>
@@ -595,6 +621,26 @@ export default function AdminUsersScreen() {
   const bannedCount = users.filter((u) => !u.is_active).length;
   const onRefresh   = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
+  // Construit la liste plate avec headers de section (uniquement en mode "Tous")
+  const listData = useCallback((): ListItem[] => {
+    if (roleFilter !== "all" || users.length === 0) {
+      return users.map((u) => ({ _type: "user", data: u }));
+    }
+    const groups: { key: RoleFilter; label: string; color: string; icon: keyof typeof Ionicons.glyphMap; items: AdminUser[] }[] = [
+      { key: "all",    label: "Admins",  color: Colors.admin,       icon: "shield-checkmark-outline", items: users.filter((u) => u.is_admin) },
+      { key: "pro",    label: "Pros",    color: Colors.pro,          icon: "briefcase-outline",        items: users.filter((u) => !u.is_admin && u.role === "pro" && u.is_active) },
+      { key: "client", label: "Clients", color: Colors.primary,      icon: "person-outline",           items: users.filter((u) => !u.is_admin && u.role === "client" && u.is_active) },
+      { key: "banned", label: "Bannis",  color: Colors.destructive,  icon: "ban-outline",              items: users.filter((u) => !u.is_admin && !u.is_active) },
+    ];
+    const result: ListItem[] = [];
+    for (const g of groups) {
+      if (g.items.length === 0) continue;
+      result.push({ _type: "header", label: g.label, count: g.items.length, color: g.color, icon: g.icon });
+      g.items.forEach((u) => result.push({ _type: "user", data: u }));
+    }
+    return result;
+  }, [users, roleFilter]);
+
   const handleLongPress = useCallback((item: AdminUser) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {});
     if (Platform.OS === "ios") {
@@ -643,25 +689,31 @@ export default function AdminUsersScreen() {
     banned: { title: "Aucun banni",         sub: "Aucun utilisateur n'est actuellement banni." },
   };
 
-  const renderItem = useCallback(({ item }: { item: AdminUser }) => (
-    <UserCard
-      item={item}
-      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setSelectedUser(item); }}
-      onLongPress={() => handleLongPress(item)}
-      onBan={() => {
-        const action = item.is_active ? "Bannir" : "Réactiver";
-        Alert.alert(action, `${action} ${item.first_name} ?`, [
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
+    if (item._type === "header") {
+      return <SectionHeader label={item.label} count={item.count} color={item.color} icon={item.icon} />;
+    }
+    const u = item.data;
+    return (
+      <UserCard
+        item={u}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setSelectedUser(u); }}
+        onLongPress={() => handleLongPress(u)}
+        onBan={() => {
+          const action = u.is_active ? "Bannir" : "Réactiver";
+          Alert.alert(action, `${action} ${u.first_name} ?`, [
+            { text: "Annuler", style: "cancel" },
+            { text: action, style: u.is_active ? "destructive" : "default", onPress: () => banMut.mutate(u.id) },
+          ]);
+        }}
+        onDelete={() => Alert.alert("Supprimer", `Supprimer ${u.first_name} définitivement ?`, [
           { text: "Annuler", style: "cancel" },
-          { text: action, style: item.is_active ? "destructive" : "default", onPress: () => banMut.mutate(item.id) },
-        ]);
-      }}
-      onDelete={() => Alert.alert("Supprimer", `Supprimer ${item.first_name} définitivement ?`, [
-        { text: "Annuler", style: "cancel" },
-        { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(item.id) },
-      ])}
-      onGrant={() => setGrantTarget(item)}
-    />
-  ), [banMut, deleteMut, handleLongPress]);
+          { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(u.id) },
+        ])}
+        onGrant={() => setGrantTarget(u)}
+      />
+    );
+  }, [banMut, deleteMut, handleLongPress]);
 
   const msg = EMPTY[roleFilter];
 
@@ -767,8 +819,8 @@ export default function AdminUsersScreen() {
           <UserSkeleton />
         ) : (
           <FlashList
-            data={users}
-            keyExtractor={(item) => String(item.id)}
+            data={listData()}
+            keyExtractor={(item) => item._type === "header" ? `h-${item.label}` : String(item.data.id)}
             renderItem={renderItem}
             // @ts-ignore — prop valide en runtime
             estimatedItemSize={84}
