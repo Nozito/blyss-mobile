@@ -61,12 +61,14 @@ function BookingCard({
 
   return (
     <View style={{
-      backgroundColor: `${statusColor}07`,
+      backgroundColor: Colors.card,
       borderRadius: 18,
       padding: 18,
       marginBottom: 10,
       borderWidth: 1,
-      borderColor: `${statusColor}18`,
+      borderColor: A_BORDER,
+      borderLeftWidth: 3,
+      borderLeftColor: statusColor,
       shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -110,7 +112,7 @@ function BookingCard({
 
       {/* Action buttons */}
       {(canConfirm || canCancel) && (
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: `${statusColor}18` }}>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: A_BORDER }}>
           {canConfirm && (
             <Pressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onConfirm(booking); }}
@@ -206,7 +208,7 @@ export default function AdminBookingsScreen() {
     ]);
 
   const listHeader = (
-    <View style={{ backgroundColor: A_BG, paddingHorizontal: 16, paddingTop: insets.top + 14, paddingBottom: 12 }}>
+    <View style={{ backgroundColor: A_BG, paddingHorizontal: 16, paddingTop: insets.top + 14, paddingBottom: 10 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {FILTERS.map((f) => {
           const cfg    = f.key !== "all" ? STATUS_CFG[f.key as BookingStatus] : null;
