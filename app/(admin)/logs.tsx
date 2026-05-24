@@ -9,8 +9,8 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 
-const A_BG     = "#F4F4F5";
-const A_BORDER = "#E4E4E7";
+
+
 
 interface Log {
   id: number;
@@ -38,7 +38,7 @@ const DATE_FILTERS = [
 
 function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: A_BORDER }}>
+    <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: Colors.border }}>
       <Text style={{ fontSize: 10, color, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
       <Text style={{ fontSize: 22, fontWeight: "900", color }}>{value}</Text>
     </View>
@@ -55,7 +55,7 @@ function SkeletonRow() {
       ])
     ).start();
   }, []);
-  return <Animated.View style={{ height: 80, borderRadius: 14, backgroundColor: A_BORDER, marginBottom: 10, opacity: anim }} />;
+  return <Animated.View style={{ height: 80, borderRadius: 14, backgroundColor: Colors.border, marginBottom: 10, opacity: anim }} />;
 }
 
 export default function AdminLogsScreen() {
@@ -98,9 +98,9 @@ export default function AdminLogsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: A_BG }}>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Header card */}
-      <View style={{ backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: A_BORDER, paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 16 }}>
+      <View style={{ backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.info }} />
           <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>Logs Système</Text>
@@ -108,7 +108,7 @@ export default function AdminLogsScreen() {
         <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 16, paddingLeft: 14 }}>{filtered.length} événement(s)</Text>
 
         {/* Search */}
-        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: A_BG, borderRadius: 12, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: A_BORDER, gap: 10, marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: Colors.background, borderRadius: 12, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: Colors.border, gap: 10, marginBottom: 12 }}>
           <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
           <TextInput
             value={searchQuery}
@@ -136,8 +136,8 @@ export default function AdminLogsScreen() {
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setTypeFilter(f.id); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? Colors.admin : A_BG,
-                  borderColor: active ? Colors.admin : A_BORDER }}
+                  backgroundColor: active ? Colors.admin : Colors.background,
+                  borderColor: active ? Colors.admin : Colors.border }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                   {f.label}
@@ -156,8 +156,8 @@ export default function AdminLogsScreen() {
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setDateFilter(f.id); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? `${Colors.admin}15` : A_BG,
-                  borderColor: active ? Colors.admin : A_BORDER }}
+                  backgroundColor: active ? `${Colors.admin}15` : Colors.background,
+                  borderColor: active ? Colors.admin : Colors.border }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.admin : Colors.mutedForeground }}>
                   {f.label}
@@ -189,8 +189,8 @@ export default function AdminLogsScreen() {
           </View>
         ) : filtered.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 60 }}>
-            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-              <Ionicons name="pulse-outline" size={32} color={A_BORDER} />
+            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Ionicons name="pulse-outline" size={32} color={Colors.border} />
             </View>
             <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucun log trouvé</Text>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Modifiez les filtres pour voir d'autres résultats.</Text>
@@ -204,7 +204,7 @@ export default function AdminLogsScreen() {
                   key={log.id}
                   style={{
                     backgroundColor: Colors.card, borderRadius: 14, padding: 14,
-                    borderWidth: 1, borderColor: A_BORDER,
+                    borderWidth: 1, borderColor: Colors.border,
                     shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
                   }}
                 >

@@ -10,8 +10,8 @@ import * as Haptics from "expo-haptics";
 import { adminApi, AdminBooking } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 
-const A_BG     = "#F4F4F5";
-const A_BORDER = "#E4E4E7";
+
+
 
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 type StatusFilter  = "all" | BookingStatus;
@@ -65,7 +65,7 @@ function BookingCard({
       padding: 14,
       marginBottom: 10,
       borderWidth: 1,
-      borderColor: A_BORDER,
+      borderColor: Colors.border,
       shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3,
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -108,7 +108,7 @@ function BookingCard({
 
       {/* Action buttons */}
       {(canConfirm || canCancel) && (
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: A_BORDER }}>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border }}>
           {canConfirm && (
             <Pressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onConfirm(booking); }}
@@ -204,9 +204,9 @@ export default function AdminBookingsScreen() {
     ]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: A_BG }}>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Status filter strip */}
-      <View style={{ paddingTop: insets.top + 10, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: A_BORDER }}>
+      <View style={{ paddingTop: insets.top + 10, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {FILTERS.map((f) => {
             const cfg    = f.key !== "all" ? STATUS_CFG[f.key as BookingStatus] : null;
@@ -220,8 +220,8 @@ export default function AdminBookingsScreen() {
                 }}
                 style={{
                   paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : A_BG,
-                  borderColor:     active ? (cfg?.color ?? Colors.admin) : A_BORDER,
+                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.background,
+                  borderColor:     active ? (cfg?.color ?? Colors.admin) : Colors.border,
                 }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
@@ -253,23 +253,23 @@ export default function AdminBookingsScreen() {
             />
           }
           renderSectionHeader={({ section }) => (
-            <View style={{ backgroundColor: A_BG, paddingVertical: 10 }}>
+            <View style={{ backgroundColor: Colors.background, paddingVertical: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{ height: 1, flex: 1, backgroundColor: A_BORDER }} />
+                <View style={{ height: 1, flex: 1, backgroundColor: Colors.border }} />
                 <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "capitalize", letterSpacing: 0.8 }}>
                   {section.title}
                 </Text>
-                <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER }}>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border }}>
                   <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground }}>{section.data.length}</Text>
                 </View>
-                <View style={{ height: 1, flex: 1, backgroundColor: A_BORDER }} />
+                <View style={{ height: 1, flex: 1, backgroundColor: Colors.border }} />
               </View>
             </View>
           )}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 80 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                <Ionicons name="calendar-outline" size={32} color={A_BORDER} />
+              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                <Ionicons name="calendar-outline" size={32} color={Colors.border} />
               </View>
               <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucune réservation</Text>
               <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Rien à afficher pour ce filtre.</Text>
