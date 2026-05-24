@@ -197,7 +197,7 @@ export default function AdminMoreScreen() {
             backgroundColor: `${Colors.destructive}08`,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: `${Colors.destructive}25`,
+            borderColor: `${Colors.destructive}22`,
             padding: 16,
             flexDirection: "row",
             alignItems: "center",
@@ -208,7 +208,7 @@ export default function AdminMoreScreen() {
           <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}14`, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
           </View>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Se déconnecter</Text>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.destructive }}>Se déconnecter</Text>
         </Pressable>
       </View>
     </ScrollView>
