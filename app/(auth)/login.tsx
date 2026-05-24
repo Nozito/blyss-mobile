@@ -320,6 +320,7 @@ export default function LoginScreen() {
       <RoleSelectionModal
         visible={showRoleModal}
         userName={loggedUserName}
+        userInitials={loggedUserName.slice(0, 2).toUpperCase() || "?"}
         onSelectRole={handleRoleSelection}
         onClose={handleCloseModal}
       />
