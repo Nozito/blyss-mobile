@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from "react";
 import {
   View, Text, ScrollView, Pressable, Animated, Platform,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -9,6 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
 import { SymbolView } from "expo-symbols";
 import { Colors } from "@/constants/colors";
+
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
 
 const GRID_ITEMS = [
   { route: "/(admin)/analytics",     icon: "analytics-outline"     as const, symbol: "chart.bar.xaxis" as const, label: "Analytics", description: "Métriques & revenus",    color: Colors.pro },
@@ -47,16 +51,16 @@ function GridCard({ item, index }: { item: GridItem; index: number }) {
           router.push(item.route as any);
         }}
         style={({ pressed }) => [{
-          backgroundColor: Colors.card, borderRadius: 12, padding: 18,
-          borderWidth: 1, borderColor: pressed ? `${item.color}35` : Colors.border,
+          backgroundColor: Colors.card, borderRadius: 18, padding: 18,
+          borderWidth: 1, borderColor: pressed ? `${item.color}35` : A_BORDER,
           opacity: pressed ? 0.85 : 1, aspectRatio: 1, justifyContent: "space-between",
-          shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
         }]}
       >
-        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: `${item.color}12`, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${item.color}12`, alignItems: "center", justifyContent: "center" }}>
           {Platform.OS === "ios"
-            ? <SymbolView name={item.symbol} size={24} tintColor={item.color} />
-            : <Ionicons name={item.icon} size={24} color={item.color} />}
+            ? <SymbolView name={item.symbol} size={26} tintColor={item.color} />
+            : <Ionicons name={item.icon} size={26} color={item.color} />}
         </View>
         <View>
           <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground, marginBottom: 3 }}>{item.label}</Text>
@@ -86,30 +90,42 @@ export default function AdminMoreScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: A_BG }}
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Admin identity card */}
+      {/* Admin identity card — LinearGradient hero */}
       <Animated.View style={{
-        borderRadius: 16, borderWidth: 1, borderColor: `${Colors.admin}33`,
-        backgroundColor: `${Colors.admin}0A`, padding: 18,
-        flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 28,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+        borderRadius: 20, overflow: "hidden", marginBottom: 28,
+        shadowColor: "#EA6000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 4,
         opacity: identityOpacity, transform: [{ translateY: identityTranslateY }],
       }}>
-        <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: Colors.admin, alignItems: "center", justifyContent: "center", shadowColor: Colors.admin, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 2 }}>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: "#fff" }}>
-            {user?.first_name?.[0]?.toUpperCase() ?? "A"}
-          </Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground }}>{user?.first_name} {user?.last_name}</Text>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{user?.email}</Text>
-        </View>
-        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: `${Colors.admin}18` }}>
-          <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.admin, letterSpacing: 1 }}>ADMIN</Text>
-        </View>
+        <LinearGradient
+          colors={["#EA6000", "#F97316", "#FBAB6A"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ padding: 20, flexDirection: "row", alignItems: "center", gap: 14 }}
+        >
+          <View style={{ position: "absolute", top: -24, right: -24, width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(255,255,255,0.10)" }} />
+          {/* Avatar — white gradient */}
+          <LinearGradient
+            colors={["rgba(255,255,255,0.35)", "rgba(255,255,255,0.15)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ width: 52, height: 52, borderRadius: 15, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: "900", color: Colors.white }}>
+              {user?.first_name?.[0]?.toUpperCase() ?? "A"}
+            </Text>
+          </LinearGradient>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.white }}>{user?.first_name} {user?.last_name}</Text>
+            <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)" }}>{user?.email}</Text>
+          </View>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.20)" }}>
+            <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.white, letterSpacing: 1 }}>ADMIN</Text>
+          </View>
+        </LinearGradient>
       </Animated.View>
 
       {/* 2×2 Grid */}
@@ -126,32 +142,35 @@ export default function AdminMoreScreen() {
       <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 12 }}>
         Informations
       </Text>
-      <View style={{ backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, marginBottom: 24, overflow: "hidden",
+      <View style={{ backgroundColor: Colors.card, borderRadius: 14, borderWidth: 1, borderColor: A_BORDER, marginBottom: 24, overflow: "hidden",
         shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
         {INFO_ROWS.map(({ label, value }, i) => (
-          <View key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0, borderBottomColor: Colors.border }}>
+          <View key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0, borderBottomColor: A_BORDER }}>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{label}</Text>
             <Text numberOfLines={1} style={{ maxWidth: 200, fontSize: 13, fontWeight: "600", color: Colors.foreground }}>{value}</Text>
           </View>
         ))}
       </View>
 
-      {/* Logout */}
-      <Pressable
-        onPress={() => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-          logout();
-        }}
-        style={({ pressed }) => [{
-          height: 52, borderRadius: 14, backgroundColor: "rgba(240,58,58,0.08)",
-          borderWidth: 1, borderColor: "rgba(240,58,58,0.15)",
-          alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
-          opacity: pressed ? 0.75 : 1,
-        }]}
-      >
-        <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Se déconnecter</Text>
-      </Pressable>
+      {/* Logout — Colors.card row with icon square */}
+      <View style={{ backgroundColor: Colors.card, borderRadius: 14, borderWidth: 1, borderColor: A_BORDER, overflow: "hidden",
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
+        <Pressable
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            logout();
+          }}
+          style={({ pressed }) => [{
+            flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14,
+            opacity: pressed ? 0.75 : 1,
+          }]}
+        >
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.destructive}10`, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="log-out-outline" size={18} color={Colors.destructive} />
+          </View>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Se déconnecter</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
