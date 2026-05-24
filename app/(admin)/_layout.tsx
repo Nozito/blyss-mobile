@@ -6,6 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
 
+const A_BG     = "#F4F4F5";
+const A_BORDER = "#E4E4E7";
+
 export default function AdminLayout() {
   const { user, isLoading } = useAuth();
 
@@ -21,7 +24,7 @@ export default function AdminLayout() {
       tabBarStyle={{
         backgroundColor: Colors.card,
         borderTopWidth: 1,
-        borderTopColor: "#E4E4E7",
+        borderTopColor: A_BORDER,
       }}
     >
       <NativeTabs.Trigger name="dashboard">
