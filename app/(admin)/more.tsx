@@ -31,7 +31,7 @@ const INFO_ROWS = [
 
 type GridItem = { route: string; icon: React.ComponentProps<typeof Ionicons>["name"]; symbol: string; label: string; description: string; color: string };
 
-function ToolRow({ item, index }: { item: GridItem; index: number }) {
+function ToolRow({ item, index, isLast }: { item: GridItem; index: number; isLast?: boolean }) {
   const router  = useRouter();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
@@ -54,22 +54,22 @@ function ToolRow({ item, index }: { item: GridItem; index: number }) {
           router.push(item.route as any);
         }}
         style={({ pressed }) => [{
-          backgroundColor: Colors.card, borderRadius: 14, padding: 16,
-          borderWidth: 1, borderColor: A_BORDER,
-          opacity: pressed ? 0.85 : 1,
+          paddingHorizontal: 16, paddingVertical: 14,
           flexDirection: "row", alignItems: "center", gap: 14,
+          borderBottomWidth: isLast ? 0 : 1, borderBottomColor: A_BORDER,
+          opacity: pressed ? 0.85 : 1,
         }]}
       >
-        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${item.color}12`, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${item.color}14`, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {Platform.OS === "ios"
-            ? <SymbolView name={item.symbol} size={22} tintColor={item.color} />
-            : <Ionicons name={item.icon} size={22} color={item.color} />}
+            ? <SymbolView name={item.symbol} size={20} tintColor={item.color} />
+            : <Ionicons name={item.icon} size={20} color={item.color} />}
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>{item.label}</Text>
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>{item.description}</Text>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>{item.label}</Text>
+          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1 }}>{item.description}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} style={{ opacity: 0.5 }} />
+        <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
       </Pressable>
     </Animated.View>
   );
@@ -168,9 +168,9 @@ export default function AdminMoreScreen() {
         <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
           Outils admin
         </Text>
-        <View style={{ gap: 10, marginBottom: 28 }}>
+        <View style={{ backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: A_BORDER, overflow: "hidden", marginBottom: 20 }}>
           {GRID_ITEMS.map((item, i) => (
-            <ToolRow key={item.route} item={item} index={i} />
+            <ToolRow key={item.route} item={item} index={i} isLast={i === GRID_ITEMS.length - 1} />
           ))}
         </View>
 
@@ -194,11 +194,13 @@ export default function AdminMoreScreen() {
             logout();
           }}
           style={({ pressed }) => [{
-            backgroundColor: `${Colors.destructive}08`,
+            marginTop: 8,
+            backgroundColor: `${Colors.destructive}0A`,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: `${Colors.destructive}22`,
-            padding: 16,
+            borderColor: `${Colors.destructive}25`,
+            paddingHorizontal: 16,
+            paddingVertical: 16,
             flexDirection: "row",
             alignItems: "center",
             gap: 14,
@@ -208,7 +210,7 @@ export default function AdminMoreScreen() {
           <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}14`, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
           </View>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.destructive }}>Se déconnecter</Text>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.destructive, flex: 1 }}>Se déconnecter</Text>
         </Pressable>
       </View>
     </ScrollView>
