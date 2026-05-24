@@ -20,7 +20,7 @@ export default function AdminLayout() {
       blurEffect="systemUltraThinMaterialLight"
       tintColor={Colors.admin}
       minimizeBehavior="automatic"
-      labelVisibilityMode="unlabeled"
+      labelVisibilityMode="labeled"
       tabBarStyle={{
         backgroundColor: Colors.card,
         borderTopWidth: 1,
