@@ -267,41 +267,45 @@ function UserRow({
       style={({ pressed }) => [{
         flexDirection: "row", alignItems: "center", gap: 12,
         backgroundColor: Colors.card,
-        borderRadius: 18, paddingHorizontal: 14, paddingVertical: 13,
+        borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
         marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
-        opacity: pressed ? 0.88 : 1,
-        shadowColor: Colors.foreground, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1,
+        opacity: pressed ? 0.85 : 1,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
       }]}
     >
-      <Avatar name={`${item.first_name} ${item.last_name}`} size={44} />
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>{item.first_name} {item.last_name}</Text>
-          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: `${rc}18` }}>
-            <Text style={{ fontSize: 9, fontWeight: "800", color: rc, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <Avatar name={`${item.first_name} ${item.last_name}`} size={42} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 3, flexWrap: "wrap" }}>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
+            {item.first_name} {item.last_name}
+          </Text>
+          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${rc}15` }}>
+            <Text style={{ fontSize: 9, fontWeight: "800", color: rc, textTransform: "uppercase", letterSpacing: 0.4 }}>
               {item.is_admin ? "admin" : item.role}
             </Text>
           </View>
           {!item.is_active && (
-            <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: `${Colors.destructive}18` }}>
+            <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${Colors.destructive}15` }}>
               <Text style={{ fontSize: 9, fontWeight: "800", color: Colors.destructive }}>BANNI</Text>
             </View>
           )}
         </View>
-        <Text style={{ fontSize: 11, color: Colors.mutedForeground }} numberOfLines={1}>{item.email}</Text>
+        <Text style={{ fontSize: 12, color: Colors.mutedForeground }} numberOfLines={1}>{item.email}</Text>
       </View>
       {!item.is_admin && (
         <Pressable
           onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBan(); }}
-          hitSlop={8}
-          style={{ width: 32, height: 32, borderRadius: 10,
-            backgroundColor: item.is_active ? `${Colors.destructive}12` : `${Colors.success}12`,
+          hitSlop={10}
+          style={{ width: 34, height: 34, borderRadius: 10,
+            backgroundColor: item.is_active ? `${Colors.destructive}10` : `${Colors.success}10`,
+            borderWidth: 1,
+            borderColor: item.is_active ? `${Colors.destructive}20` : `${Colors.success}20`,
             alignItems: "center", justifyContent: "center" }}
         >
-          <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={16} color={item.is_active ? Colors.destructive : Colors.success} />
+          <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={15} color={item.is_active ? Colors.destructive : Colors.success} />
         </Pressable>
       )}
-      <Ionicons name="chevron-forward" size={15} color={Colors.mutedForeground} />
+      <Ionicons name="chevron-forward" size={14} color={Colors.mutedForeground} />
     </Pressable>
   );
 }
@@ -421,8 +425,16 @@ export default function AdminUsersScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      {/* Search + filters */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+      {/* Header — titre + search + filtres */}
+      <View style={{ paddingHorizontal: 16, paddingTop: insets.top + 12, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.3 }}>Utilisateurs</Text>
+          {!isLoading && (
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: Colors.muted, borderWidth: 1, borderColor: Colors.border }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.mutedForeground }}>{users.length}</Text>
+            </View>
+          )}
+        </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.muted, borderRadius: 16, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: Colors.border, marginBottom: 12 }}>
           <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
           <TextInput

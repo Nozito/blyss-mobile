@@ -398,7 +398,7 @@ export default function AdminCouponsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Filter strip */}
-      <View style={{ paddingVertical: 12, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+      <View style={{ paddingTop: insets.top + 10, paddingBottom: 10, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {STATUS_FILTERS.map((f) => {
             const active = statusFilter === f.key;

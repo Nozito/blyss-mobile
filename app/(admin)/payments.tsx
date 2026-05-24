@@ -253,7 +253,7 @@ export default function AdminPaymentsScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 90 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} colors={[Colors.admin]} />}
       >
         {/* KPI strip + export button */}

@@ -57,7 +57,7 @@ export default function AdminNotificationsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
-      contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
