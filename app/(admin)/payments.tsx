@@ -12,9 +12,10 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+import { ADMIN } from "@/constants/adminTheme";
 
-const A_BG     = "#F4F4F5";
-const A_BORDER = "#E4E4E7";
+const A_BG     = ADMIN.bg;
+const A_BORDER = ADMIN.border;
 
 
 
@@ -55,26 +56,26 @@ function TxCard({
 
   return (
     <Animated.View style={{
-      backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1,
-      borderColor: A_BORDER, overflow: "hidden", marginBottom: 10,
+      backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 16, borderWidth: 1,
+      borderColor: ADMIN.border, overflow: "hidden", marginBottom: 10,
       shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
       opacity, transform: [{ translateY }],
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>
         {/* Icon */}
-        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? `${cfg.color}15` : A_BG, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Ionicons name={cfg ? cfg.icon : "card-outline"} size={18} color={cfg ? cfg.color : Colors.mutedForeground} />
+        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? `${cfg.color}15` : "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Ionicons name={cfg ? cfg.icon : "card-outline"} size={18} color={cfg ? cfg.color : "rgba(255,255,255,0.45)"} />
         </View>
 
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground, flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: isSucceeded ? Colors.success : Colors.foreground, letterSpacing: -0.5, marginLeft: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: "#FFFFFF", flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: isSucceeded ? Colors.success : "#FFFFFF", letterSpacing: -0.5, marginLeft: 8 }}>
               {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
               {tx.pro_name} · {new Date(tx.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
             </Text>
             {cfg ? (
@@ -89,12 +90,12 @@ function TxCard({
       {(tx.fee != null || isSucceeded) && (
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 12, paddingTop: 2, gap: 12 }}>
           {tx.fee != null && (
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
               Frais : {Number(tx.fee).toFixed(2)} €
             </Text>
           )}
           {tx.net_amount != null && (
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
               Net : {Number(tx.net_amount).toFixed(2)} €
             </Text>
           )}
@@ -243,17 +244,32 @@ export default function AdminPaymentsScreen() {
       >
         {/* Hero CA total */}
         <LinearGradient
-          colors={["#EA6000", "#F97316", "#FBAB6A"]}
+          colors={["#0F0800", "#1C0F00", "#0F0800"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ borderRadius: 20, padding: 20, marginBottom: 14, overflow: "hidden" }}
         >
-          <View style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.08)" }} />
-          <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CA Total</Text>
-          <Text style={{ fontSize: 40, fontWeight: "900", color: Colors.white, letterSpacing: -1 }}>
+          <View style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.04)" }} />
+          <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(249,115,22,0.6)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CA TOTAL</Text>
+          <Text style={{ fontSize: 48, fontWeight: "900", color: "#fff", letterSpacing: -1 }}>
             {caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
           </Text>
-          <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>{transactions.length} transaction(s) au total</Text>
+          {/* 3 mini-stats */}
+          <View style={{ flexDirection: "row", marginTop: 16 }}>
+            {[
+              { label: "Ce mois",      value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
+              { label: "Net total",    value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
+              { label: "Transactions", value: String(transactions.length) },
+            ].map(({ label, value }, i) => (
+              <React.Fragment key={label}>
+                {i > 0 && <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.10)", marginHorizontal: 14 }} />}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 3 }}>{label}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>{value}</Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
         </LinearGradient>
 
         {/* 3 mini-cards */}
@@ -263,8 +279,8 @@ export default function AdminPaymentsScreen() {
             { label: "Net total",  value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
             { label: "En attente", value: String(pending), color: Colors.warning },
           ].map(({ label, value, color }) => (
-            <View key={label} style={{ flex: 1, backgroundColor: Colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: A_BORDER, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{label}</Text>
+            <View key={label} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 18, padding: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{label}</Text>
               <Text style={{ fontSize: 18, fontWeight: "900", color, letterSpacing: -0.5 }}>{value}</Text>
             </View>
           ))}
@@ -272,21 +288,21 @@ export default function AdminPaymentsScreen() {
 
         {/* Section header + search + export */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.card, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: A_BORDER }}>
-            <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+            <Ionicons name="search-outline" size={16} color="rgba(255,255,255,0.45)" />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Rechercher client ou pro…"
-              placeholderTextColor={Colors.mutedForeground}
-              style={{ flex: 1, fontSize: 13, color: Colors.foreground }}
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              style={{ flex: 1, fontSize: 13, color: "#fff" }}
               autoCorrect={false}
               spellCheck={false}
               returnKeyType="search"
             />
             {search.length > 0 && (
               <Pressable onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={16} color={Colors.mutedForeground} />
+                <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.45)" />
               </Pressable>
             )}
           </View>
@@ -294,8 +310,8 @@ export default function AdminPaymentsScreen() {
             onPress={handleExportPDF}
             disabled={exporting || thisMonth.length === 0}
             style={({ pressed }) => [{
-              width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.card,
-              borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center",
+              width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", alignItems: "center", justifyContent: "center",
               opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
               shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
             }]}
@@ -316,10 +332,10 @@ export default function AdminPaymentsScreen() {
                 key={f}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : Colors.card,
-                  borderColor: active ? (cfg?.color ?? Colors.admin) : A_BORDER }}
+                  backgroundColor: active ? (cfg?.color ?? Colors.admin) : "rgba(255,255,255,0.05)",
+                  borderColor: active ? (cfg?.color ?? Colors.admin) : "rgba(255,255,255,0.09)" }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#FFFFFF" : "rgba(255,255,255,0.45)" }}>
                   {f === "all" ? "Tous" : cfg?.label}
                 </Text>
               </Pressable>
@@ -330,20 +346,20 @@ export default function AdminPaymentsScreen() {
         {/* Section label */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <View style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: Colors.admin }} />
-          <Text style={{ fontSize: 13, fontWeight: "900", color: Colors.foreground }}>Transactions</Text>
-          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: A_BG, borderWidth: 1, borderColor: A_BORDER }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground }}>{filtered.length}</Text>
+          <Text style={{ fontSize: 13, fontWeight: "900", color: "#fff" }}>Transactions</Text>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: ADMIN.border }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.45)" }}>{filtered.length}</Text>
           </View>
         </View>
 
         {/* Transactions */}
         {filtered.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 80 }}>
-            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-              <Ionicons name="card-outline" size={32} color={A_BORDER} />
+            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Ionicons name="card-outline" size={32} color="rgba(255,255,255,0.2)" />
             </View>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Aucune transaction</Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Rien à afficher pour ce filtre.</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff", marginBottom: 6 }}>Aucune transaction</Text>
+            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>Rien à afficher pour ce filtre.</Text>
           </View>
         ) : (
           filtered.map((tx, i) => (

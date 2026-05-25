@@ -1,32 +1,90 @@
 import React, { useRef, useEffect } from "react";
 import {
-  View, Text, ScrollView, Pressable, Animated,
+  View, Text, ScrollView, Pressable, Animated, Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { SymbolView } from "expo-symbols";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+import { ADMIN } from "@/constants/adminTheme";
 
-const A_BG     = "#F4F4F5";
-const A_BORDER = "#E4E4E7";
+const A_BG     = ADMIN.bg;
+const A_BORDER = ADMIN.border;
 
 const TOOLS = [
-  { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  icon: "bar-chart"     as const, color: Colors.pro,     route: "/(admin)/analytics" },
-  { key: "logs",      label: "Logs",      sub: "Événements système",   icon: "pulse"         as const, color: Colors.info,    route: "/(admin)/logs" },
-  { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         icon: "notifications" as const, color: Colors.success, route: "/(admin)/notifications" },
-  { key: "coupons",   label: "Coupons",   sub: "Codes promo",          icon: "pricetag"      as const, color: Colors.warning, route: "/(admin)/coupons" },
+  { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  symbol: "chart.bar.fill",                        color: Colors.pro,     route: "/(admin)/analytics" },
+  { key: "logs",      label: "Logs",      sub: "Événements système",   symbol: "waveform",                              color: Colors.info,    route: "/(admin)/logs" },
+  { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         symbol: "bell.fill",                             color: Colors.success, route: "/(admin)/notifications" },
+  { key: "coupons",   label: "Coupons",   sub: "Codes promo",          symbol: "tag.fill",                              color: Colors.warning, route: "/(admin)/coupons" },
 ];
 
 const INFO_ROWS = [
-  { label: "Application", value: "Blyss Admin" },
-  { label: "Plateforme",  value: "React Native / Expo" },
-  { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—" },
+  { label: "Application", value: "Blyss Admin",                         icon: "apps-outline"           as const },
+  { label: "Plateforme",  value: "React Native / Expo",                  icon: "phone-portrait-outline" as const },
+  { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—", icon: "server-outline"         as const },
 ] as const;
+
+// ─── ToolRow ──────────────────────────────────────────────────────────────────
+
+function ToolRow({
+  tool, isLast, onPress,
+}: {
+  tool: typeof TOOLS[number]; isLast: boolean; onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() =>
+        Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
+      }
+      onPressOut={() =>
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()
+      }
+    >
+      <Animated.View style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 16,
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: "rgba(255,255,255,0.07)",
+        transform: [{ scale }],
+      }}>
+        <View style={{
+          width: 46, height: 46, borderRadius: 14,
+          backgroundColor: `${tool.color}18`,
+          alignItems: "center", justifyContent: "center",
+        }}>
+          {Platform.OS === "ios" ? (
+            <SymbolView name={tool.symbol as any} size={22} tintColor={tool.color} />
+          ) : (
+            <Ionicons name="grid-outline" size={22} color={tool.color} />
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>{tool.label}</Text>
+          <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{tool.sub}</Text>
+        </View>
+        {Platform.OS === "ios" ? (
+          <SymbolView name="chevron.right" size={14} tintColor="rgba(255,255,255,0.2)" />
+        ) : (
+          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.2)" />
+        )}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function AdminMoreScreen() {
   const insets = useSafeAreaInsets();
@@ -41,13 +99,26 @@ export default function AdminMoreScreen() {
 
   const d = (dashData?.data as any) ?? {};
 
-  const profileOpacity    = useRef(new Animated.Value(0)).current;
-  const profileTranslateY = useRef(new Animated.Value(24)).current;
+  // Entry animation — full screen
+  const screenOpacity    = useRef(new Animated.Value(0)).current;
+  const screenTranslateY = useRef(new Animated.Value(20)).current;
+
+  // Avatar entrance
+  const avatarScale   = useRef(new Animated.Value(0)).current;
+  const avatarOpacity = useRef(new Animated.Value(0)).current;
+
+  // Logout press
+  const logoutScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(profileOpacity,    { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.spring(profileTranslateY, { toValue: 0, damping: 18, stiffness: 160, useNativeDriver: true }),
+      Animated.timing(screenOpacity,    { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.timing(screenTranslateY, { toValue: 0, duration: 350, useNativeDriver: true }),
+    ]).start();
+
+    Animated.parallel([
+      Animated.spring(avatarScale,   { toValue: 1, damping: 14, stiffness: 130, useNativeDriver: true }),
+      Animated.spring(avatarOpacity, { toValue: 1, damping: 14, stiffness: 130, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -55,140 +126,320 @@ export default function AdminMoreScreen() {
   const initials = fullName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
   const stats = [
-    { label: "Utilisateurs", value: d?.stats?.total_users ?? "—", icon: "people-outline" as const,  color: Colors.pro },
-    { label: "RDV du mois",  value: d?.stats?.bookings_month ?? "—", icon: "calendar-outline" as const, color: Colors.info },
-    { label: "CA du mois",   value: d?.stats?.revenue_month ? `${Number(d.stats.revenue_month).toFixed(0)}€` : "—", icon: "wallet-outline" as const, color: Colors.admin },
+    {
+      label: "Utilisateurs",
+      value: d?.stats?.total_users ?? "—",
+      symbol: "person.2.fill",
+      icon: "people-outline" as const,
+      color: Colors.pro,
+      route: "/(admin)/users",
+    },
+    {
+      label: "RDV du mois",
+      value: d?.stats?.bookings_month ?? "—",
+      symbol: "calendar.fill",
+      icon: "calendar-outline" as const,
+      color: Colors.info,
+      route: "/(admin)/bookings",
+    },
+    {
+      label: "CA du mois",
+      value: d?.stats?.revenue_month
+        ? `${Number(d.stats.revenue_month).toFixed(0)}€`
+        : "—",
+      symbol: "banknote.fill",
+      icon: "wallet-outline" as const,
+      color: Colors.admin,
+      route: "/(admin)/analytics",
+    },
   ];
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: A_BG }}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* ── Hero profile card ── */}
-      <Animated.View style={{ opacity: profileOpacity, transform: [{ translateY: profileTranslateY }], marginBottom: 20 }}>
+    <Animated.View style={{
+      flex: 1,
+      backgroundColor: A_BG,
+      opacity: screenOpacity,
+      transform: [{ translateY: screenTranslateY }],
+    }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Hero Profile ── */}
         <LinearGradient
-          colors={["#EA6000", "#F97316", "#FBAB6A"]}
+          colors={["#0F0800", "#1C0F00", "#120800"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ paddingTop: insets.top + 24, paddingBottom: 40, paddingHorizontal: 24, alignItems: "center" }}
+          style={{
+            paddingTop: insets.top + 28,
+            paddingBottom: 32,
+            paddingHorizontal: 24,
+            alignItems: "center",
+            overflow: "hidden",
+          }}
         >
-          {/* Decoration circles */}
-          <View style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.07)" }} />
-          <View style={{ position: "absolute", bottom: 20, left: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.05)" }} />
+          {/* Orb déco top-right */}
+          <View style={{
+            position: "absolute", top: -20, right: -20,
+            width: 140, height: 140, borderRadius: 70,
+            backgroundColor: "rgba(249,115,22,0.06)",
+          }} />
 
-          {/* Avatar */}
-          <LinearGradient
-            colors={["rgba(255,255,255,0.4)", "rgba(255,255,255,0.15)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ width: 88, height: 88, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 2.5, borderColor: "rgba(255,255,255,0.5)" }}
-          >
-            <Text style={{ fontSize: 34, fontWeight: "900", color: "#fff" }}>{initials || "A"}</Text>
-          </LinearGradient>
+          {/* Shield watermark */}
+          {Platform.OS === "ios" && (
+            <SymbolView
+              name="shield.fill"
+              size={100}
+              tintColor="rgba(249,115,22,0.07)"
+              style={{ position: "absolute", bottom: 16, right: 20 }}
+            />
+          )}
 
-          <Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: 4 }}>{fullName || "Admin"}</Text>
-          <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.78)", marginBottom: 14 }}>{user?.email}</Text>
+          {/* Avatar animé */}
+          <Animated.View style={{
+            opacity: avatarOpacity,
+            transform: [{ scale: avatarScale }],
+          }}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.25)", "rgba(255,255,255,0.08)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 96, height: 96, borderRadius: 32,
+                alignItems: "center", justifyContent: "center",
+                borderWidth: 2.5, borderColor: "rgba(255,255,255,0.4)",
+              }}
+            >
+              <Text style={{ fontSize: 36, fontWeight: "900", color: "#fff" }}>
+                {initials || "A"}
+              </Text>
+            </LinearGradient>
+          </Animated.View>
+
+          <Text style={{
+            fontSize: 24, fontWeight: "900", color: "#fff",
+            letterSpacing: -0.5, marginTop: 16, marginBottom: 4,
+          }}>
+            {fullName || "Admin"}
+          </Text>
+          <Text style={{
+            fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 16,
+          }}>
+            {user?.email}
+          </Text>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.22)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" }}>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: "#fff", letterSpacing: 1 }}>⚡ ADMIN</Text>
+            <View style={{
+              paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20,
+              backgroundColor: "rgba(249,115,22,0.25)",
+              borderWidth: 1, borderColor: "rgba(249,115,22,0.45)",
+            }}>
+              <Text style={{ fontSize: 11, fontWeight: "900", color: "#F97316", letterSpacing: 0.5 }}>
+                ⚡ ADMIN
+              </Text>
             </View>
-            <View style={{ paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.12)" }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.85)" }}>Accès total</Text>
+            <View style={{
+              paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20,
+              backgroundColor: "rgba(255,255,255,0.08)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+            }}>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Accès total</Text>
             </View>
           </View>
         </LinearGradient>
 
-        {/* Stats strip — floats over the gradient */}
-        <View style={{ marginHorizontal: 20, marginTop: -24, backgroundColor: Colors.card, borderRadius: 20, borderWidth: 1, borderColor: A_BORDER, padding: 16, flexDirection: "row",
-          shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 12, elevation: 6 }}>
-          {stats.map(({ label, value, icon, color }, i) => (
-            <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: i < stats.length - 1 ? 1 : 0, borderRightColor: A_BORDER }}>
-              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${color}12`, alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                <Ionicons name={icon} size={16} color={color} />
-              </View>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.foreground }}>{value}</Text>
-              <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 1 }}>{label}</Text>
-            </View>
+        {/* ── Stats Strip flottante ── */}
+        <View style={{
+          marginHorizontal: 20, marginTop: -24,
+          backgroundColor: "rgba(15,8,0,0.95)",
+          borderRadius: 24,
+          borderWidth: 1, borderColor: "rgba(249,115,22,0.20)",
+          shadowColor: "#F97316",
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 8 },
+          padding: 18,
+          flexDirection: "row",
+        }}>
+          {stats.map(({ label, value, symbol, icon, color, route }, i) => (
+            <React.Fragment key={label}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push(route as any);
+                }}
+                style={{ flex: 1, alignItems: "center" }}
+              >
+                <View style={{
+                  width: 42, height: 42, borderRadius: 14,
+                  backgroundColor: `${color}18`,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  {Platform.OS === "ios" ? (
+                    <SymbolView name={symbol as any} size={18} tintColor={color} />
+                  ) : (
+                    <Ionicons name={icon} size={18} color={color} />
+                  )}
+                </View>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", marginTop: 8 }}>
+                  {value}
+                </Text>
+                <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                  {label}
+                </Text>
+              </Pressable>
+              {i < stats.length - 1 && (
+                <View style={{
+                  width: 1,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  alignSelf: "stretch",
+                  marginVertical: 4,
+                }} />
+              )}
+            </React.Fragment>
           ))}
         </View>
-      </Animated.View>
 
-      <View style={{ paddingHorizontal: 20 }}>
-        {/* ── Outils ── */}
-        <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
-          Outils admin
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
-          {TOOLS.map((tool) => (
-            <Pressable
-              key={tool.key}
-              onPress={() => router.push(tool.route as any)}
-              style={({ pressed }) => [{
-                width: "47%",
-                backgroundColor: Colors.card,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: A_BORDER,
-                padding: 18,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 2,
-                opacity: pressed ? 0.85 : 1,
-              }]}
-            >
-              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${tool.color}14`, alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-                <Ionicons name={tool.icon} size={22} color={tool.color} />
-              </View>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground, marginBottom: 3 }}>{tool.label}</Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{tool.sub}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <View style={{ paddingHorizontal: 20 }}>
+          {/* ── Outils Admin ── */}
+          <Text style={{
+            fontSize: 11, fontWeight: "800",
+            color: "rgba(255,255,255,0.3)",
+            letterSpacing: 1.8,
+            textTransform: "uppercase",
+            marginBottom: 14,
+            marginTop: 28,
+          }}>
+            Outils Admin
+          </Text>
 
-        {/* ── Logout ── */}
-        <Pressable
-          onPress={() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-            logout();
-          }}
-          style={({ pressed }) => [{
-            backgroundColor: `${Colors.destructive}0A`,
-            borderRadius: 16,
+          <View style={{
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 22,
             borderWidth: 1,
-            borderColor: `${Colors.destructive}25`,
-            paddingHorizontal: 16,
-            paddingVertical: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 14,
-            marginBottom: 28,
-            opacity: pressed ? 0.75 : 1,
-          }]}
-        >
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}14`, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
+            borderColor: "rgba(255,255,255,0.08)",
+            overflow: "hidden",
+          }}>
+            {TOOLS.map((tool, i) => (
+              <ToolRow
+                key={tool.key}
+                tool={tool}
+                isLast={i === TOOLS.length - 1}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push(tool.route as any);
+                }}
+              />
+            ))}
           </View>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.destructive, flex: 1 }}>Se déconnecter</Text>
-        </Pressable>
 
-        {/* ── App info ── */}
-        <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 14 }}>
-          À propos
-        </Text>
-        <View style={{ backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: A_BORDER, marginBottom: 24, overflow: "hidden" }}>
-          {INFO_ROWS.map(({ label, value }, i) => (
-            <View key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0, borderBottomColor: A_BORDER }}>
-              <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>{label}</Text>
-              <Text numberOfLines={1} style={{ maxWidth: 200, fontSize: 13, fontWeight: "700", color: Colors.foreground }}>{value}</Text>
-            </View>
-          ))}
+          {/* ── Bouton déconnexion ── */}
+          <Pressable
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+              logout();
+            }}
+            onPressIn={() =>
+              Animated.spring(logoutScale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
+            }
+            onPressOut={() =>
+              Animated.spring(logoutScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()
+            }
+            style={{ marginTop: 16 }}
+          >
+            <Animated.View style={{
+              backgroundColor: "rgba(240,58,58,0.10)",
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "rgba(240,58,58,0.22)",
+              paddingHorizontal: 18,
+              paddingVertical: 18,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 16,
+              transform: [{ scale: logoutScale }],
+            }}>
+              <View style={{
+                width: 46, height: 46, borderRadius: 14,
+                backgroundColor: "rgba(240,58,58,0.15)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {Platform.OS === "ios" ? (
+                  <SymbolView
+                    name="rectangle.portrait.and.arrow.right"
+                    size={22}
+                    tintColor="#F03A3A"
+                  />
+                ) : (
+                  <Ionicons name="log-out-outline" size={22} color="#F03A3A" />
+                )}
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "800", color: "#F03A3A", flex: 1 }}>
+                Se déconnecter
+              </Text>
+            </Animated.View>
+          </Pressable>
+
+          {/* ── À propos ── */}
+          <Text style={{
+            fontSize: 11, fontWeight: "800",
+            color: "rgba(255,255,255,0.3)",
+            letterSpacing: 1.8,
+            textTransform: "uppercase",
+            marginBottom: 14,
+            marginTop: 28,
+          }}>
+            À propos
+          </Text>
+
+          <View style={{
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 22,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            overflow: "hidden",
+          }}>
+            {INFO_ROWS.map(({ label, value, icon }, i) => (
+              <View
+                key={label}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingHorizontal: 18,
+                  paddingVertical: 15,
+                  borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0,
+                  borderBottomColor: "rgba(255,255,255,0.07)",
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Ionicons name={icon} size={18} color="rgba(255,255,255,0.35)" />
+                  </View>
+                  <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.45)" }}>{label}</Text>
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    maxWidth: 200,
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: "rgba(255,255,255,0.8)",
+                    textAlign: "right",
+                  }}
+                >
+                  {value}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </Animated.View>
   );
 }

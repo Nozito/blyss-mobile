@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Pressable, RefreshControl, Platform, Animated, Easing,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,9 +15,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 
-const A_BG     = "#F4F4F5";
-const A_BORDER = "#E4E4E7";
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const BG      = "#080810";
+const CARD    = "rgba(255,255,255,0.045)";
+const BORDER  = "rgba(255,255,255,0.09)";
+const TEXT1   = "#FFFFFF";
+const TEXT2   = "rgba(255,255,255,0.50)";
+const TEXT3   = "rgba(255,255,255,0.28)";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Stats {
   totalUsers: number; totalPros: number; totalClients: number;
   totalBookings: number; todayBookings: number;
@@ -31,18 +38,19 @@ function n(v: unknown): number {
   return typeof v === "number" ? v : parseFloat(String(v ?? "0")) || 0;
 }
 
+// ── PulseDot ──────────────────────────────────────────────────────────────────
 function PulseDot({ color }: { color: string }) {
   const scale   = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const a = Animated.loop(Animated.sequence([
       Animated.parallel([
-        Animated.timing(scale,   { toValue: 1.7, duration: 700, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 700, useNativeDriver: true }),
+        Animated.timing(scale,   { toValue: 1.7, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        Animated.timing(opacity, { toValue: 0.2, duration: 800, useNativeDriver: true }),
       ]),
       Animated.parallel([
-        Animated.timing(scale,   { toValue: 1, duration: 700, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(scale,   { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
       ]),
     ]));
     a.start();
@@ -55,46 +63,87 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
+// ── Section Header ────────────────────────────────────────────────────────────
+function SectionHeader({ title, accent = Colors.admin, icon, rightContent }: {
+  title: string; accent?: string;
+  icon?: { ios: any; android: any };
+  rightContent?: React.ReactNode;
+}) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+        <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: accent }} />
+        {icon && (
+          Platform.OS === "ios"
+            ? <SymbolView name={icon.ios} size={15} tintColor={accent} />
+            : <Ionicons name={icon.android} size={15} color={accent} />
+        )}
+        <Text style={{ fontSize: 14, fontWeight: "800", color: TEXT1, letterSpacing: 0.1 }}>{title}</Text>
+      </View>
+      {rightContent}
+    </View>
+  );
+}
+
+// ── Card wrapper ──────────────────────────────────────────────────────────────
+function Card({ children, style }: { children: React.ReactNode; style?: object }) {
+  return (
+    <View style={[{
+      borderRadius: 22, padding: 18,
+      backgroundColor: CARD,
+      borderWidth: 1, borderColor: BORDER,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.45, shadowRadius: 20, elevation: 5,
+    }, style]}>
+      {children}
+    </View>
+  );
+}
+
+// ── Quick actions ─────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { icon: "people-outline"    as const, symbol: "person.2" as const, label: "Utilisateurs", route: "/(admin)/users" },
-  { icon: "calendar-outline"  as const, symbol: "calendar"  as const, label: "Réservations", route: "/(admin)/bookings" },
-  { icon: "pricetag-outline"  as const, symbol: "tag"        as const, label: "Coupons",      route: "/(admin)/coupons" },
-  { icon: "pulse-outline"     as const, symbol: "waveform"   as const, label: "Logs",         route: "/(admin)/logs" },
+  { icon: "people-outline"   as const, symbol: "person.2"          as const, label: "Utilisateurs", route: "/(admin)/users",    color: "#8B5CF6" },
+  { icon: "calendar-outline" as const, symbol: "calendar"          as const, label: "Réservations", route: "/(admin)/bookings", color: "#3B82F6" },
+  { icon: "pricetag-outline" as const, symbol: "tag"               as const, label: "Coupons",      route: "/(admin)/coupons",  color: "#F59E0B" },
+  { icon: "pulse-outline"    as const, symbol: "waveform"          as const, label: "Logs",          route: "/(admin)/logs",     color: "#22C55E" },
 ];
 
-const ACTIVITY_CFG: Record<string, { color: string; label: string; bg: string; gradient: [string, string] }> = {
-  booking: { color: Colors.pro,     label: "RDV",        bg: `${Colors.pro}18`,     gradient: [Colors.pro,     `${Colors.pro}CC`] },
-  user:    { color: Colors.info,    label: "Inscription", bg: `${Colors.info}18`,    gradient: [Colors.info,    `${Colors.info}CC`] },
-  payment: { color: Colors.success, label: "Paiement",    bg: `${Colors.success}18`, gradient: [Colors.success, `${Colors.success}CC`] },
+// ── Activity config ───────────────────────────────────────────────────────────
+const ACTIVITY_CFG: Record<string, { color: string; label: string; icon: any; gradient: [string, string] }> = {
+  booking: { color: Colors.pro,     label: "RDV",        icon: "calendar",       gradient: [Colors.pro,     `${Colors.pro}BB`] },
+  user:    { color: Colors.info,    label: "Inscription", icon: "person.badge.plus", gradient: [Colors.info,    `${Colors.info}BB`] },
+  payment: { color: Colors.success, label: "Paiement",   icon: "eurosign.circle", gradient: [Colors.success, `${Colors.success}BB`] },
 };
 
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 function DashboardSkeleton({ top }: { top: number }) {
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: A_BG }}
+      style={{ flex: 1, backgroundColor: BG }}
       scrollEnabled={false}
-      contentContainerStyle={{ paddingTop: top + 20, paddingHorizontal: 20, gap: 16, paddingBottom: 100 }}
+      contentContainerStyle={{ paddingTop: top + 20, paddingHorizontal: 16, gap: 14, paddingBottom: 120 }}
     >
-      <SkeletonBox width="100%" height={190} borderRadius={24} />
+      <SkeletonBox width="100%" height={230} borderRadius={28} />
       <View style={{ flexDirection: "row", gap: 10 }}>
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={{ flex: 1 }}><SkeletonBox width="100%" height={80} borderRadius={12} /></View>
-        ))}
+        {[0,1,2,3].map(i => <View key={i} style={{ flex: 1 }}><SkeletonBox width="100%" height={90} borderRadius={20} /></View>)}
       </View>
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={110} borderRadius={12} /></View>
-        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={110} borderRadius={12} /></View>
+        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={130} borderRadius={22} /></View>
+        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={130} borderRadius={22} /></View>
       </View>
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={110} borderRadius={12} /></View>
-        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={110} borderRadius={12} /></View>
+        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={130} borderRadius={22} /></View>
+        <View style={{ flex: 1 }}><SkeletonBox width="100%" height={130} borderRadius={22} /></View>
       </View>
-      <SkeletonBox width="100%" height={175} borderRadius={12} />
-      <SkeletonBox width="100%" height={145} borderRadius={12} />
+      <SkeletonBox width="100%" height={100} borderRadius={22} />
+      <SkeletonBox width="100%" height={200} borderRadius={22} />
+      <SkeletonBox width="100%" height={180} borderRadius={22} />
+      <SkeletonBox width="100%" height={260} borderRadius={22} />
     </ScrollView>
   );
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -105,10 +154,14 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const hasAnimated = useRef(false);
 
-  const kpiAnims = useRef([0, 1, 2, 3].map(() => ({
+  const kpiAnims = useRef([0,1,2,3].map(() => ({
     opacity:    new Animated.Value(0),
-    translateY: new Animated.Value(24),
+    translateY: new Animated.Value(20),
   }))).current;
+
+  const qaScales = useRef(QUICK_ACTIONS.map(() => new Animated.Value(1))).current;
+  const heroScale = useRef(new Animated.Value(0.96)).current;
+  const heroOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const id = setInterval(
@@ -120,12 +173,12 @@ export default function AdminDashboard() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-dashboard"],
-    queryFn:  () => adminApi.getDashboardStats() as Promise<{ success: boolean; stats: Stats; recentActivity: ActivityItem[]; revenueHistory?: number[] }>,
+    queryFn: () => adminApi.getDashboardStats() as Promise<{ success: boolean; stats: Stats; recentActivity: ActivityItem[]; revenueHistory?: number[] }>,
     staleTime: 5 * 60_000, retry: false,
   });
   const { data: healthData } = useQuery({
     queryKey: ["admin-health"],
-    queryFn:  () => adminApi.getHealth() as unknown as Promise<HealthStatus>,
+    queryFn: () => adminApi.getHealth() as unknown as Promise<HealthStatus>,
     staleTime: 30_000, refetchInterval: 60_000, retry: false,
   });
 
@@ -136,24 +189,51 @@ export default function AdminDashboard() {
   const sparkData = data?.revenueHistory ?? [];
   const byStatus  = stats?.bookingsByStatus ?? {};
   const apiOk     = healthData?.status === "ok";
+  const dbOk      = healthData?.db === "ok";
 
   const maxSpark  = useMemo(() => Math.max(1, ...sparkData), [sparkData]);
-  const sparkMin  = useMemo(() => {
-    const pos = sparkData.filter((v) => v > 0);
-    return pos.length > 0 ? Math.min(...pos) : 0;
-  }, [sparkData]);
+  const sparkMin  = useMemo(() => { const pos = sparkData.filter(v => v > 0); return pos.length > 0 ? Math.min(...pos) : 0; }, [sparkData]);
   const sparkAvg  = useMemo(() => sparkData.length > 0 ? sparkData.reduce((s, v) => s + v, 0) / sparkData.length : 0, [sparkData]);
   const totalSparkRevenue = useMemo(() => sparkData.reduce((s, v) => s + v, 0), [sparkData]);
+
+  // Taux de complétion des RDV
+  const completionRate = useMemo(() => {
+    const total = Object.values(byStatus).reduce((s, v) => s + Number(v), 0);
+    const completed = byStatus.completed ?? 0;
+    return total > 0 ? Math.round((completed / total) * 100) : 0;
+  }, [byStatus]);
+
+  // Taux d'annulation
+  const cancellationRate = useMemo(() => {
+    const total = Object.values(byStatus).reduce((s, v) => s + Number(v), 0);
+    const cancelled = byStatus.cancelled ?? 0;
+    return total > 0 ? Math.round((cancelled / total) * 100) : 0;
+  }, [byStatus]);
+
+  // Revenue par utilisateur actif
+  const revenuePerUser = useMemo(() => {
+    const active = stats?.activeUsers ?? 0;
+    const rev = stats?.totalRevenue ?? 0;
+    return active > 0 ? Math.round(rev / active) : 0;
+  }, [stats]);
 
   useEffect(() => {
     if (!stats || hasAnimated.current) return;
     hasAnimated.current = true;
+
+    // Hero anim
+    Animated.parallel([
+      Animated.timing(heroOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(heroScale,   { toValue: 1, damping: 16, stiffness: 120, useNativeDriver: true }),
+    ]).start();
+
+    // KPI stagger
     kpiAnims.forEach((anim, i) => {
       Animated.sequence([
-        Animated.delay(i * 80),
+        Animated.delay(100 + i * 100),
         Animated.parallel([
-          Animated.timing(anim.opacity,    { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.spring(anim.translateY, { toValue: 0, damping: 18, stiffness: 160, useNativeDriver: true }),
+          Animated.timing(anim.opacity,    { toValue: 1, duration: 280, useNativeDriver: true }),
+          Animated.spring(anim.translateY, { toValue: 0, damping: 15, stiffness: 150, useNativeDriver: true }),
         ]),
       ]).start();
     });
@@ -164,120 +244,193 @@ export default function AdminDashboard() {
   if (isLoading) return <DashboardSkeleton top={insets.top} />;
 
   const KPI_DATA = [
-    { label: "Clients", sub: "Total inscrits",  color: Colors.primary, icon: "person-outline"    as const, iconBg: "#FFE8F3",            value: stats?.totalClients  ?? 0 },
-    { label: "Pros",    sub: "Pros actifs",      color: Colors.admin,   icon: "briefcase-outline" as const, iconBg: `${Colors.admin}1A`,   value: stats?.totalPros    ?? 0 },
-    { label: "RDV",     sub: "Aujourd'hui",     color: Colors.info,    icon: "calendar-outline"  as const, iconBg: `${Colors.info}1A`,    value: stats?.todayBookings ?? 0 },
-    { label: "CA",      sub: "Chiffre du mois", color: Colors.success, icon: "cash-outline"      as const, iconBg: `${Colors.success}1A`, value: stats?.monthRevenue  ?? 0 },
+    { label: "Clients", sub: "Inscrits",      color: "#8B5CF6", symbol: "person.2.fill"        as const, icon: "person-outline"    as const, value: stats?.totalClients  ?? 0, changeKey: "clients"  as const },
+    { label: "Pros",    sub: "Pros actifs",    color: Colors.admin, symbol: "briefcase.fill"    as const, icon: "briefcase-outline" as const, value: stats?.totalPros    ?? 0, changeKey: "pros"     as const },
+    { label: "RDV",     sub: "Aujourd'hui",    color: Colors.info,  symbol: "calendar.badge.clock" as const, icon: "calendar-outline" as const, value: stats?.todayBookings ?? 0, changeKey: "bookings" as const },
+    { label: "CA mois", sub: "Chiffre d'aff.", color: Colors.success, symbol: "eurosign.circle.fill" as const, icon: "cash-outline"   as const, value: stats?.monthRevenue ?? 0, changeKey: "revenue"  as const },
   ];
+
+  const totalRDV = Object.values(byStatus).reduce((s, v) => s + Number(v), 0);
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: A_BG }}
-      contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100, paddingHorizontal: 20, gap: 16 }}
+      style={{ flex: 1, backgroundColor: BG }}
+      contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 14 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
     >
-      {/* ── HERO ── */}
-      <LinearGradient
-        colors={["#EA6000", "#F97316", "#FB923C"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ borderRadius: 24, padding: 22, shadowColor: "#F97316", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 20, elevation: 8, overflow: "hidden" }}
-      >
-        <View style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.10)" }} />
-        <View style={{ position: "absolute", top: -16, right: -16, width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(255,255,255,0.08)" }} />
-        <View style={{ position: "absolute", bottom: -30, left: -30, width: 110, height: 110, borderRadius: 55, backgroundColor: "rgba(255,255,255,0.06)" }} />
 
-        <View style={{ gap: 18 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
-              <Ionicons name="shield-checkmark-outline" size={12} color="#fff" />
-              <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Admin Panel</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.18)" }}>
-              <PulseDot color={apiOk ? "#A7F3D0" : "#FCA5A5"} />
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 11 }}>{apiOk ? "Systèmes OK" : "Dégradé"}</Text>
-            </View>
-          </View>
+      {/* ══ HERO ═══════════════════════════════════════════════════════════════ */}
+      <Animated.View style={{ opacity: heroOpacity, transform: [{ scale: heroScale }] }}>
+        <LinearGradient
+          colors={["#1C0D00", "#2E1600", "#180C00"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ borderRadius: 28, overflow: "hidden",
+            shadowColor: Colors.admin, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.35, shadowRadius: 30, elevation: 14 }}
+        >
+          {/* Glow orbs */}
+          <View style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: `${Colors.admin}18` }} />
+          <View style={{ position: "absolute", bottom: -30, left: -20, width: 120, height: 120, borderRadius: 60, backgroundColor: "#8B5CF618" }} />
 
-          <View>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: "#fff", letterSpacing: -0.5 }}>Bonjour {user?.first_name} 👋</Text>
-            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginTop: 4 }}>{today} · {clock}</Text>
-          </View>
+          <BlurView tint="dark" intensity={10} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
 
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.18)" }} />
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            {[
-              { label: "Utilisateurs",    value: String(stats?.totalUsers   ?? "—"),                                     large: false },
-              { label: "RDV aujourd'hui", value: String(stats?.todayBookings ?? "—"),                                     large: false },
-              { label: "CA mois",         value: `${(stats?.monthRevenue ?? 0).toLocaleString("fr-FR")}€`,               large: true  },
-            ].map(({ label, value, large }) => (
-              <View key={label} style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: large ? 24 : 20, fontWeight: "900", color: "#fff" }}>{value}</Text>
-                <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", fontWeight: "600", marginTop: 2 }}>{label}</Text>
+          <View style={{ padding: 22 }}>
+            {/* Top bar */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+                backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
+                <Text style={{ color: TEXT1, fontSize: 10, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase" }}>
+                  ⚙ Admin Panel
+                </Text>
               </View>
-            ))}
-          </View>
-        </View>
-      </LinearGradient>
-
-      {/* ── QUICK ACTIONS ── */}
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        {QUICK_ACTIONS.map(({ icon, symbol, label, route }) => (
-          <Pressable
-            key={route}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); router.push(route as any); }}
-            style={{
-              flex: 1, borderRadius: 12, padding: 16,
-              backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER,
-              alignItems: "center", gap: 10,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
-            }}
-          >
-            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: `${Colors.admin}12`, alignItems: "center", justifyContent: "center" }}>
-              {Platform.OS === "ios"
-                ? <SymbolView name={symbol} size={20} tintColor={Colors.admin} />
-                : <Ionicons name={icon} size={20} color={Colors.admin} />}
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {/* DB Status */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4,
+                  borderRadius: 16, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
+                  <PulseDot color={dbOk ? "#22C55E" : "#F87171"} />
+                  <Text style={{ color: TEXT2, fontSize: 10, fontWeight: "700" }}>DB</Text>
+                </View>
+                {/* API Status */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4,
+                  borderRadius: 16, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
+                  <PulseDot color={apiOk ? "#22C55E" : "#F87171"} />
+                  <Text style={{ color: TEXT2, fontSize: 10, fontWeight: "700" }}>API</Text>
+                </View>
+              </View>
             </View>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.foreground }}>{label}</Text>
-          </Pressable>
-        ))}
+
+            {/* Greeting */}
+            <Text style={{ fontSize: 32, fontWeight: "900", color: TEXT1, letterSpacing: -0.8, marginBottom: 4 }}>
+              Bonjour, {user?.first_name} 👋
+            </Text>
+            <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "500", marginBottom: 24, textTransform: "capitalize" }}>
+              {today} · {clock}
+            </Text>
+
+            {/* Metrics row */}
+            <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.10)", paddingTop: 18 }}>
+              {[
+                { label: "Utilisateurs",    value: String(stats?.totalUsers ?? "—"),       accent: "#8B5CF6" },
+                { label: "RDV aujourd'hui", value: String(stats?.todayBookings ?? "—"),     accent: Colors.info },
+                { label: "CA du mois",      value: `${(stats?.monthRevenue ?? 0).toLocaleString("fr-FR")} €`, accent: Colors.success },
+              ].map(({ label, value, accent }, i) => (
+                <React.Fragment key={label}>
+                  {i > 0 && <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.10)", marginHorizontal: 4 }} />}
+                  <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+                    <View style={{ width: 28, height: 2, borderRadius: 1, backgroundColor: accent, marginBottom: 4 }} />
+                    <Text style={{ fontSize: 22, fontWeight: "900", color: TEXT1, letterSpacing: -0.5 }}>{value}</Text>
+                    <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "600", textAlign: "center" }}>{label}</Text>
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+
+      {/* ══ QUICK ACTIONS ══════════════════════════════════════════════════════ */}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        {QUICK_ACTIONS.map(({ icon, symbol, label, route, color }, qi) => {
+          const badge = label === "Réservations" && (byStatus.pending ?? 0) > 0 ? byStatus.pending : null;
+          return (
+            <Animated.View key={route} style={{ flex: 1, transform: [{ scale: qaScales[qi] }] }}>
+              <Pressable
+                onPressIn={() => Animated.spring(qaScales[qi], { toValue: 0.92, useNativeDriver: true, damping: 12, stiffness: 160 }).start()}
+                onPressOut={() => Animated.spring(qaScales[qi], { toValue: 1,    useNativeDriver: true, damping: 12, stiffness: 160 }).start()}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); router.push(route as any); }}
+                style={{
+                  borderRadius: 20, paddingVertical: 14,
+                  borderWidth: 1, borderColor: BORDER,
+                  backgroundColor: CARD,
+                  alignItems: "center", gap: 8,
+                  shadowColor: color, shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15, shadowRadius: 12, elevation: 5,
+                }}
+              >
+                <View style={{ position: "relative" }}>
+                  <LinearGradient
+                    colors={[`${color}28`, `${color}10`]}
+                    style={{ width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center" }}
+                  >
+                    {Platform.OS === "ios"
+                      ? <SymbolView name={symbol} size={24} tintColor={color} />
+                      : <Ionicons name={icon} size={22} color={color} />}
+                  </LinearGradient>
+                  {badge != null && (
+                    <View style={{
+                      position: "absolute", top: -4, right: -4,
+                      minWidth: 18, height: 18, borderRadius: 9,
+                      backgroundColor: "#F97316",
+                      alignItems: "center", justifyContent: "center",
+                      paddingHorizontal: 4, borderWidth: 1.5, borderColor: BG,
+                    }}>
+                      <Text style={{ fontSize: 9, fontWeight: "900", color: "#fff" }}>
+                        {badge > 99 ? "99+" : String(badge)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT2 }}>{label}</Text>
+              </Pressable>
+            </Animated.View>
+          );
+        })}
       </View>
 
-      {/* ── KPI GRID 2×2 ── */}
+      {/* ══ KPI GRID 2×2 ═══════════════════════════════════════════════════════ */}
       <View style={{ gap: 10 }}>
         {[[0, 1], [2, 3]].map((pair, row) => (
           <View key={row} style={{ flexDirection: "row", gap: 10 }}>
             {pair.map((idx) => {
-              const { label, sub, color, icon, iconBg, value } = KPI_DATA[idx];
+              const { label, sub, color, symbol, icon, value, changeKey } = KPI_DATA[idx];
+              const change = stats?.changes?.[changeKey] ?? null;
               return (
                 <Animated.View
                   key={label}
                   style={{ flex: 1, opacity: kpiAnims[idx].opacity, transform: [{ translateY: kpiAnims[idx].translateY }] }}
                 >
                   <View style={{
-                    borderRadius: 12, padding: 16, backgroundColor: Colors.card,
-                    borderWidth: 1, borderColor: A_BORDER,
-                    borderTopWidth: 3, borderTopColor: color,
+                    borderRadius: 22, padding: 16,
+                    backgroundColor: CARD,
+                    borderWidth: 1, borderColor: BORDER,
+                    shadowColor: color, shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.12, shadowRadius: 14, elevation: 4,
                     overflow: "hidden",
-                    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
                   }}>
-                    <View style={{ position: "absolute", top: -16, right: -16, width: 64, height: 64, borderRadius: 32, backgroundColor: `${color}0D` }} />
-                    <View style={{ gap: 12 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: iconBg, alignItems: "center", justifyContent: "center" }}>
-                          <Ionicons name={icon} size={16} color={color} />
-                        </View>
-                        <Text style={{ fontSize: 9, color: Colors.mutedForeground, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</Text>
+                    {/* Subtle background glow */}
+                    <View style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: `${color}0C` }} />
+
+                    <LinearGradient
+                      colors={[`${color}28`, `${color}0E`]}
+                      style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 14 }}
+                    >
+                      {Platform.OS === "ios"
+                        ? <SymbolView name={symbol} size={20} tintColor={color} />
+                        : <Ionicons name={icon} size={19} color={color} />}
+                    </LinearGradient>
+
+                    <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -0.8 }}>
+                      {n(value).toLocaleString("fr-FR")}{label === "CA mois" ? " €" : ""}
+                    </Text>
+
+                    {change !== null && (
+                      <View style={{
+                        flexDirection: "row", alignItems: "center", gap: 3,
+                        alignSelf: "flex-start", marginTop: 5, marginBottom: 3,
+                        paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+                        backgroundColor: change >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                      }}>
+                        <Ionicons
+                          name={change >= 0 ? "trending-up" : "trending-down"}
+                          size={10}
+                          color={change >= 0 ? "#22C55E" : "#EF4444"}
+                        />
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: change >= 0 ? "#22C55E" : "#EF4444" }}>
+                          {change >= 0 ? `+${change}%` : `${change}%`}
+                        </Text>
                       </View>
-                      <View>
-                        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 2 }}>
-                          <Text style={{ fontSize: 32, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>{n(value).toLocaleString("fr-FR")}</Text>
-                          {label === "CA" && <Text style={{ fontSize: 18, fontWeight: "900", color }}> €</Text>}
-                        </View>
-                        <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 4, fontWeight: "500" }}>{sub}</Text>
-                      </View>
-                    </View>
+                    )}
+                    <Text style={{ fontSize: 11, color: TEXT3, marginTop: change !== null ? 0 : 6, fontWeight: "600" }}>{sub}</Text>
                   </View>
                 </Animated.View>
               );
@@ -286,35 +439,176 @@ export default function AdminDashboard() {
         ))}
       </View>
 
-      {/* ── REVENUE CHART ── */}
-      {sparkData.length > 1 && (
-        <View style={{ borderRadius: 12, padding: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <View style={{ width: 4, height: 20, backgroundColor: Colors.admin, borderRadius: 2 }} />
-              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Revenus — 30 jours</Text>
+      {/* ══ PERFORMANCE METRICS (new) ══════════════════════════════════════════ */}
+      <Card>
+        <SectionHeader
+          title="Performance"
+          icon={{ ios: "chart.bar.xaxis", android: "bar-chart-outline" }}
+          accent="#8B5CF6"
+        />
+        <View style={{ gap: 14 }}>
+          {/* Taux de complétion */}
+          <View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "600" }}>Taux de complétion</Text>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: "#22C55E" }}>{completionRate}%</Text>
             </View>
-            {totalSparkRevenue > 0 && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Ionicons name="cash-outline" size={14} color={Colors.admin} />
-                <Text style={{ fontSize: 12, fontWeight: "900", color: Colors.admin }}>
-                  {totalSparkRevenue.toLocaleString("fr-FR")} €
+            <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+              <LinearGradient
+                colors={["#22C55E", "#16A34A"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ height: "100%", width: `${completionRate}%`, borderRadius: 4 }}
+              />
+            </View>
+          </View>
+
+          {/* Taux d'annulation */}
+          <View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "600" }}>Taux d'annulation</Text>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: "#EF4444" }}>{cancellationRate}%</Text>
+            </View>
+            <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+              <LinearGradient
+                colors={["#EF4444", "#B91C1C"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ height: "100%", width: `${cancellationRate}%`, borderRadius: 4 }}
+              />
+            </View>
+          </View>
+
+          {/* Revenu / utilisateur actif */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {Platform.OS === "ios"
+                ? <SymbolView name="eurosign.circle" size={16} tintColor="#F59E0B" />
+                : <Ionicons name="cash-outline" size={16} color="#F59E0B" />}
+              <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "600" }}>CA / utilisateur actif</Text>
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "900", color: "#F59E0B" }}>
+              {revenuePerUser.toLocaleString("fr-FR")} €
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      {/* ══ SYSTEM HEALTH (new) ════════════════════════════════════════════════ */}
+      <Card>
+        <SectionHeader
+          title="Santé système"
+          icon={{ ios: "server.rack", android: "hardware-chip-outline" }}
+          accent={apiOk && dbOk ? "#22C55E" : "#F87171"}
+          rightContent={
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
+              backgroundColor: (apiOk && dbOk) ? "rgba(34,197,94,0.15)" : "rgba(248,113,113,0.15)",
+              borderWidth: 1, borderColor: (apiOk && dbOk) ? "rgba(34,197,94,0.3)" : "rgba(248,113,113,0.3)" }}>
+              <Text style={{ fontSize: 10, fontWeight: "800", color: (apiOk && dbOk) ? "#22C55E" : "#F87171" }}>
+                {(apiOk && dbOk) ? "Opérationnel" : "Dégradé"}
+              </Text>
+            </View>
+          }
+        />
+        <View style={{ gap: 10 }}>
+          {[
+            { label: "API Server",   ok: apiOk, icon: "network",     iconA: "wifi-outline"           },
+            { label: "Base de données", ok: dbOk,  icon: "cylinder.split.1x2", iconA: "server-outline" },
+          ].map(({ label, ok, icon, iconA }) => (
+            <View key={label} style={{
+              flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              padding: 14, borderRadius: 14,
+              backgroundColor: ok ? "rgba(34,197,94,0.07)" : "rgba(248,113,113,0.07)",
+              borderWidth: 1, borderColor: ok ? "rgba(34,197,94,0.18)" : "rgba(248,113,113,0.18)",
+            }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                {Platform.OS === "ios"
+                  ? <SymbolView name={icon as any} size={16} tintColor={ok ? "#22C55E" : "#F87171"} />
+                  : <Ionicons name={iconA as any} size={16} color={ok ? "#22C55E" : "#F87171"} />}
+                <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1 }}>{label}</Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <PulseDot color={ok ? "#22C55E" : "#F87171"} />
+                <Text style={{ fontSize: 12, fontWeight: "800", color: ok ? "#22C55E" : "#F87171" }}>
+                  {ok ? "En ligne" : "Hors ligne"}
                 </Text>
               </View>
-            )}
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      {/* ══ STATS GLOBALES (new) ════════════════════════════════════════════════ */}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        {[
+          { label: "Total RDV",   value: n(stats?.totalBookings).toLocaleString("fr-FR"), icon: "calendar.badge.checkmark" as const, iconA: "calendar-outline" as const, color: Colors.info },
+          { label: "CA total",    value: `${n(stats?.totalRevenue).toLocaleString("fr-FR")} €`, icon: "chart.line.uptrend.xyaxis" as const, iconA: "trending-up-outline" as const, color: Colors.success },
+          { label: "Actifs",      value: String(stats?.activeUsers ?? "—"),           icon: "person.crop.circle.badge.checkmark" as const, iconA: "checkmark-circle-outline" as const, color: "#F59E0B" },
+        ].map(({ label, value, icon, iconA, color }) => (
+          <View key={label} style={{ flex: 1 }}>
+            <Card style={{ padding: 14, alignItems: "center", gap: 8 }}>
+              <LinearGradient
+                colors={[`${color}28`, `${color}0A`]}
+                style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" }}
+              >
+                {Platform.OS === "ios"
+                  ? <SymbolView name={icon} size={18} tintColor={color} />
+                  : <Ionicons name={iconA} size={17} color={color} />}
+              </LinearGradient>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: TEXT1, letterSpacing: -0.5 }}>{value}</Text>
+              <Text style={{ fontSize: 10, color: TEXT3, fontWeight: "600", textAlign: "center" }}>{label}</Text>
+            </Card>
           </View>
+        ))}
+      </View>
+
+      {/* ══ REVENUE CHART ══════════════════════════════════════════════════════ */}
+      {sparkData.length > 1 && (
+        <Card>
+          <SectionHeader
+            title="Revenus 30 jours"
+            icon={{ ios: "chart.bar.fill", android: "bar-chart-outline" }}
+            accent={Colors.admin}
+            rightContent={
+              totalSparkRevenue > 0 ? (
+                <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
+                  backgroundColor: `${Colors.admin}18`, borderWidth: 1, borderColor: `${Colors.admin}35` }}>
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.admin }}>
+                    {totalSparkRevenue.toLocaleString("fr-FR")} €
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
+
+          {/* Bars */}
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 100 }}>
             {sparkData.map((v, i) => {
-              const barH = Math.max((v / maxSpark) * 92, v > 0 ? 5 : 2);
+              const barH  = Math.max((v / maxSpark) * 92, v > 0 ? 5 : 2);
+              const isLast = i === sparkData.length - 1;
               return (
                 <View key={i} style={{ flex: 1, alignItems: "center" }}>
-                  <LinearGradient
-                    colors={v > 0 ? [Colors.admin, `${Colors.admin}60`] : [A_BORDER, A_BORDER]}
-                    start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                    style={{ width: "100%", height: barH, borderRadius: 3 }}
-                  />
-                  {i % 7 === 0 && (
-                    <Text style={{ fontSize: 7, color: Colors.mutedForeground, marginTop: 2 }}>
+                  {isLast && v > 0 && (
+                    <View style={{ position: "absolute", bottom: barH + 5, alignItems: "center", zIndex: 1 }}>
+                      <View style={{ backgroundColor: Colors.admin, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 }}>
+                        <Text style={{ fontSize: 7, color: "#fff", fontWeight: "800" }}>
+                          {v >= 1000 ? `${Math.round(v / 100) / 10}k` : String(v)}€
+                        </Text>
+                      </View>
+                      <View style={{ width: 0, height: 0, borderLeftWidth: 3, borderRightWidth: 3, borderTopWidth: 4,
+                        borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: Colors.admin }} />
+                    </View>
+                  )}
+                  {v > 0 ? (
+                    <LinearGradient
+                      colors={[Colors.admin, `${Colors.admin}33`]}
+                      start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                      style={{ width: "100%", height: barH, borderRadius: 4 }}
+                    />
+                  ) : (
+                    <View style={{ width: "100%", height: barH, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.05)" }} />
+                  )}
+                  {i % 5 === 0 && (
+                    <Text style={{ fontSize: 7, color: TEXT3, marginTop: 2 }}>
                       {`J-${sparkData.length - 1 - i || "0"}`}
                     </Text>
                   )}
@@ -322,104 +616,121 @@ export default function AdminDashboard() {
               );
             })}
           </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: A_BORDER }}>
+
+          {/* Footer stats */}
+          <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 14,
+            backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingVertical: 10,
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" }}>
             {[
               { label: "Min", value: sparkMin > 0 ? `${sparkMin.toLocaleString("fr-FR")} €` : "—" },
               { label: "Moy", value: sparkAvg > 0 ? `${Math.round(sparkAvg).toLocaleString("fr-FR")} €` : "—" },
               { label: "Max", value: maxSpark > 1 ? `${maxSpark.toLocaleString("fr-FR")} €` : "—" },
             ].map(({ label, value }) => (
               <View key={label} style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>{label}</Text>
-                <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground, marginTop: 2 }}>{value}</Text>
+                <Text style={{ fontSize: 10, color: TEXT3, fontWeight: "600" }}>{label}</Text>
+                <Text style={{ fontSize: 13, fontWeight: "900", color: TEXT1, marginTop: 2 }}>{value}</Text>
               </View>
             ))}
           </View>
-        </View>
+        </Card>
       )}
 
-      {/* ── BOOKINGS BY STATUS ── */}
+      {/* ══ BOOKINGS BY STATUS ══════════════════════════════════════════════════ */}
       {Object.keys(byStatus).length > 0 && (
-        <View style={{ borderRadius: 12, padding: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <View style={{ width: 4, height: 20, backgroundColor: Colors.admin, borderRadius: 2 }} />
-              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Réservations par statut</Text>
-            </View>
-            <Ionicons name="calendar" size={16} color={Colors.admin} />
-          </View>
+        <Card>
+          <SectionHeader
+            title="Réservations par statut"
+            icon={{ ios: "calendar.badge.clock", android: "calendar-outline" }}
+            accent={Colors.admin}
+            rightContent={
+              <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3 }}>{totalRDV} total</Text>
+            }
+          />
           <View style={{ gap: 14 }}>
             {[
-              { key: "pending",   label: "En attente", color: Colors.warning },
-              { key: "confirmed", label: "Confirmées",  color: Colors.info },
-              { key: "completed", label: "Terminées",   color: Colors.success },
-              { key: "cancelled", label: "Annulées",    color: Colors.destructive },
-            ].map(({ key, label, color }) => {
+              { key: "pending",   label: "En attente", color: Colors.warning,     icon: "clock",          iconA: "time-outline" },
+              { key: "confirmed", label: "Confirmées",  color: Colors.info,        icon: "checkmark.seal", iconA: "checkmark-circle-outline" },
+              { key: "completed", label: "Terminées",   color: Colors.success,     icon: "checkmark.circle.fill", iconA: "checkmark-done-outline" },
+              { key: "cancelled", label: "Annulées",    color: Colors.destructive, icon: "xmark.circle",   iconA: "close-circle-outline" },
+            ].map(({ key, label, color, icon, iconA }) => {
               const count = byStatus[key] ?? 0;
-              const total = Object.values(byStatus).reduce((s: number, v) => s + Number(v), 0);
-              const pct   = total > 0 ? (count / total) * 100 : 0;
+              const pct   = totalRDV > 0 ? (count / totalRDV) * 100 : 0;
               return (
                 <View key={key}>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>{label}</Text>
+                      {Platform.OS === "ios"
+                        ? <SymbolView name={icon as any} size={13} tintColor={color} />
+                        : <Ionicons name={iconA as any} size={13} color={color} />}
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: TEXT1 }}>{label}</Text>
                     </View>
-                    <Text style={{ fontSize: 12, fontWeight: "900", color }}>{count}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "900", color }}>{count}</Text>
+                      <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: `${color}18` }}>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color }}>{pct.toFixed(0)}%</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <View style={{ flex: 1, height: 8, backgroundColor: A_BG, borderRadius: 4, overflow: "hidden" }}>
-                      <LinearGradient
-                        colors={[color, `${color}CC`]}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                        style={{ height: "100%", width: `${Math.min(pct, 100)}%`, borderRadius: 4 }}
-                      />
-                    </View>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, minWidth: 30, textAlign: "right" }}>
-                      {pct.toFixed(0)}%
-                    </Text>
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+                    <LinearGradient
+                      colors={[color, `${color}88`]}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                      style={{ height: "100%", width: `${Math.min(pct, 100)}%`, borderRadius: 4 }}
+                    />
                   </View>
                 </View>
               );
             })}
           </View>
-        </View>
+        </Card>
       )}
 
-      {/* ── ACTIVITÉ RÉCENTE ── */}
+      {/* ══ ACTIVITÉ RÉCENTE ═══════════════════════════════════════════════════ */}
       {activity.length > 0 && (
         <View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingHorizontal: 4 }}>
-            <View style={{ width: 4, height: 20, backgroundColor: Colors.admin, borderRadius: 2 }} />
-            <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.2 }}>Activité récente</Text>
-          </View>
+          <SectionHeader
+            title="Activité récente"
+            icon={{ ios: "bolt.fill", android: "flash" }}
+            accent={Colors.admin}
+            rightContent={
+              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3 }}>Dernières 24h</Text>
+              </View>
+            }
+          />
           <View style={{ gap: 10 }}>
             {activity.slice(0, 5).map((item, i) => {
               const cfg = ACTIVITY_CFG[item.type] ?? ACTIVITY_CFG.booking;
               const initLetter = item.title[0]?.toUpperCase() ?? "?";
               return (
-                <View
-                  key={i}
-                  style={{ borderRadius: 12, padding: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: A_BORDER, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <View key={i} style={{
+                  borderRadius: 18, padding: 14,
+                  backgroundColor: CARD,
+                  borderWidth: 1, borderColor: BORDER,
+                  shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3, shadowRadius: 12, elevation: 3,
+                }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    {/* Avatar */}
                     <LinearGradient
                       colors={cfg.gradient}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                      style={{ width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" }}
+                      style={{ width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     >
-                      <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>{initLetter}</Text>
+                      <Text style={{ color: "#fff", fontWeight: "900", fontSize: 17 }}>{initLetter}</Text>
                     </LinearGradient>
+
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }} numberOfLines={1}>{item.title}</Text>
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: cfg.bg }}>
-                          <Text style={{ fontSize: 9, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                        <Text style={{ fontWeight: "800", fontSize: 13, color: TEXT1, flex: 1 }} numberOfLines={1}>{item.title}</Text>
+                        <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, backgroundColor: `${cfg.color}1E`, marginLeft: 8 }}>
+                          <Text style={{ fontSize: 9, fontWeight: "900", color: cfg.color, letterSpacing: 0.3 }}>{cfg.label}</Text>
                         </View>
                       </View>
-                      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }} numberOfLines={1}>{item.description}</Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
-                        <Text style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "600" }}>{item.time}</Text>
+                      <Text style={{ fontSize: 11, color: TEXT2, marginBottom: 6 }} numberOfLines={1}>{item.description}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Ionicons name="time-outline" size={10} color={TEXT3} />
+                        <Text style={{ fontSize: 10, color: TEXT3, fontWeight: "600" }}>{item.time}</Text>
                       </View>
                     </View>
                   </View>
@@ -429,6 +740,7 @@ export default function AdminDashboard() {
           </View>
         </View>
       )}
+
     </ScrollView>
   );
 }

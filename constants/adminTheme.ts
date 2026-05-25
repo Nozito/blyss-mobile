@@ -1,0 +1,21 @@
+export const ADMIN = {
+  bg:           "#0A0A0F",
+  surface:      "rgba(255,255,255,0.05)",
+  surfaceHover: "rgba(255,255,255,0.08)",
+  border:       "rgba(255,255,255,0.09)",
+  borderStrong: "rgba(255,255,255,0.14)",
+  text:         "#FFFFFF",
+  textSub:      "rgba(255,255,255,0.5)",
+  textMuted:    "rgba(255,255,255,0.3)",
+  accent:       "#F97316",
+  accentBg:     "rgba(249,115,22,0.15)",
+  accentBorder: "rgba(249,115,22,0.30)",
+  cardRadius:   20,
+  sheetRadius:  32,
+  shadowColor:  "#000",
+  shadowOpts: {
+    shadowOpacity: 0.5,
+    shadowRadius:  20,
+    shadowOffset:  { width: 0, height: 6 },
+  },
+} as const;
