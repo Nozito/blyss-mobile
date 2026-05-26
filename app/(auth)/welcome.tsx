@@ -6,7 +6,6 @@ import {
   Pressable,
   Animated,
   StyleSheet,
-  Dimensions,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,24 +16,24 @@ import { SymbolView } from "expo-symbols";
 import type { SFSymbol } from "sf-symbols-typescript";
 import * as Haptics from "expo-haptics";
 
-const { height: SCREEN_H } = Dimensions.get("window");
-const CARD_H = SCREEN_H * 0.38;
-
 const FEATURES: Array<{ icon: "flash" | "people" | "shield-checkmark"; symbolName: SFSymbol; label: string }> = [
-  { icon: "flash",             symbolName: "bolt.fill",        label: "Réservations" },
-  { icon: "people",            symbolName: "person.2.fill",    label: "Clients fidèles" },
-  { icon: "shield-checkmark",  symbolName: "lock.shield.fill", label: "Paiements sécurisés" },
+  { icon: "flash",            symbolName: "bolt.fill",        label: "Réservations" },
+  { icon: "people",           symbolName: "person.2.fill",    label: "Clients fidèles" },
+  { icon: "shield-checkmark", symbolName: "lock.shield.fill", label: "Paiements sécurisés" },
 ];
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // — Entrance —
+  // — Entrée hero —
   const heroOpacity    = useRef(new Animated.Value(0)).current;
   const heroY          = useRef(new Animated.Value(-20)).current;
   const logoBadgeScale = useRef(new Animated.Value(0.7)).current;
-  const cardY          = useRef(new Animated.Value(CARD_H)).current;
+
+  // — Entrée boutons —
+  const bottomOpacity = useRef(new Animated.Value(0)).current;
+  const bottomY       = useRef(new Animated.Value(24)).current;
 
   // — Pills stagger —
   const pill0O = useRef(new Animated.Value(0)).current;
@@ -44,26 +43,20 @@ export default function WelcomeScreen() {
   const pill2O = useRef(new Animated.Value(0)).current;
   const pill2Y = useRef(new Animated.Value(20)).current;
 
-  // — Press feedback —
+  // — Press —
   const ctaScale   = useRef(new Animated.Value(1)).current;
   const loginScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      // Hero fade + slide down
       Animated.timing(heroOpacity, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
-      Animated.timing(heroY, { toValue: 0, duration: 600, delay: 100, useNativeDriver: true }),
-      // Logo spring scale
+      Animated.timing(heroY,       { toValue: 0, duration: 600, delay: 100, useNativeDriver: true }),
       Animated.sequence([
         Animated.delay(150),
         Animated.spring(logoBadgeScale, { toValue: 1, damping: 14, stiffness: 120, useNativeDriver: true }),
       ]),
-      // Card spring slide up
-      Animated.sequence([
-        Animated.delay(250),
-        Animated.spring(cardY, { toValue: 0, damping: 18, stiffness: 120, useNativeDriver: true }),
-      ]),
-      // Pill 0
+      Animated.timing(bottomOpacity, { toValue: 1, duration: 500, delay: 350, useNativeDriver: true }),
+      Animated.timing(bottomY,       { toValue: 0, duration: 500, delay: 350, useNativeDriver: true }),
       Animated.sequence([
         Animated.delay(300),
         Animated.parallel([
@@ -71,7 +64,6 @@ export default function WelcomeScreen() {
           Animated.timing(pill0Y, { toValue: 0, duration: 350, useNativeDriver: true }),
         ]),
       ]),
-      // Pill 1
       Animated.sequence([
         Animated.delay(380),
         Animated.parallel([
@@ -79,7 +71,6 @@ export default function WelcomeScreen() {
           Animated.timing(pill1Y, { toValue: 0, duration: 350, useNativeDriver: true }),
         ]),
       ]),
-      // Pill 2
       Animated.sequence([
         Animated.delay(460),
         Animated.parallel([
@@ -100,70 +91,63 @@ export default function WelcomeScreen() {
     Animated.spring(val, { toValue: to, damping: 15, stiffness: 300, useNativeDriver: true }).start();
 
   return (
-    <View style={styles.root}>
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <LinearGradient
-        colors={["#4A0030", "#9B0057", "#E8187A", "#FE5D9D"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
+    <LinearGradient
+      colors={["#4A0030", "#9B0057", "#E8187A", "#FE5D9D"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.root}
+    >
+      {/* Orbs décoratifs */}
+      <View style={styles.orb1} />
+      <View style={styles.orb2} />
+      <View style={styles.orb3} />
+
+      {/* ── Contenu central ─────────────────────────────────────────────── */}
+      <Animated.View
+        style={[
+          styles.hero,
+          { paddingTop: insets.top + 40 },
+          { opacity: heroOpacity, transform: [{ translateY: heroY }] },
+        ]}
       >
-        {/* Orbs décoratifs */}
-        <View style={styles.orb1} />
-        <View style={styles.orb2} />
-        <View style={styles.orb3} />
-
-        {/* Contenu hero */}
-        <Animated.View
-          style={[
-            styles.heroContent,
-            { paddingTop: insets.top + 40 },
-            { opacity: heroOpacity, transform: [{ translateY: heroY }] },
-          ]}
-        >
-          {/* Logo badge */}
-          <Animated.View style={[styles.logoBadge, { transform: [{ scale: logoBadgeScale }] }]}>
-            <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
-          </Animated.View>
-
-          {/* Brand */}
-          <Text style={styles.brand}>Blyss</Text>
-          <Text style={styles.tagline}>Beauté · Business · Sérénité</Text>
-
-          {/* Feature pills — glassmorphism */}
-          <View style={styles.pillRow}>
-            {FEATURES.map((f, i) => (
-              <Animated.View
-                key={f.label}
-                style={[
-                  styles.pill,
-                  { opacity: pillAnims[i].opacity, transform: [{ translateY: pillAnims[i].translateY }] },
-                ]}
-              >
-                {Platform.OS === "ios"
-                  ? <SymbolView name={f.symbolName} size={13} tintColor="#fff" />
-                  : <Ionicons name={f.icon} size={13} color="#fff" />
-                }
-                <Text style={styles.pillLabel}>{f.label}</Text>
-              </Animated.View>
-            ))}
-          </View>
+        <Animated.View style={[styles.logoBadge, { transform: [{ scale: logoBadgeScale }] }]}>
+          <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
         </Animated.View>
 
-        {/* Fondu de transition vers la carte */}
-        <LinearGradient
-          colors={["transparent", "rgba(255,255,255,0.0)", "#fff"]}
-          style={styles.fadeTransition}
-          pointerEvents="none"
-        />
-      </LinearGradient>
+        <Text style={styles.brand}>Blyss</Text>
+        <Text style={styles.tagline}>Beauté · Business · Sérénité</Text>
 
-      {/* ── Carte ───────────────────────────────────────────────────────── */}
-      <Animated.View style={[styles.card, { transform: [{ translateY: cardY }] }]}>
-        {/* Drag indicator */}
-        <View style={styles.dragHandle} />
+        <View style={styles.pillRow}>
+          {FEATURES.map((f, i) => (
+            <Animated.View
+              key={f.label}
+              style={[
+                styles.pill,
+                { opacity: pillAnims[i].opacity, transform: [{ translateY: pillAnims[i].translateY }] },
+              ]}
+            >
+              {Platform.OS === "ios"
+                ? <SymbolView name={f.symbolName} size={13} tintColor="#fff" />
+                : <Ionicons name={f.icon} size={13} color="#fff" />
+              }
+              <Text style={styles.pillLabel}>{f.label}</Text>
+            </Animated.View>
+          ))}
+        </View>
+      </Animated.View>
 
-        {/* CTA principal */}
+      {/* ── Boutons bas ─────────────────────────────────────────────────── */}
+      <Animated.View
+        style={[
+          styles.bottom,
+          { paddingBottom: Math.max(insets.bottom + 8, 28) },
+          { opacity: bottomOpacity, transform: [{ translateY: bottomY }] },
+        ]}
+      >
+        {/* Séparateur subtil */}
+        <View style={styles.divider} />
+
+        {/* CTA — blanc solide, texte rose */}
         <Pressable
           onPressIn={() => {
             springPress(ctaScale, 0.96);
@@ -172,23 +156,16 @@ export default function WelcomeScreen() {
           onPressOut={() => springPress(ctaScale, 1)}
           onPress={() => router.push("/(auth)/register")}
         >
-          <Animated.View style={[styles.ctaWrap, { transform: [{ scale: ctaScale }] }]}>
-            <LinearGradient
-              colors={["#E8187A", "#FE5D9D"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.ctaGradient}
-            >
-              <Text style={styles.ctaText}>Commencer gratuitement</Text>
-              {Platform.OS === "ios"
-                ? <SymbolView name="arrow.right" size={18} tintColor="#fff" />
-                : <Ionicons name="arrow-forward" size={18} color="#fff" />
-              }
-            </LinearGradient>
+          <Animated.View style={[styles.ctaBtn, { transform: [{ scale: ctaScale }] }]}>
+            <Text style={styles.ctaText}>Commencer gratuitement</Text>
+            {Platform.OS === "ios"
+              ? <SymbolView name="arrow.right" size={17} tintColor="#C0185C" />
+              : <Ionicons name="arrow-forward" size={17} color="#C0185C" />
+            }
           </Animated.View>
         </Pressable>
 
-        {/* Connexion */}
+        {/* Login — transparent, texte blanc */}
         <Pressable
           onPressIn={() => springPress(loginScale, 0.97)}
           onPressOut={() => springPress(loginScale, 1)}
@@ -200,29 +177,23 @@ export default function WelcomeScreen() {
         </Pressable>
 
         {/* Légal */}
-        <Text style={[styles.legal, { paddingBottom: Math.max(insets.bottom + 8, 24) }]}>
+        <Text style={styles.legal}>
           {"En continuant, tu acceptes nos "}
           <Text style={styles.legalLink}>Conditions générales</Text>
           {" et la "}
           <Text style={styles.legalLink}>Politique de confidentialité</Text>
         </Text>
       </Animated.View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#FE5D9D",
   },
 
-  // ── Hero ──────────────────────────────────────────────────────────────
-  hero: {
-    flex: 1,
-    overflow: "hidden",
-  },
-
+  // ── Orbs ──────────────────────────────────────────────────────────────
   orb1: {
     position: "absolute",
     top: -60,
@@ -234,12 +205,12 @@ const styles = StyleSheet.create({
   },
   orb2: {
     position: "absolute",
-    bottom: 120,
+    top: "35%",
     left: -80,
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: "rgba(254,93,157,0.25)",
+    backgroundColor: "rgba(254,93,157,0.20)",
   },
   orb3: {
     position: "absolute",
@@ -251,12 +222,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.05)",
   },
 
-  heroContent: {
+  // ── Hero ──────────────────────────────────────────────────────────────
+  hero: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-    paddingBottom: 80,
   },
 
   logoBadge: {
@@ -289,7 +260,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 14,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.70)",
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 32,
@@ -306,9 +277,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.13)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(255,255,255,0.22)",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 99,
@@ -319,57 +290,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // ── Fondu transition ───────────────────────────────────────────────────
-  fadeTransition: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
+  // ── Bottom ────────────────────────────────────────────────────────────
+  bottom: {
+    paddingHorizontal: 24,
   },
 
-  // ── Carte ─────────────────────────────────────────────────────────────
-  card: {
-    backgroundColor: "#FFFBFC",
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    shadowColor: "#E8187A",
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  dragHandle: {
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E5E7EB",
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
     marginBottom: 24,
   },
 
   // ── CTA ───────────────────────────────────────────────────────────────
-  ctaWrap: {
-    borderRadius: 20,
-    overflow: "hidden",
-    marginBottom: 12,
-    shadowColor: "#E8187A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  ctaGradient: {
+  ctaBtn: {
     height: 60,
+    borderRadius: 20,
+    backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   ctaText: {
-    color: "#fff",
+    color: "#C0185C",
     fontWeight: "800",
     fontSize: 16,
   },
@@ -380,23 +329,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 18,
   },
   loginText: {
-    color: "#E8187A",
-    fontWeight: "700",
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "600",
     fontSize: 15,
   },
 
   // ── Légal ─────────────────────────────────────────────────────────────
   legal: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: "rgba(255,255,255,0.40)",
     textAlign: "center",
     lineHeight: 18,
   },
   legalLink: {
-    color: "#E8187A",
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.60)",
   },
 });
