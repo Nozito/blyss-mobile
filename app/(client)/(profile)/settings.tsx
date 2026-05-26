@@ -29,7 +29,7 @@ function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ioni
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, logout } = useAuth();
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
@@ -121,7 +121,7 @@ export default function SettingsScreen() {
       const res = await authApi.deleteAccount();
       if (res.success) {
         Alert.alert("Compte supprimé");
-        await authApi.logout();
+        await logout();
         router.replace("/(auth)/login");
       } else {
         Alert.alert("Erreur", "Impossible de supprimer le compte");

@@ -111,7 +111,7 @@ export default function SpecialistProfileScreen() {
   });
 
   const { data: myBookingsData } = useQuery({
-    queryKey: ["my-bookings"],
+    queryKey: ["client-bookings"],
     queryFn: () => clientApi.getMyBookings(),
     enabled: Boolean(user),
     staleTime: 60_000,

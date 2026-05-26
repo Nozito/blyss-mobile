@@ -94,7 +94,12 @@ function FadeCard({ delay, style, children }: { delay: number; style?: object; c
 
 // ─── Star Picker ──────────────────────────────────────────────────────────────
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const scales = [0, 1, 2, 3, 4].map(() => useRef(new Animated.Value(1)).current);
+  const s0 = useRef(new Animated.Value(1)).current;
+  const s1 = useRef(new Animated.Value(1)).current;
+  const s2 = useRef(new Animated.Value(1)).current;
+  const s3 = useRef(new Animated.Value(1)).current;
+  const s4 = useRef(new Animated.Value(1)).current;
+  const scales = [s0, s1, s2, s3, s4];
   const handlePress = (i: number) => {
     onChange(i + 1);
     Animated.sequence([

@@ -20,7 +20,8 @@ interface Booking {
   id: number;
   status: "confirmed" | "pending" | "cancelled" | "completed";
   start_datetime: string;
-  prestation: { name: string; duration_minutes: number } | null;
+  price?: number;
+  prestation: { name: string; duration_minutes: number; price?: number } | null;
   pro: {
     name: string | null;
     first_name: string | null;
@@ -103,9 +104,7 @@ function BookingCard({ booking, index }: { booking: Booking; index: number }) {
   const rawName = `${booking.pro?.first_name ?? ""} ${booking.pro?.last_name ?? ""}`.trim();
   const proName = booking.pro?.name || rawName || "Spécialiste";
   const prestationName = booking.prestation?.name ?? "Prestation";
-  const price = (booking as Record<string, unknown>).price
-    ?? (booking.prestation as Record<string, unknown> | null)?.price
-    ?? null;
+  const price = booking.price ?? booking.prestation?.price ?? null;
   const initial = proName[0]?.toUpperCase() ?? "S";
 
   return (
@@ -187,7 +186,7 @@ export default function BookingsScreen() {
   const router = useRouter();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["my-bookings"],
+    queryKey: ["client-bookings"],
     queryFn: () => clientApi.getMyBookings(),
     staleTime: 30_000,
     enabled: isAuthenticated,
