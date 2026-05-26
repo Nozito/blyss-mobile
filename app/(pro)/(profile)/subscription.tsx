@@ -6,9 +6,10 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { Stack } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,22 @@ import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 type BillingPeriod = "monthly" | "annual";
+
+async function syncSubscriptionWithRetry(
+  payload: Parameters<typeof proApi.createSubscription>[0],
+  maxAttempts = 3
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await proApi.createSubscription(payload);
+      if (res.success) return true;
+    } catch {}
+    if (attempt < maxAttempts) {
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+  return false;
+}
 
 const PLAN_CONFIG: Record<RCPlan, {
   label: string;
@@ -103,10 +120,19 @@ export default function SubscriptionScreen() {
     queryFn: () => proApi.getSubscription(),
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: () => proApi.cancelSubscription(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pro-subscription"] }),
-  });
+  const handleCancelSubscription = () => {
+    Alert.alert(
+      "Gérer mon abonnement",
+      "Les abonnements Blyss Pro sont gérés par Apple. Tu seras redirigée vers les Réglages Apple pour annuler.",
+      [
+        { text: "Retour", style: "cancel" },
+        {
+          text: "Gérer via Apple",
+          onPress: () => void Linking.openURL("https://apps.apple.com/account/subscriptions"),
+        },
+      ]
+    );
+  };
 
   const subscription = data?.data;
   const isAnnual = billing === "annual";
@@ -125,19 +151,23 @@ export default function SubscriptionScreen() {
       setPurchasing(null);
 
       if (result.success) {
-        try {
-          await proApi.createSubscription({
-            plan: planKey,
-            billingType: isAnnual ? "one_time" : "monthly",
-            monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
-            paymentId: result.paymentId ?? pkg.identifier,
-          });
-        } catch {
-          // Backend silencieux — RC reste source de vérité
+        const synced = await syncSubscriptionWithRetry({
+          plan: planKey,
+          billingType: isAnnual ? "one_time" : "monthly",
+          monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
+          paymentId: result.paymentId ?? pkg.identifier,
+        });
+        if (!synced) {
+          // RC confirme l'achat, mais backend n'a pas répondu après 3 essais.
+          // L'accès est accordé via RC, mais on prévient l'utilisateur.
+          Alert.alert(
+            "Paiement accepté",
+            "Ton abonnement est actif. Une erreur de synchronisation mineure s'est produite — si des fonctionnalités sont manquantes dans les prochaines minutes, redémarre l'application ou contacte le support.",
+            [{ text: "OK" }]
+          );
         }
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-        // refreshActivePlan avant redirect pour éviter le flash activePlan=null dans le layout
         await refreshActivePlan();
         router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
       } else if (result.error && result.error !== "cancelled") {
@@ -261,16 +291,7 @@ export default function SubscriptionScreen() {
                   </Text>
                 )}
                 <Pressable
-                  onPress={() =>
-                    Alert.alert(
-                      "Annuler l'abonnement",
-                      "Es-tu sûre de vouloir annuler ?",
-                      [
-                        { text: "Non", style: "cancel" },
-                        { text: "Annuler l'abonnement", style: "destructive", onPress: () => cancelMutation.mutate() },
-                      ]
-                    )
-                  }
+                  onPress={handleCancelSubscription}
                   style={{
                     borderWidth: 1.5, borderColor: Colors.border,
                     borderRadius: 14, paddingVertical: 10,
@@ -364,6 +385,7 @@ export default function SubscriptionScreen() {
               </View>
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
+                // Start n'existe pas en annuel — on affiche juste un bandeau info, pas de carte cliquable
                 if (isAnnual && planKey === "start") return (
                   <View key="start-annual-notice" style={{
                     backgroundColor: `${Colors.mutedForeground}10`, borderRadius: 14,

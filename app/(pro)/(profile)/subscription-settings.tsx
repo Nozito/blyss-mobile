@@ -6,6 +6,7 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,12 +31,27 @@ const PLAN_META: Record<RCPlan, {
 
 const PLAN_ORDER: Record<RCPlan, number> = { start: 0, serenite: 1, signature: 2 };
 
+async function syncSubscriptionWithRetry(
+  payload: Parameters<typeof proApi.updateSubscription>[0],
+  maxAttempts = 3
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await proApi.updateSubscription(payload);
+      if (res.success) return true;
+    } catch {}
+    if (attempt < maxAttempts) {
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+  return false;
+}
+
 export default function ProSubscriptionSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
 
   const { activePlan, packages, purchase, restorePurchases, refreshActivePlan } = useRevenueCat();
@@ -59,16 +75,18 @@ export default function ProSubscriptionSettingsScreen() {
       const pkg = isAnnual && rcPkg.annualRcPackage ? rcPkg.annualRcPackage : rcPkg.rcPackage;
       const result = await purchase(pkg);
       if (result.success) {
-        try {
-          // Informer le backend du changement de plan après l'achat RC
-          await proApi.updateSubscription({
-            plan: planId,
-            billingType: isAnnual ? "one_time" : "monthly",
-            monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
-            paymentId: result.paymentId ?? pkg.identifier,
-          });
-        } catch {
-          // Backend silencieux — RC reste source de vérité
+        const synced = await syncSubscriptionWithRetry({
+          plan: planId,
+          billingType: isAnnual ? "one_time" : "monthly",
+          monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
+          paymentId: result.paymentId ?? pkg.identifier,
+        });
+        if (!synced) {
+          Alert.alert(
+            "Synchronisation",
+            "Ton abonnement est actif mais n'a pas pu être synchronisé avec le serveur. Réessaie dans quelques instants.",
+            [{ text: "OK" }]
+          );
         }
         // refreshActivePlan avant redirect pour éviter le flash activePlan=null dans le layout
         await refreshActivePlan();
@@ -86,24 +104,13 @@ export default function ProSubscriptionSettingsScreen() {
 
   const handleCancel = () => {
     Alert.alert(
-      "Annuler l'abonnement",
-      "Es-tu sûre de vouloir annuler ? Tu garderas l'accès jusqu'à la fin de ta période actuelle.",
+      "Gérer mon abonnement",
+      "Les abonnements Blyss Pro sont gérés par Apple. Tu seras redirigée vers les Réglages Apple pour annuler.",
       [
-        { text: "Non", style: "cancel" },
+        { text: "Annuler", style: "cancel" },
         {
-          text: "Oui, annuler", style: "destructive",
-          onPress: async () => {
-            setIsCancelling(true);
-            try {
-              await proApi.cancelSubscription();
-              qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-              Alert.alert("Annulé", "Ton abonnement a été annulé. L'accès reste actif jusqu'à la fin de la période en cours.");
-            } catch {
-              Alert.alert("Erreur", "Impossible d'annuler l'abonnement pour l'instant.");
-            } finally {
-              setIsCancelling(false);
-            }
-          },
+          text: "Gérer via Apple",
+          onPress: () => void Linking.openURL("https://apps.apple.com/account/subscriptions"),
         },
       ]
     );
@@ -284,8 +291,12 @@ export default function ProSubscriptionSettingsScreen() {
           <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
         </Pressable>
       </View>
-      <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16, marginBottom: 24 }}>
+      <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16, marginBottom: 16 }}>
         Annule à tout moment • Paiement sécurisé
+      </Text>
+
+      <Text style={{ fontSize: 10, color: Colors.mutedForeground, textAlign: "center", lineHeight: 15, marginBottom: 16, paddingHorizontal: 8 }}>
+        {'L\'abonnement se renouvelle automatiquement sauf annulation au moins 24h avant la fin de la période en cours via Réglages > Apple ID > Abonnements. Paiement débité à la confirmation de l\'achat.'}
       </Text>
 
       {subscription && (
@@ -296,14 +307,9 @@ export default function ProSubscriptionSettingsScreen() {
           </Text>
           <Pressable
             onPress={handleCancel}
-            disabled={isCancelling}
             style={{ height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.border }}
           >
-            {isCancelling ? (
-              <ActivityIndicator size="small" color={Colors.mutedForeground} />
-            ) : (
-              <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>Annuler mon abonnement</Text>
-            )}
+            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>Annuler mon abonnement</Text>
           </Pressable>
         </>
       )}

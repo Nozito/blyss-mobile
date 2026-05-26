@@ -509,7 +509,7 @@ export const proApi = {
   createSubscription: (data: { plan: string; billingType: "monthly" | "one_time"; monthlyPrice: number; paymentId: string }) =>
     apiCall("/api/pro/subscription", { method: "POST", body: JSON.stringify(data) }),
 
-  updateSubscription: (data: { plan: string }) =>
+  updateSubscription: (data: { plan: string; billingType?: "monthly" | "one_time"; monthlyPrice?: number; paymentId?: string }) =>
     apiCall("/api/pro/subscription/change", { method: "PUT", body: JSON.stringify(data) }),
 
   getProfile: () => apiCall<User>("/api/users"),
