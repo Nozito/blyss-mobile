@@ -200,7 +200,7 @@ export default function WelcomeScreen() {
         </Pressable>
 
         {/* Légal */}
-        <Text style={[styles.legal, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Text style={[styles.legal, { paddingBottom: Math.max(insets.bottom + 8, 24) }]}>
           {"En continuant, tu acceptes nos "}
           <Text style={styles.legalLink}>Conditions générales</Text>
           {" et la "}
@@ -330,16 +330,16 @@ const styles = StyleSheet.create({
 
   // ── Carte ─────────────────────────────────────────────────────────────
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFBFC",
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
     paddingHorizontal: 24,
-    paddingTop: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 12,
+    paddingTop: 20,
+    shadowColor: "#E8187A",
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 10,
   },
   dragHandle: {
     alignSelf: "center",
@@ -376,14 +376,11 @@ const styles = StyleSheet.create({
 
   // ── Login ─────────────────────────────────────────────────────────────
   loginBtn: {
-    height: 56,
+    height: 50,
     borderRadius: 20,
-    backgroundColor: "rgba(232,24,122,0.06)",
-    borderWidth: 1.5,
-    borderColor: "rgba(232,24,122,0.20)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   loginText: {
     color: "#E8187A",
