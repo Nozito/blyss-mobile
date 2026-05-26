@@ -157,7 +157,7 @@ export default function WelcomeScreen() {
           onPress={() => router.push("/(auth)/register")}
         >
           <Animated.View style={[styles.ctaBtn, { transform: [{ scale: ctaScale }] }]}>
-            <Text style={styles.ctaText}>Commencer gratuitement</Text>
+            <Text style={styles.ctaText}>Créer mon compte</Text>
             {Platform.OS === "ios"
               ? <SymbolView name="arrow.right" size={17} tintColor="#C0185C" />
               : <Ionicons name="arrow-forward" size={17} color="#C0185C" />
@@ -268,20 +268,20 @@ const styles = StyleSheet.create({
 
   // ── Pills ─────────────────────────────────────────────────────────────
   pillRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-    justifyContent: "center",
+    flexDirection: "column",
+    gap: 10,
+    alignItems: "flex-start",
+    alignSelf: "center",
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 10,
     backgroundColor: "rgba(255,255,255,0.13)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.22)",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 99,
   },
   pillLabel: {
@@ -330,10 +330,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.40)",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
   loginText: {
-    color: "rgba(255,255,255,0.85)",
-    fontWeight: "600",
+    color: "#fff",
+    fontWeight: "700",
     fontSize: 15,
   },
 
