@@ -7,131 +7,199 @@ import {
   Animated,
   StyleSheet,
   Dimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { SymbolView } from "expo-symbols";
+import type { SFSymbol } from "sf-symbols-typescript";
+import * as Haptics from "expo-haptics";
 
 const { height: SCREEN_H } = Dimensions.get("window");
+const CARD_H = SCREEN_H * 0.38;
 
-const FEATURES = [
-  { icon: "flash-outline" as const,             label: "Réservations",       color: "#FE5D9D", bg: "#FFF0F5" },
-  { icon: "people-outline" as const,            label: "Clients fidèles",    color: "#10B981", bg: "#F0FFF4" },
-  { icon: "shield-checkmark-outline" as const,  label: "Paiements sécurisés", color: "#3B82F6", bg: "#EFF6FF" },
-] as const;
-
-const CARD_H = SCREEN_H * 0.46;
+const FEATURES: Array<{ icon: "flash" | "people" | "shield-checkmark"; symbolName: SFSymbol; label: string }> = [
+  { icon: "flash",             symbolName: "bolt.fill",        label: "Réservations" },
+  { icon: "people",            symbolName: "person.2.fill",    label: "Clients fidèles" },
+  { icon: "shield-checkmark",  symbolName: "lock.shield.fill", label: "Paiements sécurisés" },
+];
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Slide-up de la carte blanche
-  const cardY = useRef(new Animated.Value(CARD_H)).current;
-  // Fade-in du hero
-  const heroOpacity = useRef(new Animated.Value(0)).current;
-  const heroY = useRef(new Animated.Value(24)).current;
+  // — Entrance —
+  const heroOpacity    = useRef(new Animated.Value(0)).current;
+  const heroY          = useRef(new Animated.Value(-20)).current;
+  const logoBadgeScale = useRef(new Animated.Value(0.7)).current;
+  const cardY          = useRef(new Animated.Value(CARD_H)).current;
+
+  // — Pills stagger —
+  const pill0O = useRef(new Animated.Value(0)).current;
+  const pill0Y = useRef(new Animated.Value(20)).current;
+  const pill1O = useRef(new Animated.Value(0)).current;
+  const pill1Y = useRef(new Animated.Value(20)).current;
+  const pill2O = useRef(new Animated.Value(0)).current;
+  const pill2Y = useRef(new Animated.Value(20)).current;
+
+  // — Press feedback —
+  const ctaScale   = useRef(new Animated.Value(1)).current;
+  const loginScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(heroOpacity, {
-        toValue: 1,
-        duration: 520,
-        delay: 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(heroY, {
-        toValue: 0,
-        duration: 520,
-        delay: 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(cardY, {
-        toValue: 0,
-        delay: 200,
-        speed: 14,
-        bounciness: 4,
-        useNativeDriver: true,
-      }),
+      // Hero fade + slide down
+      Animated.timing(heroOpacity, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
+      Animated.timing(heroY, { toValue: 0, duration: 600, delay: 100, useNativeDriver: true }),
+      // Logo spring scale
+      Animated.sequence([
+        Animated.delay(150),
+        Animated.spring(logoBadgeScale, { toValue: 1, damping: 14, stiffness: 120, useNativeDriver: true }),
+      ]),
+      // Card spring slide up
+      Animated.sequence([
+        Animated.delay(250),
+        Animated.spring(cardY, { toValue: 0, damping: 18, stiffness: 120, useNativeDriver: true }),
+      ]),
+      // Pill 0
+      Animated.sequence([
+        Animated.delay(300),
+        Animated.parallel([
+          Animated.timing(pill0O, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(pill0Y, { toValue: 0, duration: 350, useNativeDriver: true }),
+        ]),
+      ]),
+      // Pill 1
+      Animated.sequence([
+        Animated.delay(380),
+        Animated.parallel([
+          Animated.timing(pill1O, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(pill1Y, { toValue: 0, duration: 350, useNativeDriver: true }),
+        ]),
+      ]),
+      // Pill 2
+      Animated.sequence([
+        Animated.delay(460),
+        Animated.parallel([
+          Animated.timing(pill2O, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(pill2Y, { toValue: 0, duration: 350, useNativeDriver: true }),
+        ]),
+      ]),
     ]).start();
   }, []);
 
+  const pillAnims = [
+    { opacity: pill0O, translateY: pill0Y },
+    { opacity: pill1O, translateY: pill1Y },
+    { opacity: pill2O, translateY: pill2Y },
+  ];
+
+  const springPress = (val: Animated.Value, to: number) =>
+    Animated.spring(val, { toValue: to, damping: 15, stiffness: 300, useNativeDriver: true }).start();
+
   return (
     <View style={styles.root}>
-      {/* ── Hero gradient ───────────────────────────────────────────────── */}
+      {/* ── Hero ────────────────────────────────────────────────────────── */}
       <LinearGradient
-        colors={["#E8187A", "#FE5D9D", "#FF8EC4"]}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
+        colors={["#4A0030", "#9B0057", "#E8187A", "#FE5D9D"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        {/* Cercles décoratifs */}
-        <View style={styles.circle1} />
-        <View style={styles.circle2} />
+        {/* Orbs décoratifs */}
+        <View style={styles.orb1} />
+        <View style={styles.orb2} />
+        <View style={styles.orb3} />
 
+        {/* Contenu hero */}
         <Animated.View
           style={[
             styles.heroContent,
-            { paddingTop: insets.top + 32 },
+            { paddingTop: insets.top + 40 },
             { opacity: heroOpacity, transform: [{ translateY: heroY }] },
           ]}
         >
-          <View style={styles.logoBadge}>
-            <Image
-              source={require("@/assets/logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+          {/* Logo badge */}
+          <Animated.View style={[styles.logoBadge, { transform: [{ scale: logoBadgeScale }] }]}>
+            <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
+          </Animated.View>
 
+          {/* Brand */}
           <Text style={styles.brand}>Blyss</Text>
-          <Text style={styles.tagline}>Beauté. Business. Sérénité.</Text>
-          <Text style={styles.heroSub}>
-            La plateforme tout-en-un{"\n"}pour les pros du nail art
-          </Text>
+          <Text style={styles.tagline}>Beauté · Business · Sérénité</Text>
+
+          {/* Feature pills — glassmorphism */}
+          <View style={styles.pillRow}>
+            {FEATURES.map((f, i) => (
+              <Animated.View
+                key={f.label}
+                style={[
+                  styles.pill,
+                  { opacity: pillAnims[i].opacity, transform: [{ translateY: pillAnims[i].translateY }] },
+                ]}
+              >
+                {Platform.OS === "ios"
+                  ? <SymbolView name={f.symbolName} size={13} tintColor="#fff" />
+                  : <Ionicons name={f.icon} size={13} color="#fff" />
+                }
+                <Text style={styles.pillLabel}>{f.label}</Text>
+              </Animated.View>
+            ))}
+          </View>
         </Animated.View>
+
+        {/* Fondu de transition vers la carte */}
+        <LinearGradient
+          colors={["transparent", "rgba(255,255,255,0.0)", "#fff"]}
+          style={styles.fadeTransition}
+          pointerEvents="none"
+        />
       </LinearGradient>
 
-      {/* ── Carte blanche (slide-up) ────────────────────────────────────── */}
-      <Animated.View
-        style={[styles.card, { transform: [{ translateY: cardY }] }]}
-      >
-        {/* Features pills */}
-        <View style={styles.pillRow}>
-          {FEATURES.map((f) => (
-            <View key={f.label} style={[styles.pill, { backgroundColor: f.bg }]}>
-              <Ionicons name={f.icon} size={14} color={f.color} />
-              <Text style={[styles.pillLabel, { color: f.color }]}>{f.label}</Text>
-            </View>
-          ))}
-        </View>
+      {/* ── Carte ───────────────────────────────────────────────────────── */}
+      <Animated.View style={[styles.card, { transform: [{ translateY: cardY }] }]}>
+        {/* Drag indicator */}
+        <View style={styles.dragHandle} />
 
         {/* CTA principal */}
         <Pressable
+          onPressIn={() => {
+            springPress(ctaScale, 0.96);
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }}
+          onPressOut={() => springPress(ctaScale, 1)}
           onPress={() => router.push("/(auth)/register")}
-          style={({ pressed }) => [styles.ctaBtn, pressed && { opacity: 0.88 }]}
         >
-          <LinearGradient
-            colors={["#E8187A", "#FE5D9D"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.ctaGradient}
-          >
-            <Text style={styles.ctaText}>Commencer gratuitement</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
-          </LinearGradient>
+          <Animated.View style={[styles.ctaWrap, { transform: [{ scale: ctaScale }] }]}>
+            <LinearGradient
+              colors={["#E8187A", "#FE5D9D"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaGradient}
+            >
+              <Text style={styles.ctaText}>Commencer gratuitement</Text>
+              {Platform.OS === "ios"
+                ? <SymbolView name="arrow.right" size={18} tintColor="#fff" />
+                : <Ionicons name="arrow-forward" size={18} color="#fff" />
+              }
+            </LinearGradient>
+          </Animated.View>
         </Pressable>
 
         {/* Connexion */}
         <Pressable
+          onPressIn={() => springPress(loginScale, 0.97)}
+          onPressOut={() => springPress(loginScale, 1)}
           onPress={() => router.push("/(auth)/login")}
-          style={({ pressed }) => [styles.loginBtn, pressed && { opacity: 0.7 }]}
         >
-          <Text style={styles.loginText}>J'ai déjà un compte</Text>
+          <Animated.View style={[styles.loginBtn, { transform: [{ scale: loginScale }] }]}>
+            <Text style={styles.loginText}>J'ai déjà un compte</Text>
+          </Animated.View>
         </Pressable>
 
-        {/* Footer légal */}
+        {/* Légal */}
         <Text style={[styles.legal, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           {"En continuant, tu acceptes nos "}
           <Text style={styles.legalLink}>Conditions générales</Text>
@@ -146,7 +214,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#E8187A",
+    backgroundColor: "#FE5D9D",
   },
 
   // ── Hero ──────────────────────────────────────────────────────────────
@@ -154,114 +222,147 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  circle1: {
+
+  orb1: {
     position: "absolute",
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: "rgba(255,255,255,0.07)",
-    top: -80,
-    right: -80,
+    top: -60,
+    right: -60,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  circle2: {
+  orb2: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    bottom: 60,
-    left: -60,
+    bottom: 120,
+    left: -80,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(254,93,157,0.25)",
   },
+  orb3: {
+    position: "absolute",
+    top: 140,
+    left: 20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+
   heroContent: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-  },
-  logoBadge: {
-    width: 88,
-    height: 88,
-    borderRadius: 26,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.30)",
-  },
-  logo: {
-    width: 58,
-    height: 58,
-  },
-  brand: {
-    fontSize: 42,
-    fontWeight: "900",
-    color: "#fff",
-    letterSpacing: -1.5,
-    marginBottom: 6,
-  },
-  tagline: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.90)",
-    letterSpacing: 0.3,
-    marginBottom: 10,
-  },
-  heroSub: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.70)",
-    textAlign: "center",
-    lineHeight: 20,
+    paddingBottom: 80,
   },
 
-  // ── Carte ─────────────────────────────────────────────────────────────
-  card: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.10,
+  logoBadge: {
+    width: 96,
+    height: 96,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
     shadowRadius: 20,
-    elevation: 10,
+  },
+  logo: {
+    width: 64,
+    height: 64,
+  },
+
+  brand: {
+    fontSize: 56,
+    fontWeight: "900",
+    color: "#fff",
+    letterSpacing: -2,
+    marginBottom: 8,
+  },
+  tagline: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.75)",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 32,
   },
 
   // ── Pills ─────────────────────────────────────────────────────────────
   pillRow: {
     flexDirection: "row",
-    justifyContent: "center",
     gap: 8,
-    marginBottom: 28,
     flexWrap: "wrap",
+    justifyContent: "center",
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 99,
   },
   pillLabel: {
-    fontSize: 12,
+    color: "#fff",
     fontWeight: "700",
+    fontSize: 12,
+  },
+
+  // ── Fondu transition ───────────────────────────────────────────────────
+  fadeTransition: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+
+  // ── Carte ─────────────────────────────────────────────────────────────
+  card: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  dragHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 24,
   },
 
   // ── CTA ───────────────────────────────────────────────────────────────
-  ctaBtn: {
-    borderRadius: 18,
+  ctaWrap: {
+    borderRadius: 20,
     overflow: "hidden",
-    marginBottom: 14,
-    shadowColor: "#FE5D9D",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
+    marginBottom: 12,
+    shadowColor: "#E8187A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 8,
   },
   ctaGradient: {
-    height: 58,
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -271,26 +372,26 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
     fontSize: 16,
-    letterSpacing: -0.3,
   },
 
   // ── Login ─────────────────────────────────────────────────────────────
   loginBtn: {
-    height: 52,
-    borderRadius: 18,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: "rgba(232,24,122,0.06)",
+    borderWidth: 1.5,
+    borderColor: "rgba(232,24,122,0.20)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
     marginBottom: 20,
   },
   loginText: {
-    color: "#374151",
-    fontWeight: "600",
+    color: "#E8187A",
+    fontWeight: "700",
     fontSize: 15,
   },
 
-  // ── Legal ─────────────────────────────────────────────────────────────
+  // ── Légal ─────────────────────────────────────────────────────────────
   legal: {
     fontSize: 11,
     color: "#9CA3AF",
@@ -298,7 +399,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   legalLink: {
-    textDecorationLine: "underline",
-    color: "#6B7280",
+    color: "#E8187A",
+    fontWeight: "600",
   },
 });
