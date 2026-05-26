@@ -203,17 +203,17 @@ export function BookingSummary({
       </View>
 
       {/* Payment method */}
-      <View style={{ gap: 12 }}>
-        <Text style={{ fontSize: 15, fontWeight: "600", color: "#09090B" }}>Mode de paiement</Text>
-        <View style={{ gap: 10 }}>
-          <PaymentChoice
-            selected={paymentMethod === "on_site"}
-            onPress={() => onSelectPayment("on_site")}
-            icon={<Ionicons name="card-outline" size={20} color="#FE5D9D" />}
-            title="Payer sur place"
-            subtitle="Espèces, carte bancaire"
-          />
-          {canPayOnline ? (
+      {canPayOnline ? (
+        <View style={{ gap: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#09090B" }}>Mode de paiement</Text>
+          <View style={{ gap: 10 }}>
+            <PaymentChoice
+              selected={paymentMethod === "on_site"}
+              onPress={() => onSelectPayment("on_site")}
+              icon={<Ionicons name="card-outline" size={20} color="#FE5D9D" />}
+              title="Payer sur place"
+              subtitle="Espèces, carte bancaire"
+            />
             <PaymentChoice
               selected={paymentMethod === "online"}
               onPress={() => onSelectPayment("online")}
@@ -221,18 +221,31 @@ export function BookingSummary({
               title="Payer en ligne"
               subtitle="Carte, Apple Pay, Google Pay"
             />
-          ) : (
-            <PaymentChoice
-              selected={false}
-              onPress={() => {}}
-              icon={<Ionicons name="phone-portrait-outline" size={20} color="#6D6D78" />}
-              title="Payer en ligne"
-              subtitle="Non disponible pour ce professionnel"
-              disabled
-            />
-          )}
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={{
+          flexDirection: "row", alignItems: "center", gap: 12,
+          backgroundColor: "#FFF8EC", borderRadius: 14,
+          padding: 14, borderWidth: 1, borderColor: "#F39C1240",
+        }}>
+          <View style={{
+            width: 36, height: 36, borderRadius: 10,
+            backgroundColor: "#FEF3C7",
+            alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <Ionicons name="information-circle-outline" size={20} color="#D97706" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#92400E", marginBottom: 2 }}>
+              Paiement sur place
+            </Text>
+            <Text style={{ fontSize: 12, color: "#B45309", lineHeight: 17 }}>
+              Ce professionnel n'accepte pas le paiement en ligne. Le règlement se fait directement lors du rendez-vous.
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

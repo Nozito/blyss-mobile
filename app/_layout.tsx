@@ -116,7 +116,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss">
+        <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <RevenueCatProvider>

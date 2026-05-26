@@ -36,7 +36,6 @@ export function PaymentStep({
       paymentIntentClientSecret: secret,
       merchantDisplayName: "Blyss",
       style: "automatic",
-      locale: "fr",
       appearance: {
         colors: {
           primary: "#FE5D9D",

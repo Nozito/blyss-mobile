@@ -211,6 +211,15 @@ export default function BookingScreen() {
     [selectedPrestation, prestations]
   );
 
+  const canPayOnline = Boolean(pro?.stripe_onboarding_complete && pro?.accept_online_payment);
+
+  // Auto-select on_site when online payment is unavailable
+  useEffect(() => {
+    if (pro && !canPayOnline && paymentMethod === null) {
+      setPaymentMethod("on_site");
+    }
+  }, [pro, canPayOnline]);
+
   const isStepValid = () => {
     if (step === 1) return selectedPrestation !== null;
     if (step === 2) return selectedDate !== null && selectedTime !== null;
@@ -336,7 +345,6 @@ export default function BookingScreen() {
   }
 
   const proName = pro.activity_name || `${pro.first_name} ${pro.last_name}`;
-  const canPayOnline = pro.stripe_onboarding_complete && pro.accept_online_payment;
 
   const renderStep = () => {
     switch (step) {

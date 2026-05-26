@@ -86,7 +86,7 @@ export default function ProfileScreen() {
     }
     // Fix 1b: mise à jour locale immédiate avant le refetch
     if (res.data?.photo) patchUser({ profile_photo: res.data.photo });
-    await refreshProfile();
+    void refreshProfile();
   };
 
   const displayName = user ? `${user.first_name} ${user.last_name}` : "";
@@ -256,6 +256,47 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
+
+        {/* Admin switcher — admin only */}
+        {user?.is_admin && (
+          <View style={{
+            backgroundColor: "#0A0A0F",
+            borderRadius: 16,
+            padding: 14,
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: "rgba(249,115,22,0.30)",
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Ionicons name="shield-checkmark" size={14} color="#F97316" />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#F97316", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                Vue administrateur
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable
+                onPress={() => router.push("/(admin)/dashboard" as any)}
+                style={{
+                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+                  gap: 6, backgroundColor: "#F97316", borderRadius: 10, paddingVertical: 10,
+                }}
+              >
+                <Ionicons name="grid" size={15} color="#fff" />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Admin</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(pro)/dashboard" as any)}
+                style={{
+                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+                  gap: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 10, paddingVertical: 10,
+                }}
+              >
+                <Ionicons name="briefcase-outline" size={15} color="rgba(255,255,255,0.7)" />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Vue Pro</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         {/* Logout */}
         <Pressable
