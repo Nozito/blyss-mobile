@@ -99,6 +99,7 @@ export default function ProNotificationsScreen() {
   const [prefs, setPrefs] = useState<ProNotificationSettings>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
     proApi.getNotificationSettings().then((res) => {
@@ -110,12 +111,15 @@ export default function ProNotificationsScreen() {
     const prev = prefs;
     setPrefs({ ...prefs, [key]: value });
     setSaveSuccess(false);
+    setSaveError(false);
     const res = await proApi.updateNotificationSettings({ [key]: value });
     if (res.success) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } else {
       setPrefs(prev);
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 3000);
     }
   };
 
@@ -251,8 +255,16 @@ export default function ProNotificationsScreen() {
       {/* Footer */}
       {saveSuccess && (
         <View style={{ alignItems: "center", paddingVertical: 8 }}>
-          <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
+          <Text style={{ fontSize: 14, color: Colors.success }}>
             Préférences à jour ✓
+          </Text>
+        </View>
+      )}
+      {saveError && (
+        <View style={{ alignItems: "center", paddingVertical: 8, flexDirection: "row", justifyContent: "center", gap: 6 }}>
+          <Ionicons name="alert-circle-outline" size={15} color="#EF4444" />
+          <Text style={{ fontSize: 14, color: "#EF4444" }}>
+            Impossible de sauvegarder — réessaie
           </Text>
         </View>
       )}

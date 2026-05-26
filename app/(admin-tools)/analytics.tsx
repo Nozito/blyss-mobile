@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable, useWindowDimensions,
-  Animated,
+  Animated, Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +10,8 @@ import Svg, {
   Polyline, Rect, Defs, LinearGradient as SvgGrad, Stop, Polygon, Circle,
 } from "react-native-svg";
 import { SymbolView } from "expo-symbols";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { adminApi, AdminAnalytics } from "@/lib/api";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ADMIN } from "@/constants/adminTheme";
@@ -225,6 +227,7 @@ function PeriodPill({
 
 export default function AdminAnalyticsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const [period, setPeriod] = useState<Period>("month");
 
@@ -292,9 +295,16 @@ export default function AdminAnalyticsScreen() {
     >
       {/* ── Header ── */}
       <View style={{ marginBottom: 22 }}>
-        <Text style={{
-          fontSize: 34, fontWeight: "900", color: "#fff", letterSpacing: -1,
-        }}>
+        <Pressable
+          onPress={() => router.back()}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
+        >
+          {Platform.OS === "ios"
+            ? <SymbolView name="chevron.left" size={16} tintColor={ADMIN.accent} />
+            : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+        </Pressable>
+        <Text style={{ fontSize: 34, fontWeight: "900", color: "#fff", letterSpacing: -1 }}>
           Analytics
         </Text>
         <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>

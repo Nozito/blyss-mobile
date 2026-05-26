@@ -490,19 +490,44 @@ export default function ProCalendarScreen() {
   };
 
   // ── weekly planning
-  const applyWeeklyPlanning = async () => {
+  const applyWeeklyPlanning = () => {
     if (activeDays.length === 0 || planningSlots.length === 0) return;
+
+    const MAX_SLOTS_PER_DAY = 5;
+    const WEEKS = 4;
+
+    if (planningSlots.length > MAX_SLOTS_PER_DAY) {
+      Alert.alert(
+        "Trop de créneaux",
+        `Le planning est limité à ${MAX_SLOTS_PER_DAY} créneaux par jour. Retire les créneaux en trop avant de continuer.`
+      );
+      return;
+    }
+
+    const totalSlots = activeDays.length * WEEKS * planningSlots.length;
+
+    Alert.alert(
+      "Confirmer le planning",
+      `${totalSlots} créneaux vont être créés sur ${WEEKS} semaines (${activeDays.length} jour${activeDays.length > 1 ? "s" : ""} × ${planningSlots.length} créneau${planningSlots.length > 1 ? "x" : ""}/jour).\n\nLes créneaux déjà existants ou passés seront ignorés.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Appliquer", onPress: () => void doApplyWeeklyPlanning(WEEKS) },
+      ]
+    );
+  };
+
+  const doApplyWeeklyPlanning = async (weeks: number) => {
     setWeeklyPlanSaving(true);
 
     // dayNum: 1=Lun…7=Dim → JS getDay(): 0=Dim, 1=Lun…6=Sam
     const getNextDates = (dayNum: number): string[] => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const jsDay = dayNum % 7;                        // 7→0 (Dim), reste inchangé
-      const diff = (jsDay - today.getDay() + 7) % 7;  // jours jusqu'à prochaine occurrence
+      const jsDay = dayNum % 7;
+      const diff = (jsDay - today.getDay() + 7) % 7;
       const first = new Date(today);
       first.setDate(today.getDate() + diff);
-      return Array.from({ length: 4 }, (_, w) => {
+      return Array.from({ length: weeks }, (_, w) => {
         const d = new Date(first);
         d.setDate(first.getDate() + w * 7);
         return toLocalDate(d);
@@ -510,7 +535,6 @@ export default function ProCalendarScreen() {
     };
 
     try {
-      // TODO: picker durée dans la modale Planning
       const results = await Promise.all(
         activeDays.flatMap((dayNum) =>
           getNextDates(dayNum).flatMap((date) =>
@@ -522,13 +546,14 @@ export default function ProCalendarScreen() {
       );
 
       const failed = results.filter((r) => r === null).length;
+      const created = results.length - failed;
       await fetchSlots();
       qc.invalidateQueries({ queryKey: ["slots"] });
 
       if (failed > 0) {
         Alert.alert(
           "Planning appliqué",
-          `${results.length - failed} créneaux créés, ${failed} ignorés (chevauchement ou passés).`
+          `${created} créneaux créés, ${failed} ignorés (chevauchement ou passés).`
         );
       } else {
         setWeeklyPlanSuccess(true);

@@ -53,7 +53,10 @@ export default function ProClientsScreen() {
 
   const unblockMutation = useMutation({
     mutationFn: (id: number) => nailTechApi.unblockClient(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocked-clients"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["blocked-clients"] });
+      qc.invalidateQueries({ queryKey: ["pro-clients"] });
+    },
   });
 
   const clients = (clientsData?.data as Client[] | undefined) ?? [];
@@ -248,10 +251,12 @@ export default function ProClientsScreen() {
               </View>
               <Pressable
                 onPress={() => unblockMutation.mutate(item.client_id)}
+                disabled={unblockMutation.isPending}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 7,
                   backgroundColor: `${Colors.success}15`,
                   borderRadius: 12, borderWidth: 1, borderColor: `${Colors.success}30`,
+                  opacity: unblockMutation.isPending ? 0.5 : 1,
                 }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.success }}>Débloquer</Text>

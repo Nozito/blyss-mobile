@@ -29,21 +29,23 @@ export default function ServicesScreen() {
     queryFn: () => proApi.getServices(),
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
-      proApi.updateService(id, { active }),
+  const toggleMutation = useMutation<
+    Awaited<ReturnType<typeof proApi.updateService>>,
+    Error,
+    { id: number; active: boolean },
+    { prev: unknown }
+  >({
+    mutationFn: ({ id, active }) => proApi.updateService(id, { active }),
     onMutate: async ({ id, active }) => {
       await qc.cancelQueries({ queryKey: ["pro-services"] });
       const prev = qc.getQueryData(["pro-services"]);
-      qc.setQueryData(["pro-services"], (old: any) => ({
-        ...old,
-        data: ((old?.data ?? []) as Service[]).map((s) =>
-          s.id === id ? { ...s, active } : s
-        ),
-      }));
+      qc.setQueryData(["pro-services"], (old: unknown) => {
+        const o = old as { data?: Service[] } | undefined;
+        return { ...o, data: (o?.data ?? []).map((s) => s.id === id ? { ...s, active } : s) };
+      });
       return { prev };
     },
-    onError: (_err: unknown, _vars: unknown, ctx: any) => {
+    onError: (_err, _vars, ctx) => {
       qc.setQueryData(["pro-services"], ctx?.prev);
     },
   });

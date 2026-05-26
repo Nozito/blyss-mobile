@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   Pressable,
+  TextInput,
   Alert,
   ActivityIndicator,
 } from "react-native";
@@ -41,6 +42,7 @@ export default function ProSettingsScreen() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +140,7 @@ export default function ProSettingsScreen() {
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
+      setDeleteConfirmText("");
     }
   };
 
@@ -334,25 +337,48 @@ export default function ProSettingsScreen() {
           </Pressable>
         ) : (
           <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: "#FEF2F2", gap: 12 }}>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#DC2626" }}>
-              Supprimer le compte — action irréversible
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#DC2626" }}>
+              Suppression définitive du compte
             </Text>
+            <Text style={{ fontSize: 12, color: "#7F1D1D", lineHeight: 18 }}>
+              Cette action est irréversible. Toutes tes données seront effacées.{"\n"}
+              Tape <Text style={{ fontWeight: "800" }}>SUPPRIMER</Text> pour confirmer.
+            </Text>
+            <TextInput
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder="SUPPRIMER"
+              placeholderTextColor="#FCA5A5"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={{
+                height: 44, borderRadius: 10, borderWidth: 1.5,
+                borderColor: deleteConfirmText === "SUPPRIMER" ? "#EF4444" : "#FECACA",
+                backgroundColor: "#fff", paddingHorizontal: 14,
+                fontSize: 14, fontWeight: "700", color: "#DC2626",
+                letterSpacing: 1,
+              }}
+            />
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Pressable
-                onPress={() => setShowDeleteConfirm(false)}
+                onPress={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
                 style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
               </Pressable>
               <Pressable
                 onPress={handleDeleteAccount}
-                disabled={isDeleting}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", opacity: isDeleting ? 0.7 : 1 }}
+                disabled={isDeleting || deleteConfirmText !== "SUPPRIMER"}
+                style={{
+                  flex: 1, height: 44, borderRadius: 12, backgroundColor: "#EF4444",
+                  alignItems: "center", justifyContent: "center",
+                  opacity: isDeleting || deleteConfirmText !== "SUPPRIMER" ? 0.4 : 1,
+                }}
               >
                 {isDeleting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Confirmer</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Supprimer</Text>
                 )}
               </Pressable>
             </View>

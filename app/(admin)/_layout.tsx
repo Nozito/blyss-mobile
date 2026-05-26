@@ -1,7 +1,7 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { NativeTabs, Icon } from "expo-router/unstable-native-tabs";
-import { SymbolView } from "expo-symbols";
+import { NativeTabs, Icon, VectorIcon } from "expo-router/unstable-native-tabs";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ADMIN } from "@/constants/adminTheme";
@@ -18,31 +18,41 @@ export default function AdminLayout() {
       tintColor={ADMIN.accent}
       minimizeBehavior="automatic"
       labelVisibilityMode="unlabeled"
-      tabBarStyle={{
-        backgroundColor: "rgba(10,10,15,0.85)",
-        borderTopWidth: 1,
-        borderTopColor: "rgba(255,255,255,0.08)",
-      }}
     >
-      <NativeTabs.Trigger name="dashboard">
-        <Icon src={{ default: <SymbolView name="grid" renderingMode="monochrome" />, selected: <SymbolView name="grid.fill" renderingMode="hierarchical" /> }} />
+      <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="grid-outline" />,
+          selected: <VectorIcon family={Ionicons} name="grid" />,
+        }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="users">
-        <Icon src={{ default: <SymbolView name="person.2" renderingMode="monochrome" />, selected: <SymbolView name="person.2.fill" renderingMode="hierarchical" /> }} />
+
+      <NativeTabs.Trigger name="users" options={{ title: "" }}>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="people-outline" />,
+          selected: <VectorIcon family={Ionicons} name="people" />,
+        }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="bookings">
-        <Icon src={{ default: <SymbolView name="calendar" renderingMode="monochrome" />, selected: <SymbolView name="calendar.fill" renderingMode="hierarchical" /> }} />
+
+      <NativeTabs.Trigger name="bookings" options={{ title: "" }}>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="calendar-outline" />,
+          selected: <VectorIcon family={Ionicons} name="calendar" />,
+        }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="payments">
-        <Icon src={{ default: <SymbolView name="creditcard" renderingMode="monochrome" />, selected: <SymbolView name="creditcard.fill" renderingMode="hierarchical" /> }} />
+
+      <NativeTabs.Trigger name="payments" options={{ title: "" }}>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="card-outline" />,
+          selected: <VectorIcon family={Ionicons} name="card" />,
+        }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="more">
-        <Icon src={{ default: <SymbolView name="ellipsis.circle" renderingMode="monochrome" />, selected: <SymbolView name="ellipsis.circle.fill" renderingMode="hierarchical" /> }} />
+
+      <NativeTabs.Trigger name="more" options={{ title: "" }}>
+        <Icon src={{
+          default: <VectorIcon family={Ionicons} name="ellipsis-horizontal-circle-outline" />,
+          selected: <VectorIcon family={Ionicons} name="ellipsis-horizontal-circle" />,
+        }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="analytics"     hidden />
-      <NativeTabs.Trigger name="logs"          hidden />
-      <NativeTabs.Trigger name="notifications" hidden />
-      <NativeTabs.Trigger name="coupons"       hidden />
     </NativeTabs>
   );
 }

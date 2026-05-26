@@ -62,13 +62,14 @@ export default function ProPublicProfileScreen() {
       return;
     }
     if (res.data?.banner_photo) patchUser({ banner_photo: res.data.banner_photo });
-    await refreshProfile();
+    void refreshProfile();
   };
 
   const [activityName, setActivityName] = useState("");
   const [city, setCity] = useState("");
   const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [instagramError, setInstagramError] = useState<string | undefined>();
   const [isPublic, setIsPublic] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -121,7 +122,7 @@ export default function ProPublicProfileScreen() {
   const handleSave = async () => {
     if (!activityName.trim()) { Alert.alert("Erreur", "Le nom de l'activité est requis."); return; }
     if (!city.trim()) { Alert.alert("Erreur", "La ville est requise."); return; }
-    if (instagram && !instagram.startsWith("@")) { Alert.alert("Erreur", "Le compte Instagram doit commencer par @."); return; }
+    if (instagram && instagramError) { Alert.alert("Erreur", instagramError); return; }
 
     setIsSaving(true);
     try {
@@ -331,11 +332,24 @@ export default function ProPublicProfileScreen() {
             <Input
               label="Instagram (optionnel)"
               value={instagram}
-              onChangeText={setInstagram}
+              onChangeText={(raw) => {
+                // Auto-prefix @ and enforce strict format
+                let val = raw.trim();
+                if (val && !val.startsWith("@")) val = `@${val}`;
+                setInstagram(val);
+                if (!val) { setInstagramError(undefined); return; }
+                const handle = val.slice(1); // strip leading @
+                if (!/^[a-zA-Z0-9._]{1,30}$/.test(handle) || handle.includes("..")) {
+                  setInstagramError("Format invalide. Ex : @toncompte (lettres, chiffres, _ ou .)");
+                } else {
+                  setInstagramError(undefined);
+                }
+              }}
               placeholder="@toncompte"
               leftIcon="logo-instagram"
               autoCapitalize="none"
-              maxLength={50}
+              maxLength={31}
+              error={instagramError}
               hint="Ton compte Instagram sera affiché sur ton profil Blyss."
             />
           </View>
@@ -445,7 +459,11 @@ export default function ProPublicProfileScreen() {
               <Text className="text-xl font-bold text-foreground text-center">
                 {activityName || "Nom de l'activité"}
               </Text>
-              <Text className="text-sm text-muted-foreground mt-1">Prothésiste ongulaire</Text>
+              {user?.pro_specialties?.[0] ? (
+                <Text className="text-sm text-muted-foreground mt-1">
+                  {user.pro_specialties[0]}
+                </Text>
+              ) : null}
               {city ? (
                 <View className="flex-row items-center gap-1 mt-2">
                   <Ionicons name="location-outline" size={14} color={Colors.mutedForeground} />

@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { SymbolView } from "expo-symbols";
-import { useRouter } from "expo-router";
+import { Link } from "expo-router";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/colors";
@@ -102,10 +102,10 @@ function Card({ children, style }: { children: React.ReactNode; style?: object }
 
 // ── Quick actions ─────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { icon: "people-outline"   as const, symbol: "person.2"          as const, label: "Utilisateurs", route: "/(admin)/users",    color: "#8B5CF6" },
-  { icon: "calendar-outline" as const, symbol: "calendar"          as const, label: "Réservations", route: "/(admin)/bookings", color: "#3B82F6" },
-  { icon: "pricetag-outline" as const, symbol: "tag"               as const, label: "Coupons",      route: "/(admin)/coupons",  color: "#F59E0B" },
-  { icon: "pulse-outline"    as const, symbol: "waveform"          as const, label: "Logs",          route: "/(admin)/logs",     color: "#22C55E" },
+  { icon: "people-outline"   as const, symbol: "person.2"          as const, label: "Utilisateurs", route: "/(admin)/users",           color: "#8B5CF6" },
+  { icon: "calendar-outline" as const, symbol: "calendar"          as const, label: "Réservations", route: "/(admin)/bookings",         color: "#3B82F6" },
+  { icon: "pricetag-outline" as const, symbol: "tag"               as const, label: "Coupons",      route: "/(admin-tools)/coupons",    color: "#F59E0B" },
+  { icon: "pulse-outline"    as const, symbol: "waveform"          as const, label: "Logs",          route: "/(admin-tools)/logs",       color: "#22C55E" },
 ];
 
 // ── Activity config ───────────────────────────────────────────────────────────
@@ -146,8 +146,8 @@ function DashboardSkeleton({ top }: { top: number }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { user } = useAuth();
+
   const [clock, setClock] = useState(() =>
     new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
   );
@@ -160,8 +160,8 @@ export default function AdminDashboard() {
   }))).current;
 
   const qaScales = useRef(QUICK_ACTIONS.map(() => new Animated.Value(1))).current;
-  const heroScale = useRef(new Animated.Value(0.96)).current;
-  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const heroScale = useRef(new Animated.Value(1)).current;
+  const heroOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const id = setInterval(
@@ -171,9 +171,9 @@ export default function AdminDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data: rawData, isLoading, refetch } = useQuery({
     queryKey: ["admin-dashboard"],
-    queryFn: () => adminApi.getDashboardStats() as Promise<{ success: boolean; stats: Stats; recentActivity: ActivityItem[]; revenueHistory?: number[] }>,
+    queryFn: () => adminApi.getDashboardStats(),
     staleTime: 5 * 60_000, retry: false,
   });
   const { data: healthData } = useQuery({
@@ -184,9 +184,28 @@ export default function AdminDashboard() {
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
-  const stats     = data?.stats ?? null;
-  const activity  = data?.recentActivity ?? [];
-  const sparkData = data?.revenueHistory ?? [];
+  // Normalise snake_case et camelCase selon ce que renvoie le backend
+  const d         = (rawData?.data as any) ?? null;
+  const raw       = d?.stats ?? null;
+  const stats: Stats | null = raw ? {
+    totalUsers:       raw.total_users       ?? raw.totalUsers       ?? 0,
+    totalPros:        raw.total_pros        ?? raw.totalPros        ?? 0,
+    totalClients:     raw.total_clients     ?? raw.totalClients     ?? 0,
+    totalBookings:    raw.total_bookings    ?? raw.totalBookings    ?? 0,
+    todayBookings:    raw.today_bookings    ?? raw.bookings_today   ?? raw.todayBookings ?? 0,
+    totalRevenue:     raw.total_revenue     ?? raw.totalRevenue     ?? 0,
+    monthRevenue:     raw.revenue_month     ?? raw.month_revenue    ?? raw.monthRevenue  ?? 0,
+    activeUsers:      raw.active_users      ?? raw.activeUsers      ?? 0,
+    bookingsByStatus: raw.bookings_by_status ?? raw.bookingsByStatus ?? {},
+    changes: {
+      clients:  raw.changes?.clients  ?? null,
+      pros:     raw.changes?.pros     ?? null,
+      revenue:  raw.changes?.revenue  ?? null,
+      bookings: raw.changes?.bookings ?? null,
+    },
+  } : null;
+  const activity  = (d?.recent_activity ?? d?.recentActivity ?? []) as ActivityItem[];
+  const sparkData = (d?.revenue_history  ?? d?.revenueHistory  ?? []) as number[];
   const byStatus  = stats?.bookingsByStatus ?? {};
   const apiOk     = healthData?.status === "ok";
   const dbOk      = healthData?.db === "ok";
@@ -221,12 +240,6 @@ export default function AdminDashboard() {
     if (!stats || hasAnimated.current) return;
     hasAnimated.current = true;
 
-    // Hero anim
-    Animated.parallel([
-      Animated.timing(heroOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(heroScale,   { toValue: 1, damping: 16, stiffness: 120, useNativeDriver: true }),
-    ]).start();
-
     // KPI stagger
     kpiAnims.forEach((anim, i) => {
       Animated.sequence([
@@ -242,6 +255,14 @@ export default function AdminDashboard() {
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 
   if (isLoading) return <DashboardSkeleton top={insets.top} />;
+  if (!stats) return (
+    <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: TEXT2, fontSize: 14 }}>Impossible de charger les données</Text>
+      <Pressable onPress={onRefresh} style={{ marginTop: 12 }}>
+        <Text style={{ color: Colors.admin, fontWeight: "700" }}>Réessayer</Text>
+      </Pressable>
+    </View>
+  );
 
   const KPI_DATA = [
     { label: "Clients", sub: "Inscrits",      color: "#8B5CF6", symbol: "person.2.fill"        as const, icon: "person-outline"    as const, value: stats?.totalClients  ?? 0, changeKey: "clients"  as const },
@@ -255,7 +276,7 @@ export default function AdminDashboard() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: BG }}
-      contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 14 }}
+      contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 12 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
     >
@@ -272,9 +293,9 @@ export default function AdminDashboard() {
           <View style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: `${Colors.admin}18` }} />
           <View style={{ position: "absolute", bottom: -30, left: -20, width: 120, height: 120, borderRadius: 60, backgroundColor: "#8B5CF618" }} />
 
-          <BlurView tint="dark" intensity={10} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <BlurView tint="dark" intensity={10} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }} />
 
-          <View style={{ padding: 22 }}>
+          <View style={{ padding: 22, zIndex: 1 }}>
             {/* Top bar */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
               <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
@@ -334,10 +355,11 @@ export default function AdminDashboard() {
           const badge = label === "Réservations" && (byStatus.pending ?? 0) > 0 ? byStatus.pending : null;
           return (
             <Animated.View key={route} style={{ flex: 1, transform: [{ scale: qaScales[qi] }] }}>
+              <Link href={route as any} asChild>
               <Pressable
                 onPressIn={() => Animated.spring(qaScales[qi], { toValue: 0.92, useNativeDriver: true, damping: 12, stiffness: 160 }).start()}
                 onPressOut={() => Animated.spring(qaScales[qi], { toValue: 1,    useNativeDriver: true, damping: 12, stiffness: 160 }).start()}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); router.push(route as any); }}
+                onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
                 style={{
                   borderRadius: 20, paddingVertical: 14,
                   borderWidth: 1, borderColor: BORDER,
@@ -372,6 +394,7 @@ export default function AdminDashboard() {
                 </View>
                 <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT2 }}>{label}</Text>
               </Pressable>
+              </Link>
             </Animated.View>
           );
         })}

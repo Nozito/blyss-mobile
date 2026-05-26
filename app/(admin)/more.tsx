@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View, Text, ScrollView, Pressable, Animated, Platform,
 } from "react-native";
@@ -6,22 +6,23 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { SymbolView } from "expo-symbols";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
+import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
 
 const TOOLS = [
-  { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  symbol: "chart.bar.fill",                        color: Colors.pro,     route: "/(admin)/analytics" },
-  { key: "logs",      label: "Logs",      sub: "Événements système",   symbol: "waveform",                              color: Colors.info,    route: "/(admin)/logs" },
-  { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         symbol: "bell.fill",                             color: Colors.success, route: "/(admin)/notifications" },
-  { key: "coupons",   label: "Coupons",   sub: "Codes promo",          symbol: "tag.fill",                              color: Colors.warning, route: "/(admin)/coupons" },
+  { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  symbol: "chart.bar.fill",                        color: Colors.pro,     route: "/(admin-tools)/analytics" },
+  { key: "logs",      label: "Logs",      sub: "Événements système",   symbol: "waveform",                              color: Colors.info,    route: "/(admin-tools)/logs" },
+  { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         symbol: "bell.fill",                             color: Colors.success, route: "/(admin-tools)/notifications" },
+  { key: "coupons",   label: "Coupons",   sub: "Codes promo",          symbol: "tag.fill",                              color: Colors.warning, route: "/(admin-tools)/coupons" },
 ];
 
 const INFO_ROWS = [
@@ -33,21 +34,22 @@ const INFO_ROWS = [
 // ─── ToolRow ──────────────────────────────────────────────────────────────────
 
 function ToolRow({
-  tool, isLast, onPress,
+  tool, isLast,
 }: {
-  tool: typeof TOOLS[number]; isLast: boolean; onPress: () => void;
+  tool: typeof TOOLS[number]; isLast: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
 
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() =>
-        Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
-      }
-      onPressOut={() =>
-        Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()
-      }
+    <Link href={tool.route as any} asChild>
+      <Pressable
+        onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
+        onPressIn={() =>
+          Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
+        }
+        onPressOut={() =>
+          Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()
+        }
     >
       <Animated.View style={{
         flexDirection: "row",
@@ -81,6 +83,7 @@ function ToolRow({
         )}
       </Animated.View>
     </Pressable>
+    </Link>
   );
 }
 
@@ -88,12 +91,13 @@ function ToolRow({
 
 export default function AdminMoreScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
   const router = useRouter();
+  const { user, logout } = useAuth();
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
 
   const { data: dashData } = useQuery({
     queryKey: ["admin-dashboard"],
-    queryFn: () => adminApi.getDashboard(),
+    queryFn: () => adminApi.getDashboardStats(),
     staleTime: 5 * 60_000,
   });
 
@@ -128,7 +132,7 @@ export default function AdminMoreScreen() {
   const stats = [
     {
       label: "Utilisateurs",
-      value: d?.stats?.total_users ?? "—",
+      value: d?.stats?.totalUsers ?? "—",
       symbol: "person.2.fill",
       icon: "people-outline" as const,
       color: Colors.pro,
@@ -136,21 +140,21 @@ export default function AdminMoreScreen() {
     },
     {
       label: "RDV du mois",
-      value: d?.stats?.bookings_month ?? "—",
-      symbol: "calendar.fill",
+      value: d?.stats?.totalBookings ?? "—",
+      symbol: "calendar.circle.fill",
       icon: "calendar-outline" as const,
       color: Colors.info,
       route: "/(admin)/bookings",
     },
     {
       label: "CA du mois",
-      value: d?.stats?.revenue_month
-        ? `${Number(d.stats.revenue_month).toFixed(0)}€`
+      value: d?.stats?.monthRevenue
+        ? `${Number(d.stats.monthRevenue).toFixed(0)}€`
         : "—",
       symbol: "banknote.fill",
       icon: "wallet-outline" as const,
       color: Colors.admin,
-      route: "/(admin)/analytics",
+      route: "/(admin-tools)/analytics",
     },
   ];
 
@@ -264,11 +268,9 @@ export default function AdminMoreScreen() {
         }}>
           {stats.map(({ label, value, symbol, icon, color, route }, i) => (
             <React.Fragment key={label}>
+              <Link href={route as any} asChild>
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push(route as any);
-                }}
+                onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
                 style={{ flex: 1, alignItems: "center" }}
               >
                 <View style={{
@@ -289,6 +291,7 @@ export default function AdminMoreScreen() {
                   {label}
                 </Text>
               </Pressable>
+              </Link>
               {i < stats.length - 1 && (
                 <View style={{
                   width: 1,
@@ -302,6 +305,56 @@ export default function AdminMoreScreen() {
         </View>
 
         <View style={{ paddingHorizontal: 20 }}>
+          {/* ── Changer d'interface ── */}
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setShowSwitchModal(true);
+            }}
+            style={{ marginTop: 28 }}
+          >
+            <LinearGradient
+              colors={["rgba(249,115,22,0.14)", "rgba(249,115,22,0.06)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 16,
+                padding: 18,
+                borderRadius: 22,
+                borderWidth: 1,
+                borderColor: "rgba(249,115,22,0.28)",
+                overflow: "hidden",
+              }}
+            >
+              <View style={{
+                width: 46, height: 46, borderRadius: 14,
+                backgroundColor: "rgba(249,115,22,0.18)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {Platform.OS === "ios" ? (
+                  <SymbolView name="arrow.left.arrow.right" size={22} tintColor="#F97316" />
+                ) : (
+                  <Ionicons name="swap-horizontal-outline" size={22} color="#F97316" />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 3 }}>
+                  Changer d'interface
+                </Text>
+                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>
+                  Basculer vers Client, Pro ou Admin
+                </Text>
+              </View>
+              {Platform.OS === "ios" ? (
+                <SymbolView name="chevron.right" size={13} tintColor="rgba(249,115,22,0.6)" />
+              ) : (
+                <Ionicons name="chevron-forward" size={14} color="rgba(249,115,22,0.6)" />
+              )}
+            </LinearGradient>
+          </Pressable>
+
           {/* ── Outils Admin ── */}
           <Text style={{
             fontSize: 11, fontWeight: "800",
@@ -326,10 +379,6 @@ export default function AdminMoreScreen() {
                 key={tool.key}
                 tool={tool}
                 isLast={i === TOOLS.length - 1}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push(tool.route as any);
-                }}
               />
             ))}
           </View>
@@ -440,6 +489,22 @@ export default function AdminMoreScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <RoleSelectionModal
+        visible={showSwitchModal}
+        userName={fullName || "Admin"}
+        userInitials={initials || "A"}
+        onSelectRole={(role: AdminRole) => {
+          setShowSwitchModal(false);
+          const routes: Record<AdminRole, string> = {
+            client: "/(client)",
+            pro:    "/(pro)/dashboard",
+            admin:  "/(admin)/dashboard",
+          };
+          router.replace(routes[role] as any);
+        }}
+        onClose={() => setShowSwitchModal(false)}
+      />
     </Animated.View>
   );
 }

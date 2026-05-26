@@ -31,7 +31,10 @@ const PERIOD_LABELS: Record<Period, string> = {
 };
 
 function n(v: unknown): number {
-  return typeof v === "number" ? v : parseFloat(String(v ?? "0")) || 0;
+  if (typeof v === "number") return v;
+  // Handle French decimal format ("123,45") as well as standard ("123.45")
+  const normalized = String(v ?? "0").replace(/\s/g, "").replace(",", ".");
+  return parseFloat(normalized) || 0;
 }
 
 export default function ProFinanceScreen() {

@@ -47,7 +47,9 @@ type DashData = {
 };
 
 function n(v: unknown): number {
-  return typeof v === "number" ? v : parseFloat(String(v ?? "0")) || 0;
+  if (typeof v === "number") return v;
+  const normalized = String(v ?? "0").replace(/\s/g, "").replace(",", ".");
+  return parseFloat(normalized) || 0;
 }
 
 const STATUS_CFG = {

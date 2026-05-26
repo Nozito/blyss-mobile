@@ -108,9 +108,10 @@ export default function ProProfileScreen() {
       Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la photo.");
       return;
     }
-    // Fix 1b: mise à jour locale immédiate avant le refetch
+    // Mise à jour locale immédiate pour le feedback visuel
     if (res.data?.photo) patchUser({ profile_photo: res.data.photo });
-    await refreshProfile();
+    // Sync backend en arrière-plan sans bloquer le thread UI
+    void refreshProfile();
   };
 
   const photoUri = user?.profile_photo
@@ -531,6 +532,47 @@ export default function ProProfileScreen() {
           ))}
         </Card>
       </View>
+
+      {/* Admin switcher — admin only */}
+      {user?.is_admin && (
+        <View style={{
+          backgroundColor: "#0A0A0F",
+          borderRadius: 16,
+          padding: 14,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: "rgba(249,115,22,0.30)",
+        }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <Ionicons name="shield-checkmark" size={14} color="#F97316" />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#F97316", letterSpacing: 0.5, textTransform: "uppercase" }}>
+              Vue administrateur
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => router.push("/(admin)/dashboard" as any)}
+              style={{
+                flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+                gap: 6, backgroundColor: "#F97316", borderRadius: 10, paddingVertical: 10,
+              }}
+            >
+              <Ionicons name="grid" size={15} color="#fff" />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Admin</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/(client)" as any)}
+              style={{
+                flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+                gap: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 10, paddingVertical: 10,
+              }}
+            >
+              <Ionicons name="person-outline" size={15} color="rgba(255,255,255,0.7)" />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Vue Client</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {/* Logout */}
       <View style={{ marginBottom: 16 }}>
