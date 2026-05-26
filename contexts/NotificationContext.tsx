@@ -155,6 +155,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     void registerPushToken();
   }, [isAuthenticated]);
 
+  // Notif reçue en foreground via APNs (hors WS) → resync la liste depuis le serveur
+  useEffect(() => {
+    if (!isAuthenticated || Platform.OS === "web") return;
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      notificationsApi.getAll().then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          setNotifications(res.data as NotificationItem[]);
+        }
+      }).catch(() => {});
+    });
+    return () => sub.remove();
+  }, [isAuthenticated]);
+
   // Fix #5 — [user?.role] au lieu de [user, router] : seul le rôle détermine la
   // destination ; router est un singleton stable dans Expo Router
   useEffect(() => {
