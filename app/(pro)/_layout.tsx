@@ -39,7 +39,7 @@ export default function ProLayout() {
     <NativeTabs
       blurEffect="systemUltraThinMaterialLight"
       tintColor="#FE5D9D"
-      minimizeBehavior="automatic"
+      minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>

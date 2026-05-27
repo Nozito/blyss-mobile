@@ -1,15 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, Image,
 } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { SymbolView } from "expo-symbols";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { adminApi } from "@/lib/api";
+import { adminApi, AdminUser } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 
@@ -30,12 +32,175 @@ const TARGET_OPTS: { value: Target; label: string; icon: keyof typeof Ionicons.g
   { value: "user_id", label: "Utilisateur", icon: "at-outline",        color: Colors.success },
 ];
 
+// ─── SelectedUserCard ─────────────────────────────────────────────────────────
+
+function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
+  const photoUri = user.profile_photo
+    ? user.profile_photo.startsWith("http") ? user.profile_photo : `${API_URL}${user.profile_photo}`
+    : null;
+  const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || "?";
+  const roleColor = user.role === "pro" ? ADMIN.accent : Colors.info;
+  const statusColor = user.is_active ? Colors.success : "#EF4444";
+
+  return (
+    <View style={{
+      flexDirection: "row", alignItems: "center", gap: 12,
+      paddingHorizontal: 14, paddingVertical: 12,
+      backgroundColor: MUTED,
+      borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    }}>
+      <View style={{
+        width: 46, height: 46, borderRadius: 14,
+        backgroundColor: `${roleColor}20`,
+        alignItems: "center", justifyContent: "center",
+        overflow: "hidden",
+      }}>
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={{ width: 46, height: 46 }} resizeMode="cover" />
+        ) : (
+          <Text style={{ fontSize: 15, fontWeight: "800", color: roleColor }}>{initials}</Text>
+        )}
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT1, letterSpacing: -0.2, flexShrink: 1 }} numberOfLines={1}>
+            {user.first_name} {user.last_name}
+          </Text>
+          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${roleColor}20` }}>
+            <Text style={{ fontSize: 9, fontWeight: "700", color: roleColor, textTransform: "uppercase", letterSpacing: 0.4 }}>
+              {user.role}
+            </Text>
+          </View>
+          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${statusColor}18` }}>
+            <Text style={{ fontSize: 9, fontWeight: "700", color: statusColor, textTransform: "uppercase", letterSpacing: 0.4 }}>
+              {user.is_active ? "Actif" : "Inactif"}
+            </Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 12, color: TEXT2 }} numberOfLines={1}>{user.email}</Text>
+      </View>
+
+      {onClear ? (
+        <Pressable onPress={onClear} style={{ padding: 4 }}>
+          <Ionicons name="close-circle" size={20} color={TEXT3} />
+        </Pressable>
+      ) : (
+        <Ionicons name="chevron-forward" size={14} color={TEXT3} />
+      )}
+    </View>
+  );
+}
+
+// ─── UserPicker ───────────────────────────────────────────────────────────────
+
+function UserPicker({
+  onSelect,
+}: {
+  onSelect: (user: AdminUser) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 320);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [search]);
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["admin-users-search", debouncedSearch],
+    queryFn: () => adminApi.getUsers({ search: debouncedSearch, limit: 20 }),
+    enabled: debouncedSearch.length >= 2,
+    staleTime: 30_000,
+  });
+
+  const term = debouncedSearch.toLowerCase();
+  const users = debouncedSearch.length >= 2
+    ? ((data?.data ?? []) as AdminUser[]).filter((u) =>
+        u.first_name?.toLowerCase().includes(term) ||
+        u.last_name?.toLowerCase().includes(term) ||
+        u.email?.toLowerCase().includes(term)
+      )
+    : [];
+
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+        Rechercher un utilisateur
+      </Text>
+
+      {/* Search input */}
+      <View style={{
+        flexDirection: "row", alignItems: "center", gap: 10,
+        backgroundColor: MUTED, borderRadius: 12, paddingHorizontal: 14,
+        borderWidth: 1, borderColor: BORDER, height: 46,
+      }}>
+        <Ionicons name="search-outline" size={16} color={TEXT3} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Nom, prénom ou email…"
+          placeholderTextColor={TEXT3}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={{ flex: 1, fontSize: 14, color: TEXT1 }}
+        />
+        {isFetching && <ActivityIndicator size="small" color={TEXT3} />}
+        {search.length > 0 && !isFetching && (
+          <Pressable onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={16} color={TEXT3} />
+          </Pressable>
+        )}
+      </View>
+
+      {/* Hint */}
+      {search.length < 2 && (
+        <Text style={{ fontSize: 12, color: TEXT3, marginTop: 8 }}>
+          Tape au moins 2 caractères pour chercher
+        </Text>
+      )}
+
+      {/* Results */}
+      {users.length > 0 && (
+        <View style={{
+          marginTop: 10, borderRadius: 14, borderWidth: 1,
+          borderColor: BORDER, overflow: "hidden",
+        }}>
+          {users.map((u) => (
+            <Pressable
+              key={u.id}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onSelect(u);
+                setSearch("");
+              }}
+            >
+              <UserRow user={u} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {/* Empty state */}
+      {debouncedSearch.length >= 2 && !isFetching && users.length === 0 && (
+        <Text style={{ fontSize: 12, color: TEXT3, marginTop: 8, textAlign: "center", paddingVertical: 12 }}>
+          Aucun utilisateur trouvé
+        </Text>
+      )}
+    </View>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function AdminNotificationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
   const [target, setTarget] = useState<Target>("all");
-  const [userId, setUserId] = useState("");
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sentCount, setSentCount] = useState<number | null>(null);
@@ -44,7 +209,7 @@ export default function AdminNotificationsScreen() {
     mutationFn: () =>
       adminApi.sendPush({
         target,
-        user_id: target === "user_id" ? parseInt(userId) : undefined,
+        user_id: target === "user_id" ? selectedUser?.id : undefined,
         title: title.trim(),
         body: body.trim(),
       }),
@@ -54,7 +219,7 @@ export default function AdminNotificationsScreen() {
       setSentCount(sent);
       setTitle("");
       setBody("");
-      Alert.alert("✅ Envoyée", `Push envoyée à ${sent} destinataire(s).`);
+      Alert.alert("Envoyée", `Push envoyée à ${sent} destinataire(s).`);
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
     },
     onError: () => {
@@ -64,12 +229,13 @@ export default function AdminNotificationsScreen() {
   });
 
   const canSend = title.trim().length > 0 && body.trim().length > 0 &&
-    (target !== "user_id" || userId.trim().length > 0);
+    (target !== "user_id" || selectedUser !== null);
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: BG }}
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 40, paddingHorizontal: 16 }}
+      automaticallyAdjustContentInsets={false}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
@@ -108,7 +274,11 @@ export default function AdminNotificationsScreen() {
             return (
               <Pressable
                 key={opt.value}
-                onPress={() => { setTarget(opt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
+                onPress={() => {
+                  setTarget(opt.value);
+                  if (opt.value !== "user_id") setSelectedUser(null);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                }}
                 style={{
                   flex: 1, minWidth: "44%", flexDirection: "row", alignItems: "center", gap: 8,
                   paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5,
@@ -124,19 +294,15 @@ export default function AdminNotificationsScreen() {
         </View>
 
         {target === "user_id" && (
-          <View style={{ marginTop: 14 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-              ID Utilisateur
-            </Text>
-            <TextInput
-              value={userId}
-              onChangeText={setUserId}
-              placeholder="ex: 42"
-              placeholderTextColor={TEXT3}
-              keyboardType="number-pad"
-              style={{ backgroundColor: MUTED, borderRadius: 12, paddingHorizontal: 14, height: 44, fontSize: 14, color: TEXT1, borderWidth: 1, borderColor: BORDER }}
-            />
-          </View>
+          <>
+            {selectedUser ? (
+              <View style={{ marginTop: 14 }}>
+                <UserRow user={selectedUser} onClear={() => setSelectedUser(null)} />
+              </View>
+            ) : (
+              <UserPicker onSelect={setSelectedUser} />
+            )}
+          </>
         )}
       </View>
 
@@ -207,7 +373,11 @@ export default function AdminNotificationsScreen() {
             <>
               <Ionicons name="send-outline" size={20} color="#fff" />
               <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>
-                Envoyer{target === "all" ? " à tous" : target === "pros" ? " aux pros" : target === "clients" ? " aux clients" : ""}
+                {target === "all" ? "Envoyer à tous"
+                  : target === "pros" ? "Envoyer aux pros"
+                  : target === "clients" ? "Envoyer aux clients"
+                  : selectedUser ? `Envoyer à ${selectedUser.first_name}`
+                  : "Envoyer"}
               </Text>
             </>
           )}

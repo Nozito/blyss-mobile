@@ -18,7 +18,7 @@ export default function ClientLayout() {
     <NativeTabs
       blurEffect="systemUltraThinMaterialLight"
       tintColor="#FE5D9D"
-      minimizeBehavior="automatic"
+      minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="index" options={{ title: "" }}>

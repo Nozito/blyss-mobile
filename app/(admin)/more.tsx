@@ -168,6 +168,7 @@ export default function AdminMoreScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero Profile ── */}

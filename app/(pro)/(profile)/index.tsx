@@ -166,6 +166,7 @@ export default function ProProfileScreen() {
         paddingBottom: insets.bottom + 100,
         paddingHorizontal: 20,
       }}
+      automaticallyAdjustContentInsets={false}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}

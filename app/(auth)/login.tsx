@@ -8,7 +8,7 @@ import {
   Pressable,
   Animated,
   ActivityIndicator,
-  Image,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -19,6 +19,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
+
+// ─── Traduction minimale des erreurs Supabase (EN → FR) ──────────────────────
+
+function parseError(raw: string): string {
+  const r = raw.toLowerCase();
+  if (r.includes("invalid login") || r.includes("invalid credentials"))
+    return "Email ou mot de passe incorrect";
+  if (r.includes("email not confirmed"))
+    return "Email non confirmé";
+  if (r.includes("too many") || r.includes("rate limit"))
+    return "Trop de tentatives, réessaie plus tard";
+  if (r === "server_error" || r.includes("network"))
+    return "Pas de connexion internet";
+  return raw;
+}
+
+// ─── Validation ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
   email: z
@@ -34,6 +51,8 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+// ─── ScaleOnFocus ─────────────────────────────────────────────────────────────
+
 function ScaleOnFocus({ children, focused }: { children: React.ReactNode; focused: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
@@ -46,6 +65,8 @@ function ScaleOnFocus({ children, focused }: { children: React.ReactNode; focuse
   }, [focused, scale]);
   return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
 }
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -64,6 +85,7 @@ export default function LoginScreen() {
       Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
     ]).start();
   }, [submitError, shakeAnim]);
+
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [loggedUserName, setLoggedUserName] = useState("");
   const [loggedUserRole, setLoggedUserRole] = useState<"pro" | "client">("client");
@@ -78,7 +100,7 @@ export default function LoginScreen() {
     setSubmitError(null);
     const res = await login({ email: data.email.trim().toLowerCase(), password: data.password });
     if (!res.success) {
-      setSubmitError(res.error ?? "Identifiants incorrects");
+      setSubmitError(parseError(res.error ?? "Erreur de connexion"));
       return;
     }
     const user = res.data?.user;
@@ -114,41 +136,33 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView style={styles.root}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 48 }}
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo & header */}
-          <View className="items-center mb-10">
-            <Image
-              source={require("@/assets/logo.png")}
-              style={{ width: 130, height: 130, marginBottom: 12 }}
-              resizeMode="contain"
-            />
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: "800",
-                color: "#FE5D9D",
-                letterSpacing: -0.5,
-              }}
-            >
-              Bon retour
-            </Text>
-            <Text className="text-sm text-muted-foreground mt-1 text-center">
-              Connecte-toi pour gérer tes nails en quelques taps
+          {/* ── Retour ──────────────────────────────────────────────────────── */}
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#FF5EA0" />
+          </Pressable>
+
+          {/* ── Titre ───────────────────────────────────────────────────────── */}
+          <View style={styles.titleBlock}>
+            <Text style={styles.titleLine1}>Bon retour,</Text>
+            <Text style={styles.titleLine2}>on t'attendait</Text>
+            <Text style={styles.subtitle}>
+              Connecte-toi pour continuer sur Blyss
             </Text>
           </View>
 
-          {/* Form */}
-          <View className="gap-3">
+          {/* ── Formulaire ──────────────────────────────────────────────────── */}
+          <View style={styles.form}>
             {/* Email */}
             <Controller
               control={control}
@@ -158,7 +172,7 @@ export default function LoginScreen() {
                   <Input
                     label="Email"
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={(v) => { onChange(v); setSubmitError(null); }}
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="ton@email.com"
@@ -177,23 +191,21 @@ export default function LoginScreen() {
               name="password"
               render={({ field: { onChange, value } }) => (
                 <ScaleOnFocus focused={focusedField === "password"}>
-                  <View style={{ gap: 6 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: errors.password ? "#EF4444" : "#3F3F46", letterSpacing: 0.1 }}>
+                  <View>
+                    <View style={styles.passwordHeader}>
+                      <Text style={styles.fieldLabel}>
                         Mot de passe
                         {errors.password && (
-                          <Text style={{ fontSize: 12, fontWeight: "400" }}>
-                            {" "}· {errors.password.message}
-                          </Text>
+                          <Text style={styles.fieldError}> · {errors.password.message}</Text>
                         )}
                       </Text>
                       <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-                        <Text style={{ fontSize: 12, color: "#FE5D9D", fontWeight: "500" }}>Oublié ?</Text>
+                        <Text style={styles.forgotLink}>Oublié ?</Text>
                       </Pressable>
                     </View>
                     <Input
                       value={value}
-                      onChangeText={onChange}
+                      onChangeText={(v) => { onChange(v); setSubmitError(null); }}
                       onFocus={() => setFocusedField("password")}
                       onBlur={() => setFocusedField(null)}
                       placeholder="••••••••"
@@ -206,113 +218,49 @@ export default function LoginScreen() {
               )}
             />
 
-            {/* Submit error banner */}
+            {/* Bannière erreur */}
             {submitError && (
               <Animated.View
-                style={{
-                  transform: [{ translateX: shakeAnim }],
-                  backgroundColor: "#FFF0F3",
-                  borderRadius: 14,
-                  borderLeftWidth: 3,
-                  borderLeftColor: "#EF4444",
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
-                }}
+                style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}
               >
-                <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
-                <Text style={{ flex: 1, fontSize: 13, color: "#EF4444", fontWeight: "500", lineHeight: 18 }}>
-                  {submitError}
-                </Text>
+                <Text style={styles.errorText}>{submitError}</Text>
               </Animated.View>
             )}
-
-            {/* CTA */}
-            <Pressable
-              onPress={handleSubmit(onSubmit)}
-              disabled={isSubmitting}
-              style={{
-                marginTop: 32,
-                opacity: isSubmitting ? 0.7 : 1,
-                backgroundColor: "#FE5D9D",
-                borderRadius: 999,
-                paddingVertical: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: "#FE5D9D",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.25,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Ionicons name="lock-closed-outline" size={18} color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-                    Se connecter
-                  </Text>
-                </View>
-              )}
-            </Pressable>
           </View>
 
-          {/* Separator */}
-          <View className="flex-row items-center gap-3 my-8">
-            <View className="flex-1 h-px bg-border" />
-            <Text className="text-xs text-muted-foreground px-3">Pas encore de compte ?</Text>
-            <View className="flex-1 h-px bg-border" />
-          </View>
-
-          {/* Sign up */}
+          {/* ── CTA ─────────────────────────────────────────────────────────── */}
           <Pressable
-            onPress={() => router.push("/(auth)/register")}
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "#E5E7EB",
-              paddingVertical: 16,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            onPress={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+            style={[styles.ctaBtn, isSubmitting && { opacity: 0.6 }]}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="sparkles-outline" size={18} color="#374151" />
-              <Text style={{ color: "#374151", fontWeight: "600", fontSize: 16 }}>
-                Créer un compte
-              </Text>
-            </View>
+            {isSubmitting
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.ctaText}>Se connecter</Text>
+            }
           </Pressable>
 
-          {/* Legal */}
-          <Text
-            style={{
-              marginTop: 24,
-              marginBottom: 32,
-              fontSize: 12,
-              color: "#9CA3AF",
-              textAlign: "center",
-              lineHeight: 20,
-              paddingHorizontal: 8,
-            }}
+          {/* ── Séparateur ──────────────────────────────────────────────────── */}
+          <View style={styles.separator}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>Pas encore de compte ?</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          {/* ── Inscription ─────────────────────────────────────────────────── */}
+          <Pressable
+            onPress={() => router.push("/(auth)/register")}
+            style={styles.secondaryBtn}
           >
+            <Text style={styles.secondaryBtnText}>Créer un compte</Text>
+          </Pressable>
+
+          {/* ── Légal ───────────────────────────────────────────────────────── */}
+          <Text style={styles.legal}>
             {"En continuant, tu acceptes nos "}
-            <Text style={{ textDecorationLine: "underline", color: "#6B7280" }}>
-              Conditions générales
-            </Text>
-            {" et notre "}
-            <Text style={{ textDecorationLine: "underline", color: "#6B7280" }}>
-              Politique de confidentialité
-            </Text>
-            {"\n"}
-            <Text style={{ textDecorationLine: "underline", color: "#6B7280" }}>
-              Mentions légales
-            </Text>
+            <Text style={styles.legalLink}>CGU</Text>
+            {" et la "}
+            <Text style={styles.legalLink}>Politique de confidentialité</Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -327,3 +275,166 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#FFEAF1",
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+
+  // Retour
+  backBtn: {
+    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingBottom: 0,
+  },
+
+  // Titre
+  titleBlock: {
+    paddingHorizontal: 24,
+    marginTop: 32,
+    marginBottom: 32,
+  },
+  titleLine1: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#1A0010",
+    letterSpacing: -1,
+    lineHeight: 42,
+  },
+  titleLine2: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: "#FF5EA0",
+    letterSpacing: -1,
+    lineHeight: 44,
+    fontStyle: "italic",
+    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "rgba(0,0,0,0.45)",
+    fontWeight: "500",
+    marginTop: 10,
+    lineHeight: 22,
+  },
+
+  // Formulaire
+  form: {
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  passwordHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1A0010",
+    letterSpacing: 0.1,
+  },
+  fieldError: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: "#EF4444",
+  },
+  forgotLink: {
+    fontSize: 12,
+    color: "#FF5EA0",
+    fontWeight: "600",
+  },
+
+  // Bannière erreur
+  errorBanner: {
+    backgroundColor: "rgba(240,58,58,0.07)",
+    borderRadius: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "#F03A3A",
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#F03A3A",
+    fontWeight: "500",
+    lineHeight: 18,
+  },
+
+  // CTA
+  ctaBtn: {
+    marginTop: 28,
+    marginHorizontal: 24,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: "#FF5EA0",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#FF5EA0",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.40,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  ctaText: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+
+  // Séparateur
+  separator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginVertical: 28,
+    paddingHorizontal: 24,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.08)",
+  },
+  separatorText: {
+    fontSize: 12,
+    color: "rgba(0,0,0,0.35)",
+    fontWeight: "500",
+  },
+
+  // Bouton secondaire
+  secondaryBtn: {
+    marginHorizontal: 24,
+    height: 60,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,94,160,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryBtnText: {
+    color: "#FF5EA0",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  // Légal
+  legal: {
+    fontSize: 11,
+    color: "rgba(0,0,0,0.25)",
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 20,
+    marginBottom: 40,
+    paddingHorizontal: 32,
+  },
+  legalLink: {
+    color: "#FF5EA0",
+  },
+});

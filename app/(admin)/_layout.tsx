@@ -16,7 +16,7 @@ export default function AdminLayout() {
     <NativeTabs
       blurEffect="systemUltraThinMaterialDark"
       tintColor={ADMIN.accent}
-      minimizeBehavior="automatic"
+      minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>

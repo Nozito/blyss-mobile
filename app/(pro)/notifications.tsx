@@ -139,6 +139,7 @@ export default function ProNotificationsScreen() {
         paddingHorizontal: 20,
         paddingBottom: 100,
       }}
+      automaticallyAdjustContentInsets={false}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
