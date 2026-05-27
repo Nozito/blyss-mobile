@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,338 +16,477 @@ import { SymbolView } from "expo-symbols";
 import type { SFSymbol } from "sf-symbols-typescript";
 import * as Haptics from "expo-haptics";
 
-const FEATURES: Array<{ icon: "flash" | "people" | "shield-checkmark"; symbolName: SFSymbol; label: string }> = [
-  { icon: "flash",            symbolName: "bolt.fill",        label: "Réservations" },
-  { icon: "people",           symbolName: "person.2.fill",    label: "Clients fidèles" },
-  { icon: "shield-checkmark", symbolName: "lock.shield.fill", label: "Paiements sécurisés" },
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+const SLIDES: Array<{
+  title: string;
+  subtitle: string;
+  cta: string;
+  illustrationColor: string;
+  decorIcons: [IoniconName, IoniconName, IoniconName];
+}> = [
+  {
+    title: "Réservez en quelques secondes",
+    subtitle: "Trouvez les meilleurs pros du nail art près de chez vous.",
+    cta: "Continuer",
+    illustrationColor: "#FE5D9D",
+    decorIcons: ["sparkles", "heart", "star"],
+  },
+  {
+    title: "Gérez votre activité pro",
+    subtitle: "Agenda, clients, paiements — tout au même endroit.",
+    cta: "Continuer",
+    illustrationColor: "#A855F7",
+    decorIcons: ["briefcase", "calendar", "bar-chart"],
+  },
+  {
+    title: "Beauté · Business · Sérénité",
+    subtitle: "Rejoins des milliers de pros et clients qui font confiance à Blyss.",
+    cta: "Commencer",
+    illustrationColor: "#E8187A",
+    decorIcons: ["ribbon", "diamond", "sparkles"],
+  },
 ];
+
+const CONTAINER_SIZE = 240;
+const LOGO_SIZE      = 110;
+const ORBIT_SIZE     = 44;
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  // — Entrée hero —
-  const heroOpacity    = useRef(new Animated.Value(0)).current;
-  const heroY          = useRef(new Animated.Value(-20)).current;
-  const logoBadgeScale = useRef(new Animated.Value(0.7)).current;
+  // — Animations d'entrée —
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerY       = useRef(new Animated.Value(-16)).current;
+  const illustScale   = useRef(new Animated.Value(0.9)).current;
+  const illustOpacity = useRef(new Animated.Value(0)).current;
+  const cardY         = useRef(new Animated.Value(60)).current;
 
-  // — Entrée boutons —
-  const bottomOpacity = useRef(new Animated.Value(0)).current;
-  const bottomY       = useRef(new Animated.Value(24)).current;
+  // — Logo float —
+  const logoFloatY = useRef(new Animated.Value(0)).current;
 
-  // — Pills stagger —
-  const pill0O = useRef(new Animated.Value(0)).current;
-  const pill0Y = useRef(new Animated.Value(20)).current;
-  const pill1O = useRef(new Animated.Value(0)).current;
-  const pill1Y = useRef(new Animated.Value(20)).current;
-  const pill2O = useRef(new Animated.Value(0)).current;
-  const pill2Y = useRef(new Animated.Value(20)).current;
+  // — Orbital pulses —
+  const orbScale0 = useRef(new Animated.Value(1)).current;
+  const orbScale1 = useRef(new Animated.Value(1)).current;
+  const orbScale2 = useRef(new Animated.Value(1)).current;
 
-  // — Press —
-  const ctaScale   = useRef(new Animated.Value(1)).current;
-  const loginScale = useRef(new Animated.Value(1)).current;
+  // — Pagination dots — useNativeDriver: false (propriété layout)
+  const dotWidth0 = useRef(new Animated.Value(24)).current;
+  const dotWidth1 = useRef(new Animated.Value(8)).current;
+  const dotWidth2 = useRef(new Animated.Value(8)).current;
+  const dotWidths = [dotWidth0, dotWidth1, dotWidth2];
+
+  // — Transition entre slides —
+  const textOpacity       = useRef(new Animated.Value(1)).current;
+  const textY             = useRef(new Animated.Value(0)).current;
+  const illustTransOpacity = useRef(new Animated.Value(1)).current;
+  const illustTransX      = useRef(new Animated.Value(0)).current;
+
+  // — CTA press —
+  const ctaScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Entrée globale
     Animated.parallel([
-      Animated.timing(heroOpacity, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
-      Animated.timing(heroY,       { toValue: 0, duration: 600, delay: 100, useNativeDriver: true }),
+      Animated.timing(headerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(headerY,       { toValue: 0, duration: 400, useNativeDriver: true }),
       Animated.sequence([
-        Animated.delay(150),
-        Animated.spring(logoBadgeScale, { toValue: 1, damping: 14, stiffness: 120, useNativeDriver: true }),
-      ]),
-      Animated.timing(bottomOpacity, { toValue: 1, duration: 500, delay: 350, useNativeDriver: true }),
-      Animated.timing(bottomY,       { toValue: 0, duration: 500, delay: 350, useNativeDriver: true }),
-      Animated.sequence([
-        Animated.delay(300),
+        Animated.delay(100),
         Animated.parallel([
-          Animated.timing(pill0O, { toValue: 1, duration: 350, useNativeDriver: true }),
-          Animated.timing(pill0Y, { toValue: 0, duration: 350, useNativeDriver: true }),
+          Animated.spring(illustScale,   { toValue: 1, damping: 16, stiffness: 120, useNativeDriver: true }),
+          Animated.timing(illustOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
         ]),
       ]),
       Animated.sequence([
-        Animated.delay(380),
-        Animated.parallel([
-          Animated.timing(pill1O, { toValue: 1, duration: 350, useNativeDriver: true }),
-          Animated.timing(pill1Y, { toValue: 0, duration: 350, useNativeDriver: true }),
-        ]),
-      ]),
-      Animated.sequence([
-        Animated.delay(460),
-        Animated.parallel([
-          Animated.timing(pill2O, { toValue: 1, duration: 350, useNativeDriver: true }),
-          Animated.timing(pill2Y, { toValue: 0, duration: 350, useNativeDriver: true }),
-        ]),
+        Animated.delay(200),
+        Animated.spring(cardY, { toValue: 0, damping: 18, stiffness: 120, useNativeDriver: true }),
       ]),
     ]).start();
+
+    // Float logo — démarre après l'entrée
+    const floatTimer = setTimeout(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(logoFloatY, { toValue: -8, duration: 1000, useNativeDriver: true }),
+          Animated.timing(logoFloatY, { toValue:  0, duration: 1000, useNativeDriver: true }),
+        ])
+      ).start();
+    }, 600);
+
+    // Pulsations orbitales — stagger 300ms
+    const startOrb = (val: Animated.Value, delay: number) => {
+      const t = setTimeout(() => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(val, { toValue: 1.12, duration: 700, useNativeDriver: true }),
+            Animated.timing(val, { toValue: 1.00, duration: 700, useNativeDriver: true }),
+          ])
+        ).start();
+      }, delay);
+      return t;
+    };
+    const t0 = startOrb(orbScale0, 700);
+    const t1 = startOrb(orbScale1, 1000);
+    const t2 = startOrb(orbScale2, 1300);
+
+    return () => {
+      clearTimeout(floatTimer);
+      clearTimeout(t0);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
 
-  const pillAnims = [
-    { opacity: pill0O, translateY: pill0Y },
-    { opacity: pill1O, translateY: pill1Y },
-    { opacity: pill2O, translateY: pill2Y },
-  ];
+  const goToSlide = (next: number) => {
+    const prev = currentSlide;
+
+    // Dot widths (layout — useNativeDriver: false)
+    Animated.spring(dotWidths[prev], { toValue: 8,  useNativeDriver: false }).start();
+    Animated.spring(dotWidths[next], { toValue: 24, useNativeDriver: false }).start();
+
+    // Fade-out contenu
+    Animated.parallel([
+      Animated.timing(textOpacity,        { toValue: 0,   duration: 180, useNativeDriver: true }),
+      Animated.timing(textY,              { toValue: -12, duration: 180, useNativeDriver: true }),
+      Animated.timing(illustTransOpacity, { toValue: 0,   duration: 150, useNativeDriver: true }),
+      Animated.timing(illustTransX,       { toValue: -30, duration: 180, useNativeDriver: true }),
+    ]).start(() => {
+      // Change le slide quand tout est invisible
+      setCurrentSlide(next);
+      textY.setValue(12);
+      illustTransX.setValue(30);
+
+      // Fade-in nouveau contenu
+      Animated.parallel([
+        Animated.timing(textOpacity,        { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(textY,              { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(illustTransOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(illustTransX,       { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]).start();
+    });
+  };
 
   const springPress = (val: Animated.Value, to: number) =>
     Animated.spring(val, { toValue: to, damping: 15, stiffness: 300, useNativeDriver: true }).start();
 
-  return (
-    <LinearGradient
-      colors={["#4A0030", "#9B0057", "#E8187A", "#FE5D9D"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.root}
-    >
-      {/* Orbs décoratifs */}
-      <View style={styles.orb1} />
-      <View style={styles.orb2} />
-      <View style={styles.orb3} />
+  const slide  = SLIDES[currentSlide];
+  const isLast = currentSlide === SLIDES.length - 1;
 
-      {/* ── Contenu central ─────────────────────────────────────────────── */}
+  return (
+    <View style={styles.root}>
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <Animated.View
         style={[
-          styles.hero,
-          { paddingTop: insets.top + 40 },
-          { opacity: heroOpacity, transform: [{ translateY: heroY }] },
+          styles.header,
+          { paddingTop: insets.top + 8 },
+          { opacity: headerOpacity, transform: [{ translateY: headerY }] },
         ]}
       >
-        <Animated.View style={[styles.logoBadge, { transform: [{ scale: logoBadgeScale }] }]}>
-          <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
-        </Animated.View>
-
-        <Text style={styles.brand}>Blyss</Text>
-        <Text style={styles.tagline}>Beauté · Business · Sérénité</Text>
-
-        <View style={styles.pillRow}>
-          {FEATURES.map((f, i) => (
-            <Animated.View
-              key={f.label}
-              style={[
-                styles.pill,
-                { opacity: pillAnims[i].opacity, transform: [{ translateY: pillAnims[i].translateY }] },
-              ]}
-            >
-              {Platform.OS === "ios"
-                ? <SymbolView name={f.symbolName} size={13} tintColor="#fff" />
-                : <Ionicons name={f.icon} size={13} color="#fff" />
-              }
-              <Text style={styles.pillLabel}>{f.label}</Text>
-            </Animated.View>
-          ))}
-        </View>
+        <Text style={styles.headerBrand}>Blyss</Text>
+        <Pressable onPress={() => router.push("/(auth)/login")} style={styles.loginPill}>
+          <Text style={styles.loginPillText}>Connexion</Text>
+        </Pressable>
       </Animated.View>
 
-      {/* ── Boutons bas ─────────────────────────────────────────────────── */}
+      {/* ── Zone illustration ────────────────────────────────────────────── */}
       <Animated.View
         style={[
-          styles.bottom,
-          { paddingBottom: Math.max(insets.bottom + 8, 28) },
-          { opacity: bottomOpacity, transform: [{ translateY: bottomY }] },
+          styles.illustrationZone,
+          { opacity: illustOpacity, transform: [{ scale: illustScale }] },
         ]}
       >
-        {/* Séparateur subtil */}
-        <View style={styles.divider} />
+        <Animated.View
+          style={[
+            styles.illustrationContent,
+            { opacity: illustTransOpacity, transform: [{ translateX: illustTransX }] },
+          ]}
+        >
+          {/* Fond dégradé dynamique */}
+          <LinearGradient
+            colors={[slide.illustrationColor + "18", "#FFF0F5"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
 
-        {/* CTA — blanc solide, texte rose */}
+          {/* Logo + orbitaux */}
+          <View style={styles.orbitContainer}>
+            {/* Orbitaux */}
+            <Animated.View style={[styles.orbital, styles.orbitalTL, { shadowColor: slide.illustrationColor, transform: [{ scale: orbScale0 }] }]}>
+              <Ionicons name={slide.decorIcons[0]} size={20} color={slide.illustrationColor} />
+            </Animated.View>
+            <Animated.View style={[styles.orbital, styles.orbitalTR, { shadowColor: slide.illustrationColor, transform: [{ scale: orbScale1 }] }]}>
+              <Ionicons name={slide.decorIcons[1]} size={20} color={slide.illustrationColor} />
+            </Animated.View>
+            <Animated.View style={[styles.orbital, styles.orbitalBot, { shadowColor: slide.illustrationColor, transform: [{ scale: orbScale2 }] }]}>
+              <Ionicons name={slide.decorIcons[2]} size={20} color={slide.illustrationColor} />
+            </Animated.View>
+
+            {/* Logo badge flottant */}
+            <Animated.View
+              style={[
+                styles.logoBadge,
+                {
+                  backgroundColor: slide.illustrationColor + "20",
+                  borderColor:     slide.illustrationColor + "40",
+                  shadowColor:     slide.illustrationColor,
+                  transform: [{ translateY: logoFloatY }],
+                },
+              ]}
+            >
+              <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </Animated.View>
+
+      {/* ── Carte bas ────────────────────────────────────────────────────── */}
+      <Animated.View
+        style={[
+          styles.bottomCard,
+          { paddingBottom: Math.max(insets.bottom + 16, 28) },
+          { transform: [{ translateY: cardY }] },
+        ]}
+      >
+        {/* Pagination dots */}
+        <View style={styles.dotsRow}>
+          {SLIDES.map((_, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.dot,
+                {
+                  width: dotWidths[i],
+                  backgroundColor: i === currentSlide
+                    ? "#E8187A"
+                    : "rgba(232,24,122,0.20)",
+                },
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Texte slide */}
+        <Animated.View style={{ opacity: textOpacity, transform: [{ translateY: textY }] }}>
+          <Text style={styles.slideTitle}>{slide.title}</Text>
+          <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+        </Animated.View>
+
+        {/* CTA */}
         <Pressable
           onPressIn={() => {
             springPress(ctaScale, 0.96);
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           }}
           onPressOut={() => springPress(ctaScale, 1)}
-          onPress={() => router.push("/(auth)/register")}
+          onPress={() => {
+            if (isLast) router.push("/(auth)/register");
+            else goToSlide(currentSlide + 1);
+          }}
         >
-          <Animated.View style={[styles.ctaBtn, { transform: [{ scale: ctaScale }] }]}>
-            <Text style={styles.ctaText}>Créer mon compte</Text>
-            {Platform.OS === "ios"
-              ? <SymbolView name="arrow.right" size={17} tintColor="#C0185C" />
-              : <Ionicons name="arrow-forward" size={17} color="#C0185C" />
-            }
+          <Animated.View style={[styles.ctaWrap, { transform: [{ scale: ctaScale }] }]}>
+            <LinearGradient
+              colors={["#E8187A", "#FE5D9D"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaGradient}
+            >
+              <Text style={styles.ctaText}>{slide.cta}</Text>
+              {isLast && (
+                Platform.OS === "ios"
+                  ? <SymbolView name={"checkmark" as SFSymbol} size={18} tintColor="#fff" />
+                  : <Ionicons name="checkmark" size={18} color="#fff" />
+              )}
+            </LinearGradient>
           </Animated.View>
         </Pressable>
 
-        {/* Login — transparent, texte blanc */}
-        <Pressable
-          onPressIn={() => springPress(loginScale, 0.97)}
-          onPressOut={() => springPress(loginScale, 1)}
-          onPress={() => router.push("/(auth)/login")}
-        >
-          <Animated.View style={[styles.loginBtn, { transform: [{ scale: loginScale }] }]}>
-            <Text style={styles.loginText}>J'ai déjà un compte</Text>
-          </Animated.View>
-        </Pressable>
-
-        {/* Légal */}
-        <Text style={styles.legal}>
-          {"En continuant, tu acceptes nos "}
-          <Text style={styles.legalLink}>Conditions générales</Text>
-          {" et la "}
-          <Text style={styles.legalLink}>Politique de confidentialité</Text>
-        </Text>
+        {/* Légal — slide 3 uniquement */}
+        {currentSlide === 2 && (
+          <Text style={styles.legal}>
+            {"En continuant, tu acceptes nos "}
+            <Text style={styles.legalLink}>CGU</Text>
+            {" et la "}
+            <Text style={styles.legalLink}>Politique de confidentialité</Text>
+          </Text>
+        )}
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: "#FFFBFC",
   },
 
-  // ── Orbs ──────────────────────────────────────────────────────────────
-  orb1: {
-    position: "absolute",
-    top: -60,
-    right: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(255,255,255,0.08)",
+  // ── Header ────────────────────────────────────────────────────────────
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingBottom: 8,
   },
-  orb2: {
-    position: "absolute",
-    top: "35%",
-    left: -80,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: "rgba(254,93,157,0.20)",
+  headerBrand: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#1A0010",
+    letterSpacing: -0.5,
   },
-  orb3: {
-    position: "absolute",
-    top: 140,
-    left: 20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.05)",
+  loginPill: {
+    backgroundColor: "rgba(232,24,122,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(232,24,122,0.20)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 99,
+  },
+  loginPillText: {
+    color: "#E8187A",
+    fontWeight: "700",
+    fontSize: 14,
   },
 
-  // ── Hero ──────────────────────────────────────────────────────────────
-  hero: {
+  // ── Illustration ──────────────────────────────────────────────────────
+  illustrationZone: {
+    flex: 1,
+    overflow: "hidden",
+  },
+  illustrationContent: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
+  },
+
+  orbitContainer: {
+    width: CONTAINER_SIZE,
+    height: CONTAINER_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   logoBadge: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.35)",
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    borderRadius: 30,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
-    shadowColor: "#fff",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
+    shadowOpacity: 0.30,
+    shadowRadius: 30,
+    elevation: 8,
   },
   logo: {
-    width: 64,
-    height: 64,
+    width: 72,
+    height: 72,
   },
 
-  brand: {
-    fontSize: 56,
-    fontWeight: "900",
-    color: "#fff",
-    letterSpacing: -2,
-    marginBottom: 8,
+  orbital: {
+    position: "absolute",
+    width: ORBIT_SIZE,
+    height: ORBIT_SIZE,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  tagline: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.70)",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
+  orbitalTL: {
+    top: 16,
+    left: 14,
+  },
+  orbitalTR: {
+    top: 16,
+    right: 14,
+  },
+  orbitalBot: {
+    bottom: 16,
+    left: (CONTAINER_SIZE - ORBIT_SIZE) / 2,
+  },
+
+  // ── Carte bas ─────────────────────────────────────────────────────────
+  bottomCard: {
+    backgroundColor: "#FFFBFC",
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    shadowColor: "#E8187A",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+
+  // ── Pagination dots ───────────────────────────────────────────────────
+  dotsRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 28,
+    alignSelf: "flex-start",
+  },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+  },
+
+  // ── Texte slide ───────────────────────────────────────────────────────
+  slideTitle: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#1A0010",
+    letterSpacing: -0.8,
+    marginBottom: 10,
+  },
+  slideSubtitle: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "rgba(0,0,0,0.45)",
+    lineHeight: 22,
     marginBottom: 32,
   },
 
-  // ── Pills ─────────────────────────────────────────────────────────────
-  pillRow: {
-    flexDirection: "column",
-    gap: 10,
-    alignItems: "flex-start",
-    alignSelf: "center",
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(255,255,255,0.13)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 99,
-  },
-  pillLabel: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-
-  // ── Bottom ────────────────────────────────────────────────────────────
-  bottom: {
-    paddingHorizontal: 24,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    marginBottom: 24,
-  },
-
   // ── CTA ───────────────────────────────────────────────────────────────
-  ctaBtn: {
-    height: 60,
+  ctaWrap: {
     borderRadius: 20,
-    backgroundColor: "#fff",
+    overflow: "hidden",
+    shadowColor: "#E8187A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.40,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  ctaGradient: {
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
   },
   ctaText: {
-    color: "#C0185C",
+    color: "#fff",
     fontWeight: "800",
     fontSize: 16,
-  },
-
-  // ── Login ─────────────────────────────────────────────────────────────
-  loginBtn: {
-    height: 50,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.40)",
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  loginText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
   },
 
   // ── Légal ─────────────────────────────────────────────────────────────
   legal: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.40)",
+    color: "rgba(0,0,0,0.35)",
     textAlign: "center",
     lineHeight: 18,
+    marginTop: 14,
   },
   legalLink: {
-    color: "rgba(255,255,255,0.60)",
+    color: "#E8187A",
+    fontWeight: "600",
   },
 });
