@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   View, Text, Pressable, TextInput, Alert, StyleSheet,
   ActivityIndicator, ScrollView, RefreshControl, FlatList,
@@ -629,7 +629,7 @@ export default function AdminUsersScreen() {
   const bannedCount = users.filter((u) => !u.is_active).length;
   const onRefresh   = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
-  const listData = useCallback((): ListItem[] => {
+  const listData = useMemo((): ListItem[] => {
     if (roleFilter !== "all" || users.length === 0) {
       return users.map((u) => ({ _type: "user", data: u }));
     }
@@ -808,7 +808,7 @@ export default function AdminUsersScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            data={listData()}
+            data={listData}
             keyExtractor={(item) => item._type === "header" ? `h-${item.label}` : String(item.data.id)}
             renderItem={renderItem}
             contentContainerStyle={{ backgroundColor: BG, paddingHorizontal: 16, paddingTop: 14, paddingBottom: insets.bottom + 100 }}

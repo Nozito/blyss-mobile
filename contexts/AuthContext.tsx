@@ -221,7 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile,
       patchUser,
     }),
-    [user, isLoading, login, signup, logout, updateUser, refreshProfile, patchUser]
+    // Functions are stable (useCallback with [] deps) — only user/isLoading trigger re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user, isLoading]
   );
 
   return (

@@ -310,45 +310,46 @@ export default function ProCalendarScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [showViewPicker, setShowViewPicker] = useState(false);
 
-  // ── data fetching
-  const fetchAll = useCallback(async () => {
+  // ── month/year derived from selectedDate — stable primitives for deps
+  const selectedYear  = selectedDate.getFullYear();
+  const selectedMonth = selectedDate.getMonth();
+  const selectedDateStr = toLocalDate(selectedDate);
+
+  // ── data fetching — split month data vs day slots to avoid redundant requests
+  const fetchMonthData = useCallback(async (year: number, month: number) => {
     setLoading(true);
     try {
-      const dateStr = toLocalDate(selectedDate);
-      const month = selectedDate.getMonth();
-      const year = selectedDate.getFullYear();
       const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-      const to = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(year, month + 1, 0).getDate()}`;
-
-      const [calRes, slotRes, unavailRes] = await Promise.all([
+      const to   = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(year, month + 1, 0).getDate()}`;
+      const [calRes, unavailRes] = await Promise.all([
         proApi.getCalendar({ from, to }),
-        proApi.getSlots({ date: dateStr }),
         proApi.getUnavailabilities(),
       ]);
-
       if (calRes.success && calRes.data) setAppointments(calRes.data as Appointment[]);
-      if (slotRes.success && slotRes.data) setSlots((slotRes.data as Record<string, unknown>[]).map(mapSlot));
       if (unavailRes.success && unavailRes.data) setUnavailabilities(unavailRes.data as Unavailability[]);
     } catch {
       // silent fail
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, []);
 
-  const fetchSlots = useCallback(async () => {
+  const fetchSlots = useCallback(async (dateStr: string) => {
     setSlotsLoading(true);
     try {
-      const res = await proApi.getSlots({ date: toLocalDate(selectedDate) });
+      const res = await proApi.getSlots({ date: dateStr });
       if (res.success && res.data) setSlots((res.data as Record<string, unknown>[]).map(mapSlot));
     } catch {
       // silent
     } finally {
       setSlotsLoading(false);
     }
-  }, [selectedDate]);
+  }, []);
 
-  useEffect(() => { void fetchAll(); }, [fetchAll]);
+  // Refetch calendar+unavailabilities only when month/year changes
+  useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
+  // Refetch slots whenever selected day changes
+  useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
 
   const handleSelectDate = (d: Date) => {
     setSelectedDate(d);
@@ -396,7 +397,7 @@ export default function ProCalendarScreen() {
     }
     try {
       await proApi.createSlot({ date, time: newSlotTime, duration: newSlotDuration });
-      await fetchSlots();
+      await fetchSlots(selectedDateStr);
       setShowAddSlot(false);
     } catch {
       Alert.alert("Erreur", "Impossible d'ajouter le créneau");
@@ -417,7 +418,7 @@ export default function ProCalendarScreen() {
     setEditingSlotId(null);
     try {
       await proApi.updateSlot(parseInt(editingSlotId), { date, time: editTime, duration: editDur });
-      await fetchSlots();
+      await fetchSlots(selectedDateStr);
     } catch {
       Alert.alert("Erreur", "Impossible de modifier le créneau");
     }
@@ -549,7 +550,7 @@ export default function ProCalendarScreen() {
 
       const failed = results.filter((r) => r === null).length;
       const created = results.length - failed;
-      await fetchSlots();
+      await fetchSlots(selectedDateStr);
       qc.invalidateQueries({ queryKey: ["slots"] });
 
       if (failed > 0) {

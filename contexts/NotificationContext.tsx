@@ -54,7 +54,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.is_read).length, [notifications]);
 
   const addNotification = useCallback((n: NotificationItem) => {
     setNotifications((prev) => [n, ...prev.filter((p) => p.id !== n.id)]);
@@ -196,7 +196,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(
     () => ({ notifications, unreadCount, addNotification, markAsRead, clearAll }),
-    [notifications, unreadCount, addNotification, markAsRead, clearAll]
+    // addNotification, markAsRead, clearAll are stable (useCallback with [] deps)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [notifications, unreadCount]
   );
 
   return (

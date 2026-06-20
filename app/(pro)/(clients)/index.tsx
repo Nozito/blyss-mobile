@@ -1,4 +1,4 @@
-import React, { useState, useDeferredValue, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { proApi, nailTechApi } from "@/lib/api";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/ui/Avatar";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
@@ -43,7 +44,7 @@ export default function ProClientsScreen() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>("clients");
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebounce(search, 250);
 
   const listRef = useRef(null);
   useScrollToTop(listRef);
@@ -51,11 +52,13 @@ export default function ProClientsScreen() {
   const { data: clientsData, isLoading: loadingClients } = useQuery({
     queryKey: ["pro-clients"],
     queryFn: () => proApi.getClients(),
+    staleTime: 2 * 60_000,
   });
 
   const { data: blockedData, isLoading: loadingBlocked } = useQuery({
     queryKey: ["blocked-clients"],
     queryFn: () => nailTechApi.getBlockedClients(),
+    staleTime: 2 * 60_000,
   });
 
   const unblockMutation = useMutation({
@@ -80,10 +83,50 @@ export default function ProClientsScreen() {
     [clients, deferredSearch]
   );
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: clients.length,
     totalVisits: clients.reduce((sum, c) => sum + (c.totalVisits ?? 0), 0),
-  };
+  }), [clients]);
+
+  const clientsContentStyle = useMemo(
+    () => ({ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }),
+    [insets.bottom]
+  );
+
+  const renderClientItem = useCallback(({ item }: { item: Client }) => (
+    <Pressable
+      onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${item.id}`)}
+      style={{
+        flexDirection: "row", alignItems: "center", gap: 12,
+        backgroundColor: Colors.card, borderRadius: 20, padding: 14,
+        marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+      }}
+    >
+      <Avatar name={item.name} size={46} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+          {item.name}
+        </Text>
+        {item.phone ? (
+          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.phone}</Text>
+        ) : null}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
+          {item.totalVisits != null && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                {item.totalVisits} visite{item.totalVisits !== 1 ? "s" : ""}
+              </Text>
+            </View>
+          )}
+          {item.lastVisit ? (
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>· {item.lastVisit}</Text>
+          ) : null}
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+    </Pressable>
+  ), [router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
@@ -150,7 +193,7 @@ export default function ProClientsScreen() {
             ref={listRef}
             data={filteredClients}
             keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
+            contentContainerStyle={clientsContentStyle}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View>
@@ -189,40 +232,7 @@ export default function ProClientsScreen() {
                 </Text>
               </View>
             }
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${item.id}`)}
-                style={{
-                  flexDirection: "row", alignItems: "center", gap: 12,
-                  backgroundColor: Colors.card, borderRadius: 20, padding: 14,
-                  marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
-                }}
-              >
-                <Avatar name={item.name} size={46} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
-                    {item.name}
-                  </Text>
-                  {item.phone ? (
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.phone}</Text>
-                  ) : null}
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
-                    {item.totalVisits != null && (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
-                        <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                          {item.totalVisits} visite{item.totalVisits !== 1 ? "s" : ""}
-                        </Text>
-                      </View>
-                    )}
-                    {item.lastVisit ? (
-                      <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>· {item.lastVisit}</Text>
-                    ) : null}
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-              </Pressable>
-            )}
+            renderItem={renderClientItem}
           />
         )
       ) : loadingBlocked ? (
@@ -232,7 +242,7 @@ export default function ProClientsScreen() {
           ref={listRef}
           data={blocked}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
+          contentContainerStyle={clientsContentStyle}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 48, gap: 8 }}>

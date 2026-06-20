@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -44,7 +44,7 @@ const statusConfig: Record<BookingStatus, { label: string; badge: "default" | "s
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-export function BookingCard({ booking, onCancel, showCancelButton }: BookingCardProps) {
+export const BookingCard = memo(function BookingCard({ booking, onCancel, showCancelButton }: BookingCardProps) {
   const router = useRouter();
   const config = statusConfig[booking.status] ?? statusConfig.pending;
 
@@ -143,4 +143,4 @@ export function BookingCard({ booking, onCancel, showCancelButton }: BookingCard
       </View>
     </Pressable>
   );
-}
+});

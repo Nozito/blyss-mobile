@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { specialistsApi, favoritesApi, clientApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
+
+// ── Style constants (module-level → never recreated) ─────────────────────────
+const CATEGORY_LIST_STYLE  = { paddingHorizontal: 24, gap: 8, paddingBottom: 4 } as const;
+const SPECIALIST_LIST_STYLE = { paddingHorizontal: 24, gap: 16, paddingVertical: 8 } as const;
+const MAIN_LIST_STYLE       = { paddingBottom: 100 } as const;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -324,25 +329,28 @@ export default function ClientHome() {
   const greeting = user?.first_name ? `Salut ${user.first_name}` : "Bienvenue";
 
   // ── Render helpers ────────────────────────────────────────────────────────
-  const renderCategory: ListRenderItem<(typeof CATEGORIES)[number]> = ({ item }) => (
-    <Pressable
-      onPress={() => {
-        console.log("BOUTON PRESSED: category", item.query);
-        router.push({ pathname: "/specialists", params: { search: item.query } });
-      }}
-      className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
-    >
-      <Text style={{ fontSize: 14 }}>{item.emoji}</Text>
-      <Text className="text-xs font-semibold text-foreground">{item.label}</Text>
-    </Pressable>
+  const renderCategory = useCallback<ListRenderItem<(typeof CATEGORIES)[number]>>(
+    ({ item }) => (
+      <Pressable
+        onPress={() => router.push({ pathname: "/specialists", params: { search: item.query } })}
+        className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
+      >
+        <Text style={{ fontSize: 14 }}>{item.emoji}</Text>
+        <Text className="text-xs font-semibold text-foreground">{item.label}</Text>
+      </Pressable>
+    ),
+    [router]
   );
 
-  const renderSpecialist: ListRenderItem<Pro> = ({ item }) => (
-    <SpecialistCard
-      pro={item}
-      isFavorite={favoriteIds.has(item.id)}
-      onToggleFav={(id) => toggleFavMutation.mutate(id)}
-    />
+  const renderSpecialist = useCallback<ListRenderItem<Pro>>(
+    ({ item }) => (
+      <SpecialistCard
+        pro={item}
+        isFavorite={favoriteIds.has(item.id)}
+        onToggleFav={(id) => toggleFavMutation.mutate(id)}
+      />
+    ),
+    [favoriteIds, toggleFavMutation]
   );
 
   // ── Main render ───────────────────────────────────────────────────────────
@@ -356,7 +364,7 @@ export default function ClientHome() {
         data={[]}
         renderItem={null}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={MAIN_LIST_STYLE}
         ListHeaderComponent={
           <>
             {/* ── Header ─────────────────────────────────────────────────── */}
@@ -371,7 +379,7 @@ export default function ClientHome() {
 
             {/* ── Search bar (tap → specialists) ─────────────────────────── */}
             <Pressable
-              onPress={() => { console.log("BOUTON PRESSED: search bar"); router.push("/specialists"); }}
+              onPress={() => router.push("/specialists")}
               className="mx-6 mb-3 h-14 flex-row items-center gap-3 bg-card border-2 border-border rounded-2xl px-4"
               style={Shadows.card}
             >
@@ -388,7 +396,7 @@ export default function ClientHome() {
               keyExtractor={(item) => item.query}
               renderItem={renderCategory}
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingBottom: 4 }}
+              contentContainerStyle={CATEGORY_LIST_STYLE}
               style={{ marginBottom: 24 }}
             />
 
@@ -403,7 +411,7 @@ export default function ClientHome() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => { console.log("BOUTON PRESSED: tout voir"); router.push("/specialists"); }}
+                onPress={() => router.push("/specialists")}
                 className="flex-row items-center gap-1 px-4 py-2 rounded-full bg-primary"
                 style={Shadows.soft}
               >
@@ -424,13 +432,13 @@ export default function ClientHome() {
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderSpecialist}
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 24, gap: 16, paddingVertical: 8 }}
+                contentContainerStyle={SPECIALIST_LIST_STYLE}
               />
             )}
 
             {/* ── CTA "Voir toutes les expertes" ─────────────────────────── */}
             <Pressable
-              onPress={() => { console.log("BOUTON PRESSED: voir toutes les expertes"); router.push("/specialists"); }}
+              onPress={() => router.push("/specialists")}
               className="mx-6 mt-3 py-3.5 rounded-2xl bg-primary items-center justify-center"
               style={Shadows.soft}
             >
@@ -472,7 +480,7 @@ export default function ClientHome() {
                       Réserve dès maintenant auprès d'une experte près de chez toi
                     </Text>
                     <Pressable
-                      onPress={() => { console.log("BOUTON PRESSED: découvrir les expertes"); router.push("/specialists"); }}
+                      onPress={() => router.push("/specialists")}
                       className="mt-3 px-4 py-2 rounded-xl bg-primary self-start"
                     >
                       <View className="flex-row gap-1.5 items-center">

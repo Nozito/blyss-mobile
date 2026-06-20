@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { favoritesApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -77,31 +78,39 @@ export function useFavorites() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
   });
 
-  const isFavorited = (proId: number) =>
-    favorites.some((f) => f.id === proId);
+  const isFavorited = useCallback(
+    (proId: number) => favorites.some((f) => f.id === proId),
+    [favorites]
+  );
 
-  const toggle = (proId: number) => {
-    if (isFavorited(proId)) {
-      removeMutation.mutate(proId);
-    } else {
-      addMutation.mutate(proId);
-    }
-  };
+  const toggle = useCallback(
+    (proId: number) => {
+      if (isFavorited(proId)) {
+        removeMutation.mutate(proId);
+      } else {
+        addMutation.mutate(proId);
+      }
+    },
+    [isFavorited, addMutation, removeMutation]
+  );
 
-  const removeFavorite = (proId: number) => {
-    qc.setQueryData<Specialist[]>(["favorites"], (prev = []) =>
-      prev.filter((f) => f.id !== proId)
-    );
-    qc.setQueryData<Set<number>>(["favorites-ids"], (prev = new Set()) => {
-      const next = new Set(prev);
-      next.delete(proId);
-      return next;
-    });
-    favoritesApi.remove(proId).catch(() => {
-      void qc.invalidateQueries({ queryKey: ["favorites"] });
-      void qc.invalidateQueries({ queryKey: ["favorites-ids"] });
-    });
-  };
+  const removeFavorite = useCallback(
+    (proId: number) => {
+      qc.setQueryData<Specialist[]>(["favorites"], (prev = []) =>
+        prev.filter((f) => f.id !== proId)
+      );
+      qc.setQueryData<Set<number>>(["favorites-ids"], (prev = new Set()) => {
+        const next = new Set(prev);
+        next.delete(proId);
+        return next;
+      });
+      favoritesApi.remove(proId).catch(() => {
+        void qc.invalidateQueries({ queryKey: ["favorites"] });
+        void qc.invalidateQueries({ queryKey: ["favorites-ids"] });
+      });
+    },
+    [qc]
+  );
 
   return {
     favorites,

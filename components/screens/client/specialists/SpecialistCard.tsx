@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from "react";
+import React, { useRef, useCallback, useState, memo } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -33,7 +33,7 @@ interface Props {
   onBook?: () => void;
 }
 
-export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBook }: Props) {
+export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBook }: Props) {
   const photo = item.cover_image_url ?? item.profile_image_url;
   const cardScale = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
@@ -187,4 +187,4 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
       </Pressable>
     </Animated.View>
   );
-}
+});
