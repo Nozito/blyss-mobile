@@ -13,15 +13,17 @@ import { Link } from "expo-router";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/colors";
+import { ADMIN } from "@/constants/adminTheme";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
+import { useScrollToTop } from "@react-navigation/native";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const BG      = "#080810";
-const CARD    = "rgba(255,255,255,0.045)";
-const BORDER  = "rgba(255,255,255,0.09)";
-const TEXT1   = "#FFFFFF";
-const TEXT2   = "rgba(255,255,255,0.50)";
-const TEXT3   = "rgba(255,255,255,0.28)";
+const BG      = ADMIN.bg;
+const CARD    = ADMIN.surface;
+const BORDER  = ADMIN.border;
+const TEXT1   = ADMIN.text;
+const TEXT2   = ADMIN.textSub;
+const TEXT3   = ADMIN.textMuted;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Stats {
@@ -252,6 +254,9 @@ export default function AdminDashboard() {
     });
   }, [stats]);
 
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
+
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 
   if (isLoading) return <DashboardSkeleton top={insets.top} />;
@@ -275,8 +280,9 @@ export default function AdminDashboard() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1, backgroundColor: BG }}
-      contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 12 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
     >

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, ViewStyle } from "react-native";
+import { Colors } from "@/constants/colors";
 
 type Props = {
   width: number | string;
@@ -29,7 +30,7 @@ export function SkeletonBox({ width, height, borderRadius = 8, style }: Props) {
           width,
           height,
           borderRadius,
-          backgroundColor: "#E4E4E7",
+          backgroundColor: Colors.muted,
           opacity,
         },
         style as any,

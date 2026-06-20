@@ -70,6 +70,7 @@ export default function AdminLogsScreen() {
   const router = useRouter();
   const [logs, setLogs]               = useState<Log[]>([]);
   const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter]   = useState("all");
   const [dateFilter, setDateFilter]   = useState("today");
@@ -78,11 +79,12 @@ export default function AdminLogsScreen() {
 
   const fetchLogs = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await adminApi.getLogs?.({ date: dateFilter });
       setLogs((res?.data || []) as Log[]);
     } catch {
-      // empty state
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -106,7 +108,7 @@ export default function AdminLogsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       {/* ── Header ── */}
-      <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: 16 }}>
+      <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top + 16, paddingHorizontal: 16, paddingBottom: 16 }}>
         <Pressable
           onPress={() => router.back()}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
@@ -197,6 +199,16 @@ export default function AdminLogsScreen() {
         {loading ? (
           <View style={{ gap: 10 }}>
             {[0, 1, 2, 3].map((i) => <SkeletonRow key={i} />)}
+          </View>
+        ) : loadError ? (
+          <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
+            <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="cloud-offline-outline" size={32} color={TEXT3} />
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les logs</Text>
+            <Pressable onPress={fetchLogs} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: `${ADMIN.accent}20`, borderWidth: 1, borderColor: ADMIN.accent }}>
+              <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
+            </Pressable>
           </View>
         ) : filtered.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 60 }}>

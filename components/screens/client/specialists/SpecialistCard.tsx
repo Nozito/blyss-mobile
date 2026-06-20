@@ -1,9 +1,10 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
+import { Colors } from "@/constants/colors";
 
 export interface Specialist {
   id: number;
@@ -36,6 +37,7 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
   const photo = item.cover_image_url ?? item.profile_image_url;
   const cardScale = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
+  const [imageError, setImageError] = useState(false);
 
   const handlePressIn = () =>
     Animated.spring(cardScale, {
@@ -65,6 +67,8 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        accessibilityRole="button"
+        accessibilityLabel={`Voir le profil de ${item.business_name}`}
         style={{
           flexDirection: "row",
           backgroundColor: "#FFFFFF",
@@ -78,18 +82,19 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
       >
         {/* Photo */}
         <View style={{ width: 108, flexShrink: 0, backgroundColor: "#F8F5F1", minHeight: 130 }}>
-          {photo ? (
+          {photo && !imageError ? (
             <Image
               source={{ uri: photo }}
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
+              onError={() => setImageError(true)}
             />
           ) : (
             <LinearGradient
-              colors={["#FE5D9D26", "#FE5D9D14", "transparent"]}
+              colors={[`${Colors.primary}26`, `${Colors.primary}14`, "transparent"]}
               style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
             >
-              <Text style={{ fontSize: 30, fontWeight: "700", color: "#FE5D9D40" }}>
+              <Text style={{ fontSize: 30, fontWeight: "700", color: `${Colors.primary}40` }}>
                 {item.first_name[0]}
               </Text>
             </LinearGradient>
@@ -97,6 +102,8 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
 
           <Pressable
             onPress={handleHeartPress}
+            accessibilityRole="button"
+            accessibilityLabel={isFav ? `Retirer ${item.business_name} des favoris` : `Ajouter ${item.business_name} aux favoris`}
             style={{
               position: "absolute",
               top: 8,
@@ -104,7 +111,7 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
               width: 28,
               height: 28,
               borderRadius: 14,
-              backgroundColor: isFav ? "#FE5D9DE6" : "rgba(0,0,0,0.4)",
+              backgroundColor: isFav ? `${Colors.primary}E6` : "rgba(0,0,0,0.4)",
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -160,6 +167,8 @@ export function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBoo
 
           <Pressable
             onPress={onBook ?? onPress}
+            accessibilityRole="button"
+            accessibilityLabel={`Réserver chez ${item.business_name}`}
             style={{
               marginTop: 12,
               height: 36,

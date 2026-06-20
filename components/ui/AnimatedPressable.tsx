@@ -24,7 +24,7 @@ export function AnimatedPressable({ onPress, style, children, ...rest }: Props) 
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} {...rest}>
+      <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} accessibilityRole="button" {...rest}>
         {children}
       </Pressable>
     </Animated.View>
@@ -45,6 +45,7 @@ export function AnimatedIconButton({ onPress, style, children, ...rest }: Props)
     <Pressable
       onPress={() => { bounce(); (onPress as (() => void) | undefined)?.(); }}
       style={style}
+      accessibilityRole="button"
       {...rest}
     >
       <Animated.View style={{ transform: [{ scale }] }}>

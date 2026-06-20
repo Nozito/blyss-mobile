@@ -13,6 +13,7 @@ import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
+import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 
 const A_BG     = ADMIN.bg;
@@ -91,6 +92,8 @@ function ToolRow({
 
 export default function AdminMoreScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const router = useRouter();
   const { user, logout } = useAuth();
   const [showSwitchModal, setShowSwitchModal] = useState(false);
@@ -166,6 +169,7 @@ export default function AdminMoreScreen() {
       transform: [{ translateY: screenTranslateY }],
     }}>
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         automaticallyAdjustContentInsets={false}

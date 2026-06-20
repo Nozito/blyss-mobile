@@ -287,7 +287,7 @@ export default function AdminAnalyticsScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: A_BG }}
       contentContainerStyle={{
-        paddingTop: insets.top + 12,
+        paddingTop: insets.top + 16,
         paddingBottom: insets.bottom + 100,
         paddingHorizontal: 16,
       }}

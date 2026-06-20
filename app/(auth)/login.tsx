@@ -104,7 +104,6 @@ export default function LoginScreen() {
       return;
     }
     const user = res.data?.user;
-    console.log("user role:", user?.role);
 
     if (user?.is_admin) {
       setLoggedUserName(user.first_name ?? "");

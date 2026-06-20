@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { View, Text, Pressable, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
 
 const SERVICE_CHIPS = [
   { label: "Gel", query: "gel" },
@@ -54,15 +55,19 @@ interface Props {
 function Chip({
   active,
   onPress,
+  label,
   children,
 }: {
   active: boolean;
   onPress: () => void;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Filtre ${label}${active ? ", sélectionné" : ""}`}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -70,7 +75,7 @@ function Chip({
         height: 36,
         paddingHorizontal: 16,
         borderRadius: 999,
-        backgroundColor: active ? "#FE5D9D" : "#F8F5F1",
+        backgroundColor: active ? Colors.primary : "#F8F5F1",
         flexShrink: 0,
       }}
     >
@@ -98,7 +103,7 @@ export function FilterBar({
       if (item.type === "rating") {
         const active = ratingFilter === item.value;
         return (
-          <Chip active={active} onPress={() => onRatingChange(active ? 0 : item.value)}>
+          <Chip active={active} onPress={() => onRatingChange(active ? 0 : item.value)} label={item.label}>
             <Ionicons name="star" size={12} color={active ? "#fff" : "#FBBF24"} />
             <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#fff" : "#09090B" }}>
               {item.label}
@@ -109,11 +114,12 @@ export function FilterBar({
 
       if (item.type === "city") {
         const active = !!cityFilter;
+        const cityLabel = cityFilter || "Ville";
         return (
-          <Chip active={active} onPress={onCityToggle}>
+          <Chip active={active} onPress={onCityToggle} label={cityLabel}>
             <Ionicons name="location-outline" size={13} color={active ? "#fff" : "#09090B"} />
             <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#fff" : "#09090B" }}>
-              {cityFilter || "Ville"}
+              {cityLabel}
             </Text>
           </Chip>
         );
@@ -122,7 +128,7 @@ export function FilterBar({
       // service
       const active = serviceFilter === item.query;
       return (
-        <Chip active={active} onPress={() => onServiceChange(active ? "" : item.query)}>
+        <Chip active={active} onPress={() => onServiceChange(active ? "" : item.query)} label={item.label}>
           {active && <Ionicons name="checkmark" size={12} color="#fff" />}
           <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#fff" : "#09090B" }}>
             {item.label}
@@ -151,14 +157,16 @@ export function FilterBar({
         <View style={{ paddingTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {["", ...uniqueCities].map((city) => {
             const active = !city ? !cityFilter : cityFilter === city;
+            const chipLabel = city || "Toutes les villes";
             return (
               <Chip
                 key={city || "__all"}
                 active={active}
                 onPress={() => onCitySelect(city === cityFilter ? "" : city)}
+                label={chipLabel}
               >
                 <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#fff" : "#09090B" }}>
-                  {city || "Toutes les villes"}
+                  {chipLabel}
                 </Text>
               </Chip>
             );
@@ -183,6 +191,8 @@ export function FilterBar({
           </Text>
           <Pressable
             onPress={onClearAll}
+            accessibilityRole="button"
+            accessibilityLabel="Effacer tous les filtres"
             style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
           >
             <Ionicons name="close" size={10} color="#FE5D9D" />

@@ -13,14 +13,15 @@ import * as Haptics from "expo-haptics";
 import { adminApi, AdminBooking } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
+import { useScrollToTop } from "@react-navigation/native";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
-const CARD    = "rgba(255,255,255,0.05)";
-const BORDER  = "rgba(255,255,255,0.08)";
-const TEXT1   = "#FFFFFF";
-const TEXT2   = "rgba(255,255,255,0.45)";
-const TEXT3   = "rgba(255,255,255,0.25)";
+const CARD    = ADMIN.surface;
+const BORDER  = ADMIN.border;
+const TEXT1   = ADMIN.text;
+const TEXT2   = ADMIN.textSub;
+const TEXT3   = ADMIN.textMuted;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
@@ -336,6 +337,8 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminBookingsScreen() {
   const insets      = useSafeAreaInsets();
+  const listRef     = useRef<SectionList>(null);
+  useScrollToTop(listRef);
   const qc          = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [refreshing, setRefreshing]     = useState(false);
@@ -472,6 +475,7 @@ export default function AdminBookingsScreen() {
         </View>
       ) : (
         <SectionList
+          ref={listRef}
           sections={sections}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{

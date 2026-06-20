@@ -13,17 +13,12 @@
  *  I. Pro sans Stripe → paiement en ligne non disponible
  */
 
-// ── Mock API ──────────────────────────────────────────────────────────────────
+import { canPayOnline } from "@/lib/bookingUtils";
+
+// ── Mock fns injected as parameters — no module mock needed ──────────────────
 
 const mockCreateReservation = jest.fn();
 const mockCreatePaymentIntent = jest.fn();
-
-jest.mock("@/lib/api", () => ({
-  stripePaymentsApi: {
-    createReservation: (...args: unknown[]) => mockCreateReservation(...args),
-    createPaymentIntent: (...args: unknown[]) => mockCreatePaymentIntent(...args),
-  },
-}));
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -398,21 +393,15 @@ describe("Scénario H — Erreur création PaymentIntent", () => {
 
 describe("Scénario I — Pro sans Stripe (paiement en ligne indisponible)", () => {
   it("canPayOnline=false quand stripe_onboarding_complete=false", () => {
-    const pro = { stripe_onboarding_complete: false, accept_online_payment: true };
-    const canPay = pro.stripe_onboarding_complete && pro.accept_online_payment;
-    expect(canPay).toBe(false);
+    expect(canPayOnline(false, true)).toBe(false);
   });
 
   it("canPayOnline=false quand accept_online_payment=false", () => {
-    const pro = { stripe_onboarding_complete: true, accept_online_payment: false };
-    const canPay = pro.stripe_onboarding_complete && pro.accept_online_payment;
-    expect(canPay).toBe(false);
+    expect(canPayOnline(true, false)).toBe(false);
   });
 
   it("sur place imposé si canPayOnline=false (payment_method par défaut = on_site)", () => {
-    const pro = { stripe_onboarding_complete: false, accept_online_payment: false };
-    const canPay = pro.stripe_onboarding_complete && pro.accept_online_payment;
-    const defaultMethod: PaymentMethod = canPay ? "online" : "on_site";
+    const defaultMethod: PaymentMethod = canPayOnline(false, false) ? "online" : "on_site";
     expect(defaultMethod).toBe("on_site");
   });
 });

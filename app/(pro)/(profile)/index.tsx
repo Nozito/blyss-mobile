@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet } from "react-native";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import * as ImagePicker from "expo-image-picker";
@@ -13,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Card } from "@/components/ui/Card";
 import { Colors } from "@/constants/colors";
+import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { proApi, usersApi } from "@/lib/api";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -47,7 +49,20 @@ export default function ProProfileScreen() {
   const { activePlan } = useRevenueCat();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
   const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!uploadSuccess) return;
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setUploadSuccess(false));
+  }, [uploadSuccess]);
 
   const handlePickAvatar = () => {
     Alert.alert("Photo de profil", "Choisir depuis…", [
@@ -108,10 +123,9 @@ export default function ProProfileScreen() {
       Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la photo.");
       return;
     }
-    // Mise à jour locale immédiate pour le feedback visuel
     if (res.data?.photo) patchUser({ profile_photo: res.data.photo });
-    // Sync backend en arrière-plan sans bloquer le thread UI
     void refreshProfile();
+    setUploadSuccess(true);
   };
 
   const photoUri = user?.profile_photo
@@ -159,11 +173,13 @@ export default function ProProfileScreen() {
   ];
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 100,
+        paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
         paddingHorizontal: 20,
       }}
       automaticallyAdjustContentInsets={false}
@@ -613,5 +629,25 @@ export default function ProProfileScreen() {
         <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Blyss Pro v1.0.0</Text>
       </View>
     </ScrollView>
+
+    {/* Toast upload succès */}
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute", bottom: insets.bottom + 110,
+        alignSelf: "center", opacity: toastOpacity,
+        flexDirection: "row", alignItems: "center", gap: 8,
+        backgroundColor: Colors.success, borderRadius: 999,
+        paddingHorizontal: 18, paddingVertical: 10,
+        shadowColor: Colors.success, shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
+      }}
+    >
+      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+        Photo mise à jour
+      </Text>
+    </Animated.View>
+    </View>
   );
 }

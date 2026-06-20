@@ -53,12 +53,28 @@ export function useFavorites() {
 
   const addMutation = useMutation({
     mutationFn: (proId: number) => favoritesApi.add(proId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["favorites"] });
+      return { prev: qc.getQueryData<Specialist[]>(["favorites"]) };
+    },
+    onError: (_err, _proId, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["favorites"], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
   });
 
   const removeMutation = useMutation({
     mutationFn: (proId: number) => favoritesApi.remove(proId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
+    onMutate: async (proId: number) => {
+      await qc.cancelQueries({ queryKey: ["favorites"] });
+      const prev = qc.getQueryData<Specialist[]>(["favorites"]);
+      qc.setQueryData<Specialist[]>(["favorites"], (old = []) => old.filter((f) => f.id !== proId));
+      return { prev };
+    },
+    onError: (_err, _proId, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["favorites"], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
   });
 
   const isFavorited = (proId: number) =>

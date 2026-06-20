@@ -9,6 +9,7 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -184,6 +185,8 @@ function EmptyState() {
 export default function BookingsScreen() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["client-bookings"],
@@ -211,6 +214,7 @@ export default function BookingsScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >

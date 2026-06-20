@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, type ImageProps, type ViewProps } from 'react-native';
+import { Colors } from '@/constants/colors';
 
 interface AvatarProps extends ViewProps {
   size?: number;
@@ -67,7 +68,7 @@ export function AvatarFallback({ name, size = 40, className = '', style, ...prop
       style={style}
     >
       <Text
-        style={{ fontSize: size * 0.38, fontWeight: '600', color: '#FE5D9D' }}
+        style={{ fontSize: size * 0.38, fontWeight: '600', color: Colors.primary }}
       >
         {initials}
       </Text>

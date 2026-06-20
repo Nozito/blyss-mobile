@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { Animated, View } from "react-native";
+import { Colors } from "@/constants/colors";
 
 export function SkeletonCard() {
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -20,7 +21,7 @@ export function SkeletonCard() {
       style={{
         opacity,
         flexDirection: "row",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: Colors.card,
         borderRadius: 16,
         overflow: "hidden",
         borderWidth: 1,
@@ -29,15 +30,15 @@ export function SkeletonCard() {
         marginBottom: 12,
       }}
     >
-      <View style={{ width: 108, backgroundColor: "#EDE8E3", flexShrink: 0 }} />
+      <View style={{ width: 108, backgroundColor: Colors.muted, flexShrink: 0 }} />
       <View style={{ flex: 1, padding: 16, gap: 10 }}>
-        <View style={{ height: 16, width: "75%", backgroundColor: "#EDE8E3", borderRadius: 8 }} />
-        <View style={{ height: 12, width: "50%", backgroundColor: "#EDE8E3", borderRadius: 8 }} />
-        <View style={{ height: 12, width: "65%", backgroundColor: "#EDE8E3", borderRadius: 8 }} />
+        <View style={{ height: 16, width: "75%", backgroundColor: Colors.muted, borderRadius: 8 }} />
+        <View style={{ height: 12, width: "50%", backgroundColor: Colors.muted, borderRadius: 8 }} />
+        <View style={{ height: 12, width: "65%", backgroundColor: Colors.muted, borderRadius: 8 }} />
         <View
           style={{
             height: 36,
-            backgroundColor: "#EDE8E3",
+            backgroundColor: Colors.muted,
             borderRadius: 12,
             marginTop: "auto" as any,
           }}

@@ -393,7 +393,7 @@ export default function AdminCouponsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       {/* ── Header ── */}
-      <View style={{ paddingTop: insets.top + 8, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
+      <View style={{ paddingTop: insets.top + 16, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
         <Pressable
           onPress={() => router.back()}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}

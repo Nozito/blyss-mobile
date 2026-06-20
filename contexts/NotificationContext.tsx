@@ -82,8 +82,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const token = await storage.getAccessToken();
       if (!token || !WS_URL || !active) return;
 
-      const ws = new WebSocket(`${WS_URL}?token=${token}`);
+      const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "auth", token }));
+      };
 
       ws.onmessage = (event) => {
         try {

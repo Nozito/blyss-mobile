@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { clientApi, reviewsApi, stripePaymentsApi } from "@/lib/api";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -111,7 +112,13 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
     <View style={{ flexDirection: "row", gap: 10, justifyContent: "center" }}>
       {[0, 1, 2, 3, 4].map((i) => (
         <Animated.View key={i} style={{ transform: [{ scale: scales[i] }] }}>
-          <Pressable onPress={() => handlePress(i)}>
+          <Pressable
+            onPress={() => handlePress(i)}
+            accessibilityRole="button"
+            accessibilityLabel={`${i + 1} étoile${i > 0 ? "s" : ""}`}
+            accessibilityState={{ selected: i < value }}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          >
             <Ionicons name={i < value ? "star" : "star-outline"} size={36} color={i < value ? "#FE5D9D" : "#D1D5DB"} />
           </Pressable>
         </Animated.View>
@@ -223,8 +230,11 @@ export default function BookingDetailScreen() {
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color="#FE5D9D" />
         <Text style={styles.errorText}>Impossible de charger cette réservation.</Text>
-        <Pressable style={styles.errorBtn} onPress={() => router.replace("/(client)/bookings")}>
-          <Text style={styles.errorBtnText}>Retour aux réservations</Text>
+        <Pressable style={styles.errorBtn} onPress={() => void refetch()}>
+          <Text style={styles.errorBtnText}>Réessayer</Text>
+        </Pressable>
+        <Pressable style={styles.errorBtnSecondary} onPress={() => router.replace("/(client)/bookings")}>
+          <Text style={styles.errorBtnSecondaryText}>Retour aux réservations</Text>
         </Pressable>
       </View>
     );
@@ -261,7 +271,7 @@ export default function BookingDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }]}
         showsVerticalScrollIndicator={false}
       >
 
@@ -404,7 +414,10 @@ export default function BookingDetailScreen() {
         presentationStyle="overFullScreen"
         onRequestClose={() => setBalanceVisible(false)}
       >
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}
+        >
           <View style={{ backgroundColor: "#FFF5F8", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <Text style={{ fontSize: 18, fontWeight: "800", color: "#09090B" }}>Paiement du solde</Text>
@@ -417,14 +430,14 @@ export default function BookingDetailScreen() {
               depositPercentage={0}
               prestationName={booking.prestation_name ?? undefined}
               clientSecret={balanceClientSecret}
-              onSuccess={() => {
+              onSuccess={async () => {
+                await refetch();
                 setBalanceVisible(false);
-                void refetch();
               }}
               onError={(msg) => Alert.alert("Erreur de paiement", msg)}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ReviewModal visible={reviewVisible} proId={booking.pro_id} onClose={() => setReviewVisible(false)} />
@@ -452,8 +465,10 @@ const styles = StyleSheet.create({
   centered: { flex: 1, backgroundColor: "#FFF5F8", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
   loadingText: { fontSize: 14, color: "#6D6D78", marginTop: 8 },
   errorText: { fontSize: 15, color: "#09090B", textAlign: "center", lineHeight: 22 },
-  errorBtn: { marginTop: 8, backgroundColor: "#FE5D9D", borderRadius: 999, paddingVertical: 12, paddingHorizontal: 24 },
+  errorBtn: { marginTop: 8, backgroundColor: "#FE5D9D", borderRadius: 999, paddingVertical: 12, paddingHorizontal: 24, minWidth: 160, alignItems: "center" },
   errorBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  errorBtnSecondary: { marginTop: 8, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 999, paddingVertical: 11, paddingHorizontal: 24, minWidth: 160, alignItems: "center" },
+  errorBtnSecondaryText: { color: "#6D6D78", fontWeight: "600", fontSize: 14 },
 
   statusBadge: { borderRadius: 999, paddingHorizontal: 20, paddingVertical: 8 },
   statusBadgeText: { fontSize: 15, fontWeight: "700" },
@@ -474,7 +489,7 @@ const styles = StyleSheet.create({
   contactBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
     borderWidth: 1, borderColor: "#FE5D9D30", borderRadius: 12,
-    paddingVertical: 10, backgroundColor: "#FFF0F5",
+    paddingVertical: 13, minHeight: 44, backgroundColor: "#FFF0F5",
   },
   contactBtnText: { fontSize: 14, fontWeight: "600", color: "#FE5D9D" },
 

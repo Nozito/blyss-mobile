@@ -1,19 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useDeferredValue, useMemo, useRef } from "react";
 import {
   View,
   Text,
   FlatList,
   Pressable,
   TextInput,
+  Alert,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
+import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import type { BlockedClient } from "@/lib/api";
 
 type Client = {
@@ -40,6 +43,10 @@ export default function ProClientsScreen() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>("clients");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+
+  const listRef = useRef(null);
+  useScrollToTop(listRef);
 
   const { data: clientsData, isLoading: loadingClients } = useQuery({
     queryKey: ["pro-clients"],
@@ -57,15 +64,20 @@ export default function ProClientsScreen() {
       qc.invalidateQueries({ queryKey: ["blocked-clients"] });
       qc.invalidateQueries({ queryKey: ["pro-clients"] });
     },
+    onError: () => Alert.alert("Erreur", "Impossible de débloquer cette cliente."),
   });
 
   const clients = (clientsData?.data as Client[] | undefined) ?? [];
   const blocked = (blockedData?.data as BlockedClient[] | undefined) ?? [];
 
-  const filteredClients = clients.filter((c) =>
-    search
-      ? `${c.name} ${c.phone ?? ""}`.toLowerCase().includes(search.toLowerCase())
-      : true
+  const filteredClients = useMemo(
+    () =>
+      deferredSearch
+        ? clients.filter((c) =>
+            `${c.name} ${c.phone ?? ""}`.toLowerCase().includes(deferredSearch.toLowerCase())
+          )
+        : clients,
+    [clients, deferredSearch]
   );
 
   const stats = {
@@ -135,9 +147,10 @@ export default function ProClientsScreen() {
           <LoadingSpinner />
         ) : (
           <FlatList
+            ref={listRef}
             data={filteredClients}
             keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View>
@@ -161,7 +174,7 @@ export default function ProClientsScreen() {
                   ))}
                 </View>
                 <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 12 }}>
-                  {search ? `${filteredClients.length} résultat${filteredClients.length !== 1 ? "s" : ""}` : "Toutes les clientes"}
+                  {deferredSearch ? `${filteredClients.length} résultat${filteredClients.length !== 1 ? "s" : ""}` : "Toutes les clientes"}
                 </Text>
               </View>
             }
@@ -178,7 +191,7 @@ export default function ProClientsScreen() {
             }
             renderItem={({ item }) => (
               <Pressable
-                onPress={() => router.push(`/(pro)/client-detail?clientId=${item.id}`)}
+                onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${item.id}`)}
                 style={{
                   flexDirection: "row", alignItems: "center", gap: 12,
                   backgroundColor: Colors.card, borderRadius: 20, padding: 14,
@@ -216,9 +229,10 @@ export default function ProClientsScreen() {
         <LoadingSpinner />
       ) : (
         <FlatList
+          ref={listRef}
           data={blocked}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 48, gap: 8 }}>

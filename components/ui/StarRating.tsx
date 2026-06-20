@@ -18,6 +18,7 @@ export function StarRating({ value, onChange, size = 18, readonly = false }: Sta
           key={star}
           onPress={() => !readonly && onChange?.(star)}
           disabled={readonly}
+          hitSlop={{ top: 13, bottom: 13, left: 8, right: 8 }}
         >
           <Ionicons
             name={star <= value ? "star" : "star-outline"}

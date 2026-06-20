@@ -11,6 +11,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -239,6 +240,9 @@ export default function ClientHome() {
   const queryClient = useQueryClient();
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
+  const flatListRef = useRef(null);
+  useScrollToTop(flatListRef);
+
   // ── Entrance animation ──────────────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -348,6 +352,7 @@ export default function ClientHome() {
         style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
       <FlatList
+        ref={flatListRef}
         data={[]}
         renderItem={null}
         showsVerticalScrollIndicator={false}

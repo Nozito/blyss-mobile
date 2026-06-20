@@ -76,6 +76,9 @@ export function BookingCard({ booking, onCancel, showCancelButton }: BookingCard
   return (
     <Pressable
       onPress={() => router.push(`/booking/${booking.id}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`Réservation chez ${proName}, ${config.label}, ${dateStr} à ${timeStr}`}
+      accessibilityHint="Voir le détail de la réservation"
       className="bg-card rounded-2xl p-4 mb-3"
       style={{
         shadowColor: "#000",
@@ -127,7 +130,10 @@ export function BookingCard({ booking, onCancel, showCancelButton }: BookingCard
                   e.stopPropagation();
                   onCancel?.(booking.id);
                 }}
-                className="px-3 py-1.5 rounded-xl border border-destructive/30 bg-destructive/5"
+                accessibilityRole="button"
+                accessibilityLabel={`Annuler la réservation chez ${proName}`}
+                className="rounded-xl border border-destructive/30 bg-destructive/5"
+                style={{ paddingVertical: 10, paddingHorizontal: 16 }}
               >
                 <Text className="text-xs font-medium text-destructive">Annuler</Text>
               </Pressable>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
@@ -100,6 +101,8 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
 export default function ClientNotificationsScreen() {
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const [tab, setTab] = useState<Tab>("activity");
+  const listRef = useRef(null);
+  useScrollToTop(listRef);
   const [savingKey, setSavingKey] = useState<PrefKey | null>(null);
   const [prefsLoading, setPrefsLoading] = useState(true);
   const [preferences, setPreferences] = useState<ClientNotificationSettings>({
@@ -107,10 +110,12 @@ export default function ClientNotificationsScreen() {
     late: true, offers: true, email_summary: false,
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [prefsError, setPrefsError] = useState(false);
 
   useEffect(() => {
     notificationsApi.getSettings()
       .then((res) => { if (res.success && res.data) setPreferences(res.data); })
+      .catch(() => setPrefsError(true))
       .finally(() => setPrefsLoading(false));
   }, []);
 
@@ -189,6 +194,7 @@ export default function ClientNotificationsScreen() {
             </View>
           ) : (
             <FlatList
+              ref={listRef}
               data={grouped}
               keyExtractor={(item) => item.label}
               showsVerticalScrollIndicator={false}
@@ -240,8 +246,16 @@ export default function ClientNotificationsScreen() {
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator color={Colors.primary} />
           </View>
+        ) : prefsError ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Ionicons name="wifi-outline" size={32} color={Colors.mutedForeground} />
+            <Text style={{ fontSize: 14, color: Colors.mutedForeground, textAlign: "center" }}>
+              Impossible de charger les préférences.
+            </Text>
+          </View>
         ) : (
           <FlatList
+            ref={listRef}
             data={[1]}
             keyExtractor={() => "prefs"}
             showsVerticalScrollIndicator={false}
@@ -279,7 +293,7 @@ export default function ClientNotificationsScreen() {
                           <Switch
                             value={preferences[item.key]}
                             onValueChange={() => togglePref(item.key)}
-                            trackColor={{ false: "#E5E7EB", true: "#FE5D9D" }}
+                            trackColor={{ false: Colors.border, true: Colors.primary }}
                             thumbColor="#fff"
                             disabled={savingKey === item.key}
                           />

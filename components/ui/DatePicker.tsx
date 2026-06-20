@@ -63,6 +63,7 @@ export function DatePicker({
           setTempDate(value ?? new Date());
           setOpen(true);
         }}
+        accessibilityLabel={label ?? "Sélectionner une date"}
         className={[
           "flex-row items-center h-10 px-3 bg-background rounded-md border",
           error ? "border-destructive" : "border-input",

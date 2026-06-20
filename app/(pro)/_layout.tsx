@@ -56,7 +56,7 @@ export default function ProLayout() {
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="clients" options={{ title: "" }}>
+      <NativeTabs.Trigger name="(clients)" options={{ title: "" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="people-outline" />,
           selected: <VectorIcon family={Ionicons} name="people" />,
@@ -79,7 +79,6 @@ export default function ProLayout() {
       </NativeTabs.Trigger>
 
       {/* Routes cachées — non affichées dans la tab bar */}
-      <NativeTabs.Trigger name="client-detail" hidden />
       <NativeTabs.Trigger name="onboarding" hidden />
     </NativeTabs>
   );

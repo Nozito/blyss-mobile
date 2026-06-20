@@ -17,40 +17,39 @@ export default function AdminLayout() {
       blurEffect="systemUltraThinMaterialDark"
       tintColor={ADMIN.accent}
       minimizeBehavior="never"
-      labelVisibilityMode="unlabeled"
     >
-      <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>
+      <NativeTabs.Trigger name="dashboard" options={{ title: "Accueil" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="grid-outline" />,
           selected: <VectorIcon family={Ionicons} name="grid" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="users" options={{ title: "" }}>
+      <NativeTabs.Trigger name="users" options={{ title: "Utilisateurs" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="people-outline" />,
           selected: <VectorIcon family={Ionicons} name="people" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="bookings" options={{ title: "" }}>
+      <NativeTabs.Trigger name="bookings" options={{ title: "Réservations" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="calendar-outline" />,
           selected: <VectorIcon family={Ionicons} name="calendar" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="payments" options={{ title: "" }}>
+      <NativeTabs.Trigger name="payments" options={{ title: "Paiements" }}>
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="card-outline" />,
           selected: <VectorIcon family={Ionicons} name="card" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="more" options={{ title: "" }}>
+      <NativeTabs.Trigger name="more" options={{ title: "Profil" }}>
         <Icon src={{
-          default: <VectorIcon family={Ionicons} name="ellipsis-horizontal-circle-outline" />,
-          selected: <VectorIcon family={Ionicons} name="ellipsis-horizontal-circle" />,
+          default: <VectorIcon family={Ionicons} name="person-circle-outline" />,
+          selected: <VectorIcon family={Ionicons} name="person-circle" />,
         }} />
       </NativeTabs.Trigger>
     </NativeTabs>

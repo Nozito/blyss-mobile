@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi, ProNotificationSettings } from "@/lib/api";
 import { Colors } from "@/constants/colors";
@@ -96,6 +97,8 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
 
 export default function ProNotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
   const [prefs, setPrefs] = useState<ProNotificationSettings>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -133,6 +136,7 @@ export default function ProNotificationsScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top + 16,
@@ -199,7 +203,7 @@ export default function ProNotificationsScreen() {
                 <Switch
                   value={prefs[item.key]}
                   onValueChange={(val) => updatePref(item.key, val)}
-                  trackColor={{ false: "#E5E7EB", true: "#FE5D9D" }}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
                   thumbColor="#fff"
                 />
               </View>

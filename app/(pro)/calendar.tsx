@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { proApi, nailTechApi } from "@/lib/api";
@@ -76,6 +77,7 @@ const timeToMin = (t: string) => {
 };
 
 const checkOverlap = (slots: TimeSlot[], time: string, duration: number, excludeId?: string) => {
+  if (duration <= 0) return false;
   const s = timeToMin(time);
   const e = s + duration;
   for (const slot of slots) {
@@ -579,6 +581,8 @@ export default function ProCalendarScreen() {
   // ── selected apt status
   const aptStatusKey = selectedApt ? getAptStatus(selectedApt) : "pending";
   const aptStatusCfg = STATUS_CFG[aptStatusKey] ?? STATUS_CFG.pending;
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
 
   const selectedDateLabel = selectedDate.toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -644,6 +648,7 @@ export default function ProCalendarScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
       >
@@ -1281,7 +1286,10 @@ export default function ProCalendarScreen() {
                     minimumDate={new Date()}
                     onChange={(_, date) => {
                       if (Platform.OS === "android") setShowStartPicker(false);
-                      if (date) setUnavailStartDate(date);
+                      if (date) {
+                        setUnavailStartDate(date);
+                        if (unavailEndDate && unavailEndDate < date) setUnavailEndDate(null);
+                      }
                     }}
                     themeVariant="light"
                     accentColor="#D97706"

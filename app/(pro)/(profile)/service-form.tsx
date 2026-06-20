@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,14 @@ import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
+
+function formatDurationLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m}`;
+}
 
 type Service = {
   id: number;
@@ -51,6 +59,7 @@ export default function ServiceFormScreen() {
   const qc = useQueryClient();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
+  const initialized = useRef(false);
   const [isActive, setIsActive] = useState(true);
 
   const { data: servicesData } = useQuery({
@@ -75,7 +84,8 @@ export default function ServiceFormScreen() {
   });
 
   useEffect(() => {
-    if (!existing) return;
+    if (!existing || initialized.current) return;
+    initialized.current = true;
     reset({
       name: existing.name,
       description: existing.description ?? "",
@@ -251,7 +261,7 @@ export default function ServiceFormScreen() {
                   }}
                 >
                   <Text style={{ fontSize: 12, fontWeight: "600", color: selected ? Colors.primary : Colors.mutedForeground }}>
-                    {d < 60 ? `${d}m` : `${d / 60}h`}
+                    {formatDurationLabel(d)}
                   </Text>
                 </Pressable>
               );
@@ -303,7 +313,7 @@ export default function ServiceFormScreen() {
           <Switch
             value={isActive}
             onValueChange={setIsActive}
-            trackColor={{ false: "#E5E7EB", true: Colors.primary }}
+            trackColor={{ false: Colors.border, true: Colors.primary }}
             thumbColor="#fff"
           />
         </View>

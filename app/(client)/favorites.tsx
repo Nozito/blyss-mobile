@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors } from "@/constants/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { useFavorites } from "@/hooks/useFavorites";
 import {
   SpecialistCard,
@@ -22,6 +23,8 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { favorites, isLoading, isFetching, refetch, removeFavorite } = useFavorites();
+  const listRef = useRef(null);
+  useScrollToTop(listRef);
 
   // ── Entrance animation ────────────────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -92,6 +95,7 @@ export default function FavoritesScreen() {
     if (favorites.length > 0) {
       return (
         <FlatList
+          ref={listRef}
           data={favorites}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item, index }) => (

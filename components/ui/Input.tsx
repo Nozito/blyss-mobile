@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, TextInput, Text, Pressable, Animated, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/colors';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -11,8 +12,6 @@ interface InputProps extends TextInputProps {
   secure?: boolean;
   className?: string;
 }
-
-const P = '#FE5D9D';
 
 export function Input({
   label,
@@ -28,11 +27,8 @@ export function Input({
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // border animation (non-native — drives color)
   const focusAnim = useRef(new Animated.Value(0)).current;
-  // icon bounce (native — drives transform)
   const iconScale = useRef(new Animated.Value(1)).current;
-  // eye icon bounce on toggle
   const eyeScale = useRef(new Animated.Value(1)).current;
 
   const bounce = (anim: Animated.Value) =>
@@ -56,15 +52,15 @@ export function Input({
 
   const borderColor = focusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [error ? '#EF4444' : '#E4E0DC', error ? '#EF4444' : P],
+    outputRange: [error ? '#EF4444' : '#E4E0DC', error ? '#EF4444' : Colors.primary],
   });
 
-  const iconColor = isFocused ? P : '#A1A1AA';
+  const iconColor = isFocused ? Colors.primary : '#A1A1AA';
 
   return (
     <View style={{ gap: 6 }}>
       {label && (
-        <Text style={{ fontSize: 13, fontWeight: '600', color: isFocused ? P : '#3F3F46', letterSpacing: 0.1 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: isFocused ? Colors.primary : '#3F3F46', letterSpacing: 0.1 }}>
           {label}
         </Text>
       )}
@@ -98,6 +94,7 @@ export function Input({
           placeholderTextColor="#C0BAB5"
           autoCapitalize={props.autoCapitalize ?? 'none'}
           autoCorrect={props.autoCorrect ?? false}
+          accessibilityLabel={label}
         />
 
         {secure && (
@@ -107,6 +104,8 @@ export function Input({
               bounce(eyeScale);
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
           >
             <Animated.View style={{ transform: [{ scale: eyeScale }] }}>
               <Ionicons

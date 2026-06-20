@@ -9,6 +9,7 @@ import { proApi } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
+import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 
 type Service = {
   id: number;
@@ -18,6 +19,14 @@ type Service = {
   duration_minutes: number;
   active?: boolean;
 };
+
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m}`;
+}
 
 export default function ServicesScreen() {
   const insets = useSafeAreaInsets();
@@ -108,7 +117,7 @@ export default function ServicesScreen() {
         <FlatList
           data={services}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
           showsVerticalScrollIndicator={false}
           refreshing={false}
           onRefresh={refetch}
@@ -177,7 +186,7 @@ export default function ServicesScreen() {
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <Ionicons name="time-outline" size={13} color={Colors.mutedForeground} />
                         <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
-                          {item.duration_minutes} min
+                          {formatDuration(item.duration_minutes)}
                         </Text>
                       </View>
                     </View>
@@ -204,7 +213,7 @@ export default function ServicesScreen() {
                     <Switch
                       value={!inactive}
                       onValueChange={(val) => toggleMutation.mutate({ id: item.id, active: val })}
-                      trackColor={{ false: "#E5E7EB", true: Colors.primary }}
+                      trackColor={{ false: Colors.border, true: Colors.primary }}
                       thumbColor="#fff"
                       style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
                     />
@@ -213,7 +222,9 @@ export default function ServicesScreen() {
                   {/* Dupliquer */}
                   <Pressable
                     onPress={() => duplicateMutation.mutate(item.id)}
-                    style={{ padding: 12, borderLeftWidth: 1, borderLeftColor: Colors.border }}
+                    accessibilityLabel="Dupliquer la prestation"
+                    accessibilityRole="button"
+                    style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
                   >
                     <Ionicons name="copy-outline" size={18} color={Colors.mutedForeground} />
                   </Pressable>
@@ -221,7 +232,9 @@ export default function ServicesScreen() {
                   {/* Modifier */}
                   <Pressable
                     onPress={() => router.push(`/(pro)/(profile)/service-form?id=${item.id}`)}
-                    style={{ padding: 12, borderLeftWidth: 1, borderLeftColor: Colors.border }}
+                    accessibilityLabel="Modifier la prestation"
+                    accessibilityRole="button"
+                    style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
                   >
                     <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
                   </Pressable>
@@ -229,16 +242,18 @@ export default function ServicesScreen() {
                   {/* Supprimer */}
                   <Pressable
                     onPress={() =>
-                      Alert.alert("Supprimer", `Supprimer "${item.name}" ?`, [
-                        { text: "Annuler", style: "cancel" },
-                        {
-                          text: "Supprimer",
-                          style: "destructive",
-                          onPress: () => deleteMutation.mutate(item.id),
-                        },
-                      ])
+                      Alert.alert(
+                        "Supprimer la prestation",
+                        `Supprimer "${item.name}" ? Les réservations existantes ne seront pas affectées.`,
+                        [
+                          { text: "Annuler", style: "cancel" },
+                          { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+                        ]
+                      )
                     }
-                    style={{ padding: 12, borderLeftWidth: 1, borderLeftColor: Colors.border }}
+                    accessibilityLabel="Supprimer la prestation"
+                    accessibilityRole="button"
+                    style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
                   >
                     <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
                   </Pressable>

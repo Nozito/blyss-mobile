@@ -16,14 +16,16 @@ import { adminApi, AdminUser } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Colors } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
+import { ADMIN } from "@/constants/adminTheme";
+import { useScrollToTop } from "@react-navigation/native";
 
 // ── Dark design tokens ────────────────────────────────────────────────────────
-const BG      = "#0A0A0F";
-const CARD_BG = "rgba(255,255,255,0.05)";
-const BORDER  = "rgba(255,255,255,0.09)";
-const TEXT1   = "#FFFFFF";
-const TEXT2   = "rgba(255,255,255,0.55)";
-const TEXT3   = "rgba(255,255,255,0.35)";
+const BG      = ADMIN.bg;
+const CARD_BG = ADMIN.surface;
+const BORDER  = ADMIN.border;
+const TEXT1   = ADMIN.text;
+const TEXT2   = ADMIN.textSub;
+const TEXT3   = ADMIN.textMuted;
 
 // ── Types & constants (unchanged logic) ───────────────────────────────────────
 type RoleFilter = "all" | "pro" | "client" | "banned";
@@ -585,6 +587,8 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminUsersScreen() {
   const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList>(null);
+  useScrollToTop(listRef);
   const qc = useQueryClient();
   const [search, setSearch]             = useState("");
   const [roleFilter, setRoleFilter]     = useState<RoleFilter>("all");
@@ -609,6 +613,7 @@ export default function AdminUsersScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     },
+    onError: () => Alert.alert("Erreur", "Impossible de bannir cet utilisateur."),
   });
   const deleteMut = useMutation({
     mutationFn: (id: number) => adminApi.deleteUser(id),
@@ -616,6 +621,7 @@ export default function AdminUsersScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     },
+    onError: () => Alert.alert("Erreur", "Impossible de supprimer cet utilisateur."),
   });
 
   const users       = (data?.data as AdminUser[] | undefined) ?? [];
@@ -801,6 +807,7 @@ export default function AdminUsersScreen() {
           <UserSkeleton />
         ) : (
           <FlatList
+            ref={listRef}
             data={listData()}
             keyExtractor={(item) => item._type === "header" ? `h-${item.label}` : String(item.data.id)}
             renderItem={renderItem}

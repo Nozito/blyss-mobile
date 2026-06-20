@@ -5,6 +5,7 @@ import {
   Pressable,
   Animated,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -38,19 +39,26 @@ export default function ForgotPasswordScreen() {
   const [sent, setSent] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const handleSubmit = async () => {
     if (!email.trim()) return;
+    if (!EMAIL_REGEX.test(email.trim())) {
+      Alert.alert("Email invalide", "Saisis une adresse email valide.");
+      return;
+    }
     setIsSending(true);
     try {
-      // Always show success — don't reveal whether the email exists (security best practice)
       await fetch(`${API_URL}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      }).catch(() => {});
+      });
+      setSent(true);
+    } catch {
+      Alert.alert("Erreur de connexion", "Impossible d'envoyer l'email. Vérifie ta connexion internet.");
     } finally {
       setIsSending(false);
-      setSent(true);
     }
   };
 

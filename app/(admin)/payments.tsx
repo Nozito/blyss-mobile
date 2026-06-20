@@ -13,6 +13,7 @@ import * as Sharing from "expo-sharing";
 import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
+import { useScrollToTop } from "@react-navigation/native";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -119,13 +120,15 @@ function TxCard({
 
 export default function AdminPaymentsScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const qc     = useQueryClient();
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<TxFilter>("all");
   const [refreshing, setRefreshing]     = useState(false);
   const [exporting, setExporting]       = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-payments"],
     queryFn:  () => adminApi.getPayments(),
     staleTime: 2 * 60_000,
@@ -235,13 +238,29 @@ export default function AdminPaymentsScreen() {
     );
   }
 
+  if (isError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: A_BG, alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <Ionicons name="cloud-offline-outline" size={40} color="rgba(255,255,255,0.3)" />
+        <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Impossible de charger les paiements.</Text>
+        <Pressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.1)" }}>
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Réessayer</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: A_BG }}>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 90, paddingHorizontal: 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} colors={[Colors.admin]} />}
       >
+        {/* Page title */}
+        <Text style={{ fontSize: 32, fontWeight: "900", color: ADMIN.text, letterSpacing: -1, marginBottom: 16 }}>Paiements</Text>
+
         {/* Hero CA total */}
         <LinearGradient
           colors={["#0F0800", "#1C0F00", "#0F0800"]}

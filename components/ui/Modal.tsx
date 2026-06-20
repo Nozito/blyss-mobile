@@ -116,7 +116,7 @@ export function Modal({
       statusBarTranslucent
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
         {/* Overlay fixe — ne bouge JAMAIS */}
@@ -177,6 +177,9 @@ export function Modal({
                   backgroundColor: "white",
                   borderRadius: 24,
                   overflow: "hidden",
+                  maxWidth: 500,
+                  alignSelf: "center",
+                  width: "100%",
                 },
               ]}
             >

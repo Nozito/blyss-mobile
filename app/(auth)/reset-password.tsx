@@ -27,9 +27,11 @@ export default function ResetPasswordScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,128}$/;
+
   const handleReset = async () => {
-    if (!password || password.length < 8) {
-      Alert.alert("Erreur", "Le mot de passe doit contenir au moins 8 caractères.");
+    if (!password || !PASSWORD_REGEX.test(password)) {
+      Alert.alert("Erreur", "Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.");
       return;
     }
     if (password !== confirm) {

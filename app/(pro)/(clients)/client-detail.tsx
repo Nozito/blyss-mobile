@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { Colors } from "@/constants/colors";
+import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 type Client = {
@@ -63,7 +64,7 @@ export default function ClientDetailScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [initial, setInitial] = useState({ notes: "", allergies: "", shape: "", style: "", patchTest: false });
 
-  const { data: clientsData } = useQuery({
+  const { data: clientsData, isLoading: loadingClients } = useQuery({
     queryKey: ["pro-clients"],
     queryFn: () => proApi.getClients(),
   });
@@ -79,7 +80,7 @@ export default function ClientDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-clients"] });
       qc.invalidateQueries({ queryKey: ["blocked-clients"] });
-      router.navigate("/(pro)/clients");
+      router.back();
     },
   });
 
@@ -117,24 +118,29 @@ export default function ClientDetailScreen() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    const res = await nailTechApi.updateClientNotes(Number(clientId), {
-      notes,
-      allergies,
-      preferred_shape: shape,
-      preferred_style: style,
-      patch_test_done: patchTest,
-    });
-    setIsSaving(false);
-    if (res.success) {
-      qc.invalidateQueries({ queryKey: ["client-notes", clientId] });
-      setInitial({ notes, allergies, shape, style, patchTest });
-      setHasChanges(false);
-    } else {
+    try {
+      const res = await nailTechApi.updateClientNotes(Number(clientId), {
+        notes,
+        allergies,
+        preferred_shape: shape,
+        preferred_style: style,
+        patch_test_done: patchTest,
+      });
+      if (res.success) {
+        qc.invalidateQueries({ queryKey: ["client-notes", clientId] });
+        setInitial({ notes, allergies, shape, style, patchTest });
+        setHasChanges(false);
+      } else {
+        Alert.alert("Erreur", "Impossible de sauvegarder les notes.");
+      }
+    } catch {
       Alert.alert("Erreur", "Impossible de sauvegarder les notes.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (!client) {
+  if (loadingNotes || (loadingClients && !notesData)) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={Colors.primary} />
@@ -142,12 +148,21 @@ export default function ClientDetailScreen() {
     );
   }
 
+  if (!notesData?.data && !client) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <Ionicons name="person-outline" size={48} color={Colors.border} />
+        <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Cliente introuvable</Text>
+      </View>
+    );
+  }
+
   const noteInfo = notesData?.data;
   const displayName = (noteInfo?.first_name && noteInfo?.last_name)
     ? `${noteInfo.first_name} ${noteInfo.last_name}`
-    : client.name;
+    : client?.name ?? "";
   const displayEmail = noteInfo?.email ?? "";
-  const displayPhone = noteInfo?.phone_number ?? client.phone ?? null;
+  const displayPhone = noteInfo?.phone_number ?? client?.phone ?? null;
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -155,7 +170,7 @@ export default function ClientDetailScreen() {
         contentContainerStyle={{
           paddingTop: insets.top + 16,
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 120,
+          paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -163,7 +178,7 @@ export default function ClientDetailScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <AnimatedIconButton
-            onPress={() => router.navigate("/(pro)/clients")}
+            onPress={() => router.back()}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
@@ -251,11 +266,11 @@ export default function ClientDetailScreen() {
           <View style={{ flex: 1, alignItems: "center", paddingVertical: 18 }}>
             <Ionicons name="calendar-outline" size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
             <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground }}>
-              {client.totalVisits ?? 0}
+              {client?.totalVisits ?? 0}
             </Text>
             <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5 }}>VISITES</Text>
           </View>
-          {client.lastVisit ? (
+          {client?.lastVisit ? (
             <>
               <View style={{ width: 1, backgroundColor: Colors.border, marginVertical: 12 }} />
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 18, paddingHorizontal: 10 }}>

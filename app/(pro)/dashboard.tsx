@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,10 +16,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 
 type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
@@ -62,6 +64,8 @@ export default function ProDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockDate, setBlockDate] = useState<Date>(new Date());
@@ -158,10 +162,11 @@ export default function ProDashboard() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 20,
-        paddingBottom: insets.bottom + 100,
+        paddingTop: insets.top + 16,
+        paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
         paddingHorizontal: 20,
         gap: 16,
       }}
@@ -577,7 +582,7 @@ export default function ProDashboard() {
               return (
                 <Pressable
                   key={client.id}
-                  onPress={() => router.push(`/(pro)/client-detail?clientId=${client.id}`)}
+                  onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.id}`)}
                   style={{
                     borderRadius: 12,
                     padding: 16,
