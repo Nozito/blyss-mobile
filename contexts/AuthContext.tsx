@@ -74,21 +74,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initAuth = async () => {
       setIsLoading(true);
       try {
-        // 1. Charge le cache immédiatement pour affichage instantané
-        const cached = await storage.getUserCache();
-        if (cached) {
-          setUser(cached as unknown as User);
-        }
+        // 1. Lectures parallèles — évite la latence séquentielle de SecureStore
+        const [cached, accessToken] = await Promise.all([
+          storage.getUserCache(),
+          storage.getAccessToken(),
+        ]);
 
-        // 2. Vérifie que le token existe
-        const accessToken = await storage.getAccessToken();
+        // 2. Pas de token → non connecté
         if (!accessToken) {
           setUser(null);
           return;
         }
 
-        // 3. Appelle getProfile() pour valider/rafraîchir (5s max)
-        const response = await withTimeout(authApi.getProfile(), 5000);
+        // 3. Cache valide → navigation instantanée + refresh silencieux en arrière-plan
+        if (cached) {
+          setUser(cached as unknown as User);
+          setIsLoading(false); // Débloque la navigation immédiatement
+          // Refresh en arrière-plan — ne bloque pas l'affichage
+          withTimeout(authApi.getProfile(), 3000)
+            .then((response) => {
+              if (!_loginSucceeded.current && response.success && response.data) {
+                setUser(response.data);
+                void storage.setUserCache(toSafeCache(response.data));
+                void rcLogIn(response.data.id);
+              }
+            })
+            .catch(() => {});
+          return;
+        }
+
+        // 4. Pas de cache (expiration ou 1ère install) → attend le réseau (3s max)
+        const response = await withTimeout(authApi.getProfile(), 3000);
         if (_loginSucceeded.current) return;
 
         if (response.success && response.data) {
@@ -96,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await storage.setUserCache(toSafeCache(response.data));
           await rcLogIn(response.data.id);
         }
-        // Si !response.success → on garde le cache, l'intercepteur axios gère le refresh
+        // Si !response.success → l'intercepteur axios gère le refresh token
       } catch {
         // Erreur réseau / timeout → on garde le cache, PAS de clearAll()
       } finally {

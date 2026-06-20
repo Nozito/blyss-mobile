@@ -52,7 +52,9 @@ function AppContent() {
 
   useEffect(() => {
     if (!isLoading) {
-      SplashScreen.hideAsync().then(() => setAppReady(true));
+      // setAppReady immédiat — ne pas bloquer la navigation sur l'animation native
+      setAppReady(true);
+      void SplashScreen.hideAsync().catch(() => {});
     }
   }, [isLoading]);
 
