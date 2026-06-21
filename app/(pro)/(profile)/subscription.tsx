@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi } from "@/lib/api";
+import { Fonts } from "@/constants/fonts";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
@@ -51,11 +52,11 @@ const PLAN_CONFIG: Record<RCPlan, {
     color: Colors.primary,
     icon: "rocket-outline",
     features: [
-      { text: "Réservation en ligne", icon: "calendar-outline" },
-      { text: "Gestion des rendez-vous", icon: "grid-outline" },
-      { text: "Notifications clientes", icon: "notifications-outline" },
-      { text: "Tableau de bord", icon: "bar-chart-outline" },
-      { text: "Profil public Blyss", icon: "globe-outline" },
+      { text: "Tes clientes réservent sans DM ni appel", icon: "calendar-outline" },
+      { text: "Rappels automatiques — zéro lapin", icon: "notifications-outline" },
+      { text: "Profil public visible par toutes tes clientes", icon: "globe-outline" },
+      { text: "Dashboard pour suivre ta semaine", icon: "bar-chart-outline" },
+      { text: "Paiement en ligne sécurisé", icon: "card-outline" },
     ],
   },
   serenite: {
@@ -65,23 +66,23 @@ const PLAN_CONFIG: Record<RCPlan, {
     icon: "shield-checkmark-outline",
     features: [
       { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
-      { text: "Module finance", icon: "receipt-outline" },
-      { text: "Statistiques & Facturation", icon: "analytics-outline" },
-      { text: "Portfolio photos", icon: "camera-outline" },
-      { text: "Rappels automatiques", icon: "notifications-outline" },
+      { text: "CA en temps réel + facturation automatique", icon: "receipt-outline" },
+      { text: "Portfolio photos pour attirer de nouvelles clientes", icon: "camera-outline" },
+      { text: "Statistiques détaillées de ton activité", icon: "analytics-outline" },
+      { text: "Rappels post-prestation pour fidéliser", icon: "heart-outline" },
     ],
   },
   signature: {
     label: "Signature",
     fallbackMonthly: 49.9,
-    color: Colors.secondary ?? "#F59E0B",
+    color: Colors.secondary,
     icon: "diamond-outline",
     features: [
       { text: "Tout Sérénité inclus", icon: "checkmark-circle-outline" },
-      { text: "Visibilité premium", icon: "star-outline" },
-      { text: "Encaissement en ligne", icon: "card-outline" },
-      { text: "Rappels post-prestation", icon: "heart-outline" },
-      { text: "Support prioritaire", icon: "headset-outline" },
+      { text: "Mise en avant prioritaire dans la recherche", icon: "star-outline" },
+      { text: "Encaissement à distance depuis ton profil", icon: "card-outline" },
+      { text: "Badge Pro Signature visible par tes clientes", icon: "diamond-outline" },
+      { text: "Support prioritaire 7j/7", icon: "headset-outline" },
     ],
   },
 };
@@ -109,7 +110,7 @@ export default function SubscriptionScreen() {
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
   const [purchasing, setPurchasing] = useState<RCPlan | null>(null);
 
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, logout } = useAuth();
   const { packages, purchase, restorePurchases, activePlan, isReady, refreshActivePlan } = useRevenueCat();
 
   // hasActiveSubscription basé sur RC, pas sur user.pro_status (backend peut être lent)
@@ -262,6 +263,35 @@ export default function SubscriptionScreen() {
           <LoadingSpinner />
         ) : (
           <>
+            {!subscription && (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{
+                  fontSize: 26, fontWeight: "900", color: Colors.foreground,
+                  letterSpacing: -0.8, lineHeight: 33, marginBottom: 8,
+                }}>
+                  Ton activité mérite{"\n"}
+                  <Text style={{ color: Colors.primary, fontFamily: Fonts.serifItalic }}>
+                    mieux qu'un agenda papier
+                  </Text>
+                </Text>
+                <Text style={{ fontSize: 14, color: Colors.mutedForeground, lineHeight: 22, marginBottom: 16 }}>
+                  1 rendez-vous suffit à rentabiliser ton abonnement mensuel.
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {["Annulable à tout moment", "Paiement Apple sécurisé", "Remboursée sous 14j"].map((label) => (
+                    <View key={label} style={{
+                      flexDirection: "row", alignItems: "center", gap: 5,
+                      backgroundColor: Colors.muted, borderRadius: 20,
+                      paddingHorizontal: 10, paddingVertical: 5,
+                    }}>
+                      <Ionicons name="checkmark-circle" size={13} color={Colors.success} />
+                      <Text style={{ fontSize: 12, color: Colors.foreground, fontWeight: "500" }}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {subscription ? (
               <View style={{
                 backgroundColor: Colors.card, borderRadius: 20,
@@ -313,22 +343,7 @@ export default function SubscriptionScreen() {
                   </Pressable>
                 )}
               </View>
-            ) : (
-              <View style={{
-                backgroundColor: `${Colors.warning}15`, borderRadius: 16,
-                borderWidth: 1, borderColor: `${Colors.warning}40`,
-                padding: 16, marginBottom: 20,
-                flexDirection: "row", alignItems: "center", gap: 12,
-              }}>
-                <Ionicons name="alert-circle-outline" size={22} color={Colors.warning} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>Aucun abonnement actif</Text>
-                  <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>
-                    Choisis un plan pour accéder à toutes les fonctionnalités
-                  </Text>
-                </View>
-              </View>
-            )}
+            ) : null}
 
             <View style={{
               flexDirection: "row", backgroundColor: Colors.card,
@@ -356,7 +371,7 @@ export default function SubscriptionScreen() {
                         backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success,
                         borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
                       }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>-{savings}%</Text>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>2 mois offerts</Text>
                       </View>
                     )}
                   </Pressable>
@@ -373,7 +388,7 @@ export default function SubscriptionScreen() {
               }}>
                 <Ionicons name="gift-outline" size={18} color={Colors.success} />
                 <Text style={{ flex: 1, fontSize: 13, color: Colors.success, fontWeight: "500" }}>
-                  2 mois offerts avec l'abonnement annuel
+                  2 mois offerts · soit 2 prestations économisées sur ton abonnement
                 </Text>
               </View>
             )}
@@ -511,6 +526,20 @@ export default function SubscriptionScreen() {
             <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", marginTop: 8, lineHeight: 16 }}>
               Annule à tout moment • Paiement sécurisé
             </Text>
+
+            {!hasActiveSubscription && (
+              <Pressable
+                onPress={async () => {
+                  await logout();
+                  router.replace("/(auth)/welcome");
+                }}
+                style={{ alignItems: "center", paddingVertical: 16 }}
+              >
+                <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                  Pas maintenant — se déconnecter
+                </Text>
+              </Pressable>
+            )}
           </>
         )}
       </ScrollView>

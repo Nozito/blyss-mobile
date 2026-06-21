@@ -32,6 +32,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Blyss accède à votre galerie pour votre photo de profil.",
       NSUserNotificationsUsageDescription:
         "Blyss vous envoie des rappels pour vos rendez-vous.",
+      // RevenueCat SDK embeds ATT-capable code on iOS — required since iOS 14
+      NSUserTrackingUsageDescription:
+        "Blyss utilise cet identifiant pour personnaliser ton expérience et améliorer nos services.",
     },
   },
   android: {

@@ -6,10 +6,11 @@ import {
   Pressable,
   Animated,
   StyleSheet,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { Fonts } from "@/constants/fonts";
 import * as Haptics from "expo-haptics";
 
 // ─── Pills data ───────────────────────────────────────────────────────────────
@@ -194,7 +195,7 @@ export default function WelcomeScreen() {
       >
         <Pressable onPressIn={pressIn} onPressOut={pressOut} onPress={() => router.push("/(auth)/register")}>
           <Animated.View style={[styles.ctaWrap, { transform: [{ scale: ctaScale }] }]}>
-            <Text style={styles.ctaText}>Commencer gratuitement</Text>
+            <Text style={styles.ctaText}>Rejoindre Blyss</Text>
           </Animated.View>
         </Pressable>
 
@@ -204,9 +205,9 @@ export default function WelcomeScreen() {
 
         <Text style={styles.legal}>
           {"En continuant tu acceptes nos "}
-          <Text style={styles.legalLink}>CGU</Text>
+          <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>CGU</Text>
           {" et la "}
-          <Text style={styles.legalLink}>Politique de confidentialité</Text>
+          <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>Politique de confidentialité</Text>
         </Text>
       </Animated.View>
 
@@ -251,8 +252,7 @@ const styles = StyleSheet.create({
     color: "#FF5EA0",
     letterSpacing: -1.4,
     lineHeight: 54,
-    fontStyle: "italic",
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontFamily: Fonts.serifItalic,
   },
   subtitle: {
     marginTop: 14,

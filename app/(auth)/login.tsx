@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { Fonts } from "@/constants/fonts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -257,9 +259,9 @@ export default function LoginScreen() {
           {/* ── Légal ───────────────────────────────────────────────────────── */}
           <Text style={styles.legal}>
             {"En continuant, tu acceptes nos "}
-            <Text style={styles.legalLink}>CGU</Text>
+            <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>CGU</Text>
             {" et la "}
-            <Text style={styles.legalLink}>Politique de confidentialité</Text>
+            <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>Politique de confidentialité</Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -312,8 +314,7 @@ const styles = StyleSheet.create({
     color: "#FF5EA0",
     letterSpacing: -1,
     lineHeight: 44,
-    fontStyle: "italic",
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontFamily: Fonts.serifItalic,
   },
   subtitle: {
     fontSize: 15,

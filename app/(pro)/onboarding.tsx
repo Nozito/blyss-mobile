@@ -22,23 +22,23 @@ const SLIDES = [
     description:
       "Crée tes créneaux, accepte les réservations en ligne. Fini les allers-retours par messages.",
     color: Colors.primary,
-    bg: "#FFF0F5",
+    bg: Colors.primaryLight,
   },
   {
     icon: "people-outline" as const,
     title: "Tes clientes",
     description:
       "Retrouve l'historique de chaque cliente, ses préférences et tes notes en un seul endroit.",
-    color: "#7C3AED",
-    bg: "#F5F3FF",
+    color: Colors.primary,
+    bg: Colors.primaryLight,
   },
   {
-    icon: "card-outline" as const,
-    title: "Tes encaissements",
+    icon: "rocket-outline" as const,
+    title: "Active ton compte Pro",
     description:
-      "Suis ton chiffre d'affaires en temps réel et envoie tes factures en un tap.",
-    color: "#10B981",
-    bg: "#ECFDF5",
+      "Choisis ta formule Blyss et commence à recevoir des réservations dès aujourd'hui. 1 rendez-vous rembourse ton abonnement.",
+    color: Colors.primary,
+    bg: Colors.primaryLight,
   },
 ];
 

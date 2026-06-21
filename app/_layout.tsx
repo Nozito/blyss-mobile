@@ -3,6 +3,7 @@ import "../global.css";
 import React, { useEffect, useRef, useState } from "react";
 import { View, Image, Animated, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
+import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -44,19 +45,19 @@ function AnimatedSplash({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ── App content — attend que l'auth soit prête ────────────────────────────────
+// ── App content — attend que l'auth + les fonts soient prêts ─────────────────
 function AppContent() {
   const { isLoading } = useAuth();
+  const [fontsLoaded] = useFonts({ PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic });
   const [appReady, setAppReady] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
-    if (!isLoading) {
-      // setAppReady immédiat — ne pas bloquer la navigation sur l'animation native
+    if (!isLoading && fontsLoaded) {
       setAppReady(true);
       void SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isLoading]);
+  }, [isLoading, fontsLoaded]);
 
   // Pendant la restauration de session : splash statique (zéro flash)
   if (!appReady) {

@@ -9,6 +9,7 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -132,9 +133,9 @@ function PasswordStep({
           </View>
           <Text className="text-sm text-muted-foreground flex-1 leading-5">
             J'accepte les{" "}
-            <Text className="text-primary font-medium">Conditions générales</Text>
+            <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>Conditions générales</Text>
             {" "}et la{" "}
-            <Text className="text-primary font-medium">Politique de confidentialité</Text>
+            <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>Politique de confidentialité</Text>
           </Text>
         </Pressable>
       </View>
@@ -325,8 +326,19 @@ export default function RegisterScreen() {
                   <Text className="text-sm text-muted-foreground mt-0.5">
                     {r === "client"
                       ? "Je réserve des prestations manucure"
-                      : "Je propose mes prestations sur Blyss"}
+                      : "Agenda, réservations, paiements — tout en un"}
                   </Text>
+                  {r === "pro" && (
+                    <View style={{
+                      marginTop: 6, alignSelf: "flex-start",
+                      backgroundColor: "rgba(255,94,160,0.12)", borderRadius: 8,
+                      paddingHorizontal: 8, paddingVertical: 3,
+                    }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#FF5EA0" }}>
+                        Pour les pros du nail art
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <View
                   className={[
@@ -492,7 +504,7 @@ export default function RegisterScreen() {
             <View>
               <Text className="text-3xl font-black text-foreground">Ton Instagram</Text>
               <Text className="text-muted-foreground mt-2">
-                Aide les clientes à te découvrir
+                Tes clientes pourront voir ton travail avant de réserver
               </Text>
             </View>
             <Input
