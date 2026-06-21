@@ -11,7 +11,7 @@ export default function ClientLayout() {
   const { unreadCount } = useNotifications();
 
   if (isLoading) return <LoadingSpinner fullScreen />;
-  if (!user) return <Redirect href="/(auth)/login" />;
+  if (!user) return <Redirect href="/(auth)/welcome" />;
   if (user.role !== "client" && !user.is_admin) return <Redirect href="/(pro)/dashboard" />;
 
   return (

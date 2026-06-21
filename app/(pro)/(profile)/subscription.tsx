@@ -529,10 +529,7 @@ export default function SubscriptionScreen() {
 
             {!hasActiveSubscription && (
               <Pressable
-                onPress={async () => {
-                  await logout();
-                  router.replace("/(auth)/welcome");
-                }}
+                onPress={() => { void logout(); }}
                 style={{ alignItems: "center", paddingVertical: 16 }}
               >
                 <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>

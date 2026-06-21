@@ -28,7 +28,7 @@ export default function ProLayout() {
   }, [authLoading, rcReady, user?.id, isAdmin, hasActiveSub]);
 
   if (authLoading || !rcReady) return <LoadingSpinner fullScreen />;
-  if (!user) return <Redirect href="/(auth)/login" />;
+  if (!user) return <Redirect href="/(auth)/welcome" />;
   if (user.role !== "pro" && !isAdmin) return <Redirect href="/(client)" />;
 
   // NativeTabs MUST be mounted before the router.replace effect fires.
