@@ -20,7 +20,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     requireFullScreen: true,
     userInterfaceStyle: "light",
-    bundleIdentifier: "blyss.app",
+    // Ancienne valeur : "blyss.app" — si App Store Connect est déjà enregistré sous cet ID, mettre à jour l'identifiant dans ASC avant de soumettre
+    bundleIdentifier: "app.blyss.mobile",
     buildNumber: "1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -83,7 +84,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "@stripe/stripe-react-native",
       {
-        merchantIdentifier: "merchant.com.blyss.app",
+        merchantIdentifier: "merchant.app.blyss.mobile",
         enableGooglePay: true,
       },
     ],
