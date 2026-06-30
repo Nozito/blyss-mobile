@@ -7,7 +7,6 @@ import {
   Pressable,
   Switch,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +17,7 @@ import { proApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
 
@@ -61,6 +61,7 @@ export default function ServiceFormScreen() {
   const isEdit = !!id;
   const initialized = useRef(false);
   const [isActive, setIsActive] = useState(true);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { data: servicesData } = useQuery({
     queryKey: ["pro-services"],
@@ -101,7 +102,7 @@ export default function ServiceFormScreen() {
       qc.invalidateQueries({ queryKey: ["pro-services"] });
       router.back();
     },
-    onError: () => Alert.alert("Erreur", "Impossible de créer la prestation."),
+    onError: () => setFormError("Impossible de créer la prestation."),
   });
 
   const updateMutation = useMutation({
@@ -111,18 +112,19 @@ export default function ServiceFormScreen() {
       qc.invalidateQueries({ queryKey: ["pro-services"] });
       router.back();
     },
-    onError: () => Alert.alert("Erreur", "Impossible de modifier la prestation."),
+    onError: () => setFormError("Impossible de modifier la prestation."),
   });
 
   const onSubmit = (fd: FormData) => {
+    setFormError(null);
     const price = parseFloat(fd.price);
     const duration = parseInt(fd.duration_minutes, 10);
     if (isNaN(price) || price <= 0) {
-      Alert.alert("Erreur", "Le prix doit être un nombre positif.");
+      setFormError("Le prix doit être un nombre positif.");
       return;
     }
     if (isNaN(duration) || duration <= 0) {
-      Alert.alert("Erreur", "La durée doit être un nombre positif.");
+      setFormError("La durée doit être un nombre positif.");
       return;
     }
     const payload = {
@@ -203,19 +205,19 @@ export default function ServiceFormScreen() {
             name="description"
             render={({ field: { onChange, value } }) => (
               <View style={{
-                backgroundColor: "#F8F5F2", borderRadius: 14,
-                borderWidth: 1.5, borderColor: "#E4E0DC",
+                backgroundColor: Colors.cream, borderRadius: 14,
+                borderWidth: 1.5, borderColor: Colors.border,
                 paddingHorizontal: 14, paddingVertical: 12, minHeight: 90,
               }}>
                 <TextInput
                   value={value}
                   onChangeText={onChange}
                   placeholder="Décris ta prestation : technique, matériaux, résultat..."
-                  placeholderTextColor="#C0BAB5"
+                  placeholderTextColor={Colors.inputPlaceholder}
                   multiline
                   textAlignVertical="top"
                   maxLength={500}
-                  style={{ fontSize: 14.5, color: "#09090B", padding: 0 }}
+                  style={{ fontSize: 14.5, color: Colors.foreground, padding: 0 }}
                 />
               </View>
             )}
@@ -255,8 +257,8 @@ export default function ServiceFormScreen() {
                   style={{
                     flex: 1, paddingVertical: 10, borderRadius: 12,
                     borderWidth: 1.5,
-                    borderColor: selected ? Colors.primary : "#E4E0DC",
-                    backgroundColor: selected ? `${Colors.primary}15` : "#F8F5F2",
+                    borderColor: selected ? Colors.primary : Colors.border,
+                    backgroundColor: selected ? `${Colors.primary}15` : Colors.cream,
                     alignItems: "center",
                   }}
                 >
@@ -314,7 +316,7 @@ export default function ServiceFormScreen() {
             value={isActive}
             onValueChange={setIsActive}
             trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor="#fff"
+            thumbColor={Colors.white}
           />
         </View>
       </ScrollView>
@@ -326,6 +328,7 @@ export default function ServiceFormScreen() {
         paddingBottom: insets.bottom + 96,
         backgroundColor: "rgba(255,234,241,0.97)",
       }}>
+        {formError && <View style={{ marginBottom: 10 }}><ErrorMessage message={formError} /></View>}
         <Pressable
           onPress={handleSubmit(onSubmit)}
           disabled={isLoading}
@@ -341,11 +344,11 @@ export default function ServiceFormScreen() {
           }}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
             <>
-              <Ionicons name={isEdit ? "save-outline" : "add-circle-outline"} size={20} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+              <Ionicons name={isEdit ? "save-outline" : "add-circle-outline"} size={20} color={Colors.white} />
+              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>
                 {isEdit ? "Enregistrer les modifications" : "Créer la prestation"}
               </Text>
             </>

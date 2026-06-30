@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  ActivityIndicator, Alert, Platform, Image,
+  ActivityIndicator, Platform, Image,
 } from "react-native";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -14,11 +14,12 @@ import * as Haptics from "expo-haptics";
 import { adminApi, AdminUser } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
 const BORDER = ADMIN.border;
-const TEXT1  = "#fff";
+const TEXT1  = Colors.white;
 const TEXT2  = "rgba(255,255,255,0.5)";
 const TEXT3  = "rgba(255,255,255,0.28)";
 const MUTED  = "rgba(255,255,255,0.07)";
@@ -40,7 +41,7 @@ function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
     : null;
   const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || "?";
   const roleColor = user.role === "pro" ? ADMIN.accent : Colors.info;
-  const statusColor = user.is_active ? Colors.success : "#EF4444";
+  const statusColor = user.is_active ? Colors.success : Colors.destructive;
 
   return (
     <View style={{
@@ -203,7 +204,8 @@ export default function AdminNotificationsScreen() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [sentCount, setSentCount] = useState<number | null>(null);
+  const [sentCount, setSentCount]   = useState<number | null>(null);
+  const [sendError, setSendError]   = useState<string | null>(null);
 
   const sendMut = useMutation({
     mutationFn: () =>
@@ -217,14 +219,14 @@ export default function AdminNotificationsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const sent = res.data?.sent ?? 0;
       setSentCount(sent);
+      setSendError(null);
       setTitle("");
       setBody("");
-      Alert.alert("Envoyée", `Push envoyée à ${sent} destinataire(s).`);
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
     },
     onError: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert("Erreur", "Impossible d'envoyer la notification.");
+      setSendError("Impossible d'envoyer la notification.");
     },
   });
 
@@ -353,9 +355,11 @@ export default function AdminNotificationsScreen() {
       )}
 
       {/* ── Envoyer ── */}
+      {sendError && <View style={{ marginBottom: 12 }}><ErrorMessage message={sendError} /></View>}
       <Pressable
         onPress={() => {
           if (!canSend) return;
+          setSendError(null);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
           sendMut.mutate();
         }}
@@ -368,11 +372,11 @@ export default function AdminNotificationsScreen() {
         }}
       >
         {sendMut.isPending
-          ? <ActivityIndicator size="small" color="#fff" />
+          ? <ActivityIndicator size="small" color={Colors.white} />
           : (
             <>
-              <Ionicons name="send-outline" size={20} color="#fff" />
-              <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>
+              <Ionicons name="send-outline" size={20} color={Colors.white} />
+              <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white }}>
                 {target === "all" ? "Envoyer à tous"
                   : target === "pros" ? "Envoyer aux pros"
                   : target === "clients" ? "Envoyer aux clients"

@@ -52,10 +52,10 @@ export function Input({
 
   const borderColor = focusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [error ? '#EF4444' : '#E4E0DC', error ? '#EF4444' : Colors.primary],
+    outputRange: [error ? Colors.destructive : Colors.border, error ? Colors.destructive : Colors.primary],
   });
 
-  const iconColor = isFocused ? Colors.primary : '#A1A1AA';
+  const iconColor = isFocused ? Colors.primary : Colors.mutedForeground;
 
   return (
     <View style={{ gap: 6 }}>
@@ -71,7 +71,7 @@ export function Input({
           borderRadius: 14,
           borderWidth: 1.5,
           borderColor,
-          backgroundColor: isFocused ? '#FFFFFF' : '#F8F5F2',
+          backgroundColor: isFocused ? Colors.white : Colors.cream,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
@@ -90,8 +90,8 @@ export function Input({
           onFocus={handleFocus}
           onBlur={handleBlur}
           secureTextEntry={secure && !showPassword}
-          style={{ flex: 1, fontSize: 14.5, color: '#09090B', padding: 0, margin: 0 }}
-          placeholderTextColor="#C0BAB5"
+          style={{ flex: 1, fontSize: 14.5, color: Colors.foreground, padding: 0, margin: 0 }}
+          placeholderTextColor={Colors.inputPlaceholder}
           autoCapitalize={props.autoCapitalize ?? 'none'}
           autoCorrect={props.autoCorrect ?? false}
           accessibilityLabel={label}
@@ -121,12 +121,12 @@ export function Input({
       </Animated.View>
 
       {error && (
-        <Text style={{ fontSize: 11.5, color: '#EF4444', paddingLeft: 2, fontWeight: '500' }}>
+        <Text style={{ fontSize: 11.5, color: Colors.destructive, paddingLeft: 2, fontWeight: '500' }}>
           {error}
         </Text>
       )}
       {!error && hint && (
-        <Text style={{ fontSize: 11.5, color: '#A1A1AA', paddingLeft: 2 }}>
+        <Text style={{ fontSize: 11.5, color: Colors.mutedForeground, paddingLeft: 2 }}>
           {hint}
         </Text>
       )}

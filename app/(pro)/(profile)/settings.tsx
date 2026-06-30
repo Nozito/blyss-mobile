@@ -5,8 +5,8 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -15,12 +15,17 @@ import { useForm, Controller } from "react-hook-form";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import * as Haptics from "expo-haptics";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi, usersApi } from "@/lib/api";
+import { authApi, usersApi, proApi } from "@/lib/api";
+import { phoneSchema, bioSchema, getZodError } from "@/lib/validation";
 import { Input } from "@/components/ui/Input";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { usePro } from "@/hooks/usePro";
 import type { User } from "@/lib/api";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
@@ -36,6 +41,15 @@ export default function ProSettingsScreen() {
   const { user, refreshProfile } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isPro } = usePro();
+  const { data: subData } = useQuery({
+    queryKey: ["pro-subscription"],
+    queryFn: () => proApi.getSubscription(),
+    enabled: isPro,
+  });
+  const renewalDate = subData?.data?.endDate
+    ? new Date(subData.data.endDate).toLocaleDateString("fr-FR")
+    : null;
   const [saving, setSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -44,7 +58,8 @@ export default function ProSettingsScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]   = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const { control, handleSubmit } = useForm<Partial<User>>({
     defaultValues: {
@@ -63,6 +78,19 @@ export default function ProSettingsScreen() {
 
   const onSubmit = async (data: Partial<User>) => {
     setError(null);
+
+    // Validate phone format if provided
+    const phoneNum = (data.phone_number ?? "").replace(/\s/g, "");
+    if (phoneNum) {
+      const phoneErr = getZodError(phoneSchema, phoneNum);
+      if (phoneErr) { setError(phoneErr); return; }
+    }
+
+    // Validate bio length if provided
+    if (data.bio) {
+      const bioErr = getZodError(bioSchema, data.bio);
+      if (bioErr) { setError(bioErr); return; }
+    }
 
     const changingPassword = !!(currentPassword || newPassword || newPasswordConfirm);
     if (changingPassword) {
@@ -87,9 +115,8 @@ export default function ProSettingsScreen() {
         setNewPassword("");
         setNewPasswordConfirm("");
         if (changingPassword) {
-          Alert.alert("Mot de passe modifié", "Ton mot de passe a été mis à jour.");
+          setSuccess("Mot de passe mis à jour avec succès.");
         } else {
-          Alert.alert("Succès", "Profil mis à jour");
           router.back();
         }
       } else {
@@ -103,14 +130,14 @@ export default function ProSettingsScreen() {
   const handleExport = async () => {
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
-      Alert.alert("Export non disponible", "L'export n'est pas disponible sur cet appareil.");
+      setError("L'export n'est pas disponible sur cet appareil.");
       return;
     }
     setIsExporting(true);
     try {
       const res = await authApi.exportData();
       if (!res.success || !res.data) {
-        Alert.alert("Erreur", res.error ?? "Erreur lors de l'export.");
+        setError(res.error ?? "Erreur lors de l'export.");
         return;
       }
       const filename = `blyss-export-${new Date().toISOString().slice(0, 10)}.json`;
@@ -118,7 +145,7 @@ export default function ProSettingsScreen() {
       await FileSystem.writeAsStringAsync(fileUri, res.data, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(fileUri, { mimeType: "application/json", UTI: "public.json" });
     } catch {
-      Alert.alert("Erreur", "Impossible de générer l'export.");
+      setError("Impossible de générer l'export.");
     } finally {
       setIsExporting(false);
     }
@@ -129,14 +156,13 @@ export default function ProSettingsScreen() {
     try {
       const res = await authApi.deleteAccount();
       if (res.success) {
-        Alert.alert("Compte supprimé");
         await authApi.logout();
         router.replace("/(auth)/login");
       } else {
-        Alert.alert("Erreur", "Impossible de supprimer le compte");
+        setError("Impossible de supprimer le compte.");
       }
     } catch {
-      Alert.alert("Erreur", "Une erreur est survenue");
+      setError("Une erreur est survenue.");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -160,7 +186,7 @@ export default function ProSettingsScreen() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
         <AnimatedIconButton
           onPress={() => router.back()}
-          style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
+          style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
         </AnimatedIconButton>
@@ -170,10 +196,62 @@ export default function ProSettingsScreen() {
         </View>
       </View>
 
+      {/* ── ABONNEMENT ── */}
+      <View>
+        <SectionHeader icon="sparkles-outline" label="Abonnement" />
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
+          {isPro ? (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>Plan Pro actif</Text>
+                    <View style={{ backgroundColor: Colors.successLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.success }}>✦ Pro actif</Text>
+                    </View>
+                  </View>
+                  {renewalDate && (
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Renouvellement le {renewalDate}</Text>
+                  )}
+                </View>
+              </View>
+              <Pressable
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  void Linking.openURL("https://apps.apple.com/account/subscriptions");
+                }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
+              >
+                <Ionicons name="settings-outline" size={16} color={Colors.primary} />
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Gérer mon abonnement</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/(pro)/(profile)/subscription" as Parameters<typeof router.push>[0]);
+              }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 16 }}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.pro}18`, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="sparkles-outline" size={18} color={Colors.pro} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>Passer à Pro</Text>
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Débloquer toutes les fonctionnalités</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       {/* ── INFOS ACTIVITÉ ── */}
       <View>
         <SectionHeader icon="storefront-outline" label="Activité" />
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Controller
@@ -237,7 +315,7 @@ export default function ProSettingsScreen() {
       {/* ── SÉCURITÉ ── */}
       <View>
         <SectionHeader icon="lock-closed-outline" label="Sécurité" />
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
           <Input
             label="Ancien mot de passe"
             value={currentPassword}
@@ -278,10 +356,10 @@ export default function ProSettingsScreen() {
         </View>
       </View>
 
-      {/* Error banner */}
-      {error && (
-        <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#FECACA" }}>
-          <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "500" }}>{error}</Text>
+      {error && <ErrorMessage message={error} />}
+      {success && (
+        <View style={{ backgroundColor: `${Colors.success}12`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${Colors.success}30` }}>
+          <Text style={{ fontSize: 13, color: Colors.success, fontWeight: "600" }}>{success}</Text>
         </View>
       )}
 
@@ -294,15 +372,15 @@ export default function ProSettingsScreen() {
           style={{ height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
         >
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Enregistrer les modifications</Text>
+            <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>Enregistrer les modifications</Text>
           )}
         </LinearGradient>
       </Pressable>
 
       {/* ── DONNÉES & CONFIDENTIALITÉ ── */}
-      <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
+      <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
         <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
           Données & confidentialité
         </Text>
@@ -332,12 +410,12 @@ export default function ProSettingsScreen() {
             onPress={() => setShowDeleteConfirm(true)}
             style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
           >
-            <Ionicons name="trash-outline" size={16} color="#EF4444" />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: "#EF4444" }}>Supprimer mon compte</Text>
+            <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>Supprimer mon compte</Text>
           </Pressable>
         ) : (
-          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: "#FEF2F2", gap: 12 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: "#DC2626" }}>
+          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.destructiveLight, gap: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.destructiveText }}>
               Suppression définitive du compte
             </Text>
             <Text style={{ fontSize: 12, color: "#7F1D1D", lineHeight: 18 }}>
@@ -353,16 +431,16 @@ export default function ProSettingsScreen() {
               autoCorrect={false}
               style={{
                 height: 44, borderRadius: 10, borderWidth: 1.5,
-                borderColor: deleteConfirmText === "SUPPRIMER" ? "#EF4444" : "#FECACA",
-                backgroundColor: "#fff", paddingHorizontal: 14,
-                fontSize: 14, fontWeight: "700", color: "#DC2626",
+                borderColor: deleteConfirmText === "SUPPRIMER" ? Colors.destructive : "#FECACA",
+                backgroundColor: Colors.white, paddingHorizontal: 14,
+                fontSize: 14, fontWeight: "700", color: Colors.destructiveText,
                 letterSpacing: 1,
               }}
             />
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Pressable
                 onPress={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
               </Pressable>
@@ -370,15 +448,15 @@ export default function ProSettingsScreen() {
                 onPress={handleDeleteAccount}
                 disabled={isDeleting || deleteConfirmText !== "SUPPRIMER"}
                 style={{
-                  flex: 1, height: 44, borderRadius: 12, backgroundColor: "#EF4444",
+                  flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.destructive,
                   alignItems: "center", justifyContent: "center",
                   opacity: isDeleting || deleteConfirmText !== "SUPPRIMER" ? 0.4 : 1,
                 }}
               >
                 {isDeleting ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Supprimer</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
                 )}
               </Pressable>
             </View>

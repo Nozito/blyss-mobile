@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  ActivityIndicator, Alert, Modal, Switch, Share, RefreshControl,
+  ActivityIndicator, Modal, Switch, Share, RefreshControl,
   Animated, ActionSheetIOS, Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,11 +14,12 @@ import * as Haptics from "expo-haptics";
 import { adminApi, AdminCoupon } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
 const BORDER = ADMIN.border;
-const TEXT1  = "#fff";
+const TEXT1  = Colors.white;
 const TEXT2  = "rgba(255,255,255,0.5)";
 const TEXT3  = "rgba(255,255,255,0.28)";
 const MUTED  = "rgba(255,255,255,0.07)";
@@ -59,6 +60,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
   const [plans, setPlans]                 = useState<string[]>(["start", "serenite", "signature"]);
   const [expiresAt, setExpiresAt]         = useState("");
   const [maxUses, setMaxUses]             = useState("");
+  const [createError, setCreateError]     = useState<string | null>(null);
 
   const translateY     = useRef(new Animated.Value(600)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -89,10 +91,9 @@ function CreateModal({ onClose }: { onClose: () => void }) {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-coupons"] });
-      Alert.alert("Créé !", `Coupon ${code.toUpperCase()} créé avec succès.`);
       close();
     },
-    onError: () => Alert.alert("Erreur", "Impossible de créer le coupon."),
+    onError: () => setCreateError("Impossible de créer le coupon."),
   });
 
   const togglePlan = (p: string) =>
@@ -154,7 +155,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
                   <Pressable key={t}
                     onPress={() => { setDiscountType(t); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                     style={{ flex: 1, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: active ? ADMIN.accent : "transparent" }}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : TEXT2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: active ? Colors.white : TEXT2 }}>
                       {t === "percent" ? "Pourcentage %" : "Montant fixe €"}
                     </Text>
                   </Pressable>
@@ -198,14 +199,16 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             </Text>
             <TextInput value={maxUses} onChangeText={setMaxUses} placeholder="100" placeholderTextColor={TEXT3} keyboardType="number-pad" style={[inputStyle, { marginBottom: 28 }]} />
 
+            {createError && <View style={{ marginBottom: 12 }}><ErrorMessage message={createError} /></View>}
+
             <Pressable
-              onPress={() => { if (isValid) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); createMut.mutate(); } }}
+              onPress={() => { if (isValid) { setCreateError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); createMut.mutate(); } }}
               disabled={createMut.isPending || !isValid}
               style={{ height: 54, borderRadius: 16, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: (createMut.isPending || !isValid) ? 0.4 : 1 }}
             >
               {createMut.isPending
-                ? <ActivityIndicator size="small" color="#fff" />
-                : (<><Ionicons name="pricetag-outline" size={18} color="#fff" /><Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>Créer le coupon</Text></>)}
+                ? <ActivityIndicator size="small" color={Colors.white} />
+                : (<><Ionicons name="pricetag-outline" size={18} color={Colors.white} /><Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>Créer le coupon</Text></>)}
             </Pressable>
           </ScrollView>
         </Animated.View>
@@ -248,7 +251,7 @@ function CouponCard({
       backgroundColor: CARD, borderRadius: 16, borderWidth: 1,
       borderColor: st === "active" ? `${Colors.success}30` : BORDER,
       overflow: "hidden", marginBottom: 12,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 3,
+      shadowColor: Colors.black, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 3,
       opacity, transform: [{ translateY }],
     }}>
       <Pressable
@@ -273,7 +276,7 @@ function CouponCard({
               value={coupon.is_active}
               onValueChange={(v) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onToggle(coupon.id, v); }}
               trackColor={{ false: BORDER, true: ADMIN.accent }}
-              thumbColor="#fff"
+              thumbColor={Colors.white}
               ios_backgroundColor={BORDER}
             />
           </View>
@@ -338,6 +341,7 @@ export default function AdminCouponsScreen() {
   const [showCreate, setShowCreate]     = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | CouponStatus>("all");
   const [refreshing, setRefreshing]     = useState(false);
+  const [couponError, setCouponError]   = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-coupons"],
@@ -348,7 +352,7 @@ export default function AdminCouponsScreen() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => adminApi.deleteCoupon(id),
     onSuccess: () => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); qc.invalidateQueries({ queryKey: ["admin-coupons"] }); },
-    onError: () => Alert.alert("Erreur", "Suppression impossible."),
+    onError: () => setCouponError("Suppression impossible."),
   });
 
   const toggleMut = useMutation({
@@ -363,11 +367,11 @@ export default function AdminCouponsScreen() {
   const filtered = statusFilter === "all" ? coupons : coupons.filter((c) => couponStatus(c) === statusFilter);
 
   const handleShare  = async (code: string) => { await Share.share({ message: code, title: `Coupon ${code}` }); };
-  const handleDelete = (c: AdminCoupon) =>
-    Alert.alert("Supprimer", `Supprimer le coupon ${c.code} ?`, [
-      { text: "Annuler", style: "cancel" },
-      { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(c.id) },
-    ]);
+  const handleDelete = (c: AdminCoupon) => {
+    setCouponError(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    deleteMut.mutate(c.id);
+  };
 
   const handleCouponLongPress = useCallback((coupon: AdminCoupon) => {
     if (Platform.OS === "ios") {
@@ -403,7 +407,8 @@ export default function AdminCouponsScreen() {
             : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
           <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
         </Pressable>
-        <Text style={{ fontSize: 28, fontWeight: "900", color: TEXT1, letterSpacing: -0.5, marginBottom: 10 }}>Coupons</Text>
+        <Text style={{ fontSize: 28, fontWeight: "900", color: TEXT1, letterSpacing: -0.5, marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
+        {couponError && <View style={{ marginBottom: 8 }}><ErrorMessage message={couponError} /></View>}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {STATUS_FILTERS.map((f) => {
@@ -464,12 +469,12 @@ export default function AdminCouponsScreen() {
         }]}
       >
         <LinearGradient
-          colors={["#EA6000", "#F97316"]}
+          colors={["#EA6000", Colors.admin]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           style={{ height: 56, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Nouveau coupon</Text>
+          <Ionicons name="add" size={20} color={Colors.white} />
+          <Text style={{ color: Colors.white, fontWeight: "800", fontSize: 14 }}>Nouveau coupon</Text>
         </LinearGradient>
       </Pressable>
 

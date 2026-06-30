@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useStripe } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
+import { Colors } from "@/constants/colors";
 
 interface Props {
   amount: number;
@@ -38,17 +39,17 @@ export function PaymentStep({
       style: "automatic",
       appearance: {
         colors: {
-          primary: "#FE5D9D",
-          background: "#FFFFFF",
-          componentBackground: "#F8F5F1",
-          componentBorder: "#EBE6E0",
-          componentDivider: "#EBE6E0",
-          primaryText: "#09090B",
-          secondaryText: "#6D6D78",
-          componentText: "#09090B",
-          placeholderText: "#6D6D78",
-          icon: "#6D6D78",
-          error: "#EF4444",
+          primary: Colors.primary,
+          background: Colors.white,
+          componentBackground: Colors.cream,
+          componentBorder: Colors.border,
+          componentDivider: Colors.border,
+          primaryText: Colors.foreground,
+          secondaryText: Colors.mutedForeground,
+          componentText: Colors.foreground,
+          placeholderText: Colors.mutedForeground,
+          icon: Colors.mutedForeground,
+          error: Colors.destructive,
         },
       },
     });
@@ -89,10 +90,10 @@ export function PaymentStep({
     <View style={{ gap: 20 }}>
       {/* Header */}
       <View style={{ gap: 4 }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: "#09090B", letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
           Paiement sécurisé
         </Text>
-        <Text style={{ fontSize: 14, color: "#6D6D78" }}>
+        <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
           {depositPercentage < 100
             ? `Acompte de ${depositPercentage}% à payer maintenant`
             : "Termine le paiement pour confirmer"}
@@ -102,7 +103,7 @@ export function PaymentStep({
       {/* Amount summary */}
       <View
         style={{
-          backgroundColor: "#FFFFFF",
+          backgroundColor: Colors.white,
           borderRadius: 20,
           padding: 20,
           gap: 12,
@@ -110,17 +111,17 @@ export function PaymentStep({
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 13, color: "#6D6D78" }}>Total à payer</Text>
-          <Text style={{ fontSize: 28, fontWeight: "800", color: "#09090B" }}>
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Total à payer</Text>
+          <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.foreground }}>
             {Number(amount).toFixed(2)}€
           </Text>
         </View>
         {prestationName && (
           <>
-            <View style={{ height: 1, backgroundColor: "#EBE6E0" }} />
+            <View style={{ height: 1, backgroundColor: Colors.border }} />
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-              <Text style={{ fontSize: 13, color: "#6D6D78" }}>Prestation</Text>
-              <Text style={{ fontSize: 13, fontWeight: "500", color: "#09090B", flexShrink: 1 }} numberOfLines={1}>
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Prestation</Text>
+              <Text style={{ fontSize: 13, fontWeight: "500", color: Colors.foreground, flexShrink: 1 }} numberOfLines={1}>
                 {prestationName}
               </Text>
             </View>
@@ -130,25 +131,25 @@ export function PaymentStep({
 
       {/* Payment sheet area */}
       {initializing ? (
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 32, alignItems: "center", gap: 12, ...Shadows.card }}>
-          <ActivityIndicator size="large" color="#FE5D9D" />
-          <Text style={{ fontSize: 13, color: "#6D6D78" }}>Initialisation du paiement…</Text>
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 32, alignItems: "center", gap: 12, ...Shadows.card }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Initialisation du paiement…</Text>
         </View>
       ) : initError ? (
         /* Init failed — show retry */
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, alignItems: "center", gap: 16, ...Shadows.card }}>
-          <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
-          <Text style={{ fontSize: 14, color: "#09090B", textAlign: "center", lineHeight: 20 }}>
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 24, alignItems: "center", gap: 16, ...Shadows.card }}>
+          <Ionicons name="alert-circle-outline" size={36} color={Colors.destructive} />
+          <Text style={{ fontSize: 14, color: Colors.foreground, textAlign: "center", lineHeight: 20 }}>
             Impossible d'initialiser le paiement.
           </Text>
           <Pressable
             onPress={() => clientSecret && void initSheet(clientSecret)}
             style={{
-              backgroundColor: "#FE5D9D", borderRadius: 999,
+              backgroundColor: Colors.primary, borderRadius: 999,
               paddingVertical: 12, paddingHorizontal: 28,
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
+            <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
           </Pressable>
         </View>
       ) : (
@@ -159,7 +160,7 @@ export function PaymentStep({
           style={{ opacity: !ready || paying ? 0.6 : 1 }}
         >
           <LinearGradient
-            colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
+            colors={[Colors.primary, "rgba(254,93,157,0.9)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{
@@ -167,7 +168,7 @@ export function PaymentStep({
               borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: "#FE5D9D",
+              shadowColor: Colors.primary,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 8,
@@ -175,11 +176,11 @@ export function PaymentStep({
             }}
           >
             {paying ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={Colors.white} />
             ) : (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="card-outline" size={18} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+                <Ionicons name="card-outline" size={18} color={Colors.white} />
+                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
                   Payer {Number(amount).toFixed(2)}€
                 </Text>
               </View>
@@ -190,8 +191,8 @@ export function PaymentStep({
 
       {/* Security note */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        <Ionicons name="shield-checkmark-outline" size={14} color="#6D6D78" />
-        <Text style={{ fontSize: 11, color: "#6D6D78" }}>Paiement sécurisé par Stripe</Text>
+        <Ionicons name="shield-checkmark-outline" size={14} color={Colors.mutedForeground} />
+        <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Paiement sécurisé par Stripe</Text>
       </View>
     </View>
   );

@@ -2,6 +2,7 @@ import "../global.css";
 
 import React, { useEffect, useRef, useState } from "react";
 import { View, Image, Animated, StyleSheet } from "react-native";
+import { Colors } from "@/constants/colors";
 import { Stack } from "expo-router";
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,8 +15,12 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import { queryClient } from "@/lib/queryClient";
+import { OfflineBanner } from "@/components/ui/OfflineBanner";
+import { validateEnv, ENV } from "@/lib/env";
 
-const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+validateEnv();
+
+const STRIPE_PK = ENV.STRIPE_PK;
 
 SplashScreen.preventAutoHideAsync();
 
@@ -119,6 +124,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <OfflineBanner />
         <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
@@ -138,7 +144,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#FFF0F5",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 999,

@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Fonts } from "@/constants/fonts";
 import * as Haptics from "expo-haptics";
+import { Colors } from "@/constants/colors";
 
 // ─── Pills data ───────────────────────────────────────────────────────────────
 
@@ -220,7 +221,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#FFEAF1",
+    backgroundColor: Colors.background,
   },
 
   // Logo
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
   heroLine2: {
     fontSize: 46,
     fontWeight: "700",
-    color: "#FF5EA0",
+    color: Colors.primary,
     letterSpacing: -1.4,
     lineHeight: 54,
     fontFamily: Fonts.serifItalic,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
   },
   pill: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 99,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -285,8 +286,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,94,160,0.18)",
   },
   pillAccent: {
-    backgroundColor: "#FF5EA0",
-    borderColor: "#FF5EA0",
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   pillOutline: {
     backgroundColor: "transparent",
@@ -300,10 +301,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   pillTextAccent: {
-    color: "#FFFFFF",
+    color: Colors.white,
   },
   pillTextOutline: {
-    color: "#FF5EA0",
+    color: Colors.primary,
   },
   // Boutons
   bottomZone: {
@@ -313,17 +314,17 @@ const styles = StyleSheet.create({
   ctaWrap: {
     height: 60,
     borderRadius: 20,
-    backgroundColor: "#FF5EA0",
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#FF5EA0",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.40,
     shadowRadius: 18,
     elevation: 10,
   },
   ctaText: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: -0.2,
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryBtnText: {
-    color: "#FF5EA0",
+    color: Colors.primary,
     fontWeight: "700",
     fontSize: 15,
   },
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   legalLink: {
-    color: "#FF5EA0",
+    color: Colors.primary,
     fontWeight: "600",
   },
 });

@@ -44,7 +44,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         subtitle: "Dès qu'une cliente réserve un créneau",
         icon: "notifications-outline",
         iconBg: "#FE5D9D20",
-        iconColor: "#FE5D9D",
+        iconColor: Colors.primary,
       },
       {
         key: "cancel_change",
@@ -52,7 +52,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         subtitle: "Modification d'horaire ou annulation par la cliente",
         icon: "calendar-outline",
         iconBg: "#F59E0B20",
-        iconColor: "#F59E0B",
+        iconColor: Colors.warning,
       },
       {
         key: "daily_reminder",
@@ -81,7 +81,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         subtitle: "Quand un paiement ou acompte est encaissé",
         icon: "card-outline",
         iconBg: "#8B5CF620",
-        iconColor: "#8B5CF6",
+        iconColor: Colors.pro,
       },
       {
         key: "activity_summary",
@@ -89,7 +89,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         subtitle: "Aperçu de ton CA et rendez-vous en fin de journée",
         icon: "trending-up-outline",
         iconBg: "#FE5D9D20",
-        iconColor: "#FE5D9D",
+        iconColor: Colors.primary,
       },
     ],
   },
@@ -169,7 +169,7 @@ export default function ProNotificationsScreen() {
             {section.title}
           </Text>
           <View style={{
-            backgroundColor: "#fff",
+            backgroundColor: Colors.white,
             borderRadius: 16,
             overflow: "hidden",
             borderWidth: 1,
@@ -204,7 +204,7 @@ export default function ProNotificationsScreen() {
                   value={prefs[item.key]}
                   onValueChange={(val) => updatePref(item.key, val)}
                   trackColor={{ false: Colors.border, true: Colors.primary }}
-                  thumbColor="#fff"
+                  thumbColor={Colors.white}
                 />
               </View>
             ))}
@@ -224,7 +224,7 @@ export default function ProNotificationsScreen() {
           Système
         </Text>
         <View style={{
-          backgroundColor: "#fff",
+          backgroundColor: Colors.white,
           borderRadius: 16,
           overflow: "hidden",
           borderWidth: 1,
@@ -242,7 +242,7 @@ export default function ProNotificationsScreen() {
               backgroundColor: "#F3F4F6",
               alignItems: "center", justifyContent: "center",
             }}>
-              <Ionicons name="settings-outline" size={20} color="#6B7280" />
+              <Ionicons name="settings-outline" size={20} color={Colors.mutedForeground} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
@@ -267,8 +267,8 @@ export default function ProNotificationsScreen() {
       )}
       {saveError && (
         <View style={{ alignItems: "center", paddingVertical: 8, flexDirection: "row", justifyContent: "center", gap: 6 }}>
-          <Ionicons name="alert-circle-outline" size={15} color="#EF4444" />
-          <Text style={{ fontSize: 14, color: "#EF4444" }}>
+          <Ionicons name="alert-circle-outline" size={15} color={Colors.destructive} />
+          <Text style={{ fontSize: 14, color: Colors.destructive }}>
             Impossible de sauvegarder — réessaie
           </Text>
         </View>

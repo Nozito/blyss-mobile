@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { reviewsApi } from "@/lib/api";
+import { Colors } from "@/constants/colors";
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const s0 = useRef(new Animated.Value(1)).current;
@@ -39,7 +40,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
             <Ionicons
               name={i < value ? "star" : "star-outline"}
               size={36}
-              color={i < value ? "#FE5D9D" : "#D1D5DB"}
+              color={i < value ? Colors.primary : Colors.disabled}
             />
           </Pressable>
         </Animated.View>
@@ -73,7 +74,7 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}
       >
         <View style={s.sheet}>
           <View style={s.handle} />
@@ -83,7 +84,7 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
           <TextInput
             style={s.input}
             placeholder="Ton commentaire (optionnel)"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={Colors.mutedForeground}
             multiline
             numberOfLines={4}
             value={comment}
@@ -99,7 +100,7 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
               disabled={rating === 0 || mutation.isPending}
             >
               {mutation.isPending
-                ? <ActivityIndicator color="#fff" size="small" />
+                ? <ActivityIndicator color={Colors.white} size="small" />
                 : <Text style={s.submitText}>Envoyer</Text>}
             </Pressable>
           </View>
@@ -110,13 +111,13 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
 }
 
 const s = StyleSheet.create({
-  sheet:      { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  sheet:      { backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
   handle:     { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginBottom: 20 },
-  title:      { fontSize: 20, fontWeight: "800", color: "#09090B", textAlign: "center", marginBottom: 4 },
-  subtitle:   { fontSize: 13, color: "#6D6D78", textAlign: "center", marginBottom: 20 },
-  input:      { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, marginTop: 20, fontSize: 14, color: "#09090B", minHeight: 90, textAlignVertical: "top" },
+  title:      { fontSize: 20, fontWeight: "800", color: Colors.foreground, textAlign: "center", marginBottom: 4 },
+  subtitle:   { fontSize: 13, color: Colors.mutedForeground, textAlign: "center", marginBottom: 20 },
+  input:      { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, marginTop: 20, fontSize: 14, color: Colors.foreground, minHeight: 90, textAlignVertical: "top" },
   cancelBtn:  { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
-  cancelText: { fontSize: 15, fontWeight: "600", color: "#6D6D78" },
-  submitBtn:  { flex: 1, backgroundColor: "#FE5D9D", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
-  submitText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  cancelText: { fontSize: 15, fontWeight: "600", color: Colors.mutedForeground },
+  submitBtn:  { flex: 1, backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
+  submitText: { fontSize: 15, fontWeight: "700", color: Colors.white },
 });

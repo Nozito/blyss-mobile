@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Linking,
-  Alert,
   Modal,
   ActivityIndicator,
 } from "react-native";
@@ -16,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 interface RGPDRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -43,7 +43,7 @@ function RGPDRow({ icon, label, description, onPress, variant = "default" }: RGP
         <Ionicons
           name={icon}
           size={18}
-          color={isDestructive ? "#DC2626" : Colors.primary}
+          color={isDestructive ? Colors.destructiveText : Colors.primary}
         />
       </View>
       <View className="flex-1">
@@ -66,15 +66,17 @@ export default function ProRGPDScreen() {
   const { logout } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleDelete = async () => {
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       await authApi.deleteAccount();
       await logout();
       router.replace("/(auth)/login");
     } catch {
-      Alert.alert("Erreur", "Une erreur est survenue lors de la suppression.");
+      setDeleteError("Une erreur est survenue lors de la suppression.");
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -129,7 +131,7 @@ export default function ProRGPDScreen() {
               icon="download-outline"
               label="Télécharger mes données"
               description="Récupère une copie de tes informations au format JSON"
-              onPress={() => Alert.alert("Export", "La fonctionnalité d'export sera disponible prochainement.")}
+              onPress={() => { /* export disponible prochainement */ }}
             />
             <RGPDRow
               icon="pencil-outline"
@@ -184,13 +186,14 @@ export default function ProRGPDScreen() {
           <View className="w-full bg-card rounded-3xl p-6" style={{ gap: 16 }}>
             <View className="flex-row items-center gap-3">
               <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
-                <Ionicons name="warning-outline" size={20} color="#DC2626" />
+                <Ionicons name="warning-outline" size={20} color={Colors.destructiveText} />
               </View>
               <Text className="font-bold text-foreground text-base">Supprimer mon compte</Text>
             </View>
             <Text className="text-sm text-muted-foreground leading-relaxed">
               Cette action est irréversible. Toutes tes données personnelles seront supprimées dans les 30 jours.
             </Text>
+            {deleteError && <ErrorMessage message={deleteError} />}
             <View className="flex-row gap-3">
               <Pressable
                 onPress={() => setShowDeleteModal(false)}
@@ -202,7 +205,7 @@ export default function ProRGPDScreen() {
                 onPress={handleDelete}
                 disabled={isDeleting}
                 className="flex-1 h-11 rounded-xl items-center justify-center"
-                style={{ backgroundColor: "#DC2626", opacity: isDeleting ? 0.7 : 1 }}
+                style={{ backgroundColor: Colors.destructiveText, opacity: isDeleting ? 0.7 : 1 }}
               >
                 {isDeleting ? (
                   <ActivityIndicator size="small" color={Colors.white} />

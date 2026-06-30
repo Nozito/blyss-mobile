@@ -81,7 +81,7 @@ export const BookingCard = memo(function BookingCard({ booking, onCancel, showCa
       accessibilityHint="Voir le détail de la réservation"
       className="bg-card rounded-2xl p-4 mb-3"
       style={{
-        shadowColor: "#000",
+        shadowColor: Colors.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 6,

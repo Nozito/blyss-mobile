@@ -6,7 +6,6 @@ import {
   TextInput,
   Pressable,
   Switch,
-  Alert,
   Linking,
   ActivityIndicator,
 } from "react-native";
@@ -19,6 +18,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 type Client = {
   id: number;
@@ -62,6 +62,7 @@ export default function ClientDetailScreen() {
   const [patchTest, setPatchTest] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [initial, setInitial] = useState({ notes: "", allergies: "", shape: "", style: "", patchTest: false });
 
   const { data: clientsData, isLoading: loadingClients } = useQuery({
@@ -117,6 +118,7 @@ export default function ClientDetailScreen() {
   }, [notes, allergies, shape, style, patchTest, initial]);
 
   const handleSave = async () => {
+    setSaveError(null);
     setIsSaving(true);
     try {
       const res = await nailTechApi.updateClientNotes(Number(clientId), {
@@ -131,10 +133,10 @@ export default function ClientDetailScreen() {
         setInitial({ notes, allergies, shape, style, patchTest });
         setHasChanges(false);
       } else {
-        Alert.alert("Erreur", "Impossible de sauvegarder les notes.");
+        setSaveError("Impossible de sauvegarder les notes.");
       }
     } catch {
-      Alert.alert("Erreur", "Impossible de sauvegarder les notes.");
+      setSaveError("Impossible de sauvegarder les notes.");
     } finally {
       setIsSaving(false);
     }
@@ -215,8 +217,6 @@ export default function ClientDetailScreen() {
                 const supported = await Linking.canOpenURL(url);
                 if (supported) {
                   await Linking.openURL(url);
-                } else {
-                  Alert.alert("Impossible", "Aucune app téléphone disponible sur cet appareil.");
                 }
               }}
               style={{
@@ -239,8 +239,6 @@ export default function ClientDetailScreen() {
                 const supported = await Linking.canOpenURL(url);
                 if (supported) {
                   await Linking.openURL(url);
-                } else {
-                  Alert.alert("Impossible", "Aucune app mail disponible sur cet appareil.");
                 }
               }}
               style={{
@@ -302,15 +300,15 @@ export default function ClientDetailScreen() {
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Notes sur la cliente, habitudes, historique..."
-                placeholderTextColor="#C0BAB5"
+                placeholderTextColor={Colors.inputPlaceholder}
                 multiline
                 textAlignVertical="top"
                 maxLength={1000}
                 style={{
-                  backgroundColor: "#F8F5F2", borderRadius: 12,
-                  borderWidth: 1.5, borderColor: "#E4E0DC",
+                  backgroundColor: Colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: Colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: "#09090B", minHeight: 80,
+                  fontSize: 14, color: Colors.foreground, minHeight: 80,
                 }}
               />
             </View>
@@ -322,15 +320,15 @@ export default function ClientDetailScreen() {
                 value={allergies}
                 onChangeText={setAllergies}
                 placeholder="Ex : acrylique, résine UV..."
-                placeholderTextColor="#C0BAB5"
+                placeholderTextColor={Colors.inputPlaceholder}
                 multiline
                 textAlignVertical="top"
                 maxLength={300}
                 style={{
-                  backgroundColor: "#F8F5F2", borderRadius: 12,
-                  borderWidth: 1.5, borderColor: "#E4E0DC",
+                  backgroundColor: Colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: Colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: "#09090B", minHeight: 60,
+                  fontSize: 14, color: Colors.foreground, minHeight: 60,
                 }}
               />
             </View>
@@ -342,13 +340,13 @@ export default function ClientDetailScreen() {
                 value={shape}
                 onChangeText={setShape}
                 placeholder="Ex : amande, carré, stiletto..."
-                placeholderTextColor="#C0BAB5"
+                placeholderTextColor={Colors.inputPlaceholder}
                 maxLength={100}
                 style={{
-                  backgroundColor: "#F8F5F2", borderRadius: 12,
-                  borderWidth: 1.5, borderColor: "#E4E0DC",
+                  backgroundColor: Colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: Colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: "#09090B", height: 44,
+                  fontSize: 14, color: Colors.foreground, height: 44,
                 }}
               />
             </View>
@@ -360,13 +358,13 @@ export default function ClientDetailScreen() {
                 value={style}
                 onChangeText={setStyle}
                 placeholder="Ex : minimaliste, nail art, french..."
-                placeholderTextColor="#C0BAB5"
+                placeholderTextColor={Colors.inputPlaceholder}
                 maxLength={100}
                 style={{
-                  backgroundColor: "#F8F5F2", borderRadius: 12,
-                  borderWidth: 1.5, borderColor: "#E4E0DC",
+                  backgroundColor: Colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: Colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: "#09090B", height: 44,
+                  fontSize: 14, color: Colors.foreground, height: 44,
                 }}
               />
             </View>
@@ -383,7 +381,7 @@ export default function ClientDetailScreen() {
                 value={patchTest}
                 onValueChange={setPatchTest}
                 trackColor={{ false: "#E5E7EB", true: Colors.primary }}
-                thumbColor="#fff"
+                thumbColor={Colors.white}
               />
             </View>
           </View>
@@ -392,16 +390,7 @@ export default function ClientDetailScreen() {
         {/* Bloquer */}
         <SectionTitle title="Zone critique" />
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              "Bloquer la cliente",
-              `Bloquer ${displayName} ? Elle ne pourra plus réserver.`,
-              [
-                { text: "Annuler", style: "cancel" },
-                { text: "Bloquer", style: "destructive", onPress: () => blockMutation.mutate() },
-              ]
-            )
-          }
+          onPress={() => blockMutation.mutate()}
           style={{
             backgroundColor: "#FFF0F0", borderRadius: 16,
             borderWidth: 1, borderColor: `${Colors.destructive}30`,
@@ -433,6 +422,7 @@ export default function ClientDetailScreen() {
           paddingBottom: insets.bottom + 96,
           backgroundColor: "rgba(255,234,241,0.97)",
         }}>
+          {saveError && <View style={{ marginBottom: 10 }}><ErrorMessage message={saveError} /></View>}
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
@@ -448,11 +438,11 @@ export default function ClientDetailScreen() {
             }}
           >
             {isSaving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={Colors.white} />
             ) : (
               <>
-                <Ionicons name="save-outline" size={20} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Enregistrer les notes</Text>
+                <Ionicons name="save-outline" size={20} color={Colors.white} />
+                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>Enregistrer les notes</Text>
               </>
             )}
           </Pressable>

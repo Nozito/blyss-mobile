@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
+import { Colors } from "@/constants/colors";
 
 export interface Prestation {
   id: number;
@@ -48,10 +49,10 @@ export function ServiceSelector({
       <View style={{ paddingBottom: 24, gap: 20 }}>
         {/* Header */}
         <View style={{ gap: 4 }}>
-          <Text style={{ fontSize: 26, fontWeight: "800", color: "#09090B", letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
             Choisis ta prestation
           </Text>
-          <Text style={{ fontSize: 14, color: "#6D6D78" }}>
+          <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
             Avec {proName}
             {proCity ? ` à ${proCity}` : ""}
           </Text>
@@ -61,7 +62,7 @@ export function ServiceSelector({
         {activeConditions.length > 0 && (
           <View
             style={{
-              backgroundColor: "#FFFFFF",
+              backgroundColor: Colors.white,
               borderRadius: 16,
               padding: 16,
               gap: 12,
@@ -69,8 +70,8 @@ export function ServiceSelector({
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="shield-checkmark-outline" size={15} color="#6D6D78" />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#09090B" }}>
+              <Ionicons name="shield-checkmark-outline" size={15} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
                 Conditions de réservation
               </Text>
             </View>
@@ -86,8 +87,8 @@ export function ServiceSelector({
                     paddingHorizontal: 12,
                     paddingVertical: 10,
                     borderWidth: 1,
-                    backgroundColor: c.accepted ? "#F0FDF4" : "#FFF1F2",
-                    borderColor: c.accepted ? "#BBF7D0" : "#FECDD3",
+                    backgroundColor: c.accepted ? Colors.successLight : "#FFF1F2",
+                    borderColor: c.accepted ? Colors.successBorder : "#FECDD3",
                   }}
                 >
                   <View
@@ -95,7 +96,7 @@ export function ServiceSelector({
                       width: 20,
                       height: 20,
                       borderRadius: 10,
-                      backgroundColor: c.accepted ? "#22C55E" : "#FB7185",
+                      backgroundColor: c.accepted ? Colors.success : "#FB7185",
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0,
@@ -104,7 +105,7 @@ export function ServiceSelector({
                     <Ionicons
                       name={c.accepted ? "checkmark" : "close"}
                       size={11}
-                      color="#fff"
+                      color={Colors.white}
                     />
                   </View>
                   <Text
@@ -133,22 +134,22 @@ export function ServiceSelector({
                 key={prestation.id}
                 onPress={() => onSelect(prestation.id)}
                 style={{
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: Colors.white,
                   borderRadius: 20,
                   padding: 20,
                   borderWidth: 2,
-                  borderColor: isSelected ? "#FE5D9D" : "#EBE6E0",
+                  borderColor: isSelected ? Colors.primary : Colors.border,
                   ...Shadows.card,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "600", fontSize: 15, color: "#09090B", marginBottom: 4 }}>
+                    <Text style={{ fontWeight: "600", fontSize: 15, color: Colors.foreground, marginBottom: 4 }}>
                       {prestation.name}
                     </Text>
                     {prestation.description && (
                       <Text
-                        style={{ fontSize: 12, color: "#6D6D78", marginBottom: 8, lineHeight: 18 }}
+                        style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 8, lineHeight: 18 }}
                         numberOfLines={2}
                       >
                         {prestation.description}
@@ -156,14 +157,14 @@ export function ServiceSelector({
                     )}
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Ionicons name="time-outline" size={14} color="#FE5D9D" />
-                        <Text style={{ fontSize: 12, color: "#6D6D78" }}>
+                        <Ionicons name="time-outline" size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
                           {formatDuration(prestation.duration_minutes)}
                         </Text>
                       </View>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Ionicons name="sparkles-outline" size={14} color="#FE5D9D" />
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: "#09090B" }}>
+                        <Ionicons name="sparkles-outline" size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
                           {prestation.price.toFixed(2)}€
                         </Text>
                       </View>
@@ -175,13 +176,13 @@ export function ServiceSelector({
                       width: 24,
                       height: 24,
                       borderRadius: 12,
-                      backgroundColor: isSelected ? "#FE5D9D" : "#F8F5F1",
+                      backgroundColor: isSelected ? Colors.primary : Colors.cream,
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0,
                     }}
                   >
-                    {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                    {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
                   </View>
                 </View>
               </Pressable>

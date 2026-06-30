@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { adminApi, AdminAnalytics } from "@/lib/api";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ADMIN } from "@/constants/adminTheme";
+import { Colors } from "@/constants/colors";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -168,7 +169,7 @@ function ChartHeader({
       }}>
         <SymbolView name={symbol as any} size={18} tintColor={color} />
       </View>
-      <Text style={{ flex: 1, fontSize: 15, fontWeight: "900", color: "#fff" }}>{title}</Text>
+      <Text style={{ flex: 1, fontSize: 15, fontWeight: "900", color: Colors.white }}>{title}</Text>
       <View style={{
         backgroundColor: `${color}15`,
         borderRadius: 10,
@@ -214,7 +215,7 @@ function PeriodPill({
         <Text style={{
           fontSize: 13,
           fontWeight: active ? "800" : "600",
-          color: active ? "#F97316" : "rgba(255,255,255,0.4)",
+          color: active ? Colors.admin : "rgba(255,255,255,0.4)",
         }}>
           {label}
         </Text>
@@ -304,7 +305,7 @@ export default function AdminAnalyticsScreen() {
             : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
           <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
         </Pressable>
-        <Text style={{ fontSize: 34, fontWeight: "900", color: "#fff", letterSpacing: -1 }}>
+        <Text style={{ fontSize: 34, fontWeight: "900", color: Colors.white, letterSpacing: -1 }}>
           Analytics
         </Text>
         <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
@@ -351,7 +352,7 @@ export default function AdminAnalyticsScreen() {
                 paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
                 backgroundColor: "rgba(249,115,22,0.15)",
               }}>
-                <Text style={{ fontSize: 10, fontWeight: "800", color: "#F97316" }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.admin }}>
                   {growth >= 0 ? "↑" : "↓"} {Math.abs(growth).toFixed(1)}%
                 </Text>
               </View>
@@ -360,7 +361,7 @@ export default function AdminAnalyticsScreen() {
 
           {/* Valeur totale */}
           <Text style={{
-            fontSize: 52, fontWeight: "900", color: "#fff", letterSpacing: -2, marginBottom: 16,
+            fontSize: 52, fontWeight: "900", color: Colors.white, letterSpacing: -2, marginBottom: 16,
           }}>
             {Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €
           </Text>
@@ -375,7 +376,7 @@ export default function AdminAnalyticsScreen() {
               <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
                 CE MOIS
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>
                 {Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €
               </Text>
             </View>
@@ -384,7 +385,7 @@ export default function AdminAnalyticsScreen() {
               <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
                 UTILISATEURS
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>
                 {Number(a.users.total_users).toLocaleString("fr-FR")}
               </Text>
             </View>
@@ -393,7 +394,7 @@ export default function AdminAnalyticsScreen() {
               <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
                 RÉSERVATIONS
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>
                 {Number(a.bookings.total).toLocaleString("fr-FR")}
               </Text>
             </View>
@@ -459,13 +460,13 @@ export default function AdminAnalyticsScreen() {
             <KPICard
               label="CA total"
               value={`${Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €`}
-              color="#F97316"
+              color={Colors.admin}
               symbol="banknote"
             />
             <KPICard
               label="CA du mois"
               value={`${Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €`}
-              color="#22C55E"
+              color={Colors.success}
               symbol="checkmark.seal.fill"
             />
           </View>
@@ -474,14 +475,14 @@ export default function AdminAnalyticsScreen() {
               label="Utilisateurs"
               value={Number(a.users.total_users)}
               sub={`${a.users.new_last_30d} nouveaux 30j`}
-              color="#8B5CF6"
+              color={Colors.pro}
               symbol="person.fill"
             />
             <KPICard
               label="Réservations"
               value={Number(a.bookings.total)}
               sub={`${a.bookings.completed} terminées`}
-              color="#3B82F6"
+              color={Colors.info}
               symbol="calendar"
             />
           </View>
@@ -493,11 +494,11 @@ export default function AdminAnalyticsScreen() {
         <ChartHeader
           symbol="chart.line.uptrend.xyaxis"
           title="Revenus"
-          color="#F97316"
+          color={Colors.admin}
           badge={`${revenuePoints.reduce((s, v) => s + v, 0).toLocaleString("fr-FR")} €`}
         />
         {revenuePoints.length > 1 ? (
-          <Sparkline data={revenuePoints} color="#F97316" width={chartWidth} height={72} />
+          <Sparkline data={revenuePoints} color={Colors.admin} width={chartWidth} height={72} />
         ) : (
           <View style={{ height: 72, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
@@ -512,13 +513,13 @@ export default function AdminAnalyticsScreen() {
         <ChartHeader
           symbol="person.2.fill"
           title="Nouveaux utilisateurs"
-          color="#8B5CF6"
+          color={Colors.pro}
           badge={`${usersPoints.reduce((s, v) => s + v, 0)} inscrits`}
         />
         {usersPoints.length > 1 ? (
           <BarChart
             data={usersPoints}
-            color="#8B5CF6"
+            color={Colors.pro}
             width={chartWidth}
             height={80}
             isWeek={period === "week"}
@@ -537,11 +538,11 @@ export default function AdminAnalyticsScreen() {
         <ChartHeader
           symbol="calendar.badge.clock"
           title="Réservations"
-          color="#3B82F6"
+          color={Colors.info}
           badge={`${bookingsPoints.reduce((s, v) => s + v, 0)} RDV`}
         />
         {bookingsPoints.length > 1 ? (
-          <Sparkline data={bookingsPoints} color="#3B82F6" width={chartWidth} height={72} />
+          <Sparkline data={bookingsPoints} color={Colors.info} width={chartWidth} height={72} />
         ) : (
           <View style={{ height: 72, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
@@ -557,13 +558,13 @@ export default function AdminAnalyticsScreen() {
           <ChartHeader
             symbol="chart.pie.fill"
             title="Répartition des statuts"
-            color="#F59E0B"
+            color={Colors.warning}
             badge={`${Number(a.bookings.total)} total`}
           />
           {[
-            { label: "Confirmées", value: a.bookings.confirmed, color: "#3B82F6" },
-            { label: "Terminées",  value: a.bookings.completed, color: "#22C55E" },
-            { label: "En attente", value: a.bookings.pending,   color: "#F59E0B" },
+            { label: "Confirmées", value: a.bookings.confirmed, color: Colors.info },
+            { label: "Terminées",  value: a.bookings.completed, color: Colors.success },
+            { label: "En attente", value: a.bookings.pending,   color: Colors.warning },
             { label: "Annulées",   value: a.bookings.cancelled, color: "#F03A3A" },
           ].map(({ label, value, color }) => {
             const pct = a.bookings.total > 0
@@ -575,7 +576,7 @@ export default function AdminAnalyticsScreen() {
                   flexDirection: "row", justifyContent: "space-between",
                   alignItems: "center", marginBottom: 6,
                 }}>
-                  <Text style={{ fontSize: 13, color: "#fff", fontWeight: "600" }}>{label}</Text>
+                  <Text style={{ fontSize: 13, color: Colors.white, fontWeight: "600" }}>{label}</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={{ fontSize: 13, color, fontWeight: "700" }}>
                       {Number(value).toLocaleString("fr-FR")}

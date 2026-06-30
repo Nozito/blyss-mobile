@@ -4,12 +4,12 @@ import {
   Text,
   FlatList,
   Pressable,
-  Alert,
   ActivityIndicator,
   Modal,
   StyleSheet,
   TextInput,
 } from "react-native";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -48,6 +48,9 @@ export default function PaymentsScreen() {
   const [cardDetails, setCardDetails] = useState<CardFieldInput.Details | null>(null);
   const [cardholderName, setCardholderName] = useState("");
   const [addLoading, setAddLoading] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SavedCard | null>(null);
 
   // ── Query ─────────────────────────────────────────────────────────────────
   const { data, isLoading } = useQuery({
@@ -72,7 +75,7 @@ export default function PaymentsScreen() {
     },
     onError: (_err, _id, ctx) => {
       qc.setQueryData(["payment-methods"], ctx?.prev);
-      Alert.alert("Erreur", "Impossible de supprimer la carte.");
+      setListError("Impossible de supprimer la carte.");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["payment-methods"] }),
   });
@@ -90,15 +93,16 @@ export default function PaymentsScreen() {
     },
     onError: (_err, _id, ctx) => {
       qc.setQueryData(["payment-methods"], ctx?.prev);
-      Alert.alert("Erreur", "Impossible de changer la carte par défaut.");
+      setListError("Impossible de changer la carte par défaut.");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["payment-methods"] }),
   });
 
   // ── Ajout carte via Stripe SetupIntent ────────────────────────────────────
   const handleAddCard = useCallback(async () => {
+    setCardError(null);
     if (!cardDetails?.complete) {
-      Alert.alert("Carte incomplète", "Remplis tous les champs de la carte.");
+      setCardError("Remplis tous les champs de la carte.");
       return;
     }
     setAddLoading(true);
@@ -113,7 +117,7 @@ export default function PaymentsScreen() {
       });
 
       if (error) {
-        Alert.alert("Erreur Stripe", error.localizedMessage ?? error.message);
+        setCardError(error.localizedMessage ?? error.message);
         return;
       }
 
@@ -125,23 +129,16 @@ export default function PaymentsScreen() {
         setCardholderName("");
       }
     } catch {
-      Alert.alert("Erreur réseau", "Réessaie dans quelques instants.");
+      setCardError("Réessaie dans quelques instants.");
     } finally {
       setAddLoading(false);
     }
   }, [cardDetails, cardholderName, confirmSetupIntent, qc]);
 
-  // ── Suppression avec confirmation ─────────────────────────────────────────
   const confirmDelete = useCallback((item: SavedCard) => {
-    Alert.alert(
-      "Supprimer la carte",
-      `Supprimer ${item.brand.toUpperCase()} •••• ${item.last4} ?`,
-      [
-        { text: "Annuler", style: "cancel" },
-        { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-      ]
-    );
-  }, [deleteMutation]);
+    setListError(null);
+    setDeleteTarget(item);
+  }, []);
 
   // ── Render carte ──────────────────────────────────────────────────────────
   const renderCard = useCallback(({ item }: { item: SavedCard }) => {
@@ -178,8 +175,8 @@ export default function PaymentsScreen() {
             )}
             <Pressable onPress={() => confirmDelete(item)} style={styles.actionBtn} disabled={isDeleting}>
               {isDeleting
-                ? <ActivityIndicator size="small" color="#ef4444" />
-                : <Ionicons name="trash-outline" size={22} color="#ef4444" />}
+                ? <ActivityIndicator size="small" color={Colors.destructive} />
+                : <Ionicons name="trash-outline" size={22} color={Colors.destructive} />}
             </Pressable>
           </View>
         </View>
@@ -202,6 +199,12 @@ export default function PaymentsScreen() {
         </Pressable>
       </View>
 
+      {listError && (
+        <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+          <ErrorMessage message={listError} />
+        </View>
+      )}
+
       {/* Liste */}
       {isLoading ? (
         <LoadingSpinner />
@@ -220,7 +223,7 @@ export default function PaymentsScreen() {
               </Text>
               <Pressable onPress={() => setAddModalOpen(true)} style={styles.emptyBtn}>
                 <View style={styles.emptyBtnInner}>
-                  <Ionicons name="add" size={18} color="#fff" />
+                  <Ionicons name="add" size={18} color={Colors.white} />
                   <Text style={styles.emptyBtnText}>Ajouter une carte</Text>
                 </View>
               </Pressable>
@@ -232,9 +235,42 @@ export default function PaymentsScreen() {
 
       {/* Badge sécurité */}
       <View style={[styles.securityBadge, { marginBottom: insets.bottom + 8 }]}>
-        <Ionicons name="lock-closed" size={13} color="#6b7280" />
+        <Ionicons name="lock-closed" size={13} color={Colors.mutedForeground} />
         <Text style={styles.securityText}>Paiements sécurisés par Stripe · Données chiffrées TLS 1.3</Text>
       </View>
+
+      {/* Modal confirmation suppression */}
+      <Modal visible={!!deleteTarget} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: Colors.overlayDark, justifyContent: "flex-end", padding: 16 }}>
+          <View style={{ backgroundColor: Colors.white, borderRadius: 24, padding: 24, gap: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="trash-outline" size={20} color={Colors.destructiveText} />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Supprimer la carte</Text>
+            </View>
+            {deleteTarget && (
+              <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
+                {`Supprimer ${deleteTarget.brand.toUpperCase()} •••• ${deleteTarget.last4} ?`}
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Pressable
+                onPress={() => setDeleteTarget(null)}
+                style={{ flex: 1, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { if (deleteTarget) { deleteMutation.mutate(deleteTarget.id); setDeleteTarget(null); } }}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.destructiveText, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal ajout carte */}
       <Modal
@@ -252,7 +288,7 @@ export default function PaymentsScreen() {
           </View>
 
           <View style={styles.securityNotice}>
-            <Ionicons name="shield-checkmark" size={16} color="#22c55e" />
+            <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
             <Text style={styles.securityNoticeText}>
               Ton numéro de carte n'est jamais stocké sur nos serveurs. Il est chiffré et envoyé directement à Stripe.
             </Text>
@@ -263,7 +299,7 @@ export default function PaymentsScreen() {
             value={cardholderName}
             onChangeText={setCardholderName}
             placeholder="Jean Dupont"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={Colors.mutedForeground}
             autoCapitalize="words"
             style={styles.nameInput}
           />
@@ -284,6 +320,12 @@ export default function PaymentsScreen() {
             onCardChange={(details) => setCardDetails(details)}
           />
 
+          {cardError && (
+            <View style={{ marginBottom: 12 }}>
+              <ErrorMessage message={cardError} />
+            </View>
+          )}
+
           <Pressable
             onPress={handleAddCard}
             disabled={addLoading || !cardDetails?.complete}
@@ -291,16 +333,16 @@ export default function PaymentsScreen() {
           >
             <View style={[styles.confirmBtn, { opacity: !cardDetails?.complete ? 0.5 : 1 }]}>
               {addLoading
-                ? <ActivityIndicator color="#fff" />
+                ? <ActivityIndicator color={Colors.white} />
                 : <>
-                    <Ionicons name="lock-closed" size={16} color="#fff" />
+                    <Ionicons name="lock-closed" size={16} color={Colors.white} />
                     <Text style={styles.confirmBtnText}>Ajouter la carte</Text>
                   </>}
             </View>
           </Pressable>
 
           <View style={styles.stripeBadge}>
-            <Ionicons name="lock-closed" size={12} color="#6b7280" />
+            <Ionicons name="lock-closed" size={12} color={Colors.mutedForeground} />
             <Text style={styles.stripeBadgeText}>Propulsé par Stripe · PCI-DSS Level 1</Text>
           </View>
         </View>
@@ -313,36 +355,36 @@ const styles = StyleSheet.create({
   root:                { flex: 1, backgroundColor: "#FFF5F8" },
   header:              { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 },
   backBtn:             { padding: 4, marginRight: 8 },
-  title:               { flex: 1, fontSize: 22, fontWeight: "700", color: "#1a1a1a" },
+  title:               { flex: 1, fontSize: 22, fontWeight: "700", color: Colors.foreground },
   addBtn:              { padding: 4 },
   cardRow:             { marginBottom: 12, overflow: "hidden", flexDirection: "row" },
   brandBar:            { width: 4, borderRadius: 2 },
   cardContent:         { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
   cardInfo:            { flexDirection: "row", alignItems: "center", flex: 1 },
   cardTitle:           { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
-  cardNumber:          { fontSize: 15, fontWeight: "600", color: "#1a1a1a" },
-  cardMeta:            { fontSize: 13, color: "#6b7280" },
+  cardNumber:          { fontSize: 15, fontWeight: "600", color: Colors.foreground },
+  cardMeta:            { fontSize: 13, color: Colors.mutedForeground },
   cardActions:         { flexDirection: "row", gap: 4 },
   actionBtn:           { padding: 8, borderRadius: 8 },
   empty:               { alignItems: "center", paddingVertical: 60, paddingHorizontal: 32 },
-  emptyTitle:          { fontSize: 18, fontWeight: "700", color: "#1a1a1a", marginTop: 16, marginBottom: 8 },
-  emptySubtitle:       { fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 20 },
+  emptyTitle:          { fontSize: 18, fontWeight: "700", color: Colors.foreground, marginTop: 16, marginBottom: 8 },
+  emptySubtitle:       { fontSize: 14, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20 },
   emptyBtn:            { marginTop: 24 },
-  emptyBtnInner:       { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FF5EA0", paddingHorizontal: 28, paddingVertical: 14, borderRadius: 32 },
-  emptyBtnText:        { color: "#fff", fontSize: 15, fontWeight: "700" },
+  emptyBtnInner:       { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 32 },
+  emptyBtnText:        { color: Colors.white, fontSize: 15, fontWeight: "700" },
   securityBadge:       { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingBottom: 4 },
-  securityText:        { fontSize: 11, color: "#9ca3af" },
-  modal:               { flex: 1, backgroundColor: "#fff", paddingHorizontal: 24 },
+  securityText:        { fontSize: 11, color: Colors.mutedForeground },
+  modal:               { flex: 1, backgroundColor: Colors.white, paddingHorizontal: 24 },
   modalHeader:         { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
-  modalTitle:          { fontSize: 20, fontWeight: "700", color: "#1a1a1a" },
+  modalTitle:          { fontSize: 20, fontWeight: "700", color: Colors.foreground },
   closeBtn:            { padding: 4 },
-  securityNotice:      { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#f0fdf4", borderRadius: 10, padding: 12, marginBottom: 24 },
+  securityNotice:      { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: Colors.successLight, borderRadius: 10, padding: 12, marginBottom: 24 },
   securityNoticeText:  { flex: 1, fontSize: 13, color: "#166534", lineHeight: 18 },
-  fieldLabel:          { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 8 },
-  nameInput:           { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: "#f9f8f5", fontSize: 16, color: "#1a1a1a", marginBottom: 16 },
+  fieldLabel:          { fontSize: 14, fontWeight: "600", color: Colors.foreground, marginBottom: 8 },
+  nameInput:           { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: "#f9f8f5", fontSize: 16, color: Colors.foreground, marginBottom: 16 },
   cardField:           { height: 52, marginBottom: 28 },
-  confirmBtn:          { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#FF5EA0", borderRadius: 32, paddingVertical: 16, shadowColor: "#FF5EA0", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 },
-  confirmBtnText:      { color: "#fff", fontSize: 16, fontWeight: "700" },
+  confirmBtn:          { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 32, paddingVertical: 16, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 },
+  confirmBtnText:      { color: Colors.white, fontSize: 16, fontWeight: "700" },
   stripeBadge:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 16 },
-  stripeBadgeText:     { fontSize: 11, color: "#9ca3af" },
+  stripeBadgeText:     { fontSize: 11, color: Colors.mutedForeground },
 });

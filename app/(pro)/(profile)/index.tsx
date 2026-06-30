@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet, Animated } from "react-native";
+import { View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet, Animated, Modal as RNModal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +8,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import * as ImagePicker from "expo-image-picker";
 import * as Device from "expo-device";
+import * as Haptics from "expo-haptics";
+import { Colors as ColorsImport } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useQuery } from "@tanstack/react-query";
@@ -53,6 +55,7 @@ export default function ProProfileScreen() {
   useScrollToTop(scrollRef);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [showAvatarSheet, setShowAvatarSheet] = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -65,64 +68,41 @@ export default function ProProfileScreen() {
   }, [uploadSuccess]);
 
   const handlePickAvatar = () => {
-    Alert.alert("Photo de profil", "Choisir depuis…", [
-      {
-        text: "Galerie",
-        onPress: async () => {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (perm.status !== "granted") {
-            Alert.alert("Permission refusée", "Autorise l'accès à la galerie dans les réglages.");
-            return;
-          }
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
-          if (!result.canceled && result.assets[0]) {
-            await uploadPhoto(result.assets[0].uri);
-          }
-        },
-      },
-      {
-        text: "Caméra",
-        onPress: async () => {
-          if (!Device.isDevice) {
-            Alert.alert(
-              "Caméra indisponible",
-              "La caméra n'est pas disponible sur le simulateur. Utilise un vrai appareil ou choisis une photo depuis la galerie.",
-              [{ text: "OK", style: "cancel" }]
-            );
-            return;
-          }
-          const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (perm.status !== "granted") {
-            Alert.alert("Permission refusée", "Autorise l'accès à la caméra dans les réglages.");
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
-          if (!result.canceled && result.assets[0]) {
-            await uploadPhoto(result.assets[0].uri);
-          }
-        },
-      },
-      { text: "Annuler", style: "cancel" },
-    ]);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowAvatarSheet(true);
+  };
+
+  const pickFromGallery = async () => {
+    setShowAvatarSheet(false);
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) await uploadPhoto(result.assets[0].uri);
+  };
+
+  const pickFromCamera = async () => {
+    setShowAvatarSheet(false);
+    if (!Device.isDevice) return;
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (perm.status !== "granted") return;
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) await uploadPhoto(result.assets[0].uri);
   };
 
   const uploadPhoto = async (uri: string) => {
     setUploading(true);
     const res = await usersApi.uploadProfilePhoto(uri);
     setUploading(false);
-    if (!res.success) {
-      Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la photo.");
-      return;
-    }
+    if (!res.success) return;
     if (res.data?.photo) patchUser({ profile_photo: res.data.photo });
     void refreshProfile();
     setUploadSuccess(true);
@@ -156,11 +136,11 @@ export default function ProProfileScreen() {
       ? `Plan ${PLAN_LABELS[subscription.plan] ?? subscription.plan}`
       : "Aucun abonnement";
 
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const handleLogout = () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
-      { text: "Non", style: "cancel" },
-      { text: "Oui", style: "destructive", onPress: logout },
-    ]);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowLogoutConfirm(true);
   };
 
   const menuItems: Array<{ icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; route: string }> = [
@@ -220,7 +200,7 @@ export default function ProProfileScreen() {
                     style={{ width: 72, height: 72 }} />
                 ) : (
                   <Text style={{
-                    fontSize: 24, fontWeight: "800", color: "#FE5D9D"
+                    fontSize: 24, fontWeight: "800", color: Colors.primary
                   }}>
                     {`${user?.first_name?.[0] ?? ""}${user?.last_name?.[0] ?? ""}`}
                   </Text>
@@ -228,10 +208,10 @@ export default function ProProfileScreen() {
                 {uploading && (
                   <View style={{
                     ...StyleSheet.absoluteFillObject,
-                    backgroundColor: "rgba(0,0,0,0.4)",
+                    backgroundColor: Colors.overlayDark,
                     alignItems: "center", justifyContent: "center",
                   }}>
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={Colors.white} size="small" />
                   </View>
                 )}
               </View>
@@ -239,12 +219,12 @@ export default function ProProfileScreen() {
               <View style={{
                 position: "absolute", bottom: -4, right: -4,
                 width: 26, height: 26, borderRadius: 13,
-                backgroundColor: "#FE5D9D",
+                backgroundColor: Colors.primary,
                 alignItems: "center", justifyContent: "center",
-                shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 2 },
+                shadowColor: Colors.primary, shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.4, shadowRadius: 4, elevation: 3,
               }}>
-                <Ionicons name="camera" size={12} color="#fff" />
+                <Ionicons name="camera" size={12} color={Colors.white} />
               </View>
             </Pressable>
 
@@ -270,7 +250,7 @@ export default function ProProfileScreen() {
                   borderRadius: 2, overflow: "hidden"
                 }}>
                   <LinearGradient
-                    colors={["#FE5D9D", "#FE5D9D99"]}
+                    colors={[Colors.primary, "#FE5D9D99"]}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                     style={{
                       height: "100%",
@@ -280,7 +260,7 @@ export default function ProProfileScreen() {
                   />
                 </View>
                 <Text style={{
-                  fontSize: 11, fontWeight: "700", color: "#FE5D9D"
+                  fontSize: 11, fontWeight: "700", color: Colors.primary
                 }}>
                   {profileCompleteness}%
                 </Text>
@@ -401,7 +381,7 @@ export default function ProProfileScreen() {
                   elevation: 3,
                 }}
               >
-                <Ionicons name="card-outline" size={22} color="#fff" />
+                <Ionicons name="card-outline" size={22} color={Colors.white} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -502,8 +482,8 @@ export default function ProProfileScreen() {
                 alignSelf: "flex-start", backgroundColor: "#FE5D9D15",
                 borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6,
               }}>
-                <Ionicons name="trending-up-outline" size={11} color="#FE5D9D" />
-                <Text numberOfLines={1} style={{ fontSize: 11, color: "#FE5D9D", fontWeight: "600" }}>
+                <Ionicons name="trending-up-outline" size={11} color={Colors.primary} />
+                <Text numberOfLines={1} style={{ fontSize: 11, color: Colors.primary, fontWeight: "600" }}>
                   Compléter
                 </Text>
               </View>
@@ -561,8 +541,8 @@ export default function ProProfileScreen() {
           borderColor: "rgba(249,115,22,0.30)",
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <Ionicons name="shield-checkmark" size={14} color="#F97316" />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: "#F97316", letterSpacing: 0.5, textTransform: "uppercase" }}>
+            <Ionicons name="shield-checkmark" size={14} color={Colors.admin} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.admin, letterSpacing: 0.5, textTransform: "uppercase" }}>
               Vue administrateur
             </Text>
           </View>
@@ -571,11 +551,11 @@ export default function ProProfileScreen() {
               onPress={() => router.push("/(admin)/dashboard" as any)}
               style={{
                 flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-                gap: 6, backgroundColor: "#F97316", borderRadius: 10, paddingVertical: 10,
+                gap: 6, backgroundColor: Colors.admin, borderRadius: 10, paddingVertical: 10,
               }}
             >
-              <Ionicons name="grid" size={15} color="#fff" />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Admin</Text>
+              <Ionicons name="grid" size={15} color={Colors.white} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Admin</Text>
             </Pressable>
             <Pressable
               onPress={() => router.push("/(client)" as any)}
@@ -601,7 +581,7 @@ export default function ProProfileScreen() {
             gap: 12,
             padding: 16,
             borderRadius: 16,
-            backgroundColor: "#fff",
+            backgroundColor: Colors.white,
             borderWidth: 1,
             borderColor: "#EF444430",
           }}
@@ -611,14 +591,14 @@ export default function ProProfileScreen() {
               width: 44,
               height: 44,
               borderRadius: 12,
-              backgroundColor: "#FEF2F2",
+              backgroundColor: Colors.destructiveLight,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
           </View>
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: "#EF4444" }}>
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: Colors.destructive }}>
             Se déconnecter
           </Text>
         </Pressable>
@@ -643,11 +623,65 @@ export default function ProProfileScreen() {
         shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
       }}
     >
-      <Ionicons name="checkmark-circle" size={18} color="#fff" />
-      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+      <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
+      <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>
         Photo mise à jour
       </Text>
     </Animated.View>
+
+    {/* Avatar action sheet */}
+    <RNModal visible={showAvatarSheet} transparent animationType="slide" onRequestClose={() => setShowAvatarSheet(false)}>
+      <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowAvatarSheet(false)} />
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: ColorsImport.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 12 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ColorsImport.border, alignSelf: "center", marginTop: 12, marginBottom: 16 }} />
+        <Text style={{ fontSize: 14, fontWeight: "700", color: ColorsImport.mutedForeground, textAlign: "center", marginBottom: 8 }}>Photo de profil</Text>
+        {[
+          { label: "Prendre une photo", icon: "camera-outline" as const, onPress: pickFromCamera },
+          { label: "Choisir depuis la galerie", icon: "image-outline" as const, onPress: pickFromGallery },
+        ].map((item) => (
+          <Pressable
+            key={item.label}
+            onPress={item.onPress}
+            style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 16 }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${ColorsImport.primary}15`, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name={item.icon} size={20} color={ColorsImport.primary} />
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: ColorsImport.foreground }}>{item.label}</Text>
+          </Pressable>
+        ))}
+        <Pressable
+          onPress={() => setShowAvatarSheet(false)}
+          style={{ marginHorizontal: 20, marginTop: 8, height: 44, borderRadius: 14, backgroundColor: ColorsImport.muted, alignItems: "center", justifyContent: "center" }}
+        >
+          <Text style={{ fontSize: 15, fontWeight: "600", color: ColorsImport.foreground }}>Annuler</Text>
+        </Pressable>
+      </View>
+    </RNModal>
+
+    {/* Logout confirmation sheet */}
+    <RNModal visible={showLogoutConfirm} transparent animationType="slide" onRequestClose={() => setShowLogoutConfirm(false)}>
+      <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowLogoutConfirm(false)} />
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: ColorsImport.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ColorsImport.border, alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
+        <Text style={{ fontSize: 17, fontWeight: "800", color: ColorsImport.foreground, marginBottom: 6 }}>Déconnexion</Text>
+        <Text style={{ fontSize: 14, color: ColorsImport.mutedForeground, marginBottom: 24 }}>Êtes-vous sûr de vouloir vous déconnecter ?</Text>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <Pressable
+            onPress={() => setShowLogoutConfirm(false)}
+            style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: ColorsImport.muted, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "600", color: ColorsImport.foreground }}>Non</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { setShowLogoutConfirm(false); logout(); }}
+            style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Se déconnecter</Text>
+          </Pressable>
+        </View>
+      </View>
+    </RNModal>
     </View>
   );
 }

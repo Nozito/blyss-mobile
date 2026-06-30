@@ -14,7 +14,7 @@ import { ADMIN } from "@/constants/adminTheme";
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
 const BORDER = ADMIN.border;
-const TEXT1  = "#fff";
+const TEXT1  = Colors.white;
 const TEXT2  = "rgba(255,255,255,0.5)";
 const TEXT3  = "rgba(255,255,255,0.28)";
 const MUTED  = "rgba(255,255,255,0.07)";
@@ -226,7 +226,7 @@ export default function AdminLogsScreen() {
                 <View key={log.id} style={{
                   backgroundColor: CARD, borderRadius: 14, padding: 14,
                   borderWidth: 1, borderColor: BORDER,
-                  shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 2,
+                  shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 2,
                 }}>
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: cfg.bg, flexShrink: 0 }}>

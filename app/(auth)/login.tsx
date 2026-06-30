@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,64 +8,37 @@ import {
   Pressable,
   Animated,
   ActivityIndicator,
+  Image,
   StyleSheet,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { Fonts } from "@/constants/fonts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as LocalAuthentication from "expo-local-authentication";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
+import { storage } from "@/lib/storage";
 import { Input } from "@/components/ui/Input";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
+import { emailSchema, getZodError } from "@/lib/validation";
 
-// ─── Traduction minimale des erreurs Supabase (EN → FR) ──────────────────────
-
-function parseError(raw: string): string {
+function parseLoginError(raw: string): string {
   const r = raw.toLowerCase();
-  if (r.includes("invalid login") || r.includes("invalid credentials"))
+  if (r.includes("invalid login") || r.includes("invalid credentials") || r.includes("incorrect"))
     return "Email ou mot de passe incorrect";
   if (r.includes("email not confirmed"))
-    return "Email non confirmé";
+    return "Email non confirmé — vérifie ta boîte mail";
   if (r.includes("too many") || r.includes("rate limit"))
-    return "Trop de tentatives, réessaie plus tard";
-  if (r === "server_error" || r.includes("network"))
-    return "Pas de connexion internet";
+    return "Trop de tentatives — réessaie dans quelques minutes";
+  if (r.includes("network") || r === "server_error")
+    return "Pas de connexion — vérifie ton internet";
   return raw;
-}
-
-// ─── Validation ───────────────────────────────────────────────────────────────
-
-const schema = z.object({
-  email: z
-    .string()
-    .min(1, "Email requis")
-    .email("Format d'email invalide")
-    .max(254, "Email trop long"),
-  password: z
-    .string()
-    .min(1, "Mot de passe requis")
-    .min(6, "Minimum 6 caractères")
-    .max(128, "Maximum 128 caractères"),
-});
-type FormData = z.infer<typeof schema>;
-
-// ─── ScaleOnFocus ─────────────────────────────────────────────────────────────
-
-function ScaleOnFocus({ children, focused }: { children: React.ReactNode; focused: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  React.useEffect(() => {
-    Animated.spring(scale, {
-      toValue: focused ? 1.02 : 1,
-      useNativeDriver: true,
-      tension: 200,
-      friction: 20,
-    }).start();
-  }, [focused, scale]);
-  return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -73,12 +46,27 @@ function ScaleOnFocus({ children, focused }: { children: React.ReactNode; focuse
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
+
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState<string | undefined>(undefined);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting]     = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [isBioLoading, setIsBioLoading]     = useState(false);
+
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [bioAvailable,   setBioAvailable]   = useState(false);
+  const [bioType, setBioType] = useState<"face" | "fingerprint">("face");
+
+  const [showRoleModal, setShowRoleModal]   = useState(false);
+  const [loggedName, setLoggedName]         = useState("");
+  const [loggedRole, setLoggedRole]         = useState<"pro" | "client">("client");
+
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (!submitError) return;
+  const shake = useCallback(() => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     Animated.sequence([
       Animated.timing(shakeAnim, { toValue: 8,  duration: 55, useNativeDriver: true }),
       Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
@@ -86,58 +74,175 @@ export default function LoginScreen() {
       Animated.timing(shakeAnim, { toValue: -5, duration: 45, useNativeDriver: true }),
       Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
     ]).start();
-  }, [submitError, shakeAnim]);
+  }, [shakeAnim]);
 
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [loggedUserName, setLoggedUserName] = useState("");
-  const [loggedUserRole, setLoggedUserRole] = useState<"pro" | "client">("client");
+  // ── Check capabilities ───────────────────────────────────────────────────
+  useEffect(() => {
+    const check = async () => {
+      // Apple Sign In — iOS only
+      if (Platform.OS === "ios") {
+        const available = await AppleAuthentication.isAvailableAsync().catch(() => false);
+        setAppleAvailable(available);
+      }
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+      // Biometrics — only if user has a stored token
+      const token = await storage.getAccessToken();
+      if (!token) return;
 
-  const onSubmit = async (data: FormData) => {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync().catch(() => false);
+      const isEnrolled  = await LocalAuthentication.isEnrolledAsync().catch(() => false);
+      if (hasHardware && isEnrolled) {
+        setBioAvailable(true);
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync().catch(() => [] as number[]);
+        const FACE_ID = LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION as number;
+        setBioType(types.includes(FACE_ID) ? "face" : "fingerprint");
+      }
+    };
+    void check();
+  }, []);
+
+  // ── Real-time email validation ────────────────────────────────────────────
+  const handleEmailChange = useCallback((v: string) => {
+    setEmail(v);
     setSubmitError(null);
-    const res = await login({ email: data.email.trim().toLowerCase(), password: data.password });
-    if (!res.success) {
-      setSubmitError(parseError(res.error ?? "Erreur de connexion"));
-      return;
-    }
-    const user = res.data?.user;
-
-    if (user?.is_admin) {
-      setLoggedUserName(user.first_name ?? "");
-      setLoggedUserRole(user.role === "pro" ? "pro" : "client");
-      setShowRoleModal(true);
-      return;
-    }
-
-    if (user?.role === "client") {
-      router.replace("/(client)");
+    if (v.length > 0) {
+      const err = getZodError(emailSchema, v);
+      setEmailError(err ?? undefined);
     } else {
-      router.replace("/(pro)/dashboard");
+      setEmailError(undefined);
     }
-  };
+  }, []);
 
-  const handleRoleSelection = (selectedRole: AdminRole) => {
+  // ── Navigate after login ──────────────────────────────────────────────────
+  const navigateAfterLogin = useCallback(
+    (user: { role: string; is_admin: boolean; first_name?: string }) => {
+      if (user.is_admin) {
+        setLoggedName(user.first_name ?? "");
+        setLoggedRole(user.role === "pro" ? "pro" : "client");
+        setShowRoleModal(true);
+        return;
+      }
+      if (user.role === "pro") {
+        router.replace("/(pro)/dashboard");
+      } else {
+        router.replace("/(client)");
+      }
+    },
+    [router]
+  );
+
+  // ── Email/password login ──────────────────────────────────────────────────
+  const handleSubmit = useCallback(async () => {
+    if (!email.trim() || !password) return;
+    const emailErr = getZodError(emailSchema, email.trim());
+    if (emailErr) {
+      setEmailError(emailErr);
+      shake();
+      return;
+    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await login({ email: email.trim().toLowerCase(), password });
+      if (!res.success) {
+        setSubmitError(parseLoginError(res.error ?? "Erreur de connexion"));
+        shake();
+      } else if (res.data?.user) {
+        navigateAfterLogin(res.data.user);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [email, password, login, navigateAfterLogin, shake]);
+
+  // ── Apple Sign In ─────────────────────────────────────────────────────────
+  const handleAppleLogin = useCallback(async () => {
+    setIsAppleLoading(true);
+    setSubmitError(null);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken || !credential.authorizationCode) {
+        setSubmitError("Apple Sign In a échoué — réessaie");
+        return;
+      }
+
+      const res = await authApi.loginWithApple({
+        identityToken: credential.identityToken,
+        authorizationCode: credential.authorizationCode,
+        email: credential.email,
+        fullName: credential.fullName,
+      });
+
+      if (!res.success) {
+        setSubmitError(res.error ?? "Erreur Apple Sign In");
+        shake();
+      } else if (res.data?.user) {
+        navigateAfterLogin(res.data.user);
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error && "code" in e && (e as { code: string }).code === "ERR_REQUEST_CANCELED") {
+        // user cancelled — silently ignore
+        return;
+      }
+      setSubmitError("Apple Sign In a échoué — réessaie");
+    } finally {
+      setIsAppleLoading(false);
+    }
+  }, [navigateAfterLogin, shake]);
+
+  // ── Biometric login ───────────────────────────────────────────────────────
+  const handleBiometric = useCallback(async () => {
+    setIsBioLoading(true);
+    setSubmitError(null);
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Identifie-toi pour accéder à Blyss",
+        cancelLabel: "Annuler",
+        fallbackLabel: "Mot de passe",
+        disableDeviceFallback: false,
+      });
+
+      if (!result.success) {
+        // user cancelled or failed — no anxious message
+        return;
+      }
+
+      // Token already stored — call getProfile to restore session
+      const profile = await authApi.getProfile();
+      if (profile.success && profile.data) {
+        navigateAfterLogin(profile.data);
+      } else {
+        setSubmitError("Session expirée — connecte-toi avec ton mot de passe");
+      }
+    } catch {
+      // biometrics unavailable — silent fallback, no message
+    } finally {
+      setIsBioLoading(false);
+    }
+  }, [navigateAfterLogin]);
+
+  // ── Role modal (admin) ────────────────────────────────────────────────────
+  const handleRoleSelection = useCallback((selectedRole: AdminRole) => {
     setShowRoleModal(false);
     const routes: Record<AdminRole, string> = {
       client: "/(client)",
-      pro:    "/(pro)/dashboard",
-      admin:  "/(admin)/dashboard",
+      pro: "/(pro)/dashboard",
+      admin: "/(admin)/dashboard",
     };
     router.replace(routes[selectedRole] as Parameters<typeof router.replace>[0]);
-  };
+  }, [router]);
 
-  const handleCloseModal = () => {
-    setShowRoleModal(false);
-    router.replace(loggedUserRole === "pro" ? "/(pro)/dashboard" : "/(client)");
-  };
+  const isSubmitDisabled = isSubmitting || !email.trim() || !password || !!emailError;
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -148,130 +253,157 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Retour ──────────────────────────────────────────────────────── */}
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color="#FF5EA0" />
-          </Pressable>
+          {/* Back */}
+          <AnimatedIconButton onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
+          </AnimatedIconButton>
 
-          {/* ── Titre ───────────────────────────────────────────────────────── */}
+          {/* Logo */}
+          <View style={styles.logoBlock}>
+            <Image
+              source={require("@/assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Title */}
           <View style={styles.titleBlock}>
-            <Text style={styles.titleLine1}>Bon retour,</Text>
-            <Text style={styles.titleLine2}>on t'attendait</Text>
-            <Text style={styles.subtitle}>
-              Connecte-toi pour continuer sur Blyss
-            </Text>
+            <Text style={styles.title}>Bon retour 👋</Text>
+            <Text style={styles.subtitle}>Connecte-toi pour continuer sur Blyss</Text>
           </View>
 
-          {/* ── Formulaire ──────────────────────────────────────────────────── */}
+          {/* Error banner */}
+          {submitError && (
+            <Animated.View style={{ transform: [{ translateX: shakeAnim }], marginBottom: 16 }}>
+              <ErrorMessage message={submitError} />
+            </Animated.View>
+          )}
+
+          {/* Form */}
           <View style={styles.form}>
-            {/* Email */}
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <ScaleOnFocus focused={focusedField === "email"}>
-                  <Input
-                    label="Email"
-                    value={value}
-                    onChangeText={(v) => { onChange(v); setSubmitError(null); }}
-                    onFocus={() => setFocusedField("email")}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="ton@email.com"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    leftIcon="mail-outline"
-                    error={errors.email?.message}
-                  />
-                </ScaleOnFocus>
-              )}
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={handleEmailChange}
+              placeholder="ton@email.com"
+              keyboardType="email-address"
+              autoComplete="email"
+              autoCapitalize="none"
+              leftIcon="mail-outline"
+              error={emailError}
             />
 
-            {/* Password */}
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, value } }) => (
-                <ScaleOnFocus focused={focusedField === "password"}>
-                  <View>
-                    <View style={styles.passwordHeader}>
-                      <Text style={styles.fieldLabel}>
-                        Mot de passe
-                        {errors.password && (
-                          <Text style={styles.fieldError}> · {errors.password.message}</Text>
-                        )}
-                      </Text>
-                      <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-                        <Text style={styles.forgotLink}>Oublié ?</Text>
-                      </Pressable>
-                    </View>
-                    <Input
-                      value={value}
-                      onChangeText={(v) => { onChange(v); setSubmitError(null); }}
-                      onFocus={() => setFocusedField("password")}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="••••••••"
-                      autoComplete="current-password"
-                      leftIcon="lock-closed-outline"
-                      secure
-                    />
-                  </View>
-                </ScaleOnFocus>
-              )}
-            />
-
-            {/* Bannière erreur */}
-            {submitError && (
-              <Animated.View
-                style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}
-              >
-                <Text style={styles.errorText}>{submitError}</Text>
-              </Animated.View>
-            )}
+            <View>
+              <View style={styles.passwordHeader}>
+                <Text style={styles.fieldLabel}>Mot de passe</Text>
+                <Pressable onPress={() => router.push("/(auth)/forgot-password")} hitSlop={8}>
+                  <Text style={styles.forgotLink}>Mot de passe oublié ?</Text>
+                </Pressable>
+              </View>
+              <Input
+                value={password}
+                onChangeText={(v) => { setPassword(v); setSubmitError(null); }}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                leftIcon="lock-closed-outline"
+                secure
+              />
+            </View>
           </View>
 
-          {/* ── CTA ─────────────────────────────────────────────────────────── */}
+          {/* CTA */}
           <Pressable
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            style={[styles.ctaBtn, isSubmitting && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={isSubmitDisabled}
+            style={[styles.ctaBtn, isSubmitDisabled && styles.ctaBtnDisabled]}
           >
-            {isSubmitting
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.ctaText}>Se connecter</Text>
-            }
+            {isSubmitting ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.ctaBtnText}>Se connecter</Text>
+            )}
           </Pressable>
 
-          {/* ── Séparateur ──────────────────────────────────────────────────── */}
+          {/* Biometric */}
+          {bioAvailable && (
+            <Pressable
+              onPress={handleBiometric}
+              disabled={isBioLoading}
+              style={styles.bioBtn}
+            >
+              {isBioLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={bioType === "face" ? "scan-outline" : "finger-print-outline"}
+                    size={20}
+                    color={Colors.primary}
+                  />
+                  <Text style={styles.bioBtnText}>
+                    {bioType === "face" ? "Se connecter avec Face ID" : "Se connecter avec Touch ID"}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          )}
+
+          {/* Separator */}
           <View style={styles.separator}>
             <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>Pas encore de compte ?</Text>
+            <Text style={styles.separatorText}>ou</Text>
             <View style={styles.separatorLine} />
           </View>
 
-          {/* ── Inscription ─────────────────────────────────────────────────── */}
-          <Pressable
-            onPress={() => router.push("/(auth)/register")}
-            style={styles.secondaryBtn}
-          >
-            <Text style={styles.secondaryBtnText}>Créer un compte</Text>
-          </Pressable>
+          {/* Apple Sign In */}
+          {appleAvailable && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={16}
+              style={styles.appleBtn}
+              onPress={handleAppleLogin}
+            />
+          )}
 
-          {/* ── Légal ───────────────────────────────────────────────────────── */}
+          {isAppleLoading && (
+            <View style={styles.appleLoading}>
+              <ActivityIndicator size="small" color={Colors.mutedForeground} />
+            </View>
+          )}
+
+          {/* Register link */}
+          <View style={styles.registerRow}>
+            <Text style={styles.registerText}>Pas encore de compte ? </Text>
+            <Pressable onPress={() => router.push("/(auth)/register")}>
+              <Text style={styles.registerLink}>S'inscrire</Text>
+            </Pressable>
+          </View>
+
+          {/* Legal */}
           <Text style={styles.legal}>
             {"En continuant, tu acceptes nos "}
-            <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>CGU</Text>
+            <Text style={styles.legalLink} onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>
+              CGU
+            </Text>
             {" et la "}
-            <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>Politique de confidentialité</Text>
+            <Text style={styles.legalLink} onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>
+              Politique de confidentialité
+            </Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <RoleSelectionModal
         visible={showRoleModal}
-        userName={loggedUserName}
-        userInitials={loggedUserName.slice(0, 2).toUpperCase() || "?"}
+        userName={loggedName}
+        userInitials={loggedName.slice(0, 2).toUpperCase() || "?"}
         onSelectRole={handleRoleSelection}
-        onClose={handleCloseModal}
+        onClose={() => {
+          setShowRoleModal(false);
+          router.replace(loggedRole === "pro" ? "/(pro)/dashboard" : "/(client)");
+        }}
       />
     </SafeAreaView>
   );
@@ -280,161 +412,88 @@ export default function LoginScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#FFEAF1",
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
+  root: { flex: 1, backgroundColor: Colors.background },
 
-  // Retour
-  backBtn: {
-    paddingTop: 8,
-    paddingHorizontal: 24,
-    paddingBottom: 0,
-  },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
 
-  // Titre
-  titleBlock: {
-    paddingHorizontal: 24,
-    marginTop: 32,
-    marginBottom: 32,
-  },
-  titleLine1: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#1A0010",
-    letterSpacing: -1,
-    lineHeight: 42,
-  },
-  titleLine2: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#FF5EA0",
-    letterSpacing: -1,
-    lineHeight: 44,
-    fontFamily: Fonts.serifItalic,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "rgba(0,0,0,0.45)",
-    fontWeight: "500",
-    marginTop: 10,
-    lineHeight: 22,
-  },
+  backBtn: { paddingTop: 8, paddingBottom: 0, marginLeft: -8 },
 
-  // Formulaire
-  form: {
-    paddingHorizontal: 24,
-    gap: 12,
-  },
+  logoBlock: { alignItems: "center", marginTop: 16, marginBottom: 8 },
+  logo: { width: 90, height: 90 },
+
+  titleBlock: { marginBottom: 24 },
+  title: { fontSize: 28, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: Colors.mutedForeground, marginTop: 6, lineHeight: 20 },
+
+  form: { gap: 12, marginBottom: 24 },
+
   passwordHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1A0010",
-    letterSpacing: 0.1,
-  },
-  fieldError: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: "#EF4444",
-  },
-  forgotLink: {
-    fontSize: 12,
-    color: "#FF5EA0",
-    fontWeight: "600",
-  },
+  fieldLabel: { fontSize: 13, fontWeight: "600", color: Colors.foreground },
+  forgotLink: { fontSize: 12, fontWeight: "600", color: Colors.primary },
 
-  // Bannière erreur
-  errorBanner: {
-    backgroundColor: "rgba(240,58,58,0.07)",
-    borderRadius: 12,
-    borderLeftWidth: 2,
-    borderLeftColor: "#F03A3A",
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-  },
-  errorText: {
-    fontSize: 13,
-    color: "#F03A3A",
-    fontWeight: "500",
-    lineHeight: 18,
-  },
-
-  // CTA
   ctaBtn: {
-    marginTop: 28,
-    marginHorizontal: 24,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: "#FF5EA0",
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#FF5EA0",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.40,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+    marginBottom: 12,
   },
-  ctaText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 16,
-  },
+  ctaBtnDisabled: { backgroundColor: Colors.disabled, shadowOpacity: 0, elevation: 0 },
+  ctaBtnText: { fontSize: 16, fontWeight: "700", color: Colors.white },
 
-  // Séparateur
+  bioBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+    marginBottom: 4,
+  },
+  bioBtnText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+
   separator: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginVertical: 28,
-    paddingHorizontal: 24,
+    marginVertical: 20,
   },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(0,0,0,0.08)",
-  },
-  separatorText: {
-    fontSize: 12,
-    color: "rgba(0,0,0,0.35)",
-    fontWeight: "500",
-  },
+  separatorLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  separatorText: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "500" },
 
-  // Bouton secondaire
-  secondaryBtn: {
-    marginHorizontal: 24,
-    height: 60,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,94,160,0.25)",
+  appleBtn: { height: 52, borderRadius: 16, marginBottom: 8 },
+  appleLoading: { alignItems: "center", paddingVertical: 8 },
+
+  registerRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 24,
+    marginBottom: 16,
   },
-  secondaryBtnText: {
-    color: "#FF5EA0",
-    fontWeight: "700",
-    fontSize: 15,
-  },
+  registerText: { fontSize: 13, color: Colors.mutedForeground },
+  registerLink: { fontSize: 13, fontWeight: "700", color: Colors.primary },
 
-  // Légal
   legal: {
     fontSize: 11,
-    color: "rgba(0,0,0,0.25)",
+    color: Colors.mutedForeground,
     textAlign: "center",
     lineHeight: 18,
-    marginTop: 20,
-    marginBottom: 40,
-    paddingHorizontal: 32,
+    paddingHorizontal: 8,
   },
-  legalLink: {
-    color: "#FF5EA0",
-  },
+  legalLink: { color: Colors.primary, fontWeight: "600" },
 });

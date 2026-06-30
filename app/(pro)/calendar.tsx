@@ -5,12 +5,14 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   Modal as RNModal,
   ActivityIndicator,
+  Animated,
   Dimensions,
   Platform,
+  RefreshControl,
 } from "react-native";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Modal } from "@/components/ui/Modal";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,9 +21,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { proApi, nailTechApi } from "@/lib/api";
 import { toLocalDate } from "@/lib/dateUtils";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -108,15 +111,34 @@ const QUICK_TIMES = [
 ];
 
 const MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-const DAYS_SHORT = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+const DAYS_SHORT = ["Lun","Mar","Mer","Jeu","Ven","Sam"];
+
+// ─── Feature-scoped theme constants (intentionally distinct from brand palette)
+const PLANNING = {
+  bg: Colors.successLight,
+  border: Colors.successBorder,
+  color: Colors.successText,
+  colorDark: Colors.successTextDark,
+  iconBg: withAlpha(Colors.successText, 0.12),
+  closeBg: withAlpha(Colors.successBorder, 0.5),
+} as const;
+
+const ABSENCES = {
+  bg: Colors.warningLight,
+  border: Colors.warningBorder,
+  color: Colors.warningText,
+  colorDark: Colors.warningTextDark,
+  iconBg: withAlpha(Colors.warning, 0.12),
+  closeBg: withAlpha(Colors.warningBorder, 0.4),
+} as const;
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  completed: { label: "Terminé",    color: "#16A34A", bg: "rgba(22,163,74,0.12)",  icon: "checkmark-circle-outline" },
-  cancelled:  { label: "Annulé",    color: "#EF4444", bg: "rgba(239,68,68,0.12)",  icon: "close-circle-outline" },
-  pending:    { label: "À venir",   color: "#F59E0B", bg: "rgba(245,158,11,0.12)", icon: "time-outline" },
-  ongoing:    { label: "En cours",  color: "#3B82F6", bg: "rgba(59,130,246,0.12)", icon: "radio-button-on-outline" },
-  past_pending: { label: "À valider", color: "#8B5CF6", bg: "rgba(139,92,246,0.12)", icon: "alert-circle-outline" },
-  no_show:    { label: "Absent",    color: "#EF4444", bg: "rgba(239,68,68,0.12)",  icon: "person-remove-outline" },
+  completed:    { label: "Terminé",    color: Colors.successText,  bg: withAlpha(Colors.successText, 0.12),  icon: "checkmark-circle-outline" },
+  cancelled:    { label: "Annulé",     color: Colors.destructive,  bg: withAlpha(Colors.destructive, 0.12),  icon: "close-circle-outline" },
+  pending:      { label: "À venir",    color: Colors.warning,      bg: withAlpha(Colors.warning, 0.12),      icon: "time-outline" },
+  ongoing:      { label: "En cours",   color: Colors.info,         bg: withAlpha(Colors.info, 0.12),         icon: "radio-button-on-outline" },
+  past_pending: { label: "À valider",  color: Colors.pro,          bg: withAlpha(Colors.pro, 0.12),          icon: "alert-circle-outline" },
+  no_show:      { label: "Absent",     color: Colors.destructive,  bg: withAlpha(Colors.destructive, 0.12),  icon: "person-remove-outline" },
 };
 
 function getAptStatus(apt: Appointment): string {
@@ -135,7 +157,7 @@ function getAptStatus(apt: Appointment): string {
 
 // ─── CALENDAR GRID ───────────────────────────────────────────────────────────
 
-const CELL_SIZE = (Dimensions.get("window").width - 40 - 12) / 7;
+const CELL_SIZE = (Dimensions.get("window").width - 40 - 32) / 6;
 
 function CalendarGrid({
   currentDate,
@@ -160,11 +182,14 @@ function CalendarGrid({
   const month = currentDate.getMonth();
 
   const days = useMemo(() => {
-    const firstDay = new Date(year, month, 1);
-    const startOffset = (firstDay.getDay() + 6) % 7;
     const total = new Date(year, month + 1, 0).getDate();
-    const arr: (number | null)[] = Array(startOffset).fill(null);
-    for (let i = 1; i <= total; i++) arr.push(i);
+    const arr: (number | null)[] = [];
+    const firstDayJS = new Date(year, month, 1).getDay();
+    const startOffset = firstDayJS === 0 ? 0 : firstDayJS - 1;
+    for (let i = 0; i < startOffset; i++) arr.push(null);
+    for (let d = 1; d <= total; d++) {
+      if (new Date(year, month, d).getDay() !== 0) arr.push(d);
+    }
     return arr;
   }, [year, month]);
 
@@ -187,10 +212,10 @@ function CalendarGrid({
   const today = new Date();
 
   return (
-    <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
+    <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
       {/* Month nav */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <AnimatedIconButton onPress={onPrevMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}>
+        <AnimatedIconButton onPress={onPrevMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
         </AnimatedIconButton>
         <Pressable onPress={onToday}>
@@ -198,7 +223,7 @@ function CalendarGrid({
             {MONTHS[month]} {year}
           </Text>
         </Pressable>
-        <AnimatedIconButton onPress={onNextMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}>
+        <AnimatedIconButton onPress={onNextMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
         </AnimatedIconButton>
       </View>
@@ -235,13 +260,13 @@ function CalendarGrid({
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 12,
-                backgroundColor: isSel ? Colors.primary : isU ? "#FEF2F2" : "transparent",
+                backgroundColor: isSel ? Colors.primary : isU ? Colors.destructiveLight : "transparent",
               }}
             >
               <Text style={{
                 fontSize: 13,
                 fontWeight: isSel || isTod ? "800" : "500",
-                color: isSel ? "#fff" : isTod ? Colors.primary : isU ? "#EF4444" : Colors.foreground,
+                color: isSel ? Colors.white : isTod ? Colors.primary : isU ? Colors.destructive : Colors.foreground,
               }}>
                 {day}
               </Text>
@@ -267,29 +292,24 @@ export default function ProCalendarScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Data
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
-  // Modals
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [showUnavailModal, setShowUnavailModal] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
 
-  // Add slot form
   const [newSlotTime, setNewSlotTime] = useState("09:00");
   const [newSlotDuration, setNewSlotDuration] = useState(60);
 
-  // Edit slot
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [editTime, setEditTime] = useState("09:00");
   const [editDur, setEditDur] = useState(60);
 
-  // Unavailability form
   const [unavailStartDate, setUnavailStartDate] = useState<Date | null>(null);
   const [unavailEndDate, setUnavailEndDate] = useState<Date | null>(null);
   const [unavailReason, setUnavailReason] = useState("");
@@ -297,7 +317,6 @@ export default function ProCalendarScreen() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
-  // Weekly planning
   const [activeDays, setActiveDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [planningSlots, setPlanningSlots] = useState<string[]>(["09:00", "14:00"]);
   const [weeklyPlanSaving, setWeeklyPlanSaving] = useState(false);
@@ -305,17 +324,32 @@ export default function ProCalendarScreen() {
   const [showPlanTimePicker, setShowPlanTimePicker] = useState(false);
   const [newPlanTime, setNewPlanTime] = useState(new Date());
 
-  // View mode
-  type ViewMode = "month" | "week" | "list";
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const [showViewPicker, setShowViewPicker] = useState(false);
+  const [slotError, setSlotError] = useState<string | null>(null);
+  const [unavailError, setUnavailError] = useState<string | null>(null);
+  const [planningError, setPlanningError] = useState<string | null>(null);
+  const [planningInfo, setPlanningInfo] = useState<string | null>(null);
+  const [showDeleteSlotId, setShowDeleteSlotId] = useState<string | null>(null);
+  const [showCancelAptId, setShowCancelAptId] = useState<number | null>(null);
+  const [showPlanConfirm, setShowPlanConfirm] = useState(false);
+  const [planConfirmMsg, setPlanConfirmMsg] = useState("");
+  const [planConfirmWeeks, setPlanConfirmWeeks] = useState(4);
 
-  // ── month/year derived from selectedDate — stable primitives for deps
+  type ViewMode = "month" | "week";
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const toggleAnim = useRef(new Animated.Value(1)).current;
+
+  const toggleViewMode = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(toggleAnim, { toValue: 0.7, duration: 100, useNativeDriver: true }),
+      Animated.spring(toggleAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }),
+    ]).start();
+    setViewMode((v) => (v === "month" ? "week" : "month"));
+  }, [toggleAnim]);
+
   const selectedYear  = selectedDate.getFullYear();
   const selectedMonth = selectedDate.getMonth();
   const selectedDateStr = toLocalDate(selectedDate);
 
-  // ── data fetching — split month data vs day slots to avoid redundant requests
   const fetchMonthData = useCallback(async (year: number, month: number) => {
     setLoading(true);
     try {
@@ -346,17 +380,21 @@ export default function ProCalendarScreen() {
     }
   }, []);
 
-  // Refetch calendar+unavailabilities only when month/year changes
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
-  // Refetch slots whenever selected day changes
   useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchMonthData(selectedYear, selectedMonth), fetchSlots(selectedDateStr)]);
+    setRefreshing(false);
+  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr]);
 
   const handleSelectDate = (d: Date) => {
     setSelectedDate(d);
     setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
   };
 
-  // ── filtered appointments for selected day
   const dayAppointments = useMemo(() => {
     let list = appointments.filter(
       (a) => toLocalDate(new Date(a.date)) === toLocalDate(selectedDate)
@@ -372,7 +410,6 @@ export default function ProCalendarScreen() {
     return list;
   }, [appointments, selectedDate, searchQuery]);
 
-  // ── slot actions
   const toggleSlot = async (id: string) => {
     const slot = slots.find((s) => s.id === id);
     if (!slot || slot.isPast || !slot.isAvailable) return;
@@ -381,18 +418,19 @@ export default function ProCalendarScreen() {
       await proApi.updateSlot(parseInt(id), { status: slot.isActive ? "blocked" : "available" });
     } catch {
       setSlots((prev) => prev.map((s) => s.id === id ? { ...s, isActive: slot.isActive } : s));
-      Alert.alert("Erreur", "Impossible de mettre à jour le créneau");
+      setSlotError("Impossible de mettre à jour le créneau");
     }
   };
 
   const addSlot = async () => {
+    setSlotError(null);
     const date = toLocalDate(selectedDate);
     if (!canCreate(date, newSlotTime)) {
-      Alert.alert("Erreur", "Impossible de créer un créneau dans le passé");
+      setSlotError("Impossible de créer un créneau dans le passé");
       return;
     }
     if (checkOverlap(slots, newSlotTime, newSlotDuration)) {
-      Alert.alert("Erreur", "Ce créneau chevauche un créneau existant");
+      setSlotError("Ce créneau chevauche un créneau existant");
       return;
     }
     try {
@@ -400,19 +438,20 @@ export default function ProCalendarScreen() {
       await fetchSlots(selectedDateStr);
       setShowAddSlot(false);
     } catch {
-      Alert.alert("Erreur", "Impossible d'ajouter le créneau");
+      setSlotError("Impossible d'ajouter le créneau");
     }
   };
 
   const confirmEditSlot = async () => {
     if (!editingSlotId) return;
+    setSlotError(null);
     const date = toLocalDate(selectedDate);
     if (!canCreate(date, editTime)) {
-      Alert.alert("Erreur", "Heure déjà passée");
+      setSlotError("Heure déjà passée");
       return;
     }
     if (checkOverlap(slots, editTime, editDur, editingSlotId)) {
-      Alert.alert("Erreur", "Chevauchement avec un autre créneau");
+      setSlotError("Chevauchement avec un autre créneau");
       return;
     }
     setEditingSlotId(null);
@@ -420,22 +459,22 @@ export default function ProCalendarScreen() {
       await proApi.updateSlot(parseInt(editingSlotId), { date, time: editTime, duration: editDur });
       await fetchSlots(selectedDateStr);
     } catch {
-      Alert.alert("Erreur", "Impossible de modifier le créneau");
+      setSlotError("Impossible de modifier le créneau");
     }
   };
 
   const deleteSlot = async (id: string) => {
     const backup = [...slots];
+    setShowDeleteSlotId(null);
     setSlots((prev) => prev.filter((s) => s.id !== id));
     try {
       await proApi.deleteSlot(parseInt(id));
     } catch {
       setSlots(backup);
-      Alert.alert("Erreur", "Impossible de supprimer le créneau");
+      setSlotError("Impossible de supprimer le créneau");
     }
   };
 
-  // ── appointment actions
   const handleComplete = async (apt: Appointment) => {
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "completed" } : a));
@@ -466,16 +505,16 @@ export default function ProCalendarScreen() {
     }
   };
 
-  // ── unavailability actions
   const createUnavailability = async () => {
+    setUnavailError(null);
     if (!unavailStartDate || !unavailEndDate) {
-      Alert.alert("Erreur", "Sélectionne une période");
+      setUnavailError("Sélectionne une période");
       return;
     }
     const startStr = toLocalDate(unavailStartDate);
     const endStr = toLocalDate(unavailEndDate);
     if (endStr < startStr) {
-      Alert.alert("Erreur", "La date de fin doit être après le début");
+      setUnavailError("La date de fin doit être après le début");
       return;
     }
     setUnavailSaving(true);
@@ -486,43 +525,33 @@ export default function ProCalendarScreen() {
       setUnavailStartDate(null); setUnavailEndDate(null); setUnavailReason("");
       setShowUnavailModal(false);
     } catch {
-      Alert.alert("Erreur", "Impossible d'enregistrer la période");
+      setUnavailError("Impossible d'enregistrer la période");
     } finally {
       setUnavailSaving(false);
     }
   };
 
-  // ── weekly planning
   const applyWeeklyPlanning = () => {
     if (activeDays.length === 0 || planningSlots.length === 0) return;
 
     const MAX_SLOTS_PER_DAY = 5;
     const WEEKS = 4;
 
+    setPlanningError(null);
     if (planningSlots.length > MAX_SLOTS_PER_DAY) {
-      Alert.alert(
-        "Trop de créneaux",
-        `Le planning est limité à ${MAX_SLOTS_PER_DAY} créneaux par jour. Retire les créneaux en trop avant de continuer.`
-      );
+      setPlanningError(`Le planning est limité à ${MAX_SLOTS_PER_DAY} créneaux par jour. Retire les créneaux en trop avant de continuer.`);
       return;
     }
 
     const totalSlots = activeDays.length * WEEKS * planningSlots.length;
-
-    Alert.alert(
-      "Confirmer le planning",
-      `${totalSlots} créneaux vont être créés sur ${WEEKS} semaines (${activeDays.length} jour${activeDays.length > 1 ? "s" : ""} × ${planningSlots.length} créneau${planningSlots.length > 1 ? "x" : ""}/jour).\n\nLes créneaux déjà existants ou passés seront ignorés.`,
-      [
-        { text: "Annuler", style: "cancel" },
-        { text: "Appliquer", onPress: () => void doApplyWeeklyPlanning(WEEKS) },
-      ]
-    );
+    setPlanConfirmWeeks(WEEKS);
+    setPlanConfirmMsg(`${totalSlots} créneaux vont être créés sur ${WEEKS} semaines (${activeDays.length} jour${activeDays.length > 1 ? "s" : ""} × ${planningSlots.length} créneau${planningSlots.length > 1 ? "x" : ""}/jour).\n\nLes créneaux déjà existants ou passés seront ignorés.`);
+    setShowPlanConfirm(true);
   };
 
   const doApplyWeeklyPlanning = async (weeks: number) => {
     setWeeklyPlanSaving(true);
 
-    // dayNum: 1=Lun…7=Dim → JS getDay(): 0=Dim, 1=Lun…6=Sam
     const getNextDates = (dayNum: number): string[] => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -554,16 +583,14 @@ export default function ProCalendarScreen() {
       qc.invalidateQueries({ queryKey: ["slots"] });
 
       if (failed > 0) {
-        Alert.alert(
-          "Planning appliqué",
-          `${created} créneaux créés, ${failed} ignorés (chevauchement ou passés).`
-        );
+        setPlanningInfo(`${created} créneaux créés, ${failed} ignorés (chevauchement ou passés).`);
+        setTimeout(() => setPlanningInfo(null), 3000);
       } else {
         setWeeklyPlanSuccess(true);
         setTimeout(() => setWeeklyPlanSuccess(false), 2500);
       }
     } catch {
-      Alert.alert("Erreur", "Impossible d'appliquer le planning");
+      setPlanningError("Impossible d'appliquer le planning");
     } finally {
       setWeeklyPlanSaving(false);
     }
@@ -579,7 +606,6 @@ export default function ProCalendarScreen() {
     }
   };
 
-  // ── selected apt status
   const aptStatusKey = selectedApt ? getAptStatus(selectedApt) : "pending";
   const aptStatusCfg = STATUS_CFG[aptStatusKey] ?? STATUS_CFG.pending;
   const scrollRef = useRef(null);
@@ -606,35 +632,43 @@ export default function ProCalendarScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable
+              onPress={() => {
+                const t = new Date();
+                setSelectedDate(t);
+                setCurrentDate(new Date(t.getFullYear(), t.getMonth(), 1));
+              }}
+              style={{ height: 40, paddingHorizontal: 14, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>Auj.</Text>
+            </Pressable>
+            <Pressable
               onPress={() => setIsSearchOpen((v) => !v)}
-              style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...Shadows.card }}
+              style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
             >
               <Ionicons name={isSearchOpen ? "close" : "search-outline"} size={18} color={Colors.foreground} />
             </Pressable>
             <Pressable
-              onPress={() => setShowViewPicker(true)}
+              onPress={toggleViewMode}
               style={{
                 width: 40, height: 40, borderRadius: 12,
-                backgroundColor: viewMode !== "month" ? Colors.primary : "#FFFFFF",
+                backgroundColor: viewMode === "week" ? Colors.primary : Colors.white,
                 alignItems: "center", justifyContent: "center",
                 ...Shadows.card,
               }}
             >
-              <Ionicons
-                name={
-                  viewMode === "month" ? "calendar-outline"
-                  : viewMode === "week" ? "grid-outline"
-                  : "list-outline"
-                }
-                size={18}
-                color={viewMode !== "month" ? "#fff" : Colors.foreground}
-              />
+              <Animated.View style={{ transform: [{ scale: toggleAnim }] }}>
+                <Ionicons
+                  name={viewMode === "month" ? "calendar-outline" : "grid-outline"}
+                  size={18}
+                  color={viewMode === "week" ? Colors.white : Colors.foreground}
+                />
+              </Animated.View>
             </Pressable>
           </View>
         </View>
 
         {isSearchOpen && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 14, height: 44, ...Shadows.card, marginTop: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.white, borderRadius: 14, paddingHorizontal: 14, height: 44, ...Shadows.card, marginTop: 8 }}>
             <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
             <TextInput
               value={searchQuery}
@@ -652,6 +686,7 @@ export default function ProCalendarScreen() {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {/* ── CALENDAR GRID ── */}
         {viewMode === "month" && (
@@ -672,8 +707,7 @@ export default function ProCalendarScreen() {
         )}
 
         {viewMode === "week" && (
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
-            {/* Header semaine : flèches + label plage */}
+          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <AnimatedIconButton
                 onPress={() => {
@@ -681,7 +715,7 @@ export default function ProCalendarScreen() {
                   p.setDate(p.getDate() - 7);
                   handleSelectDate(p);
                 }}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
               </AnimatedIconButton>
@@ -689,9 +723,9 @@ export default function ProCalendarScreen() {
                 {(() => {
                   const mon = new Date(selectedDate);
                   mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-                  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+                  const sat = new Date(mon); sat.setDate(sat.getDate() + 5);
                   const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-                  return `${fmt(mon)} – ${fmt(sun)}`;
+                  return `${fmt(mon)} – ${fmt(sat)}`;
                 })()}
               </Text>
               <AnimatedIconButton
@@ -700,15 +734,14 @@ export default function ProCalendarScreen() {
                   n.setDate(n.getDate() + 7);
                   handleSelectDate(n);
                 }}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
               </AnimatedIconButton>
             </View>
 
-            {/* 7 colonnes jours */}
             <View style={{ flexDirection: "row", gap: 4 }}>
-              {Array.from({ length: 7 }, (_, i) => {
+              {Array.from({ length: 6 }, (_, i) => {
                 const base = new Date(selectedDate);
                 base.setDate(base.getDate() - ((base.getDay() + 6) % 7) + i);
                 const isActive = toLocalDate(base) === toLocalDate(selectedDate);
@@ -719,19 +752,19 @@ export default function ProCalendarScreen() {
                     key={i}
                     onPress={() => handleSelectDate(new Date(base))}
                     style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 14,
-                      backgroundColor: isActive ? Colors.primary : isToday ? "rgba(254,93,157,0.1)" : "transparent" }}
+                      backgroundColor: isActive ? Colors.primary : isToday ? withAlpha(Colors.primary, 0.10) : "transparent" }}
                   >
-                    <Text style={{ fontSize: 9, fontWeight: "700", color: isActive ? "#fff" : Colors.mutedForeground,
+                    <Text style={{ fontSize: 9, fontWeight: "700", color: isActive ? Colors.white : Colors.mutedForeground,
                       textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
-                      {["L","M","M","J","V","S","D"][i]}
+                      {["L","M","M","J","V","S"][i]}
                     </Text>
                     <Text style={{ fontSize: 16, fontWeight: "800",
-                      color: isActive ? "#fff" : isToday ? Colors.primary : Colors.foreground }}>
+                      color: isActive ? Colors.white : isToday ? Colors.primary : Colors.foreground }}>
                       {base.getDate()}
                     </Text>
                     {hasApt && (
                       <View style={{ width: 4, height: 4, borderRadius: 2, marginTop: 3,
-                        backgroundColor: isActive ? "#fff" : Colors.primary }} />
+                        backgroundColor: isActive ? Colors.white : Colors.primary }} />
                     )}
                   </Pressable>
                 );
@@ -740,38 +773,27 @@ export default function ProCalendarScreen() {
           </View>
         )}
 
-        {viewMode === "list" && (
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
-            <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>
-              {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
-            </Text>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>
-              Vue liste — navigue via le header de l'agenda
-            </Text>
-          </View>
-        )}
-
         {/* ── PLANNING & ABSENCES CARDS ── */}
         <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
           <Pressable
             onPress={() => setShowPlanningModal(true)}
-            style={{ flex: 1, backgroundColor: "#F0FDF4", borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: "#BBF7D0" }}
+            style={{ flex: 1, backgroundColor: PLANNING.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: PLANNING.border }}
           >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#16A34A20", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="calendar-number-outline" size={20} color="#16A34A" />
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="calendar-number-outline" size={20} color={PLANNING.color} />
             </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: "#15803D" }}>Planning</Text>
-            <Text style={{ fontSize: 11, color: "#16A34A", lineHeight: 15 }}>Semaine type & horaires</Text>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>Planning</Text>
+            <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>Semaine type & horaires</Text>
           </Pressable>
           <Pressable
             onPress={() => setShowUnavailModal(true)}
-            style={{ flex: 1, backgroundColor: "#FFF7ED", borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: "#FED7AA" }}
+            style={{ flex: 1, backgroundColor: ABSENCES.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: ABSENCES.border }}
           >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#F59E0B20", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="moon-outline" size={20} color="#D97706" />
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ABSENCES.iconBg, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="moon-outline" size={20} color={ABSENCES.color} />
             </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: "#B45309" }}>Absences</Text>
-            <Text style={{ fontSize: 11, color: "#D97706", lineHeight: 15 }}>Congés & indisponibilités</Text>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
+            <Text style={{ fontSize: 11, color: ABSENCES.color, lineHeight: 15 }}>Congés & indisponibilités</Text>
           </Pressable>
         </View>
 
@@ -787,8 +809,8 @@ export default function ProCalendarScreen() {
             onPress={() => setShowAddSlot(true)}
             style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
           >
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Créneau</Text>
+            <Ionicons name="add" size={16} color={Colors.white} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.white }}>Créneau</Text>
           </Pressable>
         </View>
 
@@ -798,13 +820,13 @@ export default function ProCalendarScreen() {
             <ActivityIndicator size="small" color={Colors.primary} />
           </View>
         ) : slots.length === 0 ? (
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, marginBottom: 16, gap: 6 }}>
-            <Ionicons name="time-outline" size={36} color="#D1D5DB" />
+          <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, marginBottom: 16, gap: 6 }}>
+            <Ionicons name="time-outline" size={36} color={Colors.border} />
             <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>Aucun créneau ce jour</Text>
             <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center" }}>Appuie sur « + Créneau » pour en ajouter</Text>
           </View>
         ) : (
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 16, overflow: "hidden", ...Shadows.card, marginBottom: 16 }}>
+          <View style={{ backgroundColor: Colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card, marginBottom: 16 }}>
             <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
               Créneaux ({slots.length})
             </Text>
@@ -818,7 +840,7 @@ export default function ProCalendarScreen() {
               return (
                 <View key={slot.id}>
                   {i > 0 && <View style={{ height: 1, backgroundColor: Colors.border, marginHorizontal: 16 }} />}
-                  <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: isEditing ? "rgba(254,93,157,0.05)" : undefined }}>
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: isEditing ? withAlpha(Colors.primary, 0.05) : undefined }}>
                     {isEditing ? (
                       <View style={{ gap: 12 }}>
                         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -832,10 +854,10 @@ export default function ProCalendarScreen() {
                                     paddingHorizontal: 12,
                                     paddingVertical: 6,
                                     borderRadius: 10,
-                                    backgroundColor: editTime === t ? Colors.primary : "#F8F5F1",
+                                    backgroundColor: editTime === t ? Colors.primary : Colors.muted,
                                   }}
                                 >
-                                  <Text style={{ fontSize: 12, fontWeight: "600", color: editTime === t ? "#fff" : Colors.foreground }}>
+                                  <Text style={{ fontSize: 12, fontWeight: "600", color: editTime === t ? Colors.white : Colors.foreground }}>
                                     {t}
                                   </Text>
                                 </Pressable>
@@ -848,9 +870,9 @@ export default function ProCalendarScreen() {
                             <Pressable
                               key={d}
                               onPress={() => setEditDur(d)}
-                              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: editDur === d ? Colors.primary : "#F8F5F1" }}
+                              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: editDur === d ? Colors.primary : Colors.muted }}
                             >
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: editDur === d ? "#fff" : Colors.foreground }}>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: editDur === d ? Colors.white : Colors.foreground }}>
                                 {formatDuration(d)}
                               </Text>
                             </Pressable>
@@ -859,7 +881,7 @@ export default function ProCalendarScreen() {
                         <View style={{ flexDirection: "row", gap: 8 }}>
                           <Pressable
                             onPress={() => setEditingSlotId(null)}
-                            style={{ flex: 1, height: 40, borderRadius: 12, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                            style={{ flex: 1, height: 40, borderRadius: 12, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                           >
                             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
                           </Pressable>
@@ -867,7 +889,7 @@ export default function ProCalendarScreen() {
                             onPress={confirmEditSlot}
                             style={{ flex: 1, height: 40, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
                           >
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Confirmer</Text>
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Confirmer</Text>
                           </Pressable>
                         </View>
                       </View>
@@ -878,7 +900,7 @@ export default function ProCalendarScreen() {
                             width: 10,
                             height: 10,
                             borderRadius: 5,
-                            backgroundColor: slot.isPast ? Colors.border : isBooked ? "#3B82F6" : isOpen ? Colors.primary : Colors.mutedForeground,
+                            backgroundColor: slot.isPast ? Colors.border : isBooked ? Colors.info : isOpen ? Colors.primary : Colors.mutedForeground,
                           }} />
                           <View>
                             <Text style={{ fontSize: 14, fontWeight: "700", color: slot.isPast ? Colors.mutedForeground : Colors.foreground }}>
@@ -887,7 +909,7 @@ export default function ProCalendarScreen() {
                             <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>
                               {formatDuration(parseDuration(slot.duration))}
                               {" · "}
-                              <Text style={{ color: isBooked ? "#3B82F6" : isOpen ? Colors.primary : Colors.mutedForeground }}>
+                              <Text style={{ color: isBooked ? Colors.info : isOpen ? Colors.primary : Colors.mutedForeground }}>
                                 {slot.isPast ? "Passé" : isBooked ? "Réservé" : isOpen ? "Ouvert" : "Bloqué"}
                               </Text>
                             </Text>
@@ -898,7 +920,7 @@ export default function ProCalendarScreen() {
                           <View style={{ flexDirection: "row", gap: 6 }}>
                             <Pressable
                               onPress={() => toggleSlot(slot.id)}
-                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isOpen ? "rgba(254,93,157,0.1)" : "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isOpen ? withAlpha(Colors.primary, 0.10) : Colors.muted, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name={isOpen ? "lock-open-outline" : "lock-closed-outline"} size={16} color={isOpen ? Colors.primary : Colors.mutedForeground} />
                             </Pressable>
@@ -908,20 +930,15 @@ export default function ProCalendarScreen() {
                                 setEditDur(parseDuration(slot.duration));
                                 setEditingSlotId(slot.id);
                               }}
-                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name="pencil-outline" size={16} color={Colors.mutedForeground} />
                             </Pressable>
                             <Pressable
-                              onPress={() =>
-                                Alert.alert("Supprimer", "Supprimer ce créneau ?", [
-                                  { text: "Annuler", style: "cancel" },
-                                  { text: "Supprimer", style: "destructive", onPress: () => deleteSlot(slot.id) },
-                                ])
-                              }
-                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" }}
+                              onPress={() => setShowDeleteSlotId(slot.id)}
+                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.destructiveLight, alignItems: "center", justifyContent: "center" }}
                             >
-                              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                              <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
                             </Pressable>
                           </View>
                         )}
@@ -944,8 +961,8 @@ export default function ProCalendarScreen() {
             <ActivityIndicator size="small" color={Colors.primary} />
           </View>
         ) : dayAppointments.length === 0 ? (
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, gap: 6 }}>
-            <Ionicons name="calendar-outline" size={36} color="#D1D5DB" />
+          <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, gap: 6 }}>
+            <Ionicons name="calendar-outline" size={36} color={Colors.border} />
             <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>
               Aucun rendez-vous
             </Text>
@@ -967,7 +984,7 @@ export default function ProCalendarScreen() {
                   key={apt.id}
                   onPress={() => canAct && setSelectedApt(apt)}
                   style={{
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: Colors.white,
                     borderRadius: 16,
                     padding: 16,
                     ...Shadows.card,
@@ -1014,89 +1031,41 @@ export default function ProCalendarScreen() {
         )}
       </ScrollView>
 
-      {/* ── VIEW PICKER MODAL ── */}
-      <RNModal visible={showViewPicker} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowViewPicker(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowViewPicker(false)} />
-        <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          backgroundColor: "#fff",
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          paddingBottom: insets.bottom + 16,
-        }}>
-          {/* Handle */}
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB",
-            alignSelf: "center", marginTop: 12, marginBottom: 8 }} />
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
-            textTransform: "uppercase", letterSpacing: 0.8, paddingHorizontal: 24, marginBottom: 8 }}>
-            Vue de l'agenda
-          </Text>
-
-          {([
-            { key: "month", icon: "calendar-outline",  label: "Mois",    sub: "Calendrier mensuel"  },
-            { key: "week",  icon: "grid-outline",       label: "Semaine", sub: "7 jours glissants"   },
-            { key: "list",  icon: "list-outline",       label: "Liste",   sub: "Créneaux du jour"    },
-          ] as const).map(({ key, icon, label, sub }) => (
-            <Pressable
-              key={key}
-              onPress={() => { setViewMode(key); setShowViewPicker(false); }}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 14,
-                paddingHorizontal: 24, paddingVertical: 14,
-                backgroundColor: viewMode === key ? "rgba(254,93,157,0.06)" : "transparent",
-              }}
-            >
-              <View style={{
-                width: 44, height: 44, borderRadius: 14,
-                backgroundColor: viewMode === key ? Colors.primary : "#F8F5F1",
-                alignItems: "center", justifyContent: "center",
-              }}>
-                <Ionicons name={icon} size={20} color={viewMode === key ? "#fff" : Colors.mutedForeground} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>{label}</Text>
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1 }}>{sub}</Text>
-              </View>
-              {viewMode === key && (
-                <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
-              )}
-            </Pressable>
-          ))}
-        </View>
-      </RNModal>
-
       {/* ── ADD SLOT MODAL ── */}
       <RNModal visible={showAddSlot} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowAddSlot(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setShowAddSlot(false)} />
+        <Pressable style={{ flex: 1, backgroundColor: Colors.overlayLight }} onPress={() => setShowAddSlot(false)} />
         <View style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
-          backgroundColor: "#fff",
+          backgroundColor: Colors.white,
           borderTopLeftRadius: 24, borderTopRightRadius: 24,
           paddingBottom: insets.bottom + 16,
-          maxHeight: "85%",
         }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 8 }} />
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
-          <View style={{ paddingHorizontal: 24, gap: 20, paddingBottom: 8 }}>
+          <View style={{ backgroundColor: withAlpha(Colors.primary, 0.06), paddingHorizontal: 24, paddingTop: 14, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: withAlpha(Colors.primary, 0.12) }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View>
-                <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground }}>
-                  Ajouter un créneau
-                </Text>
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
-                  {selectedDateLabel} · {slots.length} créneau{slots.length !== 1 ? "x" : ""}
-                </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: withAlpha(Colors.primary, 0.10), alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground }}>Nouveau créneau</Text>
+                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1, textTransform: "capitalize" }}>{selectedDateLabel}</Text>
+                </View>
               </View>
               <Pressable
                 onPress={() => setShowAddSlot(false)}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(Colors.primary, 0.08), alignItems: "center", justifyContent: "center" }}
               >
-                <Ionicons name="close" size={18} color={Colors.foreground} />
+                <Ionicons name="close" size={18} color={Colors.primary} />
               </Pressable>
             </View>
+          </View>
 
+          <View style={{ paddingHorizontal: 24, paddingTop: 20, gap: 20, paddingBottom: 8 }}>
             <View>
               <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                Heure
+                Heure de début
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8 }}>
@@ -1106,10 +1075,10 @@ export default function ProCalendarScreen() {
                       onPress={() => setNewSlotTime(t)}
                       style={{
                         paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
-                        backgroundColor: newSlotTime === t ? Colors.primary : "#F8F5F1",
+                        backgroundColor: newSlotTime === t ? Colors.primary : Colors.muted,
                       }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotTime === t ? "#fff" : Colors.foreground }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotTime === t ? Colors.white : Colors.foreground }}>
                         {t}
                       </Text>
                     </Pressable>
@@ -1129,10 +1098,10 @@ export default function ProCalendarScreen() {
                     onPress={() => setNewSlotDuration(d)}
                     style={{
                       paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
-                      backgroundColor: newSlotDuration === d ? Colors.primary : "#F8F5F1",
+                      backgroundColor: newSlotDuration === d ? Colors.primary : Colors.muted,
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotDuration === d ? "#fff" : Colors.foreground }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotDuration === d ? Colors.white : Colors.foreground }}>
                       {formatDuration(d)}
                     </Text>
                   </Pressable>
@@ -1140,13 +1109,28 @@ export default function ProCalendarScreen() {
               </View>
             </View>
 
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.muted, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Ionicons name="time-outline" size={16} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                Créneau de{" "}
+                <Text style={{ fontWeight: "700", color: Colors.foreground }}>{newSlotTime}</Text>
+                {" "}à{" "}
+                <Text style={{ fontWeight: "700", color: Colors.foreground }}>
+                  {(() => {
+                    const end = timeToMin(newSlotTime) + newSlotDuration;
+                    return `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
+                  })()}
+                </Text>
+                {" · "}{formatDuration(newSlotDuration)}
+              </Text>
+            </View>
+
+            {slotError && <View style={{ marginBottom: 4 }}><ErrorMessage message={slotError} /></View>}
             <Pressable
               onPress={addSlot}
               style={{ height: 52, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
-                Créer le créneau {newSlotTime} · {formatDuration(newSlotDuration)}
-              </Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Créer ce créneau</Text>
             </Pressable>
           </View>
         </View>
@@ -1156,79 +1140,98 @@ export default function ProCalendarScreen() {
       <RNModal visible={selectedApt != null} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSelectedApt(null)}>
         {selectedApt && (
           <>
-            <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }} onPress={() => setSelectedApt(null)} />
+            <Pressable style={{ flex: 1, backgroundColor: Colors.overlayLight }} onPress={() => setSelectedApt(null)} />
             <View style={{
               position: "absolute", bottom: 0, left: 0, right: 0,
-              backgroundColor: "#fff",
+              backgroundColor: Colors.white,
               borderTopLeftRadius: 24, borderTopRightRadius: 24,
               paddingBottom: insets.bottom + 16,
-              maxHeight: "85%",
             }}>
-              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 8 }} />
+              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
-              <View style={{ paddingHorizontal: 24, gap: 16 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground }}>
+              <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, backgroundColor: aptStatusCfg.bg }}>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: aptStatusCfg.color }}>{aptStatusCfg.label}</Text>
+                      </View>
+                      {selectedApt.price != null && (
+                        <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.primary }}>
+                          {Number(selectedApt.price).toFixed(2).replace(".", ",")} €
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground }}>
                       {selectedApt.client_name ?? `${selectedApt.client_first_name ?? ""} ${selectedApt.client_last_name ?? ""}`.trim()}
                     </Text>
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
-                      {selectedApt.time} · {selectedApt.prestation_name ?? "—"}
+                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 3 }}>
+                      {selectedApt.time}
+                      {selectedApt.duration ? ` · ${formatDuration(parseDuration(selectedApt.duration))}` : ""}
+                      {selectedApt.prestation_name ? ` · ${selectedApt.prestation_name}` : ""}
                     </Text>
                   </View>
                   <Pressable
                     onPress={() => setSelectedApt(null)}
-                    style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                    style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                   >
                     <Ionicons name="close" size={18} color={Colors.foreground} />
                   </Pressable>
                 </View>
+              </View>
 
-                <View style={{ height: 1, backgroundColor: Colors.border }} />
-
+              <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8 }}>
                 {["pending", "ongoing", "past_pending"].includes(getAptStatus(selectedApt)) && (
-                  <Pressable
-                    onPress={() => handleComplete(selectedApt)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}
-                  >
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(22,163,74,0.12)", alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="checkmark-circle-outline" size={20} color="#16A34A" />
-                    </View>
-                    <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Marquer comme terminé</Text>
-                  </Pressable>
+                  <>
+                    <Pressable
+                      onPress={() => handleComplete(selectedApt)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: withAlpha(Colors.successText, 0.12), alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="checkmark-circle-outline" size={22} color={Colors.successText} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.successText }}>Marquer comme terminé</Text>
+                        <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>Le rendez-vous est bien passé</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+                    </Pressable>
+                    <View style={{ height: 1, backgroundColor: Colors.border }} />
+                  </>
                 )}
 
                 {getAptStatus(selectedApt) === "past_pending" && (
-                  <Pressable
-                    onPress={() =>
-                      Alert.alert("Absent", "Enregistrer l'absence de cette cliente ?", [
-                        { text: "Non", style: "cancel" },
-                        { text: "Confirmer", style: "destructive", onPress: () => handleNoShow(selectedApt) },
-                      ])
-                    }
-                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}
-                  >
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(245,158,11,0.12)", alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="person-remove-outline" size={20} color="#F59E0B" />
-                    </View>
-                    <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Absence — cliente non venue</Text>
-                  </Pressable>
+                  <>
+                    <Pressable
+                      onPress={() => handleNoShow(selectedApt)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: withAlpha(Colors.warning, 0.12), alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="person-remove-outline" size={22} color={Colors.warning} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.warningText }}>Cliente non venue</Text>
+                        <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>Enregistrer l'absence</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+                    </Pressable>
+                    <View style={{ height: 1, backgroundColor: Colors.border }} />
+                  </>
                 )}
 
                 {getAptStatus(selectedApt) === "pending" && (
                   <Pressable
-                    onPress={() =>
-                      Alert.alert("Annuler", "Annuler ce rendez-vous ?", [
-                        { text: "Non", style: "cancel" },
-                        { text: "Annuler le RDV", style: "destructive", onPress: () => handleCancel(selectedApt) },
-                      ])
-                    }
-                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}
+                    onPress={() => setShowCancelAptId(selectedApt.id)}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
                   >
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(239,68,68,0.12)", alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+                    <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: withAlpha(Colors.destructive, 0.10), alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="close-circle-outline" size={22} color={Colors.destructive} />
                     </View>
-                    <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#EF4444" }}>Annuler le rendez-vous</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Annuler le rendez-vous</Text>
+                      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>La cliente sera notifiée</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={Colors.destructive} />
                   </Pressable>
                 )}
               </View>
@@ -1240,31 +1243,29 @@ export default function ProCalendarScreen() {
       {/* ── UNAVAILABILITY MODAL ── */}
       <Modal visible={showUnavailModal} onClose={() => setShowUnavailModal(false)} bottomSheet noPadding maxHeight="85%">
         <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
-          {/* Orange header */}
-          <View style={{ backgroundColor: "#FFF7ED", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: "#FED7AA" }}>
+          <View style={{ backgroundColor: ABSENCES.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: ABSENCES.border }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#F59E0B20", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="moon-outline" size={22} color="#D97706" />
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: ABSENCES.iconBg, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="moon-outline" size={22} color={ABSENCES.color} />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 18, fontWeight: "800", color: "#B45309" }}>Absences & congés</Text>
-                  <Text style={{ fontSize: 12, color: "#D97706", marginTop: 1 }}>Bloque des périodes d'indisponibilité</Text>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: ABSENCES.colorDark }}>Absences & congés</Text>
+                  <Text style={{ fontSize: 12, color: ABSENCES.color, marginTop: 1 }}>Bloque des périodes d'indisponibilité</Text>
                 </View>
               </View>
               <Pressable
                 onPress={() => setShowUnavailModal(false)}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#FED7AA50", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ABSENCES.closeBg, alignItems: "center", justifyContent: "center" }}
               >
-                <Ionicons name="close" size={18} color="#B45309" />
+                <Ionicons name="close" size={18} color={ABSENCES.colorDark} />
               </Pressable>
             </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8, gap: 16 }}>
-            {/* Date pickers */}
             <View style={{ gap: 12 }}>
               <View style={{ gap: 8 }}>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
@@ -1272,12 +1273,12 @@ export default function ProCalendarScreen() {
                 </Text>
                 <Pressable
                   onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? "#D97706" : Colors.border, paddingHorizontal: 14, backgroundColor: "#FFF7ED", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? ABSENCES.color : Colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                 >
-                  <Text style={{ fontSize: 14, color: unavailStartDate ? "#B45309" : Colors.mutedForeground, fontWeight: unavailStartDate ? "700" : "400" }}>
+                  <Text style={{ fontSize: 14, color: unavailStartDate ? ABSENCES.colorDark : Colors.mutedForeground, fontWeight: unavailStartDate ? "700" : "400" }}>
                     {unavailStartDate ? unavailStartDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
                   </Text>
-                  <Ionicons name="calendar-outline" size={18} color="#D97706" />
+                  <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
                 </Pressable>
                 {showStartPicker && (
                   <DateTimePicker
@@ -1293,7 +1294,7 @@ export default function ProCalendarScreen() {
                       }
                     }}
                     themeVariant="light"
-                    accentColor="#D97706"
+                    accentColor={ABSENCES.color}
                   />
                 )}
               </View>
@@ -1304,12 +1305,12 @@ export default function ProCalendarScreen() {
                 </Text>
                 <Pressable
                   onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? "#D97706" : Colors.border, paddingHorizontal: 14, backgroundColor: "#FFF7ED", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? ABSENCES.color : Colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                 >
-                  <Text style={{ fontSize: 14, color: unavailEndDate ? "#B45309" : Colors.mutedForeground, fontWeight: unavailEndDate ? "700" : "400" }}>
+                  <Text style={{ fontSize: 14, color: unavailEndDate ? ABSENCES.colorDark : Colors.mutedForeground, fontWeight: unavailEndDate ? "700" : "400" }}>
                     {unavailEndDate ? unavailEndDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
                   </Text>
-                  <Ionicons name="calendar-outline" size={18} color="#D97706" />
+                  <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
                 </Pressable>
                 {showEndPicker && (
                   <DateTimePicker
@@ -1322,7 +1323,7 @@ export default function ProCalendarScreen() {
                       if (date) setUnavailEndDate(date);
                     }}
                     themeVariant="light"
-                    accentColor="#D97706"
+                    accentColor={ABSENCES.color}
                   />
                 )}
               </View>
@@ -1336,40 +1337,48 @@ export default function ProCalendarScreen() {
                   onChangeText={setUnavailReason}
                   placeholder="Vacances, maladie…"
                   placeholderTextColor={Colors.mutedForeground}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border, paddingHorizontal: 14, fontSize: 14, color: Colors.foreground, backgroundColor: "#F8F5F1" }}
+                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border, paddingHorizontal: 14, fontSize: 14, color: Colors.foreground, backgroundColor: ABSENCES.bg }}
                 />
               </View>
             </View>
 
-            {/* Existing unavailabilities */}
             {unavailabilities.length > 0 && (
               <View style={{ gap: 8 }}>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Périodes bloquées
+                  Périodes bloquées ({unavailabilities.length})
                 </Text>
                 {unavailabilities.map((u) => (
-                  <View key={u.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FEF2F2", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-                    <View>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#EF4444" }}>
-                        {u.start_date.slice(0, 10)} → {u.end_date.slice(0, 10)}
-                      </Text>
-                      {u.reason && <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>{u.reason}</Text>}
+                  <View key={u.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.destructiveLight, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Ionicons name="moon" size={14} color={Colors.destructive} />
+                      <View>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.destructive }}>
+                          {new Date(u.start_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                          {" → "}
+                          {new Date(u.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                        </Text>
+                        {u.reason && <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>{u.reason}</Text>}
+                      </View>
                     </View>
-                    <Pressable onPress={() => removeUnavailability(u.id)}>
-                      <Ionicons name="close-circle" size={20} color="#EF4444" />
+                    <Pressable
+                      onPress={() => removeUnavailability(u.id)}
+                      style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: withAlpha(Colors.destructive, 0.10), alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Ionicons name="trash-outline" size={15} color={Colors.destructive} />
                     </Pressable>
                   </View>
                 ))}
               </View>
             )}
 
-            <Pressable
+            {unavailError && <View style={{ marginBottom: 8 }}><ErrorMessage message={unavailError} /></View>}
+            <LoadingButton
+              loading={unavailSaving}
               onPress={createUnavailability}
-              disabled={unavailSaving}
-              style={{ height: 52, borderRadius: 16, backgroundColor: "#D97706", alignItems: "center", justifyContent: "center", opacity: unavailSaving ? 0.7 : 1 }}
-            >
-              {unavailSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Bloquer la période</Text>}
-            </Pressable>
+              disabled={!unavailStartDate || !unavailEndDate}
+              label={!unavailStartDate || !unavailEndDate ? "Sélectionne les dates" : "Bloquer la période"}
+              style={{ backgroundColor: (!unavailStartDate || !unavailEndDate) ? Colors.disabled : ABSENCES.color }}
+            />
           <View style={{ height: insets.bottom + 16 }} />
           </ScrollView>
         </View>
@@ -1378,31 +1387,29 @@ export default function ProCalendarScreen() {
       {/* ── WEEKLY PLANNING MODAL ── */}
       <Modal visible={showPlanningModal} onClose={() => setShowPlanningModal(false)} bottomSheet noPadding maxHeight="85%">
         <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
-          {/* Green header */}
-          <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: "#BBF7D0" }}>
+          <View style={{ backgroundColor: PLANNING.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: PLANNING.border }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#16A34A20", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="calendar-number-outline" size={22} color="#16A34A" />
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="calendar-number-outline" size={22} color={PLANNING.color} />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 18, fontWeight: "800", color: "#15803D" }}>Planning semaine type</Text>
-                  <Text style={{ fontSize: 12, color: "#16A34A", marginTop: 1 }}>Tes jours et horaires habituels</Text>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: PLANNING.colorDark }}>Planning semaine type</Text>
+                  <Text style={{ fontSize: 12, color: PLANNING.color, marginTop: 1 }}>Appliqué sur les 4 prochaines semaines</Text>
                 </View>
               </View>
               <Pressable
                 onPress={() => setShowPlanningModal(false)}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#BBF7D050", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PLANNING.closeBg, alignItems: "center", justifyContent: "center" }}
               >
-                <Ionicons name="close" size={18} color="#15803D" />
+                <Ionicons name="close" size={18} color={PLANNING.colorDark} />
               </Pressable>
             </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8, gap: 20 }}>
-            {/* Toggleable day pills */}
             <View style={{ gap: 10 }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
                 Jours actifs
@@ -1421,10 +1428,10 @@ export default function ProCalendarScreen() {
                       }
                       style={{
                         flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-                        backgroundColor: isActive ? "#16A34A" : "#F3F4F6",
+                        backgroundColor: isActive ? PLANNING.color : Colors.muted,
                       }}
                     >
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: isActive ? "#fff" : Colors.mutedForeground }}>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: isActive ? Colors.white : Colors.mutedForeground }}>
                         {d}
                       </Text>
                     </Pressable>
@@ -1433,23 +1440,25 @@ export default function ProCalendarScreen() {
               </View>
             </View>
 
-            {/* Time slots */}
             <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
-                  Créneaux horaires
-                </Text>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
+                    Horaires de début
+                  </Text>
+                  <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 2 }}>Durée par défaut : 1h</Text>
+                </View>
                 <Pressable
                   onPress={() => setShowPlanTimePicker(true)}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#F0FDF4", borderRadius: 10 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}
                 >
-                  <Ionicons name="add" size={14} color="#16A34A" />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#16A34A" }}>Ajouter</Text>
+                  <Ionicons name="add" size={14} color={PLANNING.color} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: PLANNING.color }}>Ajouter</Text>
                 </Pressable>
               </View>
 
               {showPlanTimePicker && (
-                <View style={{ backgroundColor: "#F0FDF4", borderRadius: 14, overflow: "hidden" }}>
+                <View style={{ backgroundColor: PLANNING.bg, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: PLANNING.border }}>
                   <DateTimePicker
                     value={newPlanTime}
                     mode="time"
@@ -1467,7 +1476,7 @@ export default function ProCalendarScreen() {
                       }
                     }}
                     themeVariant="light"
-                    accentColor="#16A34A"
+                    accentColor={PLANNING.color}
                   />
                   {Platform.OS === "ios" && (
                     <Pressable
@@ -1478,9 +1487,9 @@ export default function ProCalendarScreen() {
                         if (!planningSlots.includes(t)) setPlanningSlots((prev) => [...prev, t].sort());
                         setShowPlanTimePicker(false);
                       }}
-                      style={{ margin: 12, height: 44, borderRadius: 12, backgroundColor: "#16A34A", alignItems: "center", justifyContent: "center" }}
+                      style={{ margin: 12, height: 44, borderRadius: 12, backgroundColor: PLANNING.color, alignItems: "center", justifyContent: "center" }}
                     >
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Ajouter ce créneau</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Confirmer</Text>
                     </Pressable>
                   )}
                 </View>
@@ -1488,40 +1497,116 @@ export default function ProCalendarScreen() {
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {planningSlots.map((t) => (
-                  <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "#F0FDF4", borderRadius: 10, borderWidth: 1, borderColor: "#BBF7D0" }}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#15803D" }}>{t}</Text>
+                  <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}>
+                    <Ionicons name="time-outline" size={13} color={PLANNING.color} />
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: PLANNING.colorDark }}>{t}</Text>
                     <Pressable onPress={() => setPlanningSlots((prev) => prev.filter((s) => s !== t))}>
-                      <Ionicons name="close-circle" size={16} color="#16A34A" />
+                      <Ionicons name="close-circle" size={16} color={PLANNING.color} />
                     </Pressable>
                   </View>
                 ))}
                 {planningSlots.length === 0 && (
-                  <Text style={{ fontSize: 13, color: Colors.mutedForeground, fontStyle: "italic" }}>Aucun créneau ajouté</Text>
+                  <View style={{ backgroundColor: Colors.muted, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, width: "100%" }}>
+                    <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Aucun horaire — appuie sur Ajouter</Text>
+                  </View>
                 )}
               </View>
             </View>
 
-            {weeklyPlanSuccess && (
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#16A34A", textAlign: "center" }}>
-                Planning appliqué ✓
-              </Text>
+            {activeDays.length > 0 && planningSlots.length > 0 && (
+              <View style={{ backgroundColor: PLANNING.bg, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: PLANNING.border }}>
+                <Text style={{ fontSize: 12, color: PLANNING.colorDark, fontWeight: "600", lineHeight: 18 }}>
+                  {activeDays.length * 4 * planningSlots.length} créneaux · {activeDays.length} jour{activeDays.length > 1 ? "s" : ""} × {planningSlots.length} horaire{planningSlots.length > 1 ? "s" : ""} × 4 semaines
+                </Text>
+              </View>
             )}
 
-            <Pressable
+            {weeklyPlanSuccess && (
+              <View style={{ backgroundColor: withAlpha(Colors.successText, 0.10), borderRadius: 12, padding: 14, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: PLANNING.border }}>
+                <Ionicons name="checkmark-circle" size={20} color={PLANNING.color} />
+                <Text style={{ fontSize: 14, fontWeight: "700", color: PLANNING.colorDark }}>Planning appliqué avec succès</Text>
+              </View>
+            )}
+            {planningError && <View style={{ marginBottom: 4 }}><ErrorMessage message={planningError} /></View>}
+            {planningInfo && (
+              <View style={{ backgroundColor: withAlpha(Colors.successText, 0.08), borderRadius: 12, padding: 12, borderWidth: 1, borderColor: PLANNING.border }}>
+                <Text style={{ fontSize: 13, color: PLANNING.colorDark, fontWeight: "600" }}>{planningInfo}</Text>
+              </View>
+            )}
+
+            <LoadingButton
+              loading={weeklyPlanSaving}
               onPress={applyWeeklyPlanning}
-              disabled={weeklyPlanSaving || activeDays.length === 0}
-              style={{ height: 52, borderRadius: 16, backgroundColor: activeDays.length === 0 ? "#D1D5DB" : "#16A34A", alignItems: "center", justifyContent: "center", opacity: weeklyPlanSaving ? 0.7 : 1 }}
-            >
-              {weeklyPlanSaving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Appliquer le planning</Text>
-              )}
-            </Pressable>
+              disabled={activeDays.length === 0 || planningSlots.length === 0}
+              label="Appliquer le planning"
+              style={{ backgroundColor: (activeDays.length === 0 || planningSlots.length === 0) ? Colors.disabled : PLANNING.color }}
+            />
           <View style={{ height: insets.bottom + 16 }} />
           </ScrollView>
         </View>
       </Modal>
+
+      {/* ── DELETE SLOT CONFIRM ── */}
+      <RNModal visible={showDeleteSlotId != null} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDeleteSlotId(null)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }}>
+          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 24, width: "100%", gap: 16 }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, textAlign: "center" }}>Supprimer ce créneau ?</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center" }}>Cette action est irréversible.</Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Pressable onPress={() => setShowDeleteSlotId(null)} style={{ flex: 1, height: 46, borderRadius: 13, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+              </Pressable>
+              <Pressable onPress={() => { if (showDeleteSlotId) void deleteSlot(showDeleteSlotId); }} style={{ flex: 1, height: 46, borderRadius: 13, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </RNModal>
+
+      {/* ── CANCEL APT CONFIRM ── */}
+      <RNModal visible={showCancelAptId != null} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowCancelAptId(null)}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setShowCancelAptId(null)} />
+          <View style={{ backgroundColor: Colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 16, paddingBottom: insets.bottom + 20 }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 }} />
+            <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground, textAlign: "center", marginBottom: 8 }}>Annuler le rendez-vous ?</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 20 }}>Cette action est irréversible. La cliente sera notifiée.</Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Pressable onPress={() => setShowCancelAptId(null)} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Retour</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const apt = appointments.find((a) => a.id === showCancelAptId);
+                  if (apt) { setShowCancelAptId(null); void handleCancel(apt); }
+                }}
+                style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Annuler le RDV</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </RNModal>
+
+      {/* ── PLAN CONFIRM ── */}
+      <RNModal visible={showPlanConfirm} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPlanConfirm(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }}>
+          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 24, width: "100%", gap: 16 }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, textAlign: "center" }}>Confirmer le planning</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20 }}>{planConfirmMsg}</Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Pressable onPress={() => setShowPlanConfirm(false)} style={{ flex: 1, height: 46, borderRadius: 13, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+              </Pressable>
+              <Pressable onPress={() => { setShowPlanConfirm(false); void doApplyWeeklyPlanning(planConfirmWeeks); }} style={{ flex: 1, height: 46, borderRadius: 13, backgroundColor: PLANNING.color, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Appliquer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </RNModal>
     </View>
   );
 }

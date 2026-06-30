@@ -78,7 +78,7 @@ export default function ProHelpScreen() {
       {/* Intro card */}
       <View
         className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border border-border"
-        style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        style={{ shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
       >
         <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: `${Colors.primary}18` }}>
           <Ionicons name="sparkles-outline" size={16} color={Colors.primary} />
@@ -124,7 +124,7 @@ export default function ProHelpScreen() {
               <Pressable
                 onPress={() => setOpenIndex(isOpen ? null : globalIdx)}
                 className="bg-card rounded-2xl p-4 border border-border"
-                style={{ shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
+                style={{ shadowColor: Colors.black, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
               >
                 <View className="flex-row items-center justify-between gap-3">
                   <Text className="text-sm font-semibold text-foreground flex-1">{faq.question}</Text>

@@ -4,6 +4,7 @@ import RNDateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
 
 interface DatePickerProps {
   label?: string;
@@ -72,7 +73,7 @@ export function DatePicker({
         <Ionicons
           name="calendar-outline"
           size={16}
-          color="#6D6D78"
+          color={Colors.mutedForeground}
           style={{ marginRight: 6 }}
         />
         <Text
@@ -80,7 +81,7 @@ export function DatePicker({
         >
           {value ? formatDate(value) : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={14} color="#6D6D78" />
+        <Ionicons name="chevron-down" size={14} color={Colors.mutedForeground} />
       </Pressable>
 
       {error && <Text className="text-xs text-destructive">{error}</Text>}

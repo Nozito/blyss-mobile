@@ -74,7 +74,7 @@ function ToolRow({
           )}
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>{tool.label}</Text>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white }}>{tool.label}</Text>
           <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{tool.sub}</Text>
         </View>
         {Platform.OS === "ios" ? (
@@ -220,14 +220,14 @@ export default function AdminMoreScreen() {
                 borderWidth: 2.5, borderColor: "rgba(255,255,255,0.4)",
               }}
             >
-              <Text style={{ fontSize: 36, fontWeight: "900", color: "#fff" }}>
+              <Text style={{ fontSize: 36, fontWeight: "900", color: Colors.white }}>
                 {initials || "A"}
               </Text>
             </LinearGradient>
           </Animated.View>
 
           <Text style={{
-            fontSize: 24, fontWeight: "900", color: "#fff",
+            fontSize: 24, fontWeight: "900", color: Colors.white,
             letterSpacing: -0.5, marginTop: 16, marginBottom: 4,
           }}>
             {fullName || "Admin"}
@@ -244,7 +244,7 @@ export default function AdminMoreScreen() {
               backgroundColor: "rgba(249,115,22,0.25)",
               borderWidth: 1, borderColor: "rgba(249,115,22,0.45)",
             }}>
-              <Text style={{ fontSize: 11, fontWeight: "900", color: "#F97316", letterSpacing: 0.5 }}>
+              <Text style={{ fontSize: 11, fontWeight: "900", color: Colors.admin, letterSpacing: 0.5 }}>
                 ⚡ ADMIN
               </Text>
             </View>
@@ -264,7 +264,7 @@ export default function AdminMoreScreen() {
           backgroundColor: "rgba(15,8,0,0.95)",
           borderRadius: 24,
           borderWidth: 1, borderColor: "rgba(249,115,22,0.20)",
-          shadowColor: "#F97316",
+          shadowColor: Colors.admin,
           shadowOpacity: 0.15,
           shadowRadius: 20,
           shadowOffset: { width: 0, height: 8 },
@@ -289,7 +289,7 @@ export default function AdminMoreScreen() {
                     <Ionicons name={icon} size={18} color={color} />
                   )}
                 </View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", marginTop: 8 }}>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.white, marginTop: 8 }}>
                   {value}
                 </Text>
                 <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
@@ -339,13 +339,13 @@ export default function AdminMoreScreen() {
                 alignItems: "center", justifyContent: "center",
               }}>
                 {Platform.OS === "ios" ? (
-                  <SymbolView name="arrow.left.arrow.right" size={22} tintColor="#F97316" />
+                  <SymbolView name="arrow.left.arrow.right" size={22} tintColor={Colors.admin} />
                 ) : (
-                  <Ionicons name="swap-horizontal-outline" size={22} color="#F97316" />
+                  <Ionicons name="swap-horizontal-outline" size={22} color={Colors.admin} />
                 )}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 3 }}>
+                <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white, marginBottom: 3 }}>
                   Changer d'interface
                 </Text>
                 <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>

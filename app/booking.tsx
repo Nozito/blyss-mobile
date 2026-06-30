@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,6 +21,8 @@ import { DateTimeSelector, type Slot } from "@/components/screens/client/booking
 import { BookingSummary } from "@/components/screens/client/booking/BookingSummary";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Colors } from "@/constants/colors";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -62,33 +63,27 @@ export default function BookingScreen() {
   const { proId } = useLocalSearchParams<{ proId: string }>();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Step state
   const [step, setStep] = useState(1);
-
-  // Data
   const [isLoading, setIsLoading] = useState(true);
   const [pro, setPro] = useState<Pro | null>(null);
   const [prestations, setPrestations] = useState<Prestation[]>([]);
 
-  // Selections
   const [selectedPrestation, setSelectedPrestation] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
 
-  // Booking result
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState<number | null>(null);
   const [depositPercentage, setDepositPercentage] = useState(0);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-  // Slots
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Fetch pro + prestations
   useEffect(() => {
     const fetchData = async () => {
       if (!proId || authLoading || !isAuthenticated) return;
@@ -134,8 +129,7 @@ export default function BookingScreen() {
           );
         }
       } catch {
-        Alert.alert("Erreur", "Impossible de charger les informations. Veuillez réessayer.");
-        router.replace("/(client)");
+        setBookingError("Impossible de charger les informations. Vérifiez votre connexion internet.");
       } finally {
         setIsLoading(false);
       }
@@ -144,7 +138,6 @@ export default function BookingScreen() {
     void fetchData();
   }, [proId, authLoading, isAuthenticated, router]);
 
-  // Fetch available dates for current month (step 2)
   useEffect(() => {
     const fetchDates = async () => {
       if (!proId || step !== 2) return;
@@ -165,7 +158,6 @@ export default function BookingScreen() {
     void fetchDates();
   }, [proId, currentMonth, step]);
 
-  // Fetch slots when date selected
   useEffect(() => {
     const fetchSlots = async () => {
       if (!selectedDate || !proId) return;
@@ -185,7 +177,6 @@ export default function BookingScreen() {
     void fetchSlots();
   }, [selectedDate, proId]);
 
-  // Real-time slot refresh every 30s on step 2
   useEffect(() => {
     if (step !== 2 || !selectedDate || !proId) return;
     const refresh = async () => {
@@ -201,7 +192,6 @@ export default function BookingScreen() {
     return () => clearInterval(interval);
   }, [step, selectedDate, proId]);
 
-  // Clear time when date changes
   useEffect(() => {
     setSelectedTime(null);
   }, [selectedDate]);
@@ -213,7 +203,6 @@ export default function BookingScreen() {
 
   const canPayOnline = Boolean(pro?.stripe_onboarding_complete && pro?.accept_online_payment);
 
-  // Auto-select on_site when online payment is unavailable
   useEffect(() => {
     if (pro && !canPayOnline && paymentMethod === null) {
       setPaymentMethod("on_site");
@@ -235,9 +224,10 @@ export default function BookingScreen() {
 
   const handleConfirmBooking = async () => {
     if (!selectedPrestation || !selectedDate || !selectedTime || !proId || !selectedPrestationData) {
-      Alert.alert("Erreur", "Veuillez remplir tous les champs.");
+      setBookingError("Veuillez remplir tous les champs.");
       return;
     }
+    setBookingError(null);
     setIsSubmitting(true);
     try {
       const selectedSlot = availableSlots.find((s) => s.time === selectedTime);
@@ -276,7 +266,6 @@ export default function BookingScreen() {
         return;
       }
 
-      // Create Stripe PaymentIntent for online payment
       const paymentType = resaData.deposit_percentage === 100 ? "full" : "deposit";
       const intentResult = await stripePaymentsApi.createPaymentIntent({
         reservation_id: resaData.id,
@@ -291,8 +280,7 @@ export default function BookingScreen() {
       setDepositAmount(intentResult.data.amount);
       setStep(4);
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : "Erreur lors de la réservation.";
-      Alert.alert("Erreur", msg);
+      setBookingError(error instanceof Error ? error.message : "Erreur lors de la réservation. Vérifiez votre connexion internet.");
     } finally {
       setIsSubmitting(false);
     }
@@ -308,10 +296,10 @@ export default function BookingScreen() {
 
   if (authLoading || isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
-          <ActivityIndicator size="large" color="#FE5D9D" />
-          <Text style={{ fontSize: 13, color: "#6D6D78" }}>Chargement...</Text>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Chargement...</Text>
         </View>
       </SafeAreaView>
     );
@@ -321,9 +309,9 @@ export default function BookingScreen() {
 
   if (!pro || prestations.length === 0) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "#09090B", textAlign: "center" }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: Colors.foreground, textAlign: "center" }}>
             Aucune prestation disponible
           </Text>
           <Pressable
@@ -332,12 +320,12 @@ export default function BookingScreen() {
               paddingHorizontal: 24,
               height: 48,
               borderRadius: 16,
-              backgroundColor: "#FE5D9D",
+              backgroundColor: Colors.primary,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>Retour</Text>
+            <Text style={{ color: Colors.white, fontWeight: "600" }}>Retour</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -400,54 +388,73 @@ export default function BookingScreen() {
             depositPercentage={depositPercentage}
             prestationName={selectedPrestationData?.name}
             clientSecret={clientSecret}
-            onSuccess={() => setStep(5)}
-            onError={(msg) => Alert.alert("Erreur de paiement", msg)}
+            onSuccess={() => {
+              const formattedDate = selectedDate?.toLocaleDateString("fr-FR", {
+                weekday: "short", day: "numeric", month: "long",
+              });
+              router.replace({
+                pathname: "/booking/confirmation",
+                params: {
+                  specialistName: proName,
+                  serviceName: selectedPrestationData?.name ?? "",
+                  date: formattedDate ?? "",
+                  time: selectedTime ?? "",
+                  amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
+                },
+              } as Parameters<typeof router.replace>[0]);
+            }}
+            onError={(msg) => {
+              const readable = msg.toLowerCase().includes("declined") || msg.toLowerCase().includes("refusé")
+                ? "Votre carte a été refusée. Vérifiez vos informations."
+                : msg.toLowerCase().includes("network") || msg.toLowerCase().includes("réseau")
+                ? "Erreur de connexion. Votre carte n'a pas été débitée."
+                : "Le paiement a échoué. Réessayez ou changez de moyen de paiement.";
+              setBookingError(readable);
+            }}
           />
         );
       case 5:
         return (
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={{ alignItems: "center", paddingVertical: 48, gap: 24 }}>
-              {/* Success icon */}
               <View
                 style={{
                   width: 96,
                   height: 96,
                   borderRadius: 48,
-                  backgroundColor: "#FE5D9D",
+                  backgroundColor: Colors.primary,
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#FE5D9D",
+                  shadowColor: Colors.primary,
                   shadowOffset: { width: 0, height: 8 },
                   shadowOpacity: 0.4,
                   shadowRadius: 20,
                   elevation: 8,
                 }}
               >
-                <Ionicons name="checkmark" size={48} color="#fff" />
+                <Ionicons name="checkmark" size={48} color={Colors.white} />
               </View>
 
               <View style={{ alignItems: "center", gap: 6 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={{ fontSize: 26, fontWeight: "800", color: "#09090B" }}>
+                  <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground }}>
                     Réservation confirmée
                   </Text>
-                  <Ionicons name="sparkles" size={22} color="#FE5D9D" />
+                  <Ionicons name="sparkles" size={22} color={Colors.primary} />
                 </View>
-                <Text style={{ fontSize: 14, color: "#6D6D78", textAlign: "center", maxWidth: 280, lineHeight: 20 }}>
+                <Text style={{ fontSize: 14, color: Colors.mutedForeground, textAlign: "center", maxWidth: 280, lineHeight: 20 }}>
                   Tu recevras une confirmation et un rappel avant ton rendez‑vous
                 </Text>
               </View>
 
-              {/* Summary */}
               <View
                 style={{
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: Colors.white,
                   borderRadius: 20,
                   padding: 20,
                   gap: 12,
                   width: "100%",
-                  shadowColor: "#000",
+                  shadowColor: Colors.black,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.08,
                   shadowRadius: 12,
@@ -478,23 +485,22 @@ export default function BookingScreen() {
                 ].map((row, i, arr) => (
                   <React.Fragment key={row.label}>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-                      <Text style={{ fontSize: 13, color: "#6D6D78" }}>{row.label}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: "500", color: "#09090B" }}>
+                      <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{row.label}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "500", color: Colors.foreground }}>
                         {row.value}
                       </Text>
                     </View>
-                    {i < arr.length - 1 && <View style={{ height: 1, backgroundColor: "#EBE6E0" }} />}
+                    {i < arr.length - 1 && <View style={{ height: 1, backgroundColor: Colors.border }} />}
                   </React.Fragment>
                 ))}
               </View>
 
-              {/* CTA */}
               <Pressable
                 onPress={() => router.replace("/my-bookings")}
                 style={{ width: "100%" }}
               >
                 <LinearGradient
-                  colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
+                  colors={[Colors.primary, `${Colors.primary}E6`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
@@ -502,14 +508,14 @@ export default function BookingScreen() {
                     borderRadius: 16,
                     alignItems: "center",
                     justifyContent: "center",
-                    shadowColor: "#FE5D9D",
+                    shadowColor: Colors.primary,
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.3,
                     shadowRadius: 8,
                     elevation: 4,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+                  <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
                     Voir mes réservations
                   </Text>
                 </LinearGradient>
@@ -525,9 +531,8 @@ export default function BookingScreen() {
   if (!authLoading && !isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
-        {/* Header hidden on step 4 (reservation already created) and step 5 */}
         {step < 4 && (
           <View style={{ paddingTop: 12, paddingBottom: 16 }}>
             <AnimatedIconButton
@@ -536,24 +541,23 @@ export default function BookingScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: 16,
-                backgroundColor: "#FFFFFF",
+                backgroundColor: Colors.white,
                 borderWidth: 1,
-                borderColor: "#EBE6E0",
+                borderColor: Colors.border,
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 16,
               }}
             >
-              <Ionicons name="chevron-back" size={20} color="#09090B" />
+              <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
             </AnimatedIconButton>
 
-            {/* Progress bar */}
-            <View style={{ height: 6, backgroundColor: "#EBE6E0", borderRadius: 3, overflow: "hidden" }}>
+            <View style={{ height: 6, backgroundColor: Colors.border, borderRadius: 3, overflow: "hidden" }}>
               <View
                 style={{
                   height: "100%",
                   borderRadius: 3,
-                  backgroundColor: "#FE5D9D",
+                  backgroundColor: Colors.primary,
                   width: `${(step / TOTAL_STEPS) * 100}%`,
                 }}
               />
@@ -561,10 +565,14 @@ export default function BookingScreen() {
           </View>
         )}
 
-        {/* Step content */}
         <View style={{ flex: 1 }}>{renderStep()}</View>
 
-        {/* CTA — only on step 3 */}
+        {bookingError && (
+          <View style={{ paddingBottom: 8 }}>
+            <ErrorMessage message={bookingError} />
+          </View>
+        )}
+
         {step === 3 && (
           <View style={{ paddingVertical: 16 }}>
             <Pressable
@@ -573,7 +581,7 @@ export default function BookingScreen() {
               style={{ opacity: !isStepValid() || isSubmitting ? 0.5 : 1 }}
             >
               <LinearGradient
-                colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
+                colors={[Colors.primary, `${Colors.primary}E6`]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{
@@ -581,7 +589,7 @@ export default function BookingScreen() {
                   borderRadius: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#FE5D9D",
+                  shadowColor: Colors.primary,
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
                   shadowRadius: 8,
@@ -589,15 +597,15 @@ export default function BookingScreen() {
                 }}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={Colors.white} />
                 ) : (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Ionicons
                       name={paymentMethod === "on_site" ? "checkmark-circle-outline" : "arrow-forward"}
                       size={18}
-                      color="#fff"
+                      color={Colors.white}
                     />
-                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+                    <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
                       {paymentMethod === "on_site" ? "Confirmer" : "Continuer"}
                     </Text>
                   </View>

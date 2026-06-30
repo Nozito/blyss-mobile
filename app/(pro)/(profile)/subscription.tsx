@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Alert,
   ActivityIndicator,
   Linking,
 } from "react-native";
@@ -16,10 +15,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { proApi } from "@/lib/api";
 import { Fonts } from "@/constants/fonts";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
+import * as Haptics from "expo-haptics";
 
 type BillingPeriod = "monthly" | "annual";
 
@@ -62,7 +63,7 @@ const PLAN_CONFIG: Record<RCPlan, {
   serenite: {
     label: "Sérénité",
     fallbackMonthly: 39.9,
-    color: Colors.pro ?? "#7C3AED",
+    color: Colors.pro ?? Colors.pro,
     icon: "shield-checkmark-outline",
     features: [
       { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
@@ -109,6 +110,8 @@ export default function SubscriptionScreen() {
   const qc = useQueryClient();
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
   const [purchasing, setPurchasing] = useState<RCPlan | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [syncWarning, setSyncWarning] = useState(false);
 
   const { user, refreshProfile, logout } = useAuth();
   const { packages, purchase, restorePurchases, activePlan, isReady, refreshActivePlan } = useRevenueCat();
@@ -122,17 +125,7 @@ export default function SubscriptionScreen() {
   });
 
   const handleCancelSubscription = () => {
-    Alert.alert(
-      "Gérer mon abonnement",
-      "Les abonnements Blyss Pro sont gérés par Apple. Tu seras redirigée vers les Réglages Apple pour annuler.",
-      [
-        { text: "Retour", style: "cancel" },
-        {
-          text: "Gérer via Apple",
-          onPress: () => void Linking.openURL("https://apps.apple.com/account/subscriptions"),
-        },
-      ]
-    );
+    void Linking.openURL("https://apps.apple.com/account/subscriptions");
   };
 
   const subscription = data?.data;
@@ -152,64 +145,25 @@ export default function SubscriptionScreen() {
       setPurchasing(null);
 
       if (result.success) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const synced = await syncSubscriptionWithRetry({
           plan: planKey,
           billingType: isAnnual ? "one_time" : "monthly",
           monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
           paymentId: result.paymentId ?? pkg.identifier,
         });
-        if (!synced) {
-          // RC confirme l'achat, mais backend n'a pas répondu après 3 essais.
-          // L'accès est accordé via RC, mais on prévient l'utilisateur.
-          Alert.alert(
-            "Paiement accepté",
-            "Ton abonnement est actif. Une erreur de synchronisation mineure s'est produite — si des fonctionnalités sont manquantes dans les prochaines minutes, redémarre l'application ou contacte le support.",
-            [{ text: "OK" }]
-          );
-        }
+        if (!synced) setSyncWarning(true);
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
         await refreshActivePlan();
         router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
       } else if (result.error && result.error !== "cancelled") {
-        Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
+        setPurchaseError("L'achat n'a pas pu être complété. Réessaie dans quelques instants.");
       }
     } else {
-      const config = PLAN_CONFIG[planKey];
-      const monthly = config.fallbackMonthly;
-      const price = isAnnual ? annualMonthlyFallback(monthly) : monthly;
-      Alert.alert(
-        `Passer au plan ${config.label}`,
-        `Tu seras facturée ${price.toFixed(2)} €/mois${isAnnual ? ` (${(price * 12).toFixed(0)} €/an)` : ""}.`,
-        [
-          { text: "Annuler", style: "cancel", onPress: () => setPurchasing(null) },
-          {
-            text: "Confirmer",
-            onPress: async () => {
-              try {
-                if (subscription) {
-                  await proApi.updateSubscription({ plan: planKey });
-                } else {
-                  await proApi.createSubscription({
-                    plan: planKey,
-                    billingType: isAnnual ? "one_time" : "monthly",
-                    monthlyPrice: isAnnual ? annualMonthlyFallback(PLAN_CONFIG[planKey].fallbackMonthly) : PLAN_CONFIG[planKey].fallbackMonthly,
-                    paymentId: `manual_${planKey}_${Date.now()}`,
-                  });
-                }
-                await refreshProfile();
-                qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-                await refreshActivePlan();
-                router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planKey } });
-              } catch {
-                Alert.alert("Erreur", "Impossible de changer de plan.");
-              } finally {
-                setPurchasing(null);
-              }
-            },
-          },
-        ]
-      );
+      // No RC package available — backend-only fallback
+      setPurchasing(null);
+      setPurchaseError("Ce plan n'est pas disponible pour l'instant. Réessaie plus tard.");
     }
   }, [isAnnual, packages, purchase, qc, router, refreshProfile, refreshActivePlan, subscription]);
 
@@ -259,7 +213,19 @@ export default function SubscriptionScreen() {
           </View>
         </View>
 
-        {isLoading ? (
+        {purchaseError && (
+              <View style={{ marginBottom: 16 }}>
+                <ErrorMessage message={purchaseError} />
+              </View>
+            )}
+            {syncWarning && (
+              <View style={{ marginBottom: 16, backgroundColor: Colors.warningLight, borderRadius: 12, padding: 12, borderLeftWidth: 3, borderLeftColor: Colors.warning }}>
+                <Text style={{ fontSize: 13, color: Colors.warningText, lineHeight: 18 }}>
+                  Abonnement actif. Synchronisation mineure échouée — redémarre l'app si certaines fonctionnalités manquent.
+                </Text>
+              </View>
+            )}
+            {isLoading ? (
           <LoadingSpinner />
         ) : (
           <>
@@ -363,7 +329,7 @@ export default function SubscriptionScreen() {
                       justifyContent: "center", gap: 6,
                     }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: active ? "#fff" : Colors.mutedForeground }}>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                       {p === "monthly" ? "Mensuel" : "Annuel"}
                     </Text>
                     {p === "annual" && (
@@ -371,7 +337,7 @@ export default function SubscriptionScreen() {
                         backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success,
                         borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
                       }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>2 mois offerts</Text>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.white }}>2 mois offerts</Text>
                       </View>
                     )}
                   </Pressable>
@@ -445,7 +411,7 @@ export default function SubscriptionScreen() {
                   >
                     {planKey === "serenite" && (
                       <View style={{ backgroundColor: Colors.primary, paddingVertical: 5, alignItems: "center" }}>
-                        <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", letterSpacing: 1 }}>POPULAIRE</Text>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.white, letterSpacing: 1 }}>POPULAIRE</Text>
                       </View>
                     )}
 
@@ -503,11 +469,11 @@ export default function SubscriptionScreen() {
                           }}
                         >
                           {isPurchasing ? (
-                            <ActivityIndicator color="#fff" size="small" />
+                            <ActivityIndicator color={Colors.white} size="small" />
                           ) : (
                             <>
-                              <Ionicons name="arrow-up-circle-outline" size={18} color="#fff" />
-                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Choisir {config.label}</Text>
+                              <Ionicons name="arrow-up-circle-outline" size={18} color={Colors.white} />
+                              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Choisir {config.label}</Text>
                             </>
                           )}
                         </Pressable>

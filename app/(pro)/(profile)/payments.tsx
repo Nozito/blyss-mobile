@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Switch,
-  Alert,
   ActivityIndicator,
   AppState,
   Linking,
@@ -18,6 +17,7 @@ import { Colors } from "@/constants/colors";
 import { proApi, stripeApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 // ── IBAN validation ───────────────────────────────────────────────────────────
 const IBAN_LENGTHS: Record<string, number> = {
@@ -80,6 +80,8 @@ export default function ProPaymentsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [isUpdatingDeposit, setIsUpdatingDeposit] = useState(false);
+  const [payError, setPayError]   = useState<string | null>(null);
+  const [paySuccess, setPaySuccess] = useState(false);
 
   // Payment settings (IBAN, accept_online)
   const { data: settingsData, isLoading: settingsLoading } = useQuery({
@@ -135,15 +137,16 @@ export default function ProPaymentsScreen() {
 
   const handleStripeOnboard = useCallback(async () => {
     setIsOnboarding(true);
+    setPayError(null);
     try {
       const res = await stripeApi.onboard();
       if (res.success && res.data?.url) {
         await Linking.openURL(res.data.url);
       } else {
-        Alert.alert("Erreur", "Impossible de démarrer l'activation Stripe. Réessaie dans un moment.");
+        setPayError("Impossible de démarrer l'activation Stripe. Réessaie dans un moment.");
       }
     } catch {
-      Alert.alert("Erreur", "Une erreur est survenue. Réessaie dans un moment.");
+      setPayError("Une erreur est survenue. Réessaie dans un moment.");
     } finally {
       setIsOnboarding(false);
     }
@@ -151,38 +154,37 @@ export default function ProPaymentsScreen() {
 
   const handleDepositChange = async (value: DepositValue) => {
     setDepositPct(value);
+    setPayError(null);
     setIsUpdatingDeposit(true);
     try {
       await stripeApi.updateDeposit(value);
       void qc.invalidateQueries({ queryKey: ["pro-stripe-account"] });
     } catch {
-      Alert.alert("Erreur", "Impossible de mettre à jour l'acompte.");
+      setPayError("Impossible de mettre à jour l'acompte.");
     } finally {
       setIsUpdatingDeposit(false);
     }
   };
 
   const handleSave = async () => {
+    setPayError(null);
+    setPaySuccess(false);
     const { valid, error } = validateIBAN(iban);
     if (!valid) {
-      Alert.alert("IBAN invalide", error ?? "Vérifie ton IBAN et réessaie.");
+      setPayError(error ?? "IBAN invalide. Vérifie ton IBAN et réessaie.");
       return;
     }
     if (acceptOnline && !isStripeConnected) {
-      Alert.alert(
-        "Stripe non activé",
-        "Active d'abord Stripe Connect pour accepter les paiements en ligne.",
-        [{ text: "OK" }]
-      );
+      setPayError("Active d'abord Stripe Connect pour accepter les paiements en ligne.");
       return;
     }
     setIsSaving(true);
     try {
       await proApi.updatePaymentSettings({ iban, accept_online: acceptOnline });
       void qc.invalidateQueries({ queryKey: ["pro-payment-settings"] });
-      Alert.alert("Succès", "Paramètres de paiement mis à jour !");
+      setPaySuccess(true);
     } catch {
-      Alert.alert("Erreur", "Impossible de mettre à jour les paramètres.");
+      setPayError("Impossible de mettre à jour les paramètres.");
     } finally {
       setIsSaving(false);
     }
@@ -242,7 +244,7 @@ export default function ProPaymentsScreen() {
           backgroundColor: Colors.card, borderRadius: 20, padding: 18,
           borderWidth: 1,
           borderColor: isStripeConnected ? `${Colors.success}40` : `${Colors.warning}40`,
-          shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+          shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{
@@ -268,13 +270,13 @@ export default function ProPaymentsScreen() {
             </View>
             <View style={{
               paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-              backgroundColor: isStripeConnected ? "#F0FDF4" : "#FFFBEB",
+              backgroundColor: isStripeConnected ? Colors.successLight : "#FFFBEB",
               borderWidth: 1,
-              borderColor: isStripeConnected ? "#BBF7D0" : "#FDE68A",
+              borderColor: isStripeConnected ? Colors.successBorder : "#FDE68A",
             }}>
               <Text style={{
                 fontSize: 11, fontWeight: "700",
-                color: isStripeConnected ? "#15803D" : "#92400E",
+                color: isStripeConnected ? Colors.successTextDark : "#92400E",
               }}>
                 {isStripeConnected ? "Actif" : "Inactif"}
               </Text>
@@ -293,11 +295,11 @@ export default function ProPaymentsScreen() {
               }}
             >
               {isOnboarding ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={Colors.white} />
               ) : (
                 <>
-                  <Ionicons name="open-outline" size={16} color="#fff" />
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>
+                  <Ionicons name="open-outline" size={16} color={Colors.white} />
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>
                     Activer Stripe Connect
                   </Text>
                 </>
@@ -319,7 +321,7 @@ export default function ProPaymentsScreen() {
           <View style={{
             backgroundColor: Colors.card, borderRadius: 20, padding: 18,
             borderWidth: 1, borderColor: Colors.border,
-            shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+            shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
           }}>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 14, lineHeight: 18 }}>
               Pourcentage du prix encaissé à la réservation. Le solde est réglé le jour du rendez-vous.
@@ -341,7 +343,7 @@ export default function ProPaymentsScreen() {
                   >
                     <Text style={{
                       fontSize: 15, fontWeight: "800",
-                      color: selected ? "#fff" : Colors.foreground,
+                      color: selected ? Colors.white : Colors.foreground,
                     }}>
                       {label}
                     </Text>
@@ -370,7 +372,7 @@ export default function ProPaymentsScreen() {
         <View style={{
           backgroundColor: Colors.card, borderRadius: 20, padding: 18,
           borderWidth: 1, borderColor: Colors.border,
-          shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+          shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
         }}>
           <Input
             label="IBAN"
@@ -396,7 +398,7 @@ export default function ProPaymentsScreen() {
         <View style={{
           backgroundColor: Colors.card, borderRadius: 20, padding: 18,
           borderWidth: 1, borderColor: Colors.border,
-          shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+          shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
           opacity: isStripeConnected ? 1 : 0.6,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -414,13 +416,13 @@ export default function ProPaymentsScreen() {
               value={acceptOnline && isStripeConnected}
               onValueChange={(v) => {
                 if (!isStripeConnected) {
-                  Alert.alert("Stripe non activé", "Active d'abord Stripe Connect.");
+                  setPayError("Active d'abord Stripe Connect.");
                   return;
                 }
                 setAcceptOnline(v);
               }}
               trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor="#fff"
+              thumbColor={Colors.white}
               disabled={!isStripeConnected}
             />
           </View>
@@ -459,6 +461,13 @@ export default function ProPaymentsScreen() {
         ))}
       </View>
 
+      {payError && <View style={{ marginBottom: 12 }}><ErrorMessage message={payError} /></View>}
+      {paySuccess && (
+        <View style={{ marginBottom: 12, padding: 14, borderRadius: 14, backgroundColor: `${Colors.success}12`, borderWidth: 1, borderColor: `${Colors.success}30` }}>
+          <Text style={{ fontSize: 13, color: Colors.success, fontWeight: "600", textAlign: "center" }}>Paramètres de paiement mis à jour ✓</Text>
+        </View>
+      )}
+
       {/* ── Save ── */}
       <Pressable
         onPress={handleSave}
@@ -469,9 +478,9 @@ export default function ProPaymentsScreen() {
         }}
       >
         {isSaving ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={Colors.white} />
         ) : (
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Enregistrer</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Enregistrer</Text>
         )}
       </Pressable>
     </ScrollView>

@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Alert,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +15,7 @@ import { proApi, nailTechApi } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/ui/Avatar";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import type { BlockedClient } from "@/lib/api";
@@ -44,6 +44,7 @@ export default function ProClientsScreen() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>("clients");
   const [search, setSearch] = useState("");
+  const [clientError, setClientError] = useState<string | null>(null);
   const deferredSearch = useDebounce(search, 250);
 
   const listRef = useRef(null);
@@ -67,7 +68,7 @@ export default function ProClientsScreen() {
       qc.invalidateQueries({ queryKey: ["blocked-clients"] });
       qc.invalidateQueries({ queryKey: ["pro-clients"] });
     },
-    onError: () => Alert.alert("Erreur", "Impossible de débloquer cette cliente."),
+    onError: () => setClientError("Impossible de débloquer cette cliente."),
   });
 
   const clients = (clientsData?.data as Client[] | undefined) ?? [];
@@ -131,9 +132,10 @@ export default function ProClientsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5, marginBottom: 16 }}>
+        <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5, marginBottom: clientError ? 8 : 16 }}>
           Mes clientes
         </Text>
+        {clientError && <View style={{ marginBottom: 12 }}><ErrorMessage message={clientError} /></View>}
 
         {/* Tabs */}
         <View style={{ flexDirection: "row", backgroundColor: Colors.card, borderRadius: 16, padding: 4, gap: 4, marginBottom: 12 }}>
@@ -147,8 +149,8 @@ export default function ProClientsScreen() {
                 backgroundColor: tab === key ? Colors.primary : "transparent",
               }}
             >
-              <Ionicons name={icon} size={15} color={tab === key ? "#fff" : Colors.mutedForeground} />
-              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? "#fff" : Colors.mutedForeground }}>
+              <Ionicons name={icon} size={15} color={tab === key ? Colors.white : Colors.mutedForeground} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? Colors.white : Colors.mutedForeground }}>
                 {label}
               </Text>
               {key === "blocked" && blocked.length > 0 && (
@@ -157,7 +159,7 @@ export default function ProClientsScreen() {
                   backgroundColor: tab === key ? "rgba(255,255,255,0.3)" : Colors.destructive,
                   alignItems: "center", justifyContent: "center",
                 }}>
-                  <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>{blocked.length}</Text>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{blocked.length}</Text>
                 </View>
               )}
             </Pressable>
@@ -166,14 +168,14 @@ export default function ProClientsScreen() {
 
         {/* Barre de recherche */}
         {tab === "clients" && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: "#E4E0DC", backgroundColor: "#F8F5F2", paddingHorizontal: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.cream, paddingHorizontal: 14 }}>
             <Ionicons name="search-outline" size={16} color="#A1A1AA" />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Rechercher par nom ou téléphone..."
-              placeholderTextColor="#C0BAB5"
-              style={{ flex: 1, fontSize: 14.5, color: "#09090B", padding: 0 }}
+              placeholderTextColor={Colors.inputPlaceholder}
+              style={{ flex: 1, fontSize: 14.5, color: Colors.foreground, padding: 0 }}
               autoCorrect={false}
             />
             {search.length > 0 && (

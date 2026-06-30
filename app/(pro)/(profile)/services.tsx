@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, FlatList, Pressable, Alert, Switch } from "react-native";
+import { View, Text, FlatList, Pressable, Switch } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -107,7 +107,7 @@ export default function ServicesScreen() {
             shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
           }}
         >
-          <Ionicons name="add" size={22} color="#fff" />
+          <Ionicons name="add" size={22} color={Colors.white} />
         </Pressable>
       </View>
 
@@ -144,8 +144,8 @@ export default function ServicesScreen() {
                   flexDirection: "row", alignItems: "center", gap: 8,
                 }}
               >
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Créer une prestation</Text>
+                <Ionicons name="add-circle-outline" size={18} color={Colors.white} />
+                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Créer une prestation</Text>
               </Pressable>
             </View>
           }
@@ -214,7 +214,7 @@ export default function ServicesScreen() {
                       value={!inactive}
                       onValueChange={(val) => toggleMutation.mutate({ id: item.id, active: val })}
                       trackColor={{ false: Colors.border, true: Colors.primary }}
-                      thumbColor="#fff"
+                      thumbColor={Colors.white}
                       style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
                     />
                   </View>
@@ -241,16 +241,7 @@ export default function ServicesScreen() {
 
                   {/* Supprimer */}
                   <Pressable
-                    onPress={() =>
-                      Alert.alert(
-                        "Supprimer la prestation",
-                        `Supprimer "${item.name}" ? Les réservations existantes ne seront pas affectées.`,
-                        [
-                          { text: "Annuler", style: "cancel" },
-                          { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-                        ]
-                      )
-                    }
+                    onPress={() => deleteMutation.mutate(item.id)}
                     accessibilityLabel="Supprimer la prestation"
                     accessibilityRole="button"
                     style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}

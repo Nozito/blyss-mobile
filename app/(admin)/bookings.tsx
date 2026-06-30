@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   View, Text, SectionList, Pressable, ScrollView,
-  ActivityIndicator, Alert, RefreshControl, Animated, Platform,
+  ActivityIndicator, RefreshControl, Animated, Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -14,6 +14,7 @@ import { adminApi, AdminBooking } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
@@ -165,7 +166,7 @@ function BookingCard({
 
             <View style={{ flex: 1 }} />
 
-            <Text style={{ fontSize: 15, fontWeight: "900", color: "#22C55E", marginRight: (canConfirm || canCancel) ? 8 : 0 }}>
+            <Text style={{ fontSize: 15, fontWeight: "900", color: Colors.success, marginRight: (canConfirm || canCancel) ? 8 : 0 }}>
               {price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"}
             </Text>
 
@@ -308,7 +309,7 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
         <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(34,197,94,0.7)", marginBottom: 4 }}>
           CA TOTAL
         </Text>
-        <Text style={{ fontSize: 20, fontWeight: "900", color: "#22C55E", letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 20, fontWeight: "900", color: Colors.success, letterSpacing: -0.5 }}>
           {revenue.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €
         </Text>
       </View>
@@ -349,13 +350,15 @@ export default function AdminBookingsScreen() {
     staleTime: 2 * 60_000,
   });
 
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
   const confirmMut = useMutation({
     mutationFn: (id: number) => adminApi.confirmBooking(id),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-bookings"] });
     },
-    onError: () => Alert.alert("Erreur", "Impossible de confirmer."),
+    onError: () => setBookingError("Impossible de confirmer cette réservation."),
   });
 
   const cancelMut = useMutation({
@@ -364,7 +367,7 @@ export default function AdminBookingsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-bookings"] });
     },
-    onError: () => Alert.alert("Erreur", "Impossible d'annuler."),
+    onError: () => setBookingError("Impossible d'annuler cette réservation."),
   });
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
@@ -383,22 +386,19 @@ export default function AdminBookingsScreen() {
     return Object.entries(grouped).map(([title, data]) => ({ title, data }));
   }, [bookings]);
 
-  const handleConfirm = (b: AdminBooking) =>
-    Alert.alert("Confirmer", `Confirmer #${b.id}${b.client_name ? ` — ${b.client_name}` : ""} ?`, [
-      { text: "Annuler",   style: "cancel" },
-      { text: "Confirmer", onPress: () => confirmMut.mutate(b.id) },
-    ]);
+  const handleConfirm = (b: AdminBooking) => {
+    setBookingError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    confirmMut.mutate(b.id);
+  };
 
-  const handleCancel = (b: AdminBooking) =>
-    Alert.alert("Annuler", `Annuler #${b.id}${b.client_name ? ` — ${b.client_name}` : ""} ?`, [
-      { text: "Non",     style: "cancel" },
-      { text: "Annuler", style: "destructive", onPress: () => cancelMut.mutate(b.id) },
-    ]);
+  const handleCancel = (b: AdminBooking) => {
+    setBookingError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    cancelMut.mutate(b.id);
+  };
 
-  const handleEdit = (b: AdminBooking) =>
-    Alert.alert("Modifier", `Réservation #${b.id}${b.client_name ? ` — ${b.client_name}` : ""}`, [
-      { text: "Fermer", style: "cancel" },
-    ]);
+  const handleEdit = (_b: AdminBooking) => { /* edition via écran dédié */ };
 
   // ── Header ─────────────────────────────────────────────────────────────────
   const ListHeader = useMemo(() => (
@@ -468,6 +468,11 @@ export default function AdminBookingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
+      {bookingError && (
+        <View style={{ paddingHorizontal: 16, paddingTop: insets.top + 12 }}>
+          <ErrorMessage message={bookingError} />
+        </View>
+      )}
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
           <ActivityIndicator size="large" color={Colors.admin} />

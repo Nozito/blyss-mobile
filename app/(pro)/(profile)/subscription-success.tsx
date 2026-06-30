@@ -64,7 +64,7 @@ export default function ProSubscriptionSuccessScreen() {
         fadeOut
         explosionSpeed={350}
         fallSpeed={2800}
-        colors={[Colors.primary, "#7C3AED", "#F59E0B", "#10B981", "#EC4899", "#fff"]}
+        colors={[Colors.primary, Colors.pro, Colors.warning, "#10B981", "#EC4899", Colors.white]}
       />
 
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
@@ -72,7 +72,7 @@ export default function ProSubscriptionSuccessScreen() {
         <Animated.View style={[styles.iconWrap, { transform: [{ scale: pulseAnim }] }]}>
           <View style={[styles.iconBg, { backgroundColor: `${Colors.success}20` }]} />
           <View style={[styles.iconCircle, { backgroundColor: Colors.success }]}>
-            <Ionicons name="checkmark" size={40} color="#fff" />
+            <Ionicons name="checkmark" size={40} color={Colors.white} />
           </View>
         </Animated.View>
 
@@ -92,9 +92,9 @@ export default function ProSubscriptionSuccessScreen() {
         </Text>
 
         {/* Badge plan actif */}
-        <View style={[styles.activeBadge, { borderColor: "#BBF7D0", backgroundColor: "#F0FDF4" }]}>
+        <View style={[styles.activeBadge, { borderColor: Colors.successBorder, backgroundColor: Colors.successLight }]}>
           <View style={styles.activeDot} />
-          <Text style={[styles.activeBadgeText, { color: "#15803D" }]}>
+          <Text style={[styles.activeBadgeText, { color: Colors.successTextDark }]}>
             {PLAN_LABELS[plan]} · Actif
           </Text>
         </View>
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#22C55E",
+    backgroundColor: Colors.success,
   },
   activeBadgeText: {
     fontSize: 13,

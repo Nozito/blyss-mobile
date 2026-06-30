@@ -94,7 +94,7 @@ function Card({ children, style }: { children: React.ReactNode; style?: object }
       borderRadius: 22, padding: 18,
       backgroundColor: CARD,
       borderWidth: 1, borderColor: BORDER,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 6 },
+      shadowColor: Colors.black, shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.45, shadowRadius: 20, elevation: 5,
     }, style]}>
       {children}
@@ -104,10 +104,10 @@ function Card({ children, style }: { children: React.ReactNode; style?: object }
 
 // ── Quick actions ─────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { icon: "people-outline"   as const, symbol: "person.2"          as const, label: "Utilisateurs", route: "/(admin)/users",           color: "#8B5CF6" },
-  { icon: "calendar-outline" as const, symbol: "calendar"          as const, label: "Réservations", route: "/(admin)/bookings",         color: "#3B82F6" },
-  { icon: "pricetag-outline" as const, symbol: "tag"               as const, label: "Coupons",      route: "/(admin-tools)/coupons",    color: "#F59E0B" },
-  { icon: "pulse-outline"    as const, symbol: "waveform"          as const, label: "Logs",          route: "/(admin-tools)/logs",       color: "#22C55E" },
+  { icon: "people-outline"   as const, symbol: "person.2"          as const, label: "Utilisateurs", route: "/(admin)/users",           color: Colors.pro },
+  { icon: "calendar-outline" as const, symbol: "calendar"          as const, label: "Réservations", route: "/(admin)/bookings",         color: Colors.info },
+  { icon: "pricetag-outline" as const, symbol: "tag"               as const, label: "Coupons",      route: "/(admin-tools)/coupons",    color: Colors.warning },
+  { icon: "pulse-outline"    as const, symbol: "waveform"          as const, label: "Logs",          route: "/(admin-tools)/logs",       color: Colors.success },
 ];
 
 // ── Activity config ───────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
   );
 
   const KPI_DATA = [
-    { label: "Clients", sub: "Inscrits",      color: "#8B5CF6", symbol: "person.2.fill"        as const, icon: "person-outline"    as const, value: stats?.totalClients  ?? 0, changeKey: "clients"  as const },
+    { label: "Clients", sub: "Inscrits",      color: Colors.pro, symbol: "person.2.fill"        as const, icon: "person-outline"    as const, value: stats?.totalClients  ?? 0, changeKey: "clients"  as const },
     { label: "Pros",    sub: "Pros actifs",    color: Colors.admin, symbol: "briefcase.fill"    as const, icon: "briefcase-outline" as const, value: stats?.totalPros    ?? 0, changeKey: "pros"     as const },
     { label: "RDV",     sub: "Aujourd'hui",    color: Colors.info,  symbol: "calendar.badge.clock" as const, icon: "calendar-outline" as const, value: stats?.todayBookings ?? 0, changeKey: "bookings" as const },
     { label: "CA mois", sub: "Chiffre d'aff.", color: Colors.success, symbol: "eurosign.circle.fill" as const, icon: "cash-outline"   as const, value: stats?.monthRevenue ?? 0, changeKey: "revenue"  as const },
@@ -314,13 +314,13 @@ export default function AdminDashboard() {
                 {/* DB Status */}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4,
                   borderRadius: 16, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
-                  <PulseDot color={dbOk ? "#22C55E" : "#F87171"} />
+                  <PulseDot color={dbOk ? Colors.success : Colors.destructiveLight} />
                   <Text style={{ color: TEXT2, fontSize: 10, fontWeight: "700" }}>DB</Text>
                 </View>
                 {/* API Status */}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4,
                   borderRadius: 16, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
-                  <PulseDot color={apiOk ? "#22C55E" : "#F87171"} />
+                  <PulseDot color={apiOk ? Colors.success : Colors.destructiveLight} />
                   <Text style={{ color: TEXT2, fontSize: 10, fontWeight: "700" }}>API</Text>
                 </View>
               </View>
@@ -337,7 +337,7 @@ export default function AdminDashboard() {
             {/* Metrics row */}
             <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.10)", paddingTop: 18 }}>
               {[
-                { label: "Utilisateurs",    value: String(stats?.totalUsers ?? "—"),       accent: "#8B5CF6" },
+                { label: "Utilisateurs",    value: String(stats?.totalUsers ?? "—"),       accent: Colors.pro },
                 { label: "RDV aujourd'hui", value: String(stats?.todayBookings ?? "—"),     accent: Colors.info },
                 { label: "CA du mois",      value: `${(stats?.monthRevenue ?? 0).toLocaleString("fr-FR")} €`, accent: Colors.success },
               ].map(({ label, value, accent }, i) => (
@@ -388,11 +388,11 @@ export default function AdminDashboard() {
                     <View style={{
                       position: "absolute", top: -4, right: -4,
                       minWidth: 18, height: 18, borderRadius: 9,
-                      backgroundColor: "#F97316",
+                      backgroundColor: Colors.admin,
                       alignItems: "center", justifyContent: "center",
                       paddingHorizontal: 4, borderWidth: 1.5, borderColor: BG,
                     }}>
-                      <Text style={{ fontSize: 9, fontWeight: "900", color: "#fff" }}>
+                      <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.white }}>
                         {badge > 99 ? "99+" : String(badge)}
                       </Text>
                     </View>
@@ -452,9 +452,9 @@ export default function AdminDashboard() {
                         <Ionicons
                           name={change >= 0 ? "trending-up" : "trending-down"}
                           size={10}
-                          color={change >= 0 ? "#22C55E" : "#EF4444"}
+                          color={change >= 0 ? Colors.success : Colors.destructive}
                         />
-                        <Text style={{ fontSize: 10, fontWeight: "800", color: change >= 0 ? "#22C55E" : "#EF4444" }}>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: change >= 0 ? Colors.success : Colors.destructive }}>
                           {change >= 0 ? `+${change}%` : `${change}%`}
                         </Text>
                       </View>
@@ -473,18 +473,18 @@ export default function AdminDashboard() {
         <SectionHeader
           title="Performance"
           icon={{ ios: "chart.bar.xaxis", android: "bar-chart-outline" }}
-          accent="#8B5CF6"
+          accent={Colors.pro}
         />
         <View style={{ gap: 14 }}>
           {/* Taux de complétion */}
           <View>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "600" }}>Taux de complétion</Text>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: "#22C55E" }}>{completionRate}%</Text>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.success }}>{completionRate}%</Text>
             </View>
             <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
               <LinearGradient
-                colors={["#22C55E", "#16A34A"]}
+                colors={[Colors.success, Colors.successText]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={{ height: "100%", width: `${completionRate}%`, borderRadius: 4 }}
               />
@@ -495,11 +495,11 @@ export default function AdminDashboard() {
           <View>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "600" }}>Taux d'annulation</Text>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: "#EF4444" }}>{cancellationRate}%</Text>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.destructive }}>{cancellationRate}%</Text>
             </View>
             <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
               <LinearGradient
-                colors={["#EF4444", "#B91C1C"]}
+                colors={[Colors.destructive, "#B91C1C"]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={{ height: "100%", width: `${cancellationRate}%`, borderRadius: 4 }}
               />
@@ -511,11 +511,11 @@ export default function AdminDashboard() {
             paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               {Platform.OS === "ios"
-                ? <SymbolView name="eurosign.circle" size={16} tintColor="#F59E0B" />
-                : <Ionicons name="cash-outline" size={16} color="#F59E0B" />}
+                ? <SymbolView name="eurosign.circle" size={16} tintColor={Colors.warning} />
+                : <Ionicons name="cash-outline" size={16} color={Colors.warning} />}
               <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "600" }}>CA / utilisateur actif</Text>
             </View>
-            <Text style={{ fontSize: 15, fontWeight: "900", color: "#F59E0B" }}>
+            <Text style={{ fontSize: 15, fontWeight: "900", color: Colors.warning }}>
               {revenuePerUser.toLocaleString("fr-FR")} €
             </Text>
           </View>
@@ -527,12 +527,12 @@ export default function AdminDashboard() {
         <SectionHeader
           title="Santé système"
           icon={{ ios: "server.rack", android: "hardware-chip-outline" }}
-          accent={apiOk && dbOk ? "#22C55E" : "#F87171"}
+          accent={apiOk && dbOk ? Colors.success : Colors.destructiveLight}
           rightContent={
             <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
               backgroundColor: (apiOk && dbOk) ? "rgba(34,197,94,0.15)" : "rgba(248,113,113,0.15)",
               borderWidth: 1, borderColor: (apiOk && dbOk) ? "rgba(34,197,94,0.3)" : "rgba(248,113,113,0.3)" }}>
-              <Text style={{ fontSize: 10, fontWeight: "800", color: (apiOk && dbOk) ? "#22C55E" : "#F87171" }}>
+              <Text style={{ fontSize: 10, fontWeight: "800", color: (apiOk && dbOk) ? Colors.success : Colors.destructiveLight }}>
                 {(apiOk && dbOk) ? "Opérationnel" : "Dégradé"}
               </Text>
             </View>
@@ -551,13 +551,13 @@ export default function AdminDashboard() {
             }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 {Platform.OS === "ios"
-                  ? <SymbolView name={icon as any} size={16} tintColor={ok ? "#22C55E" : "#F87171"} />
-                  : <Ionicons name={iconA as any} size={16} color={ok ? "#22C55E" : "#F87171"} />}
+                  ? <SymbolView name={icon as any} size={16} tintColor={ok ? Colors.success : Colors.destructiveLight} />
+                  : <Ionicons name={iconA as any} size={16} color={ok ? Colors.success : Colors.destructiveLight} />}
                 <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1 }}>{label}</Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <PulseDot color={ok ? "#22C55E" : "#F87171"} />
-                <Text style={{ fontSize: 12, fontWeight: "800", color: ok ? "#22C55E" : "#F87171" }}>
+                <PulseDot color={ok ? Colors.success : Colors.destructiveLight} />
+                <Text style={{ fontSize: 12, fontWeight: "800", color: ok ? Colors.success : Colors.destructiveLight }}>
                   {ok ? "En ligne" : "Hors ligne"}
                 </Text>
               </View>
@@ -571,7 +571,7 @@ export default function AdminDashboard() {
         {[
           { label: "Total RDV",   value: n(stats?.totalBookings).toLocaleString("fr-FR"), icon: "calendar.badge.checkmark" as const, iconA: "calendar-outline" as const, color: Colors.info },
           { label: "CA total",    value: `${n(stats?.totalRevenue).toLocaleString("fr-FR")} €`, icon: "chart.line.uptrend.xyaxis" as const, iconA: "trending-up-outline" as const, color: Colors.success },
-          { label: "Actifs",      value: String(stats?.activeUsers ?? "—"),           icon: "person.crop.circle.badge.checkmark" as const, iconA: "checkmark-circle-outline" as const, color: "#F59E0B" },
+          { label: "Actifs",      value: String(stats?.activeUsers ?? "—"),           icon: "person.crop.circle.badge.checkmark" as const, iconA: "checkmark-circle-outline" as const, color: Colors.warning },
         ].map(({ label, value, icon, iconA, color }) => (
           <View key={label} style={{ flex: 1 }}>
             <Card style={{ padding: 14, alignItems: "center", gap: 8 }}>
@@ -619,7 +619,7 @@ export default function AdminDashboard() {
                   {isLast && v > 0 && (
                     <View style={{ position: "absolute", bottom: barH + 5, alignItems: "center", zIndex: 1 }}>
                       <View style={{ backgroundColor: Colors.admin, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 }}>
-                        <Text style={{ fontSize: 7, color: "#fff", fontWeight: "800" }}>
+                        <Text style={{ fontSize: 7, color: Colors.white, fontWeight: "800" }}>
                           {v >= 1000 ? `${Math.round(v / 100) / 10}k` : String(v)}€
                         </Text>
                       </View>
@@ -736,7 +736,7 @@ export default function AdminDashboard() {
                   borderRadius: 18, padding: 14,
                   backgroundColor: CARD,
                   borderWidth: 1, borderColor: BORDER,
-                  shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+                  shadowColor: Colors.black, shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3, shadowRadius: 12, elevation: 3,
                 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -746,7 +746,7 @@ export default function AdminDashboard() {
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       style={{ width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     >
-                      <Text style={{ color: "#fff", fontWeight: "900", fontSize: 17 }}>{initLetter}</Text>
+                      <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 17 }}>{initLetter}</Text>
                     </LinearGradient>
 
                     <View style={{ flex: 1 }}>

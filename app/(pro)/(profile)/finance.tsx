@@ -6,7 +6,6 @@ import {
   Pressable,
   Modal,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,6 +20,7 @@ import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 type Period = "week" | "month" | "year";
 
@@ -45,7 +45,9 @@ export default function ProFinanceScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("month");
   const [showObjectiveModal, setShowObjectiveModal] = useState(false);
   const [objectiveInput, setObjectiveInput] = useState("");
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting]     = useState(false);
+  const [financeError, setFinanceError] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-finance-stats"],
@@ -59,7 +61,7 @@ export default function ProFinanceScreen() {
       void qc.invalidateQueries({ queryKey: ["pro-finance-stats"] });
       setShowObjectiveModal(false);
     },
-    onError: () => Alert.alert("Erreur", "Impossible de mettre à jour l'objectif"),
+    onError: () => setFinanceError("Impossible de mettre à jour l'objectif."),
   });
 
   const rawStats = data?.data as Record<string, unknown> | undefined;
@@ -96,24 +98,13 @@ export default function ProFinanceScreen() {
 
   const monthLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 
-  const handleExport = () => {
-    Alert.alert("Exporter les données", "Choisir le format :", [
-      {
-        text: "CSV",
-        onPress: exportCSV,
-      },
-      {
-        text: "PDF",
-        onPress: exportPDF,
-      },
-      { text: "Annuler", style: "cancel" },
-    ]);
-  };
+  const handleExport = () => { setFinanceError(null); setShowExportModal(true); };
 
   const exportCSV = async () => {
+    setShowExportModal(false);
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
-      Alert.alert("Export non disponible", "L'export n'est pas disponible sur cet appareil.");
+      setFinanceError("L'export n'est pas disponible sur cet appareil.");
       return;
     }
     setExporting(true);
@@ -140,16 +131,17 @@ export default function ProFinanceScreen() {
       await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(fileUri, { mimeType: "text/csv", UTI: "public.comma-separated-values-text" });
     } catch {
-      Alert.alert("Erreur", "Impossible de générer l'export CSV.");
+      setFinanceError("Impossible de générer l'export CSV.");
     } finally {
       setExporting(false);
     }
   };
 
   const exportPDF = async () => {
+    setShowExportModal(false);
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
-      Alert.alert("Export non disponible", "L'export n'est pas disponible sur cet appareil.");
+      setFinanceError("L'export n'est pas disponible sur cet appareil.");
       return;
     }
     setExporting(true);
@@ -244,7 +236,7 @@ export default function ProFinanceScreen() {
       await FileSystem.moveAsync({ from: uri, to: destUri });
       await Sharing.shareAsync(destUri, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
     } catch {
-      Alert.alert("Erreur", "Impossible de générer l'export PDF.");
+      setFinanceError("Impossible de générer l'export PDF.");
     } finally {
       setExporting(false);
     }
@@ -274,7 +266,7 @@ export default function ProFinanceScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
           <AnimatedIconButton
             onPress={() => router.back()}
-            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...Shadows.card }}
+            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
           </AnimatedIconButton>
@@ -285,7 +277,7 @@ export default function ProFinanceScreen() {
           <Pressable
             onPress={handleExport}
             disabled={exporting || !stats}
-            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", opacity: exporting || !stats ? 0.5 : 1, ...Shadows.card }}
+            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", opacity: exporting || !stats ? 0.5 : 1, ...Shadows.card }}
           >
             {exporting ? (
               <ActivityIndicator size="small" color={Colors.primary} />
@@ -296,7 +288,7 @@ export default function ProFinanceScreen() {
         </View>
 
         {/* Period selector */}
-        <View style={{ flexDirection: "row", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 4, gap: 4, ...Shadows.card }}>
+        <View style={{ flexDirection: "row", backgroundColor: Colors.white, borderRadius: 16, padding: 4, gap: 4, ...Shadows.card }}>
           {(["week", "month", "year"] as Period[]).map((p) => (
             <Pressable
               key={p}
@@ -309,7 +301,7 @@ export default function ProFinanceScreen() {
                 backgroundColor: selectedPeriod === p ? Colors.primary : "transparent",
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: "700", color: selectedPeriod === p ? "#fff" : Colors.mutedForeground }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: selectedPeriod === p ? Colors.white : Colors.mutedForeground }}>
                 {PERIOD_LABELS[p]}
               </Text>
             </Pressable>
@@ -341,16 +333,16 @@ export default function ProFinanceScreen() {
                     <Ionicons
                       name={variation >= 0 ? "trending-up-outline" : "trending-down-outline"}
                       size={12}
-                      color="#fff"
+                      color={Colors.white}
                     />
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.white }}>
                       {variation >= 0 ? "+" : ""}{variation}% vs mois préc.
                     </Text>
                   </View>
                 )}
               </View>
 
-              <Text style={{ fontSize: 42, fontWeight: "900", color: "#fff", letterSpacing: -1, marginBottom: 4 }}>
+              <Text style={{ fontSize: 42, fontWeight: "900", color: Colors.white, letterSpacing: -1, marginBottom: 4 }}>
                 {periodValue.toFixed(2).replace(".", ",")} €
               </Text>
               <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
@@ -361,7 +353,7 @@ export default function ProFinanceScreen() {
             {/* Objectif mensuel */}
             <Pressable
               onPress={() => { setObjectiveInput(String(stats.objective || "")); setShowObjectiveModal(true); }}
-              style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, ...Shadows.card }}
+              style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -383,7 +375,7 @@ export default function ProFinanceScreen() {
 
               {stats.objective > 0 && (
                 <>
-                  <View style={{ height: 8, backgroundColor: "#F8F5F1", borderRadius: 4, overflow: "hidden" }}>
+                  <View style={{ height: 8, backgroundColor: Colors.cream, borderRadius: 4, overflow: "hidden" }}>
                     <LinearGradient
                       colors={[Colors.primary, `${Colors.primary}CC`]}
                       start={{ x: 0, y: 0 }}
@@ -405,7 +397,7 @@ export default function ProFinanceScreen() {
                   key={label}
                   style={{
                     width: "47%",
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: Colors.white,
                     borderRadius: 16,
                     padding: 16,
                     ...Shadows.card,
@@ -424,7 +416,7 @@ export default function ProFinanceScreen() {
 
             {/* Top services */}
             {stats.topServices.length > 0 && (
-              <View style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <View style={{ width: 4, height: 20, backgroundColor: Colors.primary, borderRadius: 2 }} />
                   <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Top prestations</Text>
@@ -450,7 +442,7 @@ export default function ProFinanceScreen() {
                             <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>{svc.count} rdv</Text>
                           </View>
                         </View>
-                        <View style={{ height: 6, backgroundColor: "#F8F5F1", borderRadius: 3, overflow: "hidden" }}>
+                        <View style={{ height: 6, backgroundColor: Colors.cream, borderRadius: 3, overflow: "hidden" }}>
                           <LinearGradient
                             colors={[Colors.primary, `${Colors.primary}CC`]}
                             start={{ x: 0, y: 0 }}
@@ -478,9 +470,9 @@ export default function ProFinanceScreen() {
 
       {/* Objective modal */}
       <Modal visible={showObjectiveModal} transparent animationType="slide" onRequestClose={() => setShowObjectiveModal(false)}>
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}>
           <View style={{
-            backgroundColor: "#FFFFFF",
+            backgroundColor: Colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
@@ -491,7 +483,7 @@ export default function ProFinanceScreen() {
               <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground }}>Objectif mensuel</Text>
               <Pressable
                 onPress={() => setShowObjectiveModal(false)}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={Colors.foreground} />
               </Pressable>
@@ -505,19 +497,19 @@ export default function ProFinanceScreen() {
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
-              backgroundColor: "#F8F5F2",
+              backgroundColor: Colors.cream,
               borderRadius: 14,
               paddingHorizontal: 14,
               height: 44,
               borderWidth: 1.5,
-              borderColor: "#E4E0DC",
+              borderColor: Colors.border,
             }}>
               <Ionicons name="flag-outline" size={18} color={Colors.primary} />
               <TextInput
                 value={objectiveInput}
                 onChangeText={setObjectiveInput}
                 placeholder="ex. 2000"
-                placeholderTextColor="#C0BAB5"
+                placeholderTextColor={Colors.inputPlaceholder}
                 keyboardType="decimal-pad"
                 style={{ flex: 1, fontSize: 17, fontWeight: "700", color: Colors.foreground, padding: 0 }}
               />
@@ -527,21 +519,50 @@ export default function ProFinanceScreen() {
             <Pressable
               onPress={() => {
                 const val = parseFloat(objectiveInput);
-                if (!val || val <= 0) { Alert.alert("Erreur", "Entre un montant valide"); return; }
+                if (!val || val <= 0) { setFinanceError("Entre un montant valide."); return; }
                 objectiveMutation.mutate(val);
               }}
               disabled={objectiveMutation.isPending}
               style={{ height: 52, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: objectiveMutation.isPending ? 0.7 : 1 }}
             >
               {objectiveMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Enregistrer</Text>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Enregistrer</Text>
               )}
             </Pressable>
           </View>
         </View>
       </Modal>
+
+      {/* Export format picker modal */}
+      <Modal visible={showExportModal} transparent animationType="fade" onRequestClose={() => setShowExportModal(false)}>
+        <View style={{ flex: 1, backgroundColor: Colors.overlayDark, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
+          <View style={{ backgroundColor: Colors.card, borderRadius: 20, padding: 24, width: "100%", borderWidth: 1, borderColor: Colors.border }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 6 }}>Exporter les données</Text>
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 20 }}>Choisir le format :</Text>
+            <View style={{ gap: 10 }}>
+              <Pressable onPress={exportCSV} style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+                <Ionicons name="document-text-outline" size={18} color={Colors.primary} />
+                <Text style={{ fontWeight: "700", color: Colors.primary }}>CSV</Text>
+              </Pressable>
+              <Pressable onPress={exportPDF} style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+                <Ionicons name="document-outline" size={18} color={Colors.primary} />
+                <Text style={{ fontWeight: "700", color: Colors.primary }}>PDF</Text>
+              </Pressable>
+              <Pressable onPress={() => setShowExportModal(false)} style={{ height: 48, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontWeight: "600", color: Colors.mutedForeground }}>Annuler</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {financeError && (
+        <View style={{ position: "absolute", bottom: insets.bottom + 20, left: 20, right: 20 }}>
+          <ErrorMessage message={financeError} />
+        </View>
+      )}
     </View>
   );
 }

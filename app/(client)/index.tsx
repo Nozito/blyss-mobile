@@ -6,6 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   Animated,
+  RefreshControl,
   type ListRenderItem,
 } from "react-native";
 import { Image } from "expo-image";
@@ -18,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { specialistsApi, favoritesApi, clientApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
+import { Colors } from "@/constants/colors";
 
 // ── Style constants (module-level → never recreated) ─────────────────────────
 const CATEGORY_LIST_STYLE  = { paddingHorizontal: 24, gap: 8, paddingBottom: 4 } as const;
@@ -26,12 +28,12 @@ const MAIN_LIST_STYLE       = { paddingBottom: 100 } as const;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { label: "Pose gel",     emoji: "💅", query: "gel" },
-  { label: "Semi-perm.",   emoji: "✨", query: "semi-permanent" },
-  { label: "French",       emoji: "🤍", query: "french" },
-  { label: "Nail art",     emoji: "🎨", query: "nail art" },
-  { label: "Manucure",     emoji: "💎", query: "manucure" },
-  { label: "Baby boomer",  emoji: "🌸", query: "baby boomer" },
+  { label: "Pose gel",     query: "gel" },
+  { label: "Semi-perm.",   query: "semi-permanent" },
+  { label: "French",       query: "french" },
+  { label: "Nail art",     query: "nail art" },
+  { label: "Manucure",     query: "manucure" },
+  { label: "Baby boomer",  query: "baby boomer" },
 ] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -107,7 +109,7 @@ function SpecialistCard({
           />
         ) : (
           <LinearGradient
-            colors={["#FFE6F0", "#FE5D9D"]}
+            colors={["#FFE6F0", Colors.primary]}
             style={{ width: "100%", height: "100%" }}
           />
         )}
@@ -132,7 +134,7 @@ function SpecialistCard({
             <Ionicons
               name={isFavorite ? "heart" : "heart-outline"}
               size={18}
-              color={isFavorite ? "#EF4444" : "#6D6D78"}
+              color={isFavorite ? Colors.destructive : Colors.mutedForeground}
             />
           </Animated.View>
         </Pressable>
@@ -171,7 +173,7 @@ function SpecialistCard({
       {/* Footer */}
       <View className="px-4 py-3 flex-row items-center justify-between">
         <View className="flex-row gap-1 items-center">
-          <Ionicons name="location-outline" size={13} color="#6D6D78" />
+          <Ionicons name="location-outline" size={13} color={Colors.mutedForeground} />
           <Text className="text-xs text-muted-foreground">{pro.city ?? "France"}</Text>
         </View>
         <View className="flex-row gap-3 items-center">
@@ -187,7 +189,7 @@ function SpecialistCard({
             </View>
           )}
           <View className="w-7 h-7 rounded-lg bg-primary/10 items-center justify-center">
-            <Ionicons name="chevron-forward" size={15} color="#FE5D9D" />
+            <Ionicons name="chevron-forward" size={15} color={Colors.primary} />
           </View>
         </View>
       </View>
@@ -224,16 +226,16 @@ function BookingItem({ booking }: { booking: Booking }) {
         </Text>
         <View className="flex-row gap-3 mt-2 items-center">
           <View className="flex-row gap-1 items-center">
-            <Ionicons name="calendar-outline" size={12} color="#6D6D78" />
+            <Ionicons name="calendar-outline" size={12} color={Colors.mutedForeground} />
             <Text className="text-xs text-muted-foreground">{dateStr}</Text>
           </View>
           <View className="flex-row gap-1 items-center">
-            <Ionicons name="time-outline" size={12} color="#FE5D9D" />
+            <Ionicons name="time-outline" size={12} color={Colors.primary} />
             <Text className="text-xs text-primary font-semibold">{timeStr}</Text>
           </View>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#6D6D78" />
+      <Ionicons name="chevron-forward" size={20} color={Colors.mutedForeground} />
     </Pressable>
   );
 }
@@ -259,7 +261,9 @@ export default function ClientHome() {
   }, []);
 
   // ── Data queries ─────────────────────────────────────────────────────────
-  const { data: proRes, isLoading: loadingPros } = useQuery({
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: proRes, isLoading: loadingPros, refetch: refetchPros } = useQuery({
     queryKey: ["pros", "home"],
     queryFn: () => specialistsApi.getPros({ limit: 8 }),
     staleTime: 2 * 60_000,
@@ -278,6 +282,16 @@ export default function ClientHome() {
     enabled: !!user,
     staleTime: 60_000,
   });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refetchPros(),
+      queryClient.invalidateQueries({ queryKey: ["client-bookings"] }),
+      queryClient.invalidateQueries({ queryKey: ["favorites"] }),
+    ]);
+    setRefreshing(false);
+  }, [refetchPros, queryClient]);
 
   // Sync favoriteIds from query (replaces deprecated onSuccess)
   useEffect(() => {
@@ -333,9 +347,8 @@ export default function ClientHome() {
     ({ item }) => (
       <Pressable
         onPress={() => router.push({ pathname: "/specialists", params: { search: item.query } })}
-        className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
+        className="px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
       >
-        <Text style={{ fontSize: 14 }}>{item.emoji}</Text>
         <Text className="text-xs font-semibold text-foreground">{item.label}</Text>
       </Pressable>
     ),
@@ -365,6 +378,9 @@ export default function ClientHome() {
         renderItem={null}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={MAIN_LIST_STYLE}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
         ListHeaderComponent={
           <>
             {/* ── Header ─────────────────────────────────────────────────── */}
@@ -383,7 +399,7 @@ export default function ClientHome() {
               className="mx-6 mb-3 h-14 flex-row items-center gap-3 bg-card border-2 border-border rounded-2xl px-4"
               style={Shadows.card}
             >
-              <Ionicons name="search-outline" size={20} color="#6D6D78" />
+              <Ionicons name="search-outline" size={20} color={Colors.mutedForeground} />
               <Text className="text-muted-foreground text-sm flex-1">
                 Experte, ville, prestation...
               </Text>
@@ -416,14 +432,14 @@ export default function ClientHome() {
                 style={Shadows.soft}
               >
                 <Text className="text-xs font-semibold text-white">Tout voir</Text>
-                <Ionicons name="chevron-forward" size={12} color="#fff" />
+                <Ionicons name="chevron-forward" size={12} color={Colors.white} />
               </Pressable>
             </View>
 
             {/* ── Specialist cards (FlatList horizontal) ─────────────────── */}
             {loadingPros ? (
               <View className="h-64 items-center justify-center">
-                <ActivityIndicator color="#FE5D9D" />
+                <ActivityIndicator color={Colors.primary} />
               </View>
             ) : (
               <FlatList
@@ -446,7 +462,7 @@ export default function ClientHome() {
                 <Text className="text-white font-semibold text-sm">
                   Voir toutes les expertes
                 </Text>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
+                <Ionicons name="arrow-forward" size={18} color={Colors.white} />
               </View>
             </Pressable>
 
@@ -470,7 +486,7 @@ export default function ClientHome() {
               >
                 <View className="flex-row gap-4 items-start">
                   <View className="w-12 h-12 rounded-2xl bg-primary items-center justify-center flex-shrink-0">
-                    <Ionicons name="calendar-outline" size={22} color="#fff" />
+                    <Ionicons name="calendar-outline" size={22} color={Colors.white} />
                   </View>
                   <View className="flex-1">
                     <Text className="font-semibold text-base text-foreground">
@@ -484,7 +500,7 @@ export default function ClientHome() {
                       className="mt-3 px-4 py-2 rounded-xl bg-primary self-start"
                     >
                       <View className="flex-row gap-1.5 items-center">
-                        <Ionicons name="sparkles-outline" size={14} color="#fff" />
+                        <Ionicons name="sparkles-outline" size={14} color={Colors.white} />
                         <Text className="text-white text-xs font-semibold">
                           Découvrir les expertes
                         </Text>

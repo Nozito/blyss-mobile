@@ -71,7 +71,7 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
         accessibilityLabel={`Voir le profil de ${item.business_name}`}
         style={{
           flexDirection: "row",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: Colors.white,
           borderRadius: 16,
           overflow: "hidden",
           borderWidth: 1,
@@ -81,7 +81,7 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
         }}
       >
         {/* Photo */}
-        <View style={{ width: 108, flexShrink: 0, backgroundColor: "#F8F5F1", minHeight: 130 }}>
+        <View style={{ width: 108, flexShrink: 0, backgroundColor: Colors.cream, minHeight: 130 }}>
           {photo && !imageError ? (
             <Image
               source={{ uri: photo }}
@@ -111,13 +111,13 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
               width: 28,
               height: 28,
               borderRadius: 14,
-              backgroundColor: isFav ? `${Colors.primary}E6` : "rgba(0,0,0,0.4)",
+              backgroundColor: isFav ? `${Colors.primary}E6` : Colors.overlayDark,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-              <Ionicons name={isFav ? "heart" : "heart-outline"} size={12} color="#fff" />
+              <Ionicons name={isFav ? "heart" : "heart-outline"} size={12} color={Colors.white} />
             </Animated.View>
           </Pressable>
         </View>
@@ -126,13 +126,13 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
         <View style={{ flex: 1, padding: 16, flexDirection: "column", minHeight: 130 }}>
           <View style={{ flex: 1 }}>
             <Text
-              style={{ fontSize: 15, fontWeight: "600", color: "#09090B", lineHeight: 20 }}
+              style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground, lineHeight: 20 }}
               numberOfLines={1}
             >
               {item.business_name}
             </Text>
             <Text
-              style={{ fontSize: 12, color: "#FE5D9D", fontWeight: "500", marginTop: 2 }}
+              style={{ fontSize: 12, color: Colors.primary, fontWeight: "500", marginTop: 2 }}
               numberOfLines={1}
             >
               {item.specialty}
@@ -141,11 +141,11 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
             {item.rating > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 }}>
                 <Ionicons name="star" size={11} color="#FBBF24" />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#09090B" }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
                   {item.rating != null ? Number(item.rating).toFixed(1) : "–"}
                 </Text>
                 {item.reviews_count > 0 && (
-                  <Text style={{ fontSize: 11, color: "#6D6D78" }}>
+                  <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
                     · {item.reviews_count} avis
                   </Text>
                 )}
@@ -153,12 +153,12 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
             )}
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
-              <Ionicons name="location-outline" size={11} color="#6D6D78" />
-              <Text style={{ fontSize: 12, color: "#6D6D78", flex: 1 }} numberOfLines={1}>
+              <Ionicons name="location-outline" size={11} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground, flex: 1 }} numberOfLines={1}>
                 {item.city}
               </Text>
               {item.distance_km != null && (
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#FE5D9D", flexShrink: 0 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primary, flexShrink: 0 }}>
                   {item.distance_km} km
                 </Text>
               )}
@@ -173,15 +173,15 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
               marginTop: 12,
               height: 36,
               borderRadius: 12,
-              backgroundColor: "#FE5D9D",
+              backgroundColor: Colors.primary,
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "row",
               gap: 6,
             }}
           >
-            <Ionicons name="calendar-outline" size={13} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Réserver</Text>
+            <Ionicons name="calendar-outline" size={13} color={Colors.white} />
+            <Text style={{ color: Colors.white, fontSize: 13, fontWeight: "600" }}>Réserver</Text>
           </Pressable>
         </View>
       </Pressable>

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
-  View, Text, ScrollView, Pressable, TextInput,
-  ActivityIndicator, Alert, RefreshControl, Animated,
+  View, Text, ScrollView, Pressable, TextInput, Modal,
+  ActivityIndicator, RefreshControl, Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -59,7 +60,7 @@ function TxCard({
     <Animated.View style={{
       backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 16, borderWidth: 1,
       borderColor: ADMIN.border, overflow: "hidden", marginBottom: 10,
-      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+      shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
       opacity, transform: [{ translateY }],
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>
@@ -70,8 +71,8 @@ function TxCard({
 
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: "#FFFFFF", flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: isSucceeded ? Colors.success : "#FFFFFF", letterSpacing: -0.5, marginLeft: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.white, flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: isSucceeded ? Colors.success : Colors.white, letterSpacing: -0.5, marginLeft: 8 }}>
               {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
             </Text>
           </View>
@@ -127,6 +128,8 @@ export default function AdminPaymentsScreen() {
   const [statusFilter, setStatusFilter] = useState<TxFilter>("all");
   const [refreshing, setRefreshing]     = useState(false);
   const [exporting, setExporting]       = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [refundTarget, setRefundTarget] = useState<AdminPayment | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-payments"],
@@ -139,9 +142,12 @@ export default function AdminPaymentsScreen() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-payments"] });
-      Alert.alert("Remboursé", "Le remboursement a été initié.");
+      setRefundTarget(null);
     },
-    onError: () => Alert.alert("Erreur", "Impossible d'effectuer le remboursement."),
+    onError: () => {
+      setRefundTarget(null);
+      setPaymentError("Impossible d'effectuer le remboursement.");
+    },
   });
 
   const onRefresh = useCallback(async () => {
@@ -170,15 +176,10 @@ export default function AdminPaymentsScreen() {
   const netTotal = succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0);
   const pending  = transactions.filter((t) => t.status === "pending" || t.status === "processing").length;
 
-  const confirmRefund = (tx: AdminPayment) =>
-    Alert.alert(
-      "Rembourser",
-      `Rembourser ${Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € à ${tx.client_name} ?\n\nCette action est irréversible.`,
-      [
-        { text: "Annuler",    style: "cancel" },
-        { text: "Rembourser", style: "destructive", onPress: () => refundMut.mutate(tx.id) },
-      ],
-    );
+  const confirmRefund = (tx: AdminPayment) => {
+    setPaymentError(null);
+    setRefundTarget(tx);
+  };
 
   const handleExportPDF = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -224,7 +225,7 @@ export default function AdminPaymentsScreen() {
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       await Sharing.shareAsync(uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Exporter les transactions" });
     } catch {
-      Alert.alert("Erreur", "Impossible de générer le PDF.");
+      setPaymentError("Impossible de générer le PDF.");
     } finally {
       setExporting(false);
     }
@@ -244,7 +245,7 @@ export default function AdminPaymentsScreen() {
         <Ionicons name="cloud-offline-outline" size={40} color="rgba(255,255,255,0.3)" />
         <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Impossible de charger les paiements.</Text>
         <Pressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.1)" }}>
-          <Text style={{ color: "#fff", fontWeight: "700" }}>Réessayer</Text>
+          <Text style={{ color: Colors.white, fontWeight: "700" }}>Réessayer</Text>
         </Pressable>
       </View>
     );
@@ -252,6 +253,41 @@ export default function AdminPaymentsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: A_BG }}>
+      {/* Refund confirmation modal */}
+      <Modal visible={!!refundTarget} transparent animationType="fade" onRequestClose={() => setRefundTarget(null)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
+          <View style={{ backgroundColor: ADMIN.surface, borderRadius: 20, padding: 24, width: "100%", borderWidth: 1, borderColor: ADMIN.border }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: ADMIN.text, marginBottom: 10 }}>Confirmer le remboursement</Text>
+            {refundTarget && (
+              <Text style={{ fontSize: 14, color: ADMIN.textSub, lineHeight: 20, marginBottom: 24 }}>
+                {"Rembourser "}
+                <Text style={{ fontWeight: "800", color: Colors.destructive }}>
+                  {Number(refundTarget.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+                </Text>
+                {` à ${refundTarget.client_name} ?\n\nCette action est irréversible.`}
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setRefundTarget(null)}
+                style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: ADMIN.textSub, fontWeight: "700" }}>Annuler</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => refundTarget && refundMut.mutate(refundTarget.id)}
+                disabled={refundMut.isPending}
+                style={{ flex: 1, height: 46, borderRadius: 14, backgroundColor: `${Colors.destructive}18`, borderWidth: 1, borderColor: `${Colors.destructive}40`, alignItems: "center", justifyContent: "center" }}
+              >
+                {refundMut.isPending
+                  ? <ActivityIndicator size="small" color={Colors.destructive} />
+                  : <Text style={{ color: Colors.destructive, fontWeight: "800" }}>Rembourser</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -260,6 +296,7 @@ export default function AdminPaymentsScreen() {
       >
         {/* Page title */}
         <Text style={{ fontSize: 32, fontWeight: "900", color: ADMIN.text, letterSpacing: -1, marginBottom: 16 }}>Paiements</Text>
+        {paymentError && <View style={{ marginBottom: 12 }}><ErrorMessage message={paymentError} /></View>}
 
         {/* Hero CA total */}
         <LinearGradient
@@ -270,7 +307,7 @@ export default function AdminPaymentsScreen() {
         >
           <View style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.04)" }} />
           <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(249,115,22,0.6)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CA TOTAL</Text>
-          <Text style={{ fontSize: 48, fontWeight: "900", color: "#fff", letterSpacing: -1 }}>
+          <Text style={{ fontSize: 48, fontWeight: "900", color: Colors.white, letterSpacing: -1 }}>
             {caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
           </Text>
           {/* 3 mini-stats */}
@@ -284,7 +321,7 @@ export default function AdminPaymentsScreen() {
                 {i > 0 && <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.10)", marginHorizontal: 14 }} />}
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 3 }}>{label}</Text>
-                  <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>{value}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>{value}</Text>
                 </View>
               </React.Fragment>
             ))}
@@ -298,7 +335,7 @@ export default function AdminPaymentsScreen() {
             { label: "Net total",  value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
             { label: "En attente", value: String(pending), color: Colors.warning },
           ].map(({ label, value, color }) => (
-            <View key={label} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 18, padding: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
+            <View key={label} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 18, padding: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 }}>
               <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{label}</Text>
               <Text style={{ fontSize: 18, fontWeight: "900", color, letterSpacing: -0.5 }}>{value}</Text>
             </View>
@@ -314,7 +351,7 @@ export default function AdminPaymentsScreen() {
               onChangeText={setSearch}
               placeholder="Rechercher client ou pro…"
               placeholderTextColor="rgba(255,255,255,0.3)"
-              style={{ flex: 1, fontSize: 13, color: "#fff" }}
+              style={{ flex: 1, fontSize: 13, color: Colors.white }}
               autoCorrect={false}
               spellCheck={false}
               returnKeyType="search"
@@ -332,7 +369,7 @@ export default function AdminPaymentsScreen() {
               width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)",
               borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", alignItems: "center", justifyContent: "center",
               opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+              shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
             }]}
           >
             {exporting
@@ -354,7 +391,7 @@ export default function AdminPaymentsScreen() {
                   backgroundColor: active ? (cfg?.color ?? Colors.admin) : "rgba(255,255,255,0.05)",
                   borderColor: active ? (cfg?.color ?? Colors.admin) : "rgba(255,255,255,0.09)" }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#FFFFFF" : "rgba(255,255,255,0.45)" }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : "rgba(255,255,255,0.45)" }}>
                   {f === "all" ? "Tous" : cfg?.label}
                 </Text>
               </Pressable>
@@ -365,7 +402,7 @@ export default function AdminPaymentsScreen() {
         {/* Section label */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <View style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: Colors.admin }} />
-          <Text style={{ fontSize: 13, fontWeight: "900", color: "#fff" }}>Transactions</Text>
+          <Text style={{ fontSize: 13, fontWeight: "900", color: Colors.white }}>Transactions</Text>
           <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: ADMIN.border }}>
             <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.45)" }}>{filtered.length}</Text>
           </View>
@@ -377,7 +414,7 @@ export default function AdminPaymentsScreen() {
             <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
               <Ionicons name="card-outline" size={32} color="rgba(255,255,255,0.2)" />
             </View>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff", marginBottom: 6 }}>Aucune transaction</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white, marginBottom: 6 }}>Aucune transaction</Text>
             <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>Rien à afficher pour ce filtre.</Text>
           </View>
         ) : (

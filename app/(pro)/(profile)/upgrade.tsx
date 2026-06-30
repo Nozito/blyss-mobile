@@ -81,14 +81,14 @@ export default function ProUpgradeScreen() {
             backgroundColor: "rgba(255,255,255,0.2)",
             alignItems: "center", justifyContent: "center",
           }}>
-            <Ionicons name="lock-closed-outline" size={28} color="#fff" />
+            <Ionicons name="lock-closed-outline" size={28} color={Colors.white} />
           </View>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: "#fff", marginBottom: 8, textAlign: "center" }}>
+          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.white, marginBottom: 8, textAlign: "center" }}>
             Fonctionnalité non incluse
           </Text>
           <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", textAlign: "center", lineHeight: 20 }}>
             Cette page nécessite le plan{" "}
-            <Text style={{ fontWeight: "800", color: "#fff" }}>{meta.label}</Text>.{"\n"}
+            <Text style={{ fontWeight: "800", color: Colors.white }}>{meta.label}</Text>.{"\n"}
             Ton abonnement actuel ne comprend pas cet accès.
           </Text>
         </View>
@@ -97,7 +97,7 @@ export default function ProUpgradeScreen() {
         <View style={{
           backgroundColor: Colors.card, borderRadius: 20, padding: 20,
           borderWidth: 1, borderColor: Colors.border, marginBottom: 16,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+          shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -106,7 +106,7 @@ export default function ProUpgradeScreen() {
               backgroundColor: meta.color,
               alignItems: "center", justifyContent: "center",
             }}>
-              <Ionicons name={meta.icon} size={18} color="#fff" />
+              <Ionicons name={meta.icon} size={18} color={Colors.white} />
             </View>
             <View>
               <Text style={{ fontWeight: "700", fontSize: 15, color: Colors.foreground }}>
@@ -145,7 +145,7 @@ export default function ProUpgradeScreen() {
               shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+            <Text style={{ color: Colors.white, fontWeight: "800", fontSize: 15 }}>
               Passer au plan {meta.label}
             </Text>
           </Pressable>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
-  View, Text, Pressable, TextInput, Alert, StyleSheet,
+  View, Text, Pressable, TextInput, StyleSheet,
   ActivityIndicator, ScrollView, RefreshControl, FlatList,
   Modal, ActionSheetIOS, Platform, Animated, Share,
 } from "react-native";
@@ -16,6 +16,7 @@ import { adminApi, AdminUser } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Colors } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 
@@ -39,12 +40,12 @@ const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérén
 const MONTHS_OPTS = [1, 3, 6, 12];
 
 const AVATAR_PALETTE: [string, string][] = [
-  ["#EA6000", "#F97316"],
-  ["#7C3AED", "#8B5CF6"],
-  ["#1D4ED8", "#3B82F6"],
-  ["#15803D", "#22C55E"],
+  ["#EA6000", Colors.admin],
+  [Colors.pro, Colors.pro],
+  [Colors.infoText, Colors.info],
+  [Colors.successTextDark, Colors.success],
   ["#BE185D", "#EC4899"],
-  ["#B45309", "#F59E0B"],
+  [Colors.warningTextDark, Colors.warning],
 ];
 
 function initials(name: string) {
@@ -82,7 +83,7 @@ function Avatar({ name, size = 52 }: { name: string; size?: number }) {
   return (
     <LinearGradient colors={[s, e]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       style={{ width: size, height: size, borderRadius: r, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: "#fff", fontWeight: "900", fontSize: Math.round(size * 0.33) }}>
+      <Text style={{ color: Colors.white, fontWeight: "900", fontSize: Math.round(size * 0.33) }}>
         {initials(name)}
       </Text>
     </LinearGradient>
@@ -128,8 +129,9 @@ function UserSkeleton() {
 // ── Grant bottom sheet ────────────────────────────────────────────────────────
 function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const qc = useQueryClient();
-  const [plan, setPlan]     = useState<typeof PLAN_OPTS[number]>("serenite");
-  const [months, setMonths] = useState(1);
+  const [plan, setPlan]       = useState<typeof PLAN_OPTS[number]>("serenite");
+  const [months, setMonths]   = useState(1);
+  const [grantError, setGrantError] = useState<string | null>(null);
 
   const grantMut = useMutation({
     mutationFn: () => adminApi.grantSubscription(user.id, { plan, months }),
@@ -137,10 +139,9 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       qc.invalidateQueries({ queryKey: ["admin-user", user.id] });
-      Alert.alert("✅ Accordé", `${PLAN_LABELS[plan]} — ${months} mois accordé à ${user.first_name}.`);
       onClose();
     },
-    onError: () => Alert.alert("Erreur", "Impossible d'accorder l'abonnement."),
+    onError: () => setGrantError("Impossible d'accorder l'abonnement."),
   });
 
   return (
@@ -200,15 +201,17 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
             ))}
           </View>
 
+          {grantError && <View style={{ marginBottom: 12 }}><ErrorMessage message={grantError} /></View>}
+
           <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
+            onPress={() => { setGrantError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
             disabled={grantMut.isPending} style={{ opacity: grantMut.isPending ? 0.7 : 1 }}>
-            <LinearGradient colors={["#EA6000", "#F97316", "#FBAB6A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            <LinearGradient colors={["#EA6000", Colors.admin, "#FBAB6A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={{ height: 54, borderRadius: 18, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10 }}>
               {grantMut.isPending
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <><Ionicons name="gift-outline" size={20} color="#fff" />
-                    <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>Accorder l'abonnement</Text></>}
+                ? <ActivityIndicator size="small" color={Colors.white} />
+                : <><Ionicons name="gift-outline" size={20} color={Colors.white} />
+                    <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white }}>Accorder l'abonnement</Text></>}
             </LinearGradient>
           </Pressable>
         </View>
@@ -220,6 +223,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
 // ── User detail bottom sheet ───────────────────────────────────────────────────
 function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant: () => void; onClose: () => void }) {
   const qc = useQueryClient();
+  const [sheetError, setSheetError] = useState<string | null>(null);
 
   const { data: fullData } = useQuery({
     queryKey: ["admin-user", user.id],
@@ -264,7 +268,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       qc.invalidateQueries({ queryKey: ["admin-user", user.id] });
     },
-    onError: () => Alert.alert("Erreur", "Impossible de modifier le rôle."),
+    onError: () => setSheetError("Impossible de modifier le rôle."),
   });
 
   const handleShareEmail = async () => {
@@ -287,31 +291,31 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               style={{ paddingTop: 8, paddingBottom: 28, paddingHorizontal: 24, alignItems: "center" }}>
               <LinearGradient colors={["rgba(255,255,255,0.3)", "rgba(255,255,255,0.1)"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={{ width: 66, height: 66, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 12, borderWidth: 2, borderColor: "rgba(255,255,255,0.4)" }}>
-                <Text style={{ fontSize: 24, fontWeight: "900", color: "#fff" }}>{initials(`${full.first_name} ${full.last_name}`)}</Text>
+                <Text style={{ fontSize: 24, fontWeight: "900", color: Colors.white }}>{initials(`${full.first_name} ${full.last_name}`)}</Text>
               </LinearGradient>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#fff", marginBottom: 8 }}>{full.first_name} {full.last_name}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.white, marginBottom: 8 }}>{full.first_name} {full.last_name}</Text>
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 8 }}>
                 <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.25)" }}>
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", textTransform: "uppercase" }}>{full.is_admin ? "ADMIN" : full.role}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.white, textTransform: "uppercase" }}>{full.is_admin ? "ADMIN" : full.role}</Text>
                 </View>
                 {planStr && (
                   <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)" }}>
-                    <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>⭐ {planStr}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.white }}>⭐ {planStr}</Text>
                   </View>
                 )}
                 {!full.is_active && (
                   <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: "rgba(240,58,58,0.4)" }}>
-                    <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>BANNI</Text>
+                    <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.white }}>BANNI</Text>
                   </View>
                 )}
               </View>
               <Pressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6, opacity: 0.85 }}>
-                <Ionicons name="mail-outline" size={13} color="#fff" />
-                <Text style={{ fontSize: 12, color: "#fff" }}>{full.email}</Text>
+                <Ionicons name="mail-outline" size={13} color={Colors.white} />
+                <Text style={{ fontSize: 12, color: Colors.white }}>{full.email}</Text>
                 <Ionicons name="share-outline" size={12} color="rgba(255,255,255,0.7)" />
               </Pressable>
               <Pressable onPress={onClose} style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="close" size={18} color="#fff" />
+                <Ionicons name="close" size={18} color={Colors.white} />
               </Pressable>
             </LinearGradient>
 
@@ -354,6 +358,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 </View>
               )}
 
+              {sheetError && <View style={{ marginBottom: 4 }}><ErrorMessage message={sheetError} /></View>}
+
               {/* Actions */}
               <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
                 {[
@@ -374,10 +380,9 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 {!full.is_admin && (
                   <Pressable onPress={() => {
                     const newRole = full.role === "pro" ? "client" : "pro";
-                    Alert.alert("Modifier le rôle", `Passer ${full.first_name} en ${newRole} ?`, [
-                      { text: "Annuler", style: "cancel" },
-                      { text: "Confirmer", onPress: () => updateRoleMut.mutate(newRole) },
-                    ]);
+                    setSheetError(null);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                    updateRoleMut.mutate(newRole);
                   }} style={({ pressed }) => [styles.actionRow, { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 }]}>
                     <View style={[styles.actionIcon, { backgroundColor: `${Colors.pro}18` }]}>
                       <Ionicons name="swap-horizontal-outline" size={18} color={Colors.pro} />
@@ -393,10 +398,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 )}
 
                 {full.is_active ? (
-                  <Pressable onPress={() => Alert.alert("Bannir", `Bannir ${full.first_name} ?`, [
-                    { text: "Annuler", style: "cancel" },
-                    { text: "Bannir", style: "destructive", onPress: () => banMut.mutate() },
-                  ])} style={({ pressed }) => [styles.actionRow, { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 }]}>
+                  <Pressable onPress={() => { setSheetError(null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); banMut.mutate(); }}
+                    style={({ pressed }) => [styles.actionRow, { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 }]}>
                     <View style={[styles.actionIcon, { backgroundColor: `${Colors.warning}18` }]}>
                       <Ionicons name="ban-outline" size={18} color={Colors.warning} />
                     </View>
@@ -414,10 +417,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                   </Pressable>
                 )}
 
-                <Pressable onPress={() => Alert.alert("Supprimer", `Supprimer ${full.first_name} définitivement ?`, [
-                  { text: "Annuler", style: "cancel" },
-                  { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate() },
-                ])} style={({ pressed }) => [styles.actionRow, { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 }]}>
+                <Pressable onPress={() => { setSheetError(null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); deleteMut.mutate(); }}
+                  style={({ pressed }) => [styles.actionRow, { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 }]}>
                   <View style={[styles.actionIcon, { backgroundColor: `${Colors.destructive}14` }]}>
                     <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
                   </View>
@@ -458,13 +459,13 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
     <View style={{ flexDirection: "row", marginBottom: 10, marginLeft: 6, overflow: "hidden", borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }}>
       <Pressable onPress={() => { swipeRef.current?.close(); onBan(); }}
         style={{ width: 80, backgroundColor: "rgba(245,158,11,0.85)", alignItems: "center", justifyContent: "center", gap: 4 }}>
-        <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={22} color="#fff" />
-        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>{item.is_active ? "Bannir" : "Réactiver"}</Text>
+        <Ionicons name={item.is_active ? "ban-outline" : "checkmark-circle-outline"} size={22} color={Colors.white} />
+        <Text style={{ color: Colors.white, fontSize: 11, fontWeight: "700" }}>{item.is_active ? "Bannir" : "Réactiver"}</Text>
       </Pressable>
       <Pressable onPress={() => { swipeRef.current?.close(); onDelete(); }}
         style={{ width: 80, backgroundColor: "rgba(240,58,58,0.85)", alignItems: "center", justifyContent: "center", gap: 4 }}>
-        <Ionicons name="trash-outline" size={22} color="#fff" />
-        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>Suppr.</Text>
+        <Ionicons name="trash-outline" size={22} color={Colors.white} />
+        <Text style={{ color: Colors.white, fontSize: 11, fontWeight: "700" }}>Suppr.</Text>
       </Pressable>
     </View>
   );
@@ -472,9 +473,9 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
   const renderLeftActions = () => (
     <View style={{ width: 86, marginBottom: 10, marginRight: 6, overflow: "hidden", borderTopRightRadius: 18, borderBottomRightRadius: 18 }}>
       <Pressable onPress={() => { swipeRef.current?.close(); onGrant(); }} style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: "#F97316", alignItems: "center", justifyContent: "center", gap: 4 }}>
-          <Ionicons name="gift-outline" size={22} color="#fff" />
-          <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>Abonnement</Text>
+        <View style={{ flex: 1, backgroundColor: Colors.admin, alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <Ionicons name="gift-outline" size={22} color={Colors.white} />
+          <Text style={{ color: Colors.white, fontSize: 11, fontWeight: "700" }}>Abonnement</Text>
         </View>
       </Pressable>
     </View>
@@ -499,7 +500,7 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
             overflow: "hidden",
             borderWidth: 1,
             borderColor: BORDER,
-            shadowColor: "#000",
+            shadowColor: Colors.black,
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.4,
             shadowRadius: 16,
@@ -522,7 +523,7 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
                 <Text style={{ fontWeight: "800", fontSize: 15, color: TEXT1, flex: 1, letterSpacing: -0.3 }} numberOfLines={1}>{name}</Text>
                 {!item.is_active ? (
                   <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(240,58,58,0.2)", borderWidth: 1, borderColor: "rgba(240,58,58,0.4)" }}>
-                    <Text style={{ fontSize: 9, fontWeight: "900", color: "#F87171", letterSpacing: 0.3 }}>BANNI</Text>
+                    <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.destructiveLight, letterSpacing: 0.3 }}>BANNI</Text>
                   </View>
                 ) : (
                   <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: `${rc}20`, borderWidth: 1, borderColor: `${rc}40` }}>
@@ -595,6 +596,7 @@ export default function AdminUsersScreen() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantTarget, setGrantTarget]   = useState<AdminUser | null>(null);
   const [refreshing, setRefreshing]     = useState(false);
+  const [usersError, setUsersError]     = useState<string | null>(null);
   const debouncedSearch = useDebounce(search, 380);
 
   const { data, isLoading, refetch } = useQuery({
@@ -613,7 +615,7 @@ export default function AdminUsersScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     },
-    onError: () => Alert.alert("Erreur", "Impossible de bannir cet utilisateur."),
+    onError: () => setUsersError("Impossible de bannir cet utilisateur."),
   });
   const deleteMut = useMutation({
     mutationFn: (id: number) => adminApi.deleteUser(id),
@@ -621,7 +623,7 @@ export default function AdminUsersScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     },
-    onError: () => Alert.alert("Erreur", "Impossible de supprimer cet utilisateur."),
+    onError: () => setUsersError("Impossible de supprimer cet utilisateur."),
   });
 
   const users       = (data?.data as AdminUser[] | undefined) ?? [];
@@ -664,16 +666,11 @@ export default function AdminUsersScreen() {
           if      (idx === 1) { setSelectedUser(item); }
           else if (idx === 2) { setGrantTarget(item); }
           else if (idx === 3) {
-            const action = item.is_active ? "Bannir" : "Réactiver";
-            Alert.alert(action, `${action} ${item.first_name} ?`, [
-              { text: "Annuler", style: "cancel" },
-              { text: action, style: item.is_active ? "destructive" : "default", onPress: () => banMut.mutate(item.id) },
-            ]);
+            setUsersError(null);
+            banMut.mutate(item.id);
           } else if (idx === 4) {
-            Alert.alert("Supprimer", `Supprimer ${item.first_name} définitivement ?`, [
-              { text: "Annuler", style: "cancel" },
-              { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(item.id) },
-            ]);
+            setUsersError(null);
+            deleteMut.mutate(item.id);
           }
         }
       );
@@ -706,17 +703,8 @@ export default function AdminUsersScreen() {
         item={u}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setSelectedUser(u); }}
         onLongPress={() => handleLongPress(u)}
-        onBan={() => {
-          const action = u.is_active ? "Bannir" : "Réactiver";
-          Alert.alert(action, `${action} ${u.first_name} ?`, [
-            { text: "Annuler", style: "cancel" },
-            { text: action, style: u.is_active ? "destructive" : "default", onPress: () => banMut.mutate(u.id) },
-          ]);
-        }}
-        onDelete={() => Alert.alert("Supprimer", `Supprimer ${u.first_name} définitivement ?`, [
-          { text: "Annuler", style: "cancel" },
-          { text: "Supprimer", style: "destructive", onPress: () => deleteMut.mutate(u.id) },
-        ])}
+        onBan={() => { setUsersError(null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); banMut.mutate(u.id); }}
+        onDelete={() => { setUsersError(null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); deleteMut.mutate(u.id); }}
         onGrant={() => setGrantTarget(u)}
       />
     );
@@ -743,7 +731,7 @@ export default function AdminUsersScreen() {
             </View>
             {!isLoading && (
               <View style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "rgba(249,115,22,0.2)", borderWidth: 1, borderColor: "rgba(249,115,22,0.4)" }}>
-                <Text style={{ fontSize: 18, fontWeight: "900", color: "#F97316" }}>{users.length}</Text>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.admin }}>{users.length}</Text>
               </View>
             )}
           </View>
@@ -784,6 +772,8 @@ export default function AdminUsersScreen() {
               );
             })}
           </ScrollView>
+
+          {usersError && <View style={{ marginBottom: 8 }}><ErrorMessage message={usersError} /></View>}
 
           {/* Mini stats strip */}
           {!isLoading && (
@@ -851,7 +841,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 16,

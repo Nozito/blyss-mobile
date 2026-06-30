@@ -12,7 +12,7 @@ import { Colors } from "@/constants/colors";
 // Mêmes tokens que dashboard.tsx
 const CARD   = "rgba(255,255,255,0.045)";
 const BORDER = "rgba(255,255,255,0.09)";
-const TEXT1  = "#FFFFFF";
+const TEXT1  = Colors.white;
 const TEXT2  = "rgba(255,255,255,0.50)";
 const TEXT3  = "rgba(255,255,255,0.28)";
 
@@ -207,7 +207,7 @@ export default function RoleSelectionModal({
         borderTopWidth: 1, borderTopColor: BORDER,
         paddingBottom: Math.max(insets.bottom + 16, 28),
         transform: [{ translateY: sheetTranslateY }],
-        shadowColor: "#000",
+        shadowColor: Colors.black,
         shadowOffset: { width: 0, height: -8 },
         shadowOpacity: 0.55,
         shadowRadius: 24,
@@ -255,7 +255,7 @@ export default function RoleSelectionModal({
           {/* Avatar */}
           <Animated.View style={{ transform: [{ scale: avatarScale }], marginBottom: 16 }}>
             <LinearGradient
-              colors={["#EA6000", "#F97316", "#FBAB6A"]}
+              colors={["#EA6000", Colors.admin, "#FBAB6A"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
@@ -263,7 +263,7 @@ export default function RoleSelectionModal({
                 alignItems: "center", justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 28, fontWeight: "900", color: "#fff" }}>
+              <Text style={{ fontSize: 28, fontWeight: "900", color: Colors.white }}>
                 {userInitials || "A"}
               </Text>
             </LinearGradient>

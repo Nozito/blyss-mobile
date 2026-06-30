@@ -6,7 +6,6 @@ import {
   Pressable,
   Switch,
   ActivityIndicator,
-  Alert,
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -78,8 +77,8 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
   {
     title: "Rendez-vous",
     items: [
-      { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: "#FE5D9D20", iconColor: "#FE5D9D" },
-      { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: "#F59E0B20", iconColor: "#F59E0B" },
+      { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: "#FE5D9D20", iconColor: Colors.primary },
+      { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: "#F59E0B20", iconColor: Colors.warning },
       { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: "#06B6D420", iconColor: "#06B6D4" },
     ],
   },
@@ -92,8 +91,8 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
   {
     title: "Promotions",
     items: [
-      { key: "offers",        label: "Offres & codes promo", subtitle: "Exclusivités et promotions de tes expertes", icon: "gift-outline", iconBg: "#8B5CF620", iconColor: "#8B5CF6" },
-      { key: "email_summary", label: "Résumé par email", subtitle: "Récap' hebdo de tes rendez-vous", icon: "mail-outline", iconBg: "#6B728020", iconColor: "#6B7280" },
+      { key: "offers",        label: "Offres & codes promo", subtitle: "Exclusivités et promotions de tes expertes", icon: "gift-outline", iconBg: "#8B5CF620", iconColor: Colors.pro },
+      { key: "email_summary", label: "Résumé par email", subtitle: "Récap' hebdo de tes rendez-vous", icon: "mail-outline", iconBg: "#6B728020", iconColor: Colors.mutedForeground },
     ],
   },
 ];
@@ -136,7 +135,7 @@ export default function ClientNotificationsScreen() {
       }
     } catch {
       setPreferences(prev);
-      Alert.alert("Erreur", "Impossible de mettre à jour la préférence");
+      if (__DEV__) console.log("Impossible de mettre à jour la préférence");
     } finally {
       setSavingKey(null);
     }
@@ -168,8 +167,8 @@ export default function ClientNotificationsScreen() {
               onPress={() => setTab(id)}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
-                backgroundColor: tab === id ? "#fff" : "transparent",
-                shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+                backgroundColor: tab === id ? Colors.white : "transparent",
+                shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: tab === id ? 0.08 : 0, shadowRadius: 4,
                 elevation: tab === id ? 2 : 0,
               }}
@@ -214,7 +213,7 @@ export default function ClientNotificationsScreen() {
                           style={{
                             flexDirection: "row", alignItems: "flex-start", gap: 12,
                             padding: 14, borderRadius: 16,
-                            backgroundColor: notif.is_read ? Colors.muted : "#fff",
+                            backgroundColor: notif.is_read ? Colors.muted : Colors.white,
                             borderWidth: notif.is_read ? 0 : 1,
                             borderColor: "#FE5D9D1A",
                             ...(notif.is_read ? {} : Shadows.card),
@@ -232,7 +231,7 @@ export default function ClientNotificationsScreen() {
                             </Text>
                           </View>
                           {!notif.is_read && (
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FE5D9D", marginTop: 6, flexShrink: 0 }} />
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, marginTop: 6, flexShrink: 0 }} />
                           )}
                         </Pressable>
                       );
@@ -264,8 +263,8 @@ export default function ClientNotificationsScreen() {
               <View>
                 {/* Bandeau info */}
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#FE5D9D15", borderRadius: 12, padding: 14, marginBottom: 24 }}>
-                  <Ionicons name="notifications-outline" size={18} color="#FE5D9D" />
-                  <Text style={{ flex: 1, fontSize: 13, color: "#FE5D9D", lineHeight: 18 }}>
+                  <Ionicons name="notifications-outline" size={18} color={Colors.primary} />
+                  <Text style={{ flex: 1, fontSize: 13, color: Colors.primary, lineHeight: 18 }}>
                     Choisis les alertes que tu souhaites recevoir.{" "}
                     Tu peux modifier tes préférences à tout moment.
                   </Text>
@@ -277,7 +276,7 @@ export default function ClientNotificationsScreen() {
                     <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
                       {section.title}
                     </Text>
-                    <View style={{ backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
+                    <View style={{ backgroundColor: Colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
                       {section.items.map((item, idx) => (
                         <View
                           key={item.key}
@@ -294,7 +293,7 @@ export default function ClientNotificationsScreen() {
                             value={preferences[item.key]}
                             onValueChange={() => togglePref(item.key)}
                             trackColor={{ false: Colors.border, true: Colors.primary }}
-                            thumbColor="#fff"
+                            thumbColor={Colors.white}
                             disabled={savingKey === item.key}
                           />
                         </View>
@@ -308,13 +307,13 @@ export default function ClientNotificationsScreen() {
                   <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
                     Système
                   </Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
+                  <View style={{ backgroundColor: Colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
                     <Pressable
                       onPress={() => Linking.openSettings()}
                       style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14 }}
                     >
                       <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" }}>
-                        <Ionicons name="settings-outline" size={20} color="#6B7280" />
+                        <Ionicons name="settings-outline" size={20} color={Colors.mutedForeground} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>Réglages système</Text>

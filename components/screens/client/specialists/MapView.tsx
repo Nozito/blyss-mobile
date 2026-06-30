@@ -13,6 +13,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Specialist } from "./SpecialistCard";
+import { Colors } from "@/constants/colors";
 
 
 const PARIS: Region = {
@@ -54,7 +55,7 @@ function MarkerPin({ item }: { item: Specialist }) {
           <Text style={styles.badgeText}>~{item.min_price}€</Text>
         ) : item.rating > 0 ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-            <Ionicons name="star" size={7} color="#fff" />
+            <Ionicons name="star" size={7} color={Colors.white} />
             <Text style={styles.badgeText}>{item.rating != null ? Number(item.rating).toFixed(1) : "–"}</Text>
           </View>
         ) : null}
@@ -85,7 +86,7 @@ function ProBottomCard({
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-        <Ionicons name="close" size={18} color="#6D6D78" />
+        <Ionicons name="close" size={18} color={Colors.mutedForeground} />
       </Pressable>
 
       {/* Avatar + infos */}
@@ -102,7 +103,7 @@ function ProBottomCard({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
             {item.city ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Ionicons name="location-outline" size={12} color="#6D6D78" />
+                <Ionicons name="location-outline" size={12} color={Colors.mutedForeground} />
                 <Text style={styles.cardCity}>{item.city}</Text>
               </View>
             ) : null}
@@ -176,8 +177,8 @@ export default function SpecialistsMapView({ specialists }: Props) {
         initialRegion={initialRegion}
         showsUserLocation
         showsMyLocationButton={Platform.OS === "android"}
-        clusterColor="#FE5D9D"
-        clusterTextColor="#ffffff"
+        clusterColor={Colors.primary}
+        clusterTextColor={Colors.white}
         clusterFontFamily="System"
         onPress={() => selectedPro && handleClose()}
         renderCluster={(cluster: any) => {
@@ -213,7 +214,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
       {mapped.length === 0 && (
         <View style={styles.noMarkers}>
           <View style={styles.noMarkersCard}>
-            <Ionicons name="location-outline" size={20} color="#6D6D78" />
+            <Ionicons name="location-outline" size={20} color={Colors.mutedForeground} />
             <Text style={styles.noMarkersText}>
               {specialists.length === 0 ? "Aucune experte dans cette zone" : "Les expertes de cette liste n'ont pas encore de position GPS"}
             </Text>
@@ -232,7 +233,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
 
       {Platform.OS === "ios" && (
         <Pressable onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)} style={styles.locBtn}>
-          <Ionicons name="locate-outline" size={20} color="#FE5D9D" />
+          <Ionicons name="locate-outline" size={20} color={Colors.primary} />
         </Pressable>
       )}
     </View>
@@ -242,36 +243,36 @@ export default function SpecialistsMapView({ specialists }: Props) {
 
 const styles = StyleSheet.create({
   cluster: {
-    backgroundColor: "#FE5D9D",
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#FE5D9D",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 4,
     elevation: 4,
   },
-  clusterText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  loader: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: "#FFEAF1" },
-  loaderText: { fontSize: 14, color: "#6D6D78", fontWeight: "500" },
+  clusterText: { color: Colors.white, fontWeight: "700", fontSize: 14 },
+  loader: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: Colors.background },
+  loaderText: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
   pinWrap: { alignItems: "center" },
   pinCircle: {
     width: 44, height: 44, borderRadius: 22, overflow: "hidden",
-    borderWidth: 2.5, borderColor: "#FE5D9D", backgroundColor: "#FFE6F0",
-    shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4, elevation: 4,
+    borderWidth: 2.5, borderColor: Colors.primary, backgroundColor: "#FFE6F0",
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4, elevation: 4,
   },
   pinFallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFE6F0" },
-  pinInitial: { fontSize: 18, fontWeight: "800", color: "#FE5D9D" },
+  pinInitial: { fontSize: 18, fontWeight: "800", color: Colors.primary },
   badge: {
-    marginTop: 2, backgroundColor: "#FE5D9D", borderRadius: 8,
+    marginTop: 2, backgroundColor: Colors.primary, borderRadius: 8,
     paddingHorizontal: 6, paddingVertical: 2, minWidth: 28, alignItems: "center",
-    shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 2, elevation: 2,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 2, elevation: 2,
   },
-  badgeText: { fontSize: 9, fontWeight: "800", color: "#fff" },
+  badgeText: { fontSize: 9, fontWeight: "800", color: Colors.white },
   pinTail: {
     width: 0, height: 0,
     borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 6,
-    borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: "#FE5D9D",
+    borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: Colors.primary,
     marginTop: -1,
   },
   bottomCard: {
@@ -279,10 +280,10 @@ const styles = StyleSheet.create({
     bottom: 100,
     left: 16,
     right: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.14,
     shadowRadius: 16,
@@ -297,17 +298,17 @@ const styles = StyleSheet.create({
   cardAvatar: {
     width: 56, height: 56, borderRadius: 28, backgroundColor: "#FFE0EF",
     overflow: "hidden", alignItems: "center", justifyContent: "center",
-    flexShrink: 0, borderWidth: 2, borderColor: "#FE5D9D",
+    flexShrink: 0, borderWidth: 2, borderColor: Colors.primary,
   },
-  cardAvatarInitial: { fontSize: 22, fontWeight: "800", color: "#FE5D9D" },
-  cardName: { fontSize: 16, fontWeight: "700", color: "#09090B" },
-  cardCity: { fontSize: 12, color: "#6D6D78" },
-  cardRating: { fontSize: 12, fontWeight: "700", color: "#09090B" },
+  cardAvatarInitial: { fontSize: 22, fontWeight: "800", color: Colors.primary },
+  cardName: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
+  cardCity: { fontSize: 12, color: Colors.mutedForeground },
+  cardRating: { fontSize: 12, fontWeight: "700", color: Colors.foreground },
   cardBtn: {
     borderRadius: 28,
     overflow: "hidden",
-    backgroundColor: "#FE5D9D",
-    shadowColor: "#FE5D9D",
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 14,
@@ -326,13 +327,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#FE5D9D",
+    backgroundColor: Colors.primary,
     borderRadius: 28,
   },
   cardBtnText: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: Colors.white,
     letterSpacing: 0.4,
   },
   noMarkers: { position: "absolute", bottom: 100, left: 0, right: 0, alignItems: "center" },
@@ -340,14 +341,14 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
+    shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
     maxWidth: 300,
   },
-  noMarkersText: { fontSize: 12, color: "#6D6D78", fontWeight: "500", flex: 1 },
+  noMarkersText: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "500", flex: 1 },
   locBtn: {
     position: "absolute", top: 16, right: 16, width: 44, height: 44,
-    borderRadius: 22, backgroundColor: "#FFFFFF",
+    borderRadius: 22, backgroundColor: Colors.white,
     alignItems: "center", justifyContent: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+    shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
   },
 });

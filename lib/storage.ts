@@ -42,8 +42,8 @@ export const storage = {
       const raw = await SecureStore.getItemAsync(KEYS.USER_CACHE);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as { data: Record<string, unknown>; cachedAt: number };
-      // Cache expiration: 5 minutes
-      if (Date.now() - parsed.cachedAt > 5 * 60 * 1000) return null;
+      // Cache expiration: 30 minutes — assez frais pour le display instantané
+      if (Date.now() - parsed.cachedAt > 30 * 60 * 1000) return null;
       return parsed.data;
     } catch {
       return null;

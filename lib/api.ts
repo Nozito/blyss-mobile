@@ -362,6 +362,31 @@ export const authApi = {
     }
   },
 
+  loginWithApple: async (data: {
+    identityToken: string;
+    authorizationCode: string;
+    email?: string | null;
+    fullName?: { givenName?: string | null; familyName?: string | null } | null;
+  }): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken: string }>> => {
+    const { response, json } = await rawApiCall<{
+      success: boolean;
+      data: { user: User; accessToken: string; refreshToken: string };
+      message?: string;
+      error?: string;
+    }>("/api/auth/apple", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok || !json?.success) {
+      return { success: false, error: json?.message ?? json?.error ?? "Erreur Apple Sign In" };
+    }
+
+    const { user, accessToken, refreshToken } = json.data;
+    await storage.setTokens(accessToken, refreshToken);
+    return { success: true, data: { user, accessToken, refreshToken } };
+  },
+
   deleteAccount: async (): Promise<ApiResponse<void>> =>
     apiCall("/api/auth/delete-account", { method: "DELETE" }),
 
@@ -583,6 +608,38 @@ export const proApi = {
 
   updateFinanceObjective: (objective: number) =>
     apiCall("/api/pro/finance/objective", { method: "PUT", body: JSON.stringify({ objective }) }),
+
+  getStats: (period: "month" | "week" = "month") =>
+    apiCall<{ bookings: number; revenue: number; uniqueClients: number; completionRate: number }>(
+      `/api/pro/stats?period=${period}`
+    ),
+
+  getGallery: () =>
+    apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>("/api/pro/gallery"),
+
+  deleteGallery: (id: number) => apiCall(`/api/pro/gallery/${id}`, { method: "DELETE" }),
+
+  uploadGallery: async (uri: string): Promise<ApiResponse<{ id: number; url: string; thumbnail: string }>> => {
+    try {
+      const accessToken = await storage.getAccessToken();
+      const filename = uri.split("/").pop() ?? "gallery.jpg";
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+      const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+      const formData = new FormData();
+      // @ts-expect-error — React Native FormData accepts { uri, name, type }
+      formData.append("image", { uri, name: filename, type: mimeType });
+      const response = await fetch(`${API_BASE_URL}/api/pro/gallery`, {
+        method: "POST",
+        headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        body: formData,
+      });
+      const json = await response.json().catch(() => null) as { success?: boolean; data?: { id: number; url: string; thumbnail: string }; message?: string } | null;
+      if (!response.ok || !json?.success) return { success: false, error: json?.message ?? "Erreur upload" };
+      return { success: true, data: json.data };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Erreur de connexion" };
+    }
+  },
 };
 
 // ── Client API ────────────────────────────────────────────────────────────────
@@ -651,6 +708,10 @@ export const instagramApi = {
     const res = await fetch(`${API_BASE_URL}/api/public/pro/${proId}/instagram`);
     return res.json() as Promise<ApiResponse<{ photos: InstagramPhoto[]; connected: boolean; username?: string }>>;
   },
+  getFeed: (): Promise<ApiResponse<{ photos: Array<{ id: string; url: string; thumbnail: string }> }>> =>
+    apiCall("/api/pro/instagram/feed"),
+  importPhoto: (photoId: string): Promise<ApiResponse<{ id: number; url: string }>> =>
+    apiCall("/api/pro/instagram/import", { method: "POST", body: JSON.stringify({ photoId }) }),
 };
 
 // ── Users API ─────────────────────────────────────────────────────────────────
@@ -997,6 +1058,26 @@ export const adminApi = {
     const q = params?.date ? `?date=${params.date}` : "";
     return apiCall(`/api/admin/logs${q}`);
   },
+
+  // Pro validation
+  getPros: (params?: { status?: "pending" | "active" | "suspended"; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
+    const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
+    return apiCall(`/api/admin/pros${q}`);
+  },
+  approvePro: (id: number): Promise<ApiResponse<{ id: number }>> =>
+    apiCall(`/api/admin/pros/${id}/approve`, { method: "PATCH" }),
+  rejectPro: (id: number, data: { reason: string }): Promise<ApiResponse<{ id: number }>> =>
+    apiCall(`/api/admin/pros/${id}/reject`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  // Reviews moderation
+  getReviews: (params?: { flagged?: boolean; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
+    const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
+    return apiCall(`/api/admin/reviews${q}`);
+  },
+  deleteReview: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/reviews/${id}`, { method: "DELETE" }),
+  ignoreReviewFlag: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/reviews/${id}/ignore`, { method: "PATCH" }),
 };
 
 export default {

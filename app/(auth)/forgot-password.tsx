@@ -1,214 +1,154 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   Pressable,
-  Animated,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { authApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-
-function ScaleOnFocus({ children, focused }: { children: React.ReactNode; focused: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  React.useEffect(() => {
-    Animated.spring(scale, {
-      toValue: focused ? 1.02 : 1,
-      useNativeDriver: true,
-      tension: 200,
-      friction: 20,
-    }).start();
-  }, [focused, scale]);
-  return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
-}
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail]         = useState("");
+  const [emailError, setEmailError] = useState<string | undefined>(undefined);
   const [isSending, setIsSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+  const [sent, setSent]           = useState(false);
+  const [apiError, setApiError]   = useState<string | null>(null);
 
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const handleEmailChange = useCallback((v: string) => {
+    setEmail(v);
+    setApiError(null);
+    if (v.length > 0 && !EMAIL_REGEX.test(v)) {
+      setEmailError("Format d'email invalide");
+    } else {
+      setEmailError(undefined);
+    }
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!email.trim()) return;
     if (!EMAIL_REGEX.test(email.trim())) {
-      Alert.alert("Email invalide", "Saisis une adresse email valide.");
+      setEmailError("Format d'email invalide");
       return;
     }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsSending(true);
+    setApiError(null);
     try {
-      await fetch(`${API_URL}/api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
+      await authApi.forgotPassword(email.trim().toLowerCase());
+      // Always show success to avoid email enumeration
       setSent(true);
     } catch {
-      Alert.alert("Erreur de connexion", "Impossible d'envoyer l'email. Vérifie ta connexion internet.");
+      setApiError("Impossible d'envoyer l'email — vérifie ta connexion");
     } finally {
       setIsSending(false);
     }
-  };
+  }, [email]);
+
+  const isDisabled = isSending || !email.trim() || !!emailError;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingTop: 48,
-            paddingBottom: 32,
-            flexGrow: 1,
-            justifyContent: "center",
-          }}
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Back */}
           <AnimatedIconButton
             onPress={() => router.back()}
-            className="flex-row items-center gap-1.5 mb-8"
+            style={styles.backBtn}
           >
-            <Ionicons name="chevron-back" size={18} color="#6D6D78" />
-            <Text className="text-sm text-muted-foreground">Retour</Text>
+            <Ionicons name="chevron-back" size={20} color={Colors.mutedForeground} />
+            <Text style={styles.backText}>Retour</Text>
           </AnimatedIconButton>
 
           {sent ? (
-            /* ── Success state ─────────────────────────────────────── */
-            <View className="items-center gap-4">
-              <View className="w-18 h-18 rounded-2xl bg-primary/10 items-center justify-center mb-2"
-                style={{ width: 72, height: 72, borderRadius: 22 }}>
-                <Ionicons name="checkmark-circle-outline" size={32} color="#FE5D9D" />
+            /* ── Success state ───────────────────────────────────────── */
+            <View style={styles.centeredBlock}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="mail-outline" size={36} color={Colors.primary} />
               </View>
-
-              <Text className="text-2xl font-black text-foreground tracking-tight text-center">
-                Email envoyé
+              <Text style={styles.title}>Email envoyé ✉️</Text>
+              <Text style={styles.subtitle}>
+                Si cette adresse est associée à un compte, tu recevras un lien dans quelques minutes.
               </Text>
-              <Text className="text-sm text-muted-foreground text-center leading-5 px-2">
-                Si cette adresse est associée à un compte, tu recevras un lien
-                de réinitialisation dans quelques minutes.
-              </Text>
-              <Text className="text-xs text-muted-foreground text-center">
-                Pense à vérifier tes spams.
-              </Text>
+              <Text style={styles.spamHint}>Pense à vérifier tes spams.</Text>
 
               <Pressable
                 onPress={() => router.replace("/(auth)/login")}
-                className="w-full mt-2"
+                style={styles.ctaBtn}
               >
-                <LinearGradient
-                  colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{
-                    height: 56,
-                    borderRadius: 16,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    shadowColor: "#FE5D9D",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 4,
-                  }}
-                >
-                  <Text className="text-white font-bold text-base">
-                    Retour à la connexion
-                  </Text>
-                </LinearGradient>
+                <Text style={styles.ctaBtnText}>Retour à la connexion</Text>
               </Pressable>
             </View>
           ) : (
-            /* ── Form state ────────────────────────────────────────── */
+            /* ── Form state ──────────────────────────────────────────── */
             <>
-              <View className="items-center mb-8">
-                <View
-                  className="bg-primary/10 items-center justify-center mb-4"
-                  style={{ width: 72, height: 72, borderRadius: 22 }}
-                >
-                  <Ionicons name="mail-outline" size={30} color="#FE5D9D" />
+              <View style={styles.centeredBlock}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="lock-open-outline" size={36} color={Colors.primary} />
                 </View>
-                <Text className="text-2xl font-black text-foreground tracking-tight text-center">
-                  Mot de passe oublié
-                </Text>
-                <Text className="text-sm text-muted-foreground text-center mt-2 leading-5">
+                <Text style={styles.title}>Mot de passe oublié</Text>
+                <Text style={styles.subtitle}>
                   Saisis ton email et on t'envoie un lien de réinitialisation.
                 </Text>
               </View>
 
-              <View className="gap-3">
-                <ScaleOnFocus focused={isFocused}>
-                  <Input
-                    label="Adresse email"
-                    value={email}
-                    onChangeText={setEmail}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    placeholder="ton@email.fr"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    leftIcon="mail-outline"
-                  />
-                </ScaleOnFocus>
+              <View style={styles.form}>
+                {apiError && <ErrorMessage message={apiError} />}
+
+                <Input
+                  label="Adresse email"
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  placeholder="ton@email.fr"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  leftIcon="mail-outline"
+                  error={emailError}
+                />
 
                 <Pressable
                   onPress={handleSubmit}
-                  disabled={isSending || !email.trim()}
-                  style={{ marginTop: 24, opacity: !email.trim() ? 0.5 : 1 }}
+                  disabled={isDisabled}
+                  style={[styles.ctaBtn, isDisabled && styles.ctaBtnDisabled]}
                 >
-                  <LinearGradient
-                    colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{
-                      height: 56,
-                      borderRadius: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      shadowColor: "#FE5D9D",
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      elevation: 4,
-                    }}
-                  >
-                    {isSending ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <View className="flex-row items-center gap-2">
-                        <Ionicons name="send-outline" size={18} color="#fff" />
-                        <Text className="text-white font-bold text-base">
-                          Envoyer le lien
-                        </Text>
-                      </View>
-                    )}
-                  </LinearGradient>
+                  {isSending ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <View style={styles.ctaBtnInner}>
+                      <Ionicons name="send-outline" size={18} color={Colors.white} />
+                      <Text style={styles.ctaBtnText}>Envoyer le lien</Text>
+                    </View>
+                  )}
                 </Pressable>
               </View>
 
               <Pressable
                 onPress={() => router.replace("/(auth)/login")}
-                className="mt-6 items-center"
+                style={styles.loginLink}
               >
-                <Text className="text-sm text-primary font-medium">
-                  Retour à la connexion
-                </Text>
+                <Text style={styles.loginLinkText}>Retour à la connexion</Text>
               </Pressable>
             </>
           )}
@@ -217,3 +157,70 @@ export default function ForgotPasswordScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.background },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 32 },
+  backText: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
+
+  centeredBlock: { alignItems: "center", marginBottom: 32, gap: 12 },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: Colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Colors.foreground,
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.mutedForeground,
+    textAlign: "center",
+    lineHeight: 21,
+    maxWidth: 280,
+  },
+  spamHint: {
+    fontSize: 12,
+    color: Colors.mutedForeground,
+    textAlign: "center",
+    opacity: 0.7,
+  },
+
+  form: { gap: 16 },
+
+  ctaBtn: {
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  ctaBtnDisabled: { backgroundColor: Colors.disabled, shadowOpacity: 0, elevation: 0 },
+  ctaBtnInner: { flexDirection: "row", alignItems: "center", gap: 8 },
+  ctaBtnText: { fontSize: 16, fontWeight: "700", color: Colors.white },
+
+  loginLink: { alignItems: "center", marginTop: 20 },
+  loginLinkText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+});

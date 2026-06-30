@@ -7,18 +7,29 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "ios": {
         "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.blyssapp.fr",
+        "EXPO_PUBLIC_WS_URL": "wss://api.blyssapp.fr/ws"
       }
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "ios": {
         "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://staging.blyssapp.fr",
+        "EXPO_PUBLIC_WS_URL": "wss://staging.blyssapp.fr/ws"
       }
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "ios": {
         "buildConfiguration": "Release"
       },

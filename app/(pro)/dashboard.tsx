@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Alert,
   Platform,
+  RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
@@ -57,7 +58,7 @@ function n(v: unknown): number {
 const STATUS_CFG = {
   ongoing:   { label: "En cours",  bg: "rgba(52,199,89,0.15)",  text: "#34C759" },
   upcoming:  { label: "À venir",   bg: "rgba(0,122,255,0.15)",  text: "#007AFF" },
-  completed: { label: "Terminé",   bg: "rgba(120,120,128,0.15)", text: "#6B7280" },
+  completed: { label: "Terminé",   bg: "rgba(120,120,128,0.15)", text: Colors.mutedForeground },
 } as const;
 
 export default function ProDashboard() {
@@ -71,6 +72,7 @@ export default function ProDashboard() {
   const [blockDate, setBlockDate] = useState<Date>(new Date());
   const [showBlockDatePicker, setShowBlockDatePicker] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
   const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
 
   // Redirect new pros to onboarding if they haven't seen it yet
@@ -82,11 +84,19 @@ export default function ProDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["pro-dashboard"],
     queryFn: () => proApi.getDashboard(),
     staleTime: 60_000,
   });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const raw = data?.data as DashData | undefined;
 
@@ -135,7 +145,7 @@ export default function ProDashboard() {
       }
       setShowBlockModal(false);
     } catch {
-      Alert.alert("Erreur", "Impossible de modifier le statut de la journée");
+      setBlockError("Impossible de modifier le statut de la journée");
     } finally {
       setBlockLoading(false);
     }
@@ -171,6 +181,7 @@ export default function ProDashboard() {
         gap: 16,
       }}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
     >
       {/* ── HEADER ── */}
       <View>
@@ -189,7 +200,7 @@ export default function ProDashboard() {
       {/* ── WEEKLY PERFORMANCE HERO ── */}
       <View>
         <LinearGradient
-          colors={["#FF4D96", "#FF5EA0", "#FF82B8"]}
+          colors={["#FF4D96", Colors.primary, "#FF82B8"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -212,15 +223,15 @@ export default function ProDashboard() {
             {/* Label */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
-                <Ionicons name="pulse-outline" size={12} color="#fff" />
-                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                <Ionicons name="pulse-outline" size={12} color={Colors.white} />
+                <Text style={{ color: Colors.white, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>
                   Cette semaine
                 </Text>
               </View>
               {/* Trend badge */}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: weeklyStats.isUp ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}>
-                <Ionicons name={weeklyStats.isUp ? "trending-up" : "trending-down"} size={14} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13, letterSpacing: -0.2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: weeklyStats.isUp ? "rgba(255,255,255,0.22)" : Colors.overlayLight, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}>
+                <Ionicons name={weeklyStats.isUp ? "trending-up" : "trending-down"} size={14} color={Colors.white} />
+                <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 13, letterSpacing: -0.2 }}>
                   {weeklyStats.isUp ? "+" : "-"}{weeklyStats.change}%
                 </Text>
               </View>
@@ -229,7 +240,7 @@ export default function ProDashboard() {
             {/* Nombre principal */}
             <View>
               <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}>
-                <Text style={{ fontSize: 60, fontWeight: "900", color: "#fff", letterSpacing: -2, lineHeight: 62 }}>
+                <Text style={{ fontSize: 60, fontWeight: "900", color: Colors.white, letterSpacing: -2, lineHeight: 62 }}>
                   {weeklyStats.services}
                 </Text>
                 <Text style={{ fontSize: 18, fontWeight: "700", color: "rgba(255,255,255,0.85)", marginBottom: 8 }}>
@@ -280,7 +291,7 @@ export default function ProDashboard() {
                 borderColor: Colors.border,
                 alignItems: "center",
                 gap: 10,
-                shadowColor: "#000",
+                shadowColor: Colors.black,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.04,
                 shadowRadius: 4,
@@ -334,7 +345,7 @@ export default function ProDashboard() {
             {/* Left */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
               <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }}>
-                <Ionicons name="flash" size={22} color="#fff" />
+                <Ionicons name="flash" size={22} color={Colors.white} />
               </View>
               <View style={{ gap: 2 }}>
                 <Text style={{ fontSize: 10, fontWeight: "900", color: Colors.primary, letterSpacing: 1.2, textTransform: "uppercase" }}>
@@ -378,7 +389,7 @@ export default function ProDashboard() {
               borderWidth: 1,
               borderColor: Colors.border,
               overflow: "hidden",
-              shadowColor: "#000",
+              shadowColor: Colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -455,7 +466,7 @@ export default function ProDashboard() {
               borderWidth: 1,
               borderColor: Colors.border,
               overflow: "hidden",
-              shadowColor: "#000",
+              shadowColor: Colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -589,7 +600,7 @@ export default function ProDashboard() {
                     backgroundColor: Colors.card,
                     borderWidth: 1,
                     borderColor: Colors.border,
-                    shadowColor: "#000",
+                    shadowColor: Colors.black,
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: 0.04,
                     shadowRadius: 4,
@@ -612,7 +623,7 @@ export default function ProDashboard() {
                         elevation: 2,
                       }}
                     >
-                      <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>
+                      <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 14 }}>
                         {client.avatar}
                       </Text>
                     </View>
@@ -683,7 +694,7 @@ export default function ProDashboard() {
               backgroundColor: Colors.card,
               borderWidth: 1,
               borderColor: Colors.border,
-              shadowColor: "#000",
+              shadowColor: Colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -761,7 +772,7 @@ export default function ProDashboard() {
               backgroundColor: Colors.card,
               borderWidth: 1,
               borderColor: Colors.border,
-              shadowColor: "#000",
+              shadowColor: Colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -866,8 +877,8 @@ export default function ProDashboard() {
             end={{ x: 1, y: 0 }}
             style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
-            <Ionicons name="calendar-outline" size={18} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
+            <Ionicons name="calendar-outline" size={18} color={Colors.white} />
+            <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
           </LinearGradient>
         </Pressable>
       </Modal>
@@ -917,9 +928,10 @@ export default function ProDashboard() {
             : "Cette journée est disponible à la réservation"}
         </Text>
 
+        {blockError && <View style={{ marginBottom: 8 }}><ErrorMessage message={blockError} /></View>}
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Pressable
-            onPress={() => setShowBlockModal(false)}
+            onPress={() => { setBlockError(null); setShowBlockModal(false); }}
             style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.muted, alignItems: "center" }}
           >
             <Text style={{ fontWeight: "700", color: Colors.foreground, fontSize: 14 }}>Annuler</Text>
@@ -933,11 +945,11 @@ export default function ProDashboard() {
                 justifyContent: "center", gap: 8, opacity: blockLoading ? 0.7 : 1 }}
             >
               {blockLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={Colors.white} size="small" />
               ) : (
                 <>
-                  <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+                  <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color={Colors.white} />
+                  <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>
                     {isBlockedDay(blockDate) ? "Débloquer" : "Bloquer"}
                   </Text>
                 </>

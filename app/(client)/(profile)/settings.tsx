@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,14 +14,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, usersApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, paddingLeft: 2 }}>
-      <Ionicons name={icon} size={15} color="#FE5D9D" />
-      <Text style={{ fontSize: 13, fontWeight: "600", color: "#09090B" }}>{label}</Text>
+      <Ionicons name={icon} size={15} color={Colors.primary} />
+      <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>{label}</Text>
     </View>
   );
 }
@@ -45,7 +45,8 @@ export default function SettingsScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Keep form in sync with user data
   useEffect(() => {
@@ -96,9 +97,9 @@ export default function SettingsScreen() {
         setNewPassword("");
         setNewPasswordConfirm("");
         if (changingPassword) {
-          Alert.alert("Mot de passe modifié", "Ton mot de passe a été mis à jour.");
+          setSuccess("Mot de passe mis à jour avec succès.");
         } else {
-          Alert.alert("Modifications enregistrées");
+          setSuccess("Modifications enregistrées.");
         }
       } else {
         setError(res.error ?? (res as { message?: string }).message ?? "Erreur lors de la sauvegarde");
@@ -111,8 +112,7 @@ export default function SettingsScreen() {
   };
 
   const handleExportData = async () => {
-    // TODO: authApi.exportData() — endpoint not yet available in mobile API
-    Alert.alert("Fonctionnalité à venir", "L'export de données sera disponible prochainement.");
+    setSuccess("L'export de données sera disponible prochainement.");
   };
 
   const handleDeleteAccount = async () => {
@@ -120,14 +120,13 @@ export default function SettingsScreen() {
     try {
       const res = await authApi.deleteAccount();
       if (res.success) {
-        Alert.alert("Compte supprimé");
         await logout();
         router.replace("/(auth)/login");
       } else {
-        Alert.alert("Erreur", "Impossible de supprimer le compte");
+        setError("Impossible de supprimer le compte.");
       }
     } catch {
-      Alert.alert("Erreur", "Une erreur est survenue");
+      setError("Une erreur est survenue.");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -135,7 +134,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -145,20 +144,20 @@ export default function SettingsScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <AnimatedIconButton
             onPress={() => router.back()}
-            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#EBE6E0", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
           >
-            <Ionicons name="chevron-back" size={20} color="#09090B" />
+            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
           </AnimatedIconButton>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: "#09090B" }}>Paramètres</Text>
-            <Text style={{ fontSize: 12, color: "#6D6D78" }}>Gère ton compte et ta sécurité</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Paramètres</Text>
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Gère ton compte et ta sécurité</Text>
           </View>
         </View>
 
         {/* Infos personnelles */}
         <View style={{ marginBottom: 20 }}>
           <SectionHeader icon="person-outline" label="Infos personnelles" />
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
             <Input
               label="Nom"
               value={lastName}
@@ -188,7 +187,7 @@ export default function SettingsScreen() {
         {/* Sécurité */}
         <View style={{ marginBottom: 20 }}>
           <SectionHeader icon="lock-closed-outline" label="Sécurité" />
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
             <Input
               label="Ancien mot de passe"
               value={currentPassword}
@@ -217,11 +216,11 @@ export default function SettingsScreen() {
               secure
             />
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 11, color: "#6D6D78", lineHeight: 16 }}>
+              <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 16 }}>
                 Ton mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.
               </Text>
               <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-                <Text style={{ fontSize: 12, color: "#FE5D9D", fontWeight: "500" }}>
+                <Text style={{ fontSize: 12, color: Colors.primary, fontWeight: "500" }}>
                   Mot de passe oublié ?
                 </Text>
               </Pressable>
@@ -231,23 +230,28 @@ export default function SettingsScreen() {
 
         {/* Error banner */}
         {error && (
-          <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#FECACA" }}>
-            <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "500" }}>{error}</Text>
+          <View style={{ backgroundColor: Colors.destructiveLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#FECACA" }}>
+            <Text style={{ fontSize: 13, color: Colors.destructiveText, fontWeight: "500" }}>{error}</Text>
+          </View>
+        )}
+        {success && (
+          <View style={{ backgroundColor: Colors.successLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.successBorder }}>
+            <Text style={{ fontSize: 13, color: Colors.successText, fontWeight: "600" }}>{success}</Text>
           </View>
         )}
 
         {/* Save CTA */}
         <Pressable onPress={handleSave} disabled={isSaving} style={{ marginBottom: 24, opacity: isSaving ? 0.7 : 1 }}>
           <LinearGradient
-            colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
+            colors={[Colors.primary, "rgba(254,93,157,0.9)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={{ height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", shadowColor: "#FE5D9D", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
+            style={{ height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
           >
             {isSaving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
                 Enregistrer les modifications
               </Text>
             )}
@@ -255,27 +259,27 @@ export default function SettingsScreen() {
         </Pressable>
 
         {/* Données & confidentialité */}
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, overflow: "hidden", ...Shadows.card, marginBottom: 8 }}>
-          <Text style={{ fontSize: 10, fontWeight: "700", color: "#6D6D78", textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card, marginBottom: 8 }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
             Données & confidentialité
           </Text>
 
           <Pressable
             onPress={() => router.push("/(client)/(profile)/rgpd")}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#EBE6E0" }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
           >
-            <Ionicons name="shield-outline" size={16} color="#FE5D9D" />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: "#09090B" }}>Mes droits RGPD</Text>
-            <Ionicons name="chevron-forward" size={16} color="#6D6D78" />
+            <Ionicons name="shield-outline" size={16} color={Colors.primary} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Mes droits RGPD</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
           </Pressable>
 
           <Pressable
             onPress={handleExportData}
             disabled={isExporting}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#EBE6E0", opacity: isExporting ? 0.5 : 1 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border, opacity: isExporting ? 0.5 : 1 }}
           >
-            <Ionicons name="download-outline" size={16} color="#FE5D9D" />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: "#09090B" }}>
+            <Ionicons name="download-outline" size={16} color={Colors.primary} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>
               {isExporting ? "Export en cours..." : "Exporter mes données"}
             </Text>
           </Pressable>
@@ -283,34 +287,34 @@ export default function SettingsScreen() {
           {!showDeleteConfirm ? (
             <Pressable
               onPress={() => setShowDeleteConfirm(true)}
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#EBE6E0" }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
             >
-              <Ionicons name="trash-outline" size={16} color="#EF4444" />
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: "#EF4444" }}>
+              <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>
                 Supprimer mon compte
               </Text>
             </Pressable>
           ) : (
-            <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: "#EBE6E0", backgroundColor: "#FEF2F2", gap: 12 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#DC2626" }}>
+            <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.destructiveLight, gap: 12 }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.destructiveText }}>
                 Supprimer le compte — action irréversible
               </Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <Pressable
                   onPress={() => setShowDeleteConfirm(false)}
-                  style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: "#F8F5F1", alignItems: "center", justifyContent: "center" }}
+                  style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#09090B" }}>Annuler</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleDeleteAccount}
                   disabled={isDeleting}
-                  style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", opacity: isDeleting ? 0.7 : 1 }}
+                  style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", opacity: isDeleting ? 0.7 : 1 }}
                 >
                   {isDeleting ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={Colors.white} />
                   ) : (
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Confirmer</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Confirmer</Text>
                   )}
                 </Pressable>
               </View>

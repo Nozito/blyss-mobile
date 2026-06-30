@@ -7,24 +7,35 @@ import {
   Pressable,
   TextInput,
   Switch,
-  Alert,
   ActivityIndicator,
   Modal,
+  Share,
+  Linking,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { Clipboard } from "react-native";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
-import { proApi, usersApi } from "@/lib/api";
+import { proApi, usersApi, instagramApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { proProfileSchema } from "@/lib/validation";
+
+const SCREEN_W = Dimensions.get("window").width;
+const GALLERY_CELL = (SCREEN_W - 40 - 8) / 3;
 
 type Service = { id: number; name: string; price: number; duration_minutes: number; active?: boolean };
+type GalleryImage = { id: number; url: string; thumbnail: string; created_at: string };
 
-const MAX_BIO = 500;
+const MAX_BIO = 300;
+const MAX_GALLERY = 20;
 
 export default function ProPublicProfileScreen() {
   const router = useRouter();
@@ -33,6 +44,42 @@ export default function ProPublicProfileScreen() {
   const qc = useQueryClient();
 
   const [bannerUploading, setBannerUploading] = useState(false);
+
+  // Gallery state
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<GalleryImage | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+
+  // Share state
+  const [copyToast, setCopyToast] = useState(false);
+
+  // Instagram
+  const [igImporting, setIgImporting] = useState<string | null>(null);
+  const [igError, setIgError] = useState<string | null>(null);
+
+  const { data: galleryData, refetch: refetchGallery } = useQuery({
+    queryKey: ["pro-gallery"],
+    queryFn: () => proApi.getGallery(),
+  });
+  const gallery: GalleryImage[] = (galleryData?.data as GalleryImage[] | undefined) ?? [];
+
+  const { data: igStatusData } = useQuery({
+    queryKey: ["ig-status"],
+    queryFn: () => instagramApi.getStatus(),
+  });
+  const igConnected = igStatusData?.data?.connected ?? false;
+  const igUsername = igStatusData?.data?.username;
+
+  const { data: igFeedData } = useQuery({
+    queryKey: ["ig-feed"],
+    queryFn: () => instagramApi.getFeed(),
+    enabled: igConnected,
+  });
+  const igPhotos = igFeedData?.data?.photos ?? [];
+
+  const profileUrl = user?.id
+    ? `https://blyssapp.fr/s/${user.id}`
+    : "https://blyssapp.fr";
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
   const bannerUri = user?.banner_photo
@@ -43,10 +90,7 @@ export default function ProPublicProfileScreen() {
 
   const handlePickBanner = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (perm.status !== "granted") {
-      Alert.alert("Permission refusée", "Autorise l'accès à la galerie dans les réglages.");
-      return;
-    }
+    if (perm.status !== "granted") return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -57,12 +101,68 @@ export default function ProPublicProfileScreen() {
     setBannerUploading(true);
     const res = await usersApi.uploadBannerPhoto(result.assets[0].uri);
     setBannerUploading(false);
-    if (!res.success) {
-      Alert.alert("Erreur", res.error ?? "Impossible de mettre à jour la bannière.");
-      return;
-    }
+    if (!res.success) return;
     if (res.data?.banner_photo) patchUser({ banner_photo: res.data.banner_photo });
     void refreshProfile();
+  };
+
+  const handleAddGalleryPhoto = async () => {
+    if (gallery.length >= MAX_GALLERY) { setGalleryError(`Maximum ${MAX_GALLERY} photos.`); return; }
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setGalleryUploading(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const res = await proApi.uploadGallery(result.assets[0].uri);
+    setGalleryUploading(false);
+    if (!res.success) { setGalleryError(res.error ?? "Impossible d'ajouter la photo."); return; }
+    void refetchGallery();
+  };
+
+  const handleDeleteGalleryPhoto = async (img: GalleryImage) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedGalleryImage(null);
+    await proApi.deleteGallery(img.id);
+    void refetchGallery();
+  };
+
+  const handleCopyLink = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Clipboard.setString(profileUrl);
+    setCopyToast(true);
+    setTimeout(() => setCopyToast(false), 2000);
+  };
+
+  const handleShareLink = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Share.share({ url: profileUrl, message: `Réservez avec moi sur Blyss : ${profileUrl}` });
+  };
+
+  const handleImportIgPhoto = async (photoId: string) => {
+    setIgImporting(photoId);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const res = await instagramApi.importPhoto(photoId);
+    setIgImporting(null);
+    if (!res.success) { setIgError("Impossible d'importer cette photo."); return; }
+    void refetchGallery();
+  };
+
+  const handleDisconnectIg = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await instagramApi.disconnect();
+    qc.invalidateQueries({ queryKey: ["ig-status"] });
+    qc.invalidateQueries({ queryKey: ["ig-feed"] });
+  };
+
+  const handleConnectIg = () => {
+    const apiBase = process.env.EXPO_PUBLIC_API_URL ?? "";
+    void Linking.openURL(`${apiBase}/api/auth/instagram?redirect=blyss://instagram-callback`);
   };
 
   const [activityName, setActivityName] = useState("");
@@ -119,12 +219,21 @@ export default function ProPublicProfileScreen() {
     setHasChanges(changed);
   }, [activityName, city, bio, instagram, isPublic, initial]);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const handleSave = async () => {
-    if (!activityName.trim()) { Alert.alert("Erreur", "Le nom de l'activité est requis."); return; }
-    if (!city.trim()) { Alert.alert("Erreur", "La ville est requise."); return; }
-    if (instagram && instagramError) { Alert.alert("Erreur", instagramError); return; }
+    setSaveError(null);
+
+    const parsed = proProfileSchema.safeParse({ activityName, city, bio, instagram });
+    if (!parsed.success) {
+      setSaveError(parsed.error.errors[0]?.message ?? "Champ invalide.");
+      return;
+    }
+    if (instagram && instagramError) { setSaveError(instagramError ?? "Handle Instagram invalide."); return; }
 
     setIsSaving(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await proApi.updateProfile({
         activity_name: activityName,
@@ -136,9 +245,11 @@ export default function ProPublicProfileScreen() {
       qc.invalidateQueries({ queryKey: ["pro-public-profile"] });
       setInitial({ activityName, city, bio, instagram, isPublic });
       setHasChanges(false);
-      Alert.alert("Succès", "Profil public mis à jour !");
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      Alert.alert("Erreur", "Impossible de mettre à jour le profil.");
+      setSaveError("Impossible de mettre à jour le profil.");
     } finally {
       setIsSaving(false);
     }
@@ -202,7 +313,7 @@ export default function ProPublicProfileScreen() {
         {/* Info card */}
         <View
           className="bg-card rounded-2xl p-4 mb-6 flex-row items-start gap-4 border border-border"
-          style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+          style={{ shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
           <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: Colors.primary }}>
             <Ionicons name="information-circle-outline" size={20} color={Colors.white} />
@@ -254,8 +365,8 @@ export default function ProPublicProfileScreen() {
               alignItems: "center", justifyContent: "center",
             }}>
               {bannerUploading
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Ionicons name="camera-outline" size={16} color="#fff" />}
+                ? <ActivityIndicator size="small" color={Colors.white} />
+                : <Ionicons name="camera-outline" size={16} color={Colors.white} />}
             </View>
           </Pressable>
         </View>
@@ -296,7 +407,7 @@ export default function ProPublicProfileScreen() {
               <Text style={{ fontSize: 13, fontWeight: "600", color: "#3F3F46", letterSpacing: 0.1 }}>Biographie</Text>
               <TextInput
                 placeholder="Parle de ton parcours, tes spécialités, ce qui te passionne..."
-                placeholderTextColor="#C0BAB5"
+                placeholderTextColor={Colors.inputPlaceholder}
                 value={bio}
                 onChangeText={(t) => setBio(t.slice(0, MAX_BIO))}
                 multiline
@@ -304,14 +415,14 @@ export default function ProPublicProfileScreen() {
                 textAlignVertical="top"
                 maxLength={MAX_BIO}
                 style={{
-                  backgroundColor: "#F8F5F2",
+                  backgroundColor: Colors.cream,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: "#E4E0DC",
+                  borderColor: Colors.border,
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   fontSize: 14.5,
-                  color: "#09090B",
+                  color: Colors.foreground,
                   minHeight: 100,
                 }}
               />
@@ -355,6 +466,132 @@ export default function ProPublicProfileScreen() {
           </View>
         </View>
 
+        {/* Section: Galerie de réalisations */}
+        <View className="mb-6">
+          <SectionTitle title="Galerie de réalisations" />
+          {galleryError && (
+            <View style={{ marginBottom: 8 }}><ErrorMessage message={galleryError} /></View>
+          )}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+            {gallery.map((img) => (
+              <Pressable
+                key={img.id}
+                onPress={() => setSelectedGalleryImage(img)}
+                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: Colors.muted }}
+              >
+                <Image source={{ uri: img.thumbnail || img.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+              </Pressable>
+            ))}
+            {gallery.length < MAX_GALLERY && (
+              <Pressable
+                onPress={handleAddGalleryPhoto}
+                disabled={galleryUploading}
+                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, backgroundColor: Colors.muted, borderWidth: 1.5, borderColor: Colors.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" }}
+              >
+                {galleryUploading
+                  ? <ActivityIndicator size="small" color={Colors.primary} />
+                  : <Ionicons name="add" size={28} color={Colors.mutedForeground} />}
+              </Pressable>
+            )}
+          </View>
+          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 6, paddingHorizontal: 2 }}>
+            {gallery.length}/{MAX_GALLERY} photos
+          </Text>
+        </View>
+
+        {/* Section: Instagram */}
+        <View className="mb-6">
+          <SectionTitle title="Photos Instagram" />
+          <View className="bg-card rounded-2xl border border-border overflow-hidden">
+            {igConnected ? (
+              <>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+                  <Ionicons name="logo-instagram" size={20} color={Colors.primary} />
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: Colors.foreground }}>
+                    {igUsername ? `@${igUsername}` : "Connecté"}
+                  </Text>
+                  <Pressable
+                    onPress={handleDisconnectIg}
+                    style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: Colors.destructive }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.destructive }}>Déconnecter</Text>
+                  </Pressable>
+                </View>
+                {igError && <View style={{ padding: 12 }}><ErrorMessage message={igError} /></View>}
+                {igPhotos.length > 0 ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                    {igPhotos.slice(0, 9).map((photo) => (
+                      <Pressable
+                        key={photo.id}
+                        onPress={() => void handleImportIgPhoto(photo.id)}
+                        disabled={igImporting === photo.id}
+                        style={{ width: "33.333%", aspectRatio: 1, position: "relative" }}
+                      >
+                        <Image source={{ uri: photo.thumbnail || photo.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                        {igImporting === photo.id && (
+                          <View style={{ ...require("react-native").StyleSheet.absoluteFillObject, backgroundColor: Colors.overlayDark, alignItems: "center", justifyContent: "center" }}>
+                            <ActivityIndicator size="small" color={Colors.white} />
+                          </View>
+                        )}
+                        <View style={{ position: "absolute", top: 4, right: 4, backgroundColor: Colors.primary, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                          <Text style={{ fontSize: 8, fontWeight: "800", color: Colors.white }}>IG</Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={{ padding: 20, alignItems: "center", gap: 6 }}>
+                    <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Aucune photo disponible</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View style={{ padding: 20, alignItems: "center", gap: 12 }}>
+                <Ionicons name="logo-instagram" size={36} color={Colors.mutedForeground} />
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground, textAlign: "center" }}>
+                  Importez vos réalisations directement depuis Instagram
+                </Text>
+                <Pressable
+                  onPress={handleConnectIg}
+                  style={{ height: 44, paddingHorizontal: 24, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Connecter Instagram</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Section: Lien de partage */}
+        <View className="mb-6">
+          <SectionTitle title="Votre lien professionnel" />
+          <View style={{ backgroundColor: Colors.primaryLight, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: `${Colors.primary}30` }}>
+            {copyToast && (
+              <View style={{ backgroundColor: Colors.success, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 10, alignSelf: "flex-start" }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.white }}>Lien copié !</Text>
+              </View>
+            )}
+            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 4 }}>Ton profil Blyss</Text>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.primary, marginBottom: 14 }} numberOfLines={1}>{profileUrl}</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={handleCopyLink}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.white, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: `${Colors.primary}30` }}
+              >
+                <Ionicons name="copy-outline" size={16} color={Colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Copier</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleShareLink}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                <Ionicons name="share-outline" size={16} color={Colors.white} />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Partager</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
         {/* Section: Visibilité */}
         <View className="mb-6">
           <SectionTitle title="Visibilité du profil" />
@@ -395,9 +632,16 @@ export default function ProPublicProfileScreen() {
 
       {/* Sticky save button */}
       <View
-        className="absolute bottom-0 left-0 right-0 px-5 pt-4"
+        className="absolute bottom-0 left-0 right-0 px-5 pt-2"
         style={{ paddingBottom: insets.bottom + 12, backgroundColor: "rgba(255,234,241,0.95)" }}
       >
+        {saveError && <View style={{ marginBottom: 8 }}><ErrorMessage message={saveError} /></View>}
+        {saveSuccess && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.successLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8 }}>
+            <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.successText }}>Profil public mis à jour !</Text>
+          </View>
+        )}
         <Pressable
           onPress={handleSave}
           disabled={!hasChanges || isSaving}
@@ -422,6 +666,31 @@ export default function ProPublicProfileScreen() {
           )}
         </Pressable>
       </View>
+
+      {/* Gallery image detail modal */}
+      <Modal visible={selectedGalleryImage != null} transparent animationType="fade" onRequestClose={() => setSelectedGalleryImage(null)}>
+        {selectedGalleryImage && (
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}>
+            <Pressable style={{ position: "absolute", top: insets.top + 16, right: 16, zIndex: 10 }} onPress={() => setSelectedGalleryImage(null)}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="close" size={20} color={Colors.white} />
+              </View>
+            </Pressable>
+            <Image
+              source={{ uri: selectedGalleryImage.url }}
+              style={{ width: SCREEN_W - 40, height: SCREEN_W - 40, borderRadius: 16 }}
+              resizeMode="cover"
+            />
+            <Pressable
+              onPress={() => handleDeleteGalleryPhoto(selectedGalleryImage)}
+              style={{ marginTop: 20, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, backgroundColor: Colors.destructive }}
+            >
+              <Ionicons name="trash-outline" size={18} color={Colors.white} />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
+            </Pressable>
+          </View>
+        )}
+      </Modal>
 
       {/* Preview modal */}
       <Modal visible={showPreview} animationType="slide" presentationStyle="pageSheet">
@@ -516,7 +785,7 @@ export default function ProPublicProfileScreen() {
               <View className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
                 <View className="flex-row items-center gap-3">
                   <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
-                    <Ionicons name="eye-off-outline" size={18} color="#DC2626" />
+                    <Ionicons name="eye-off-outline" size={18} color={Colors.destructiveText} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-foreground">Profil actuellement privé</Text>
@@ -540,8 +809,8 @@ export default function ProPublicProfileScreen() {
                 shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
               }}
             >
-              <Ionicons name="calendar-outline" size={18} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Réserver</Text>
+              <Ionicons name="calendar-outline" size={18} color={Colors.white} />
+              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>Réserver</Text>
             </Pressable>
             <Pressable onPress={() => setShowPreview(false)} style={{ marginTop: 12, alignItems: "center" }}>
               <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Fermer l'aperçu</Text>

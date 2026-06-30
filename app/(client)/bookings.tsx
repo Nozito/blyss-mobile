@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientApi } from "@/lib/api";
+import { Colors } from "@/constants/colors";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Booking {
@@ -34,10 +35,10 @@ interface Booking {
 
 // ─── Badge config ─────────────────────────────────────────────────────────────
 const BADGE: Record<string, { label: string; prefix: string; bg: string; color: string }> = {
-  confirmed: { label: "Confirmé",   prefix: "✓ ", bg: "#E8F8F0", color: "#27AE60" },
-  pending:   { label: "En attente", prefix: "",   bg: "#FFF8E1", color: "#F39C12" },
-  cancelled: { label: "Annulé",     prefix: "✕ ", bg: "#FDECEA", color: "#E74C3C" },
-  completed: { label: "Terminé",    prefix: "✓ ", bg: "#E8F8F0", color: "#27AE60" },
+  confirmed: { label: "Confirmé",   prefix: "✓ ", bg: Colors.successLight,     color: Colors.successText },
+  pending:   { label: "En attente", prefix: "",   bg: Colors.warningLight,     color: Colors.warningText },
+  cancelled: { label: "Annulé",     prefix: "✕ ", bg: Colors.destructiveLight, color: Colors.destructiveText },
+  completed: { label: "Terminé",    prefix: "✓ ", bg: Colors.successLight,     color: Colors.successText },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -144,12 +145,12 @@ function BookingCard({ booking, index }: { booking: Booking; index: number }) {
 
         {/* Row 3 : date et heure */}
         <View style={styles.cardDateRow}>
-          <Ionicons name="calendar-outline" size={13} color="#FE5D9D" />
+          <Ionicons name="calendar-outline" size={13} color={Colors.primary} />
           <Text style={styles.cardDate}>{formatDate(booking.start_datetime)}</Text>
           {formatTime(booking.start_datetime) ? (
             <>
-              <Text style={{ fontSize: 12, color: "#CCC" }}>·</Text>
-              <Ionicons name="time-outline" size={13} color="#FE5D9D" />
+              <Text style={{ fontSize: 12, color: Colors.border }}>·</Text>
+              <Ionicons name="time-outline" size={13} color={Colors.primary} />
               <Text style={styles.cardDate}>{formatTime(booking.start_datetime)}</Text>
             </>
           ) : null}
@@ -165,7 +166,7 @@ function EmptyState() {
   return (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIcon}>
-        <Ionicons name="calendar" size={36} color="#E91E8C" />
+        <Ionicons name="calendar" size={36} color={Colors.primary} />
       </View>
       <Text style={styles.emptyTitle}>Aucune réservation</Text>
       <Text style={styles.emptySubtitle}>
@@ -262,21 +263,21 @@ export default function BookingsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF0F5" },
+  container: { flex: 1, backgroundColor: Colors.background },
 
-  header: { flexShrink: 0, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, backgroundColor: "#FFF0F5" },
-  headerTitle: { fontSize: 26, fontWeight: "800", color: "#09090B", letterSpacing: -0.5 },
-  headerSubtitle: { fontSize: 13, color: "#6D6D78", marginTop: 4 },
+  header: { flexShrink: 0, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, backgroundColor: Colors.background },
+  headerTitle: { fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 13, color: Colors.mutedForeground, marginTop: 4 },
 
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
 
   ctaBanner: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 20,
     marginTop: 20,
     alignItems: "center",
-    shadowColor: "#FE5D9D",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -286,34 +287,34 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: "#FFF0F5",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
-  ctaBannerTitle: { fontSize: 17, fontWeight: "800", color: "#09090B", marginBottom: 6, textAlign: "center" },
-  ctaBannerSubtitle: { fontSize: 13, color: "#6D6D78", lineHeight: 19, marginBottom: 16, textAlign: "center" },
+  ctaBannerTitle: { fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 6, textAlign: "center" },
+  ctaBannerSubtitle: { fontSize: 13, color: Colors.mutedForeground, lineHeight: 19, marginBottom: 16, textAlign: "center" },
   ctaBannerButton: {
-    backgroundColor: "#FE5D9D",
+    backgroundColor: Colors.primary,
     borderRadius: 999,
     paddingVertical: 13,
     paddingHorizontal: 28,
     alignItems: "center",
-    shadowColor: "#FE5D9D",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
   },
 
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#09090B", marginTop: 24, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: Colors.foreground, marginTop: 24, marginBottom: 12 },
 
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -323,30 +324,30 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#FFE0EF",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  cardAvatarText: { fontSize: 18, fontWeight: "700", color: "#FE5D9D" },
-  cardProName: { fontSize: 15, fontWeight: "700", color: "#09090B", marginBottom: 2 },
+  cardAvatarText: { fontSize: 18, fontWeight: "700", color: Colors.primary },
+  cardProName: { fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   badgeText: { fontSize: 11, fontWeight: "600" },
-  cardPrestation: { fontSize: 13, color: "#666", marginBottom: 4 },
+  cardPrestation: { fontSize: 13, color: Colors.mutedForeground, marginBottom: 4 },
   cardDateRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  cardDate: { fontSize: 12, color: "#888", textTransform: "capitalize" },
-  cardTime: { fontWeight: "600", color: "#09090B" },
+  cardDate: { fontSize: 12, color: Colors.mutedForeground, textTransform: "capitalize" },
+  cardTime: { fontWeight: "600", color: Colors.foreground },
 
-  skeletonTitle: { height: 18, width: "55%", backgroundColor: "#F0E0E8", borderRadius: 8, marginBottom: 10 },
-  skeletonLine:  { height: 14, width: "75%", backgroundColor: "#F5E8EE", borderRadius: 8, marginBottom: 8 },
-  skeletonShort: { height: 13, width: "40%", backgroundColor: "#F5E8EE", borderRadius: 8 },
+  skeletonTitle: { height: 18, width: "55%", backgroundColor: Colors.muted, borderRadius: 8, marginBottom: 10 },
+  skeletonLine:  { height: 14, width: "75%", backgroundColor: Colors.muted, borderRadius: 8, marginBottom: 8 },
+  skeletonShort: { height: 13, width: "40%", backgroundColor: Colors.muted, borderRadius: 8 },
 
   emptyContainer: { alignItems: "center", paddingTop: 80, paddingHorizontal: 32 },
   emptyIcon: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: "#FFE0EF", alignItems: "center", justifyContent: "center", marginBottom: 20,
+    backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center", marginBottom: 20,
   },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#09090B", marginBottom: 8, textAlign: "center" },
-  emptySubtitle: { fontSize: 14, color: "#6D6D78", textAlign: "center", lineHeight: 20, marginBottom: 24 },
-  ctaButton: { backgroundColor: "#FE5D9D", borderRadius: 999, paddingVertical: 14, paddingHorizontal: 28 },
-  ctaText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
+  emptyTitle: { fontSize: 18, fontWeight: "700", color: Colors.foreground, marginBottom: 8, textAlign: "center" },
+  emptySubtitle: { fontSize: 14, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  ctaButton: { backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 28 },
+  ctaText: { color: Colors.white, fontSize: 15, fontWeight: "700" },
 });

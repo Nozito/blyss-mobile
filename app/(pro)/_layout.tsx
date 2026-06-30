@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { Colors } from "@/constants/colors";
 
 export default function ProLayout() {
   const { user, isLoading: authLoading } = useAuth();
@@ -38,7 +39,7 @@ export default function ProLayout() {
   return (
     <NativeTabs
       blurEffect="systemUltraThinMaterialLight"
-      tintColor="#FE5D9D"
+      tintColor={Colors.primary}
       minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >

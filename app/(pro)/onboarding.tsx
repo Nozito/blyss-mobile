@@ -143,7 +143,7 @@ export default function ProOnboardingScreen() {
           <Ionicons
             name={isLast ? "rocket-outline" : "arrow-forward"}
             size={20}
-            color="#fff"
+            color={Colors.white}
           />
         </Pressable>
       </View>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   ctaText: {
-    color: "#fff",
+    color: Colors.white,
     fontWeight: "800",
     fontSize: 17,
   },

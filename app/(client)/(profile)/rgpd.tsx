@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Linking,
-  Alert,
   Modal,
   ActivityIndicator,
 } from "react-native";
@@ -18,6 +17,7 @@ import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 interface RGPDRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -45,7 +45,7 @@ function RGPDRow({ icon, label, description, onPress, variant = "default" }: RGP
         <Ionicons
           name={icon}
           size={18}
-          color={isDestructive ? "#DC2626" : Colors.primary}
+          color={isDestructive ? Colors.destructiveText : Colors.primary}
         />
       </View>
       <View className="flex-1">
@@ -69,21 +69,23 @@ export default function ClientRGPDScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [rgpdError, setRgpdError] = useState<string | null>(null);
 
   const settingsRoute = user?.role === "pro" ? "/(pro)/settings" : "/(client)/(profile)/settings";
   const notifRoute = user?.role === "pro" ? "/(pro)/notifications" : "/(client)/notifications";
 
   const handleExport = async () => {
+    setRgpdError(null);
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
-      Alert.alert("Export non disponible", "L'export n'est pas disponible sur cet appareil.");
+      setRgpdError("L'export n'est pas disponible sur cet appareil.");
       return;
     }
     setIsExporting(true);
     try {
       const res = await authApi.exportData();
       if (!res.success || !res.data) {
-        Alert.alert("Erreur", res.error ?? "Erreur lors de l'export.");
+        setRgpdError(res.error ?? "Erreur lors de l'export.");
         return;
       }
       const filename = `blyss-export-${new Date().toISOString().slice(0, 10)}.json`;
@@ -91,13 +93,14 @@ export default function ClientRGPDScreen() {
       await FileSystem.writeAsStringAsync(fileUri, res.data, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(fileUri, { mimeType: "application/json", UTI: "public.json" });
     } catch {
-      Alert.alert("Erreur", "Impossible de générer l'export.");
+      setRgpdError("Impossible de générer l'export.");
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleDelete = async () => {
+    setRgpdError(null);
     setIsDeleting(true);
     try {
       const res = await authApi.deleteAccount();
@@ -105,7 +108,7 @@ export default function ClientRGPDScreen() {
       await logout();
       router.replace("/(auth)/login");
     } catch (err) {
-      Alert.alert("Erreur", err instanceof Error ? err.message : "Une erreur est survenue.");
+      setRgpdError(err instanceof Error ? err.message : "Une erreur est survenue.");
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -132,6 +135,7 @@ export default function ClientRGPDScreen() {
             <Text className="text-xs text-muted-foreground">Confidentialité & compte</Text>
           </View>
         </View>
+        {rgpdError && !showDeleteModal && <View style={{ marginTop: 8 }}><ErrorMessage message={rgpdError} /></View>}
       </View>
 
       <ScrollView
@@ -218,13 +222,14 @@ export default function ClientRGPDScreen() {
           >
             <View className="flex-row items-center gap-3">
               <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
-                <Ionicons name="warning-outline" size={20} color="#DC2626" />
+                <Ionicons name="warning-outline" size={20} color={Colors.destructiveText} />
               </View>
               <Text className="font-bold text-foreground text-base">Supprimer mon compte</Text>
             </View>
             <Text className="text-sm text-muted-foreground leading-relaxed">
               Cette action est irréversible. Toutes tes données personnelles seront supprimées dans les 30 jours suivant la demande.
             </Text>
+            {rgpdError && <ErrorMessage message={rgpdError} />}
             <View className="flex-row gap-3">
               <Pressable
                 onPress={() => setShowDeleteModal(false)}
@@ -236,7 +241,7 @@ export default function ClientRGPDScreen() {
                 onPress={handleDelete}
                 disabled={isDeleting}
                 className="flex-1 h-11 rounded-xl items-center justify-center"
-                style={{ backgroundColor: "#DC2626", opacity: isDeleting ? 0.7 : 1 }}
+                style={{ backgroundColor: Colors.destructiveText, opacity: isDeleting ? 0.7 : 1 }}
               >
                 {isDeleting ? (
                   <ActivityIndicator size="small" color={Colors.white} />

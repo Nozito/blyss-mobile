@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Alert,
   ActivityIndicator,
   Linking,
 } from "react-native";
@@ -14,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import * as Haptics from "expo-haptics";
 import { proApi } from "@/lib/api";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 
@@ -53,6 +54,7 @@ export default function ProSubscriptionSettingsScreen() {
   const qc = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const { activePlan, packages, purchase, restorePurchases, refreshActivePlan } = useRevenueCat();
 
@@ -65,11 +67,12 @@ export default function ProSubscriptionSettingsScreen() {
 
   const handleUpgrade = async (planId: RCPlan) => {
     if (planId === activePlan) return;
+    setUpgradeError(null);
     setIsChanging(true);
     try {
       const rcPkg = packages.find((p) => p.key === planId);
       if (!rcPkg) {
-        Alert.alert("Erreur", "Ce plan n'est pas disponible.");
+        setUpgradeError("Ce plan n'est pas disponible.");
         return;
       }
       const pkg = isAnnual && rcPkg.annualRcPackage ? rcPkg.annualRcPackage : rcPkg.rcPackage;
@@ -82,38 +85,24 @@ export default function ProSubscriptionSettingsScreen() {
           paymentId: result.paymentId ?? pkg.identifier,
         });
         if (!synced) {
-          Alert.alert(
-            "Synchronisation",
-            "Ton abonnement est actif mais n'a pas pu être synchronisé avec le serveur. Réessaie dans quelques instants.",
-            [{ text: "OK" }]
-          );
+          setUpgradeError("Abonnement actif, mais la synchronisation a échoué. Réessaie dans quelques instants.");
         }
-        // refreshActivePlan avant redirect pour éviter le flash activePlan=null dans le layout
         await refreshActivePlan();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
         router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planId } });
       } else if (result.error && result.error !== "cancelled") {
-        Alert.alert("Erreur", "L'achat n'a pas pu être complété. Réessaie.");
+        setUpgradeError("L'achat n'a pas pu être complété. Réessaie.");
       }
     } catch {
-      Alert.alert("Erreur", "Impossible de changer de plan pour l'instant.");
+      setUpgradeError("Impossible de changer de plan pour l'instant.");
     } finally {
       setIsChanging(false);
     }
   };
 
   const handleCancel = () => {
-    Alert.alert(
-      "Gérer mon abonnement",
-      "Les abonnements Blyss Pro sont gérés par Apple. Tu seras redirigée vers les Réglages Apple pour annuler.",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Gérer via Apple",
-          onPress: () => void Linking.openURL("https://apps.apple.com/account/subscriptions"),
-        },
-      ]
-    );
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Linking.openURL("https://apps.apple.com/account/subscriptions");
   };
 
   if (isLoading) {
@@ -187,11 +176,11 @@ export default function ProSubscriptionSettingsScreen() {
             </View>
             <View style={{
               paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-              backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "#BBF7D0",
+              backgroundColor: Colors.successLight, borderWidth: 1, borderColor: Colors.successBorder,
               flexDirection: "row", alignItems: "center", gap: 6,
             }}>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success }} />
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#15803D" }}>Actif</Text>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.successTextDark }}>Actif</Text>
             </View>
           </View>
           {subscription?.endDate && (
@@ -220,18 +209,24 @@ export default function ProSubscriptionSettingsScreen() {
                 justifyContent: "center", gap: 6,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : Colors.mutedForeground }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
                 {period === "monthly" ? "Mensuel" : "Annuel"}
               </Text>
               {period === "annual" && (
                 <View style={{ backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>-17%</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.white }}>-17%</Text>
                 </View>
               )}
             </Pressable>
           );
         })}
       </View>
+
+      {upgradeError && (
+        <View style={{ marginBottom: 12 }}>
+          <ErrorMessage message={upgradeError} />
+        </View>
+      )}
 
       <Text style={{
         fontSize: 11, fontWeight: "800", color: Colors.mutedForeground,
@@ -257,7 +252,7 @@ export default function ProSubscriptionSettingsScreen() {
                 borderWidth: isCurrent ? 2 : 1,
                 borderColor: isCurrent ? meta.color : Colors.border,
                 opacity: isChanging && !isCurrent ? 0.7 : 1,
-                shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+                shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -275,9 +270,9 @@ export default function ProSubscriptionSettingsScreen() {
                   </View>
                 ) : (
                   <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: meta.color, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    {!isUpgrade && <Ionicons name="arrow-back" size={11} color="#fff" />}
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>{meta.label}</Text>
-                    {isUpgrade && <Ionicons name="arrow-forward" size={11} color="#fff" />}
+                    {!isUpgrade && <Ionicons name="arrow-back" size={11} color={Colors.white} />}
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.white }}>{meta.label}</Text>
+                    {isUpgrade && <Ionicons name="arrow-forward" size={11} color={Colors.white} />}
                   </View>
                 )}
               </View>

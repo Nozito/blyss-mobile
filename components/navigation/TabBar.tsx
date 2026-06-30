@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
+import { Colors } from "@/constants/colors";
 
 type TabConfig = {
   name: string;
@@ -56,13 +57,13 @@ function TabIcon({ icon, label, focused }: { icon: string; label: string; focuse
         <Ionicons
           name={icon as any}
           size={22}
-          color={focused ? "#FE5D9D" : "rgba(0,0,0,0.55)"}
+          color={focused ? Colors.primary : "rgba(0,0,0,0.55)"}
         />
         <Text
           style={{
             fontSize: 10,
             fontWeight: "700",
-            color: "#FE5D9D",
+            color: Colors.primary,
             marginTop: 2,
             opacity: focused ? 1 : 0,
           }}
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     height: TAB_HEIGHT,
     borderRadius: 30,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.10,
     shadowRadius: 24,

@@ -10,7 +10,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Semantic tokens (mirroring web CSS vars)
+        // Core semantic tokens
         background: "#FFEAF1",
         foreground: "#09090B",
         border: "#EBE6E0",
@@ -43,6 +43,26 @@ module.exports = {
         destructive: {
           DEFAULT: "#EF4444",
           foreground: "#FFFFFF",
+          light: "#FEF2F2",
+          text: "#DC2626",
+        },
+        success: {
+          DEFAULT: "#22C55E",
+          foreground: "#FFFFFF",
+          light: "#F0FDF4",
+          text: "#16A34A",
+        },
+        warning: {
+          DEFAULT: "#F59E0B",
+          foreground: "#FFFFFF",
+          light: "#FEF3C7",
+          text: "#D97706",
+        },
+        info: {
+          DEFAULT: "#3B82F6",
+          foreground: "#FFFFFF",
+          light: "#EFF6FF",
+          text: "#1D4ED8",
         },
         // Blyss brand tokens
         blyss: {
@@ -52,9 +72,6 @@ module.exports = {
           "gold-light": "#F7F0E8",
           cream: "#F8F5F1",
         },
-        // Status colors
-        success: "#22C55E",
-        warning: "#F59E0B",
         // Role colors
         "client-primary": "#FE5D9D",
         "pro-primary": "#8B5CF6",
@@ -65,11 +82,16 @@ module.exports = {
         display: ["System", "sans-serif"],
       },
       borderRadius: {
-        sm: 12,
-        md: 14,
-        lg: 16,
+        sm: 10,
+        md: 12,
+        lg: 14,
+        xl: 16,
+        "2xl": 20,
         "3xl": 24,
         "4xl": 32,
+      },
+      spacing: {
+        "safe-bottom": "80px",
       },
     },
   },

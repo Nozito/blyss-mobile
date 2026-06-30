@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { Animated, type StyleProp, type ViewStyle } from "react-native";
+import { Colors } from "@/constants/colors";
 
 interface Props {
   width?: number | `${number}%`;
@@ -28,7 +29,7 @@ export function SkeletonLine({ width = "100%", height = 12, style }: Props) {
           opacity,
           width: width as any,
           height,
-          backgroundColor: "#EDE8E3",
+          backgroundColor: Colors.border,
           borderRadius: height / 2,
         },
         style,

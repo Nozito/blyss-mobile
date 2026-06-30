@@ -5,6 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { Colors } from "@/constants/colors";
 
 export default function ClientLayout() {
   const { user, isLoading } = useAuth();
@@ -17,7 +18,7 @@ export default function ClientLayout() {
   return (
     <NativeTabs
       blurEffect="systemUltraThinMaterialLight"
-      tintColor="#FE5D9D"
+      tintColor={Colors.primary}
       minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >

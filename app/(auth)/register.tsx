@@ -8,166 +8,347 @@ import {
   Pressable,
   Animated,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
-import { DatePicker } from "@/components/ui/DatePicker";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import {
+  step1Schema,
+  step2ClientSchema,
+  step2ProSchema,
+  emailSchema,
+  passwordSchema,
+  phoneSchema,
+  phoneRequiredSchema,
+  getZodError,
+} from "@/lib/validation";
 
-// ── Constants (mirrored from web) ──────────────────────────────────────────
-const VALIDATION = {
-  PHONE_REGEX: /^[0-9]{10}$/,
-  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
-  NAME_MAX: 50,
-  TEXT_MAX: 100,
-  EMAIL_MAX: 254,
-  PASSWORD_MIN: 8,
-  PASSWORD_MAX: 128,
-  MIN_AGE: 16,
-} as const;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Role = "client" | "pro";
+
+interface Step1Data {
+  firstName: string;
+  email: string;
+  password: string;
+}
+
+interface Step2ClientData {
+  phone: string;
+  acceptedTerms: boolean;
+}
+
+interface Step2ProData {
+  activityName: string;
+  jobType: string;
+  phone: string;
+  acceptedTerms: boolean;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const JOB_TYPES = [
+  "Esthéticienne",
+  "Coach",
+  "Naturopathe",
+  "Ostéopathe",
+  "Autre",
+];
 
 const ERROR_CODES: Record<string, string> = {
   email_exists: "Cet email est déjà utilisé",
   weak_password: "Mot de passe trop faible (minuscule, majuscule, chiffre)",
-  age_restriction: "Tu dois avoir au moins 16 ans",
   invalid_phone: "Numéro de téléphone invalide",
-  invalid_email: "Email invalide",
+  invalid_email: "Format d'email invalide",
   missing_fields: "Champs obligatoires manquants",
-  data_too_long: "Un ou plusieurs champs sont trop longs",
+  data_too_long: "Un champ dépasse la longueur maximale",
+  server_error: "Erreur serveur — réessaie dans un instant",
 };
 
-// ── Types ──────────────────────────────────────────────────────────────────
-type Role = "client" | "pro";
+// ─── Password strength ────────────────────────────────────────────────────────
 
-interface FormData {
-  role: Role;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  birthDate: Date | undefined;
-  activityName: string;
-  city: string;
-  instagramAccount: string;
-  password: string;
-  confirmPassword: string;
-  acceptedTerms: boolean;
+function getStrength(pw: string): { score: 0 | 1 | 2 | 3; label: string } {
+  if (!pw) return { score: 0, label: "" };
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasDigit = /\d/.test(pw);
+  const types = [hasUpper, hasLower, hasDigit].filter(Boolean).length;
+  if (pw.length >= 8 && types === 3) return { score: 3, label: "Fort" };
+  if (pw.length >= 8 && types >= 2) return { score: 2, label: "Moyen" };
+  return { score: 1, label: "Faible" };
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 10);
-  return digits.replace(/(\d{2})(?=\d)/g, "$1 ");
+const STRENGTH_COLORS = ["transparent", Colors.destructive, Colors.warning, Colors.success];
+const STRENGTH_TEXT_COLORS = ["transparent", Colors.destructive, Colors.warningText, Colors.successText];
+
+function PasswordStrengthBar({ password }: { password: string }) {
+  const { score, label } = getStrength(password);
+  if (!password) return null;
+  return (
+    <View style={{ marginTop: 6, gap: 4 }}>
+      <View style={{ flexDirection: "row", gap: 4 }}>
+        {[1, 2, 3].map((i) => (
+          <View
+            key={i}
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: i <= score ? STRENGTH_COLORS[score] : Colors.border,
+            }}
+          />
+        ))}
+      </View>
+      {label ? (
+        <Text style={{ fontSize: 11, color: STRENGTH_TEXT_COLORS[score], fontWeight: "600" }}>
+          {label}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
-function getAge(birthDate: string): number {
-  if (!birthDate) return 0;
-  const today = new Date();
-  const birth = new Date(birthDate);
-  if (isNaN(birth.getTime())) return 0;
-  let age = today.getFullYear() - birth.getFullYear();
-  if (
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  )
-    age--;
-  return age;
-}
+// ─── CGU Checkbox ─────────────────────────────────────────────────────────────
 
-// ── Password step (shared between client step 6 and pro step 9) ────────────
-function PasswordStep({
-  formData,
-  update,
+function TermsCheckbox({
+  checked,
+  onToggle,
 }: {
-  formData: FormData;
-  update: (u: Partial<FormData>) => void;
+  checked: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <View className="gap-6">
-      <View>
-        <Text className="text-3xl font-black text-foreground">Dernière étape</Text>
-        <Text className="text-muted-foreground mt-2">Choisis ton mot de passe</Text>
+    <Pressable onPress={onToggle} style={styles.termsRow}>
+      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+        {checked && <Ionicons name="checkmark" size={12} color={Colors.white} />}
       </View>
-
-      <View className="gap-4">
-        <Input
-          label="Mot de passe"
-          value={formData.password}
-          onChangeText={(v) => update({ password: v })}
-          secure
-          autoComplete="new-password"
-          placeholder="Min. 8 caractères"
-          leftIcon="lock-closed-outline"
-          hint="1 minuscule, 1 majuscule, 1 chiffre minimum"
-        />
-        <Input
-          label="Confirmer le mot de passe"
-          value={formData.confirmPassword}
-          onChangeText={(v) => update({ confirmPassword: v })}
-          secure
-          autoComplete="new-password"
-          placeholder="Répète ton mot de passe"
-          leftIcon="lock-closed-outline"
-        />
-
-        {/* CGU checkbox */}
-        <Pressable
-          onPress={() => update({ acceptedTerms: !formData.acceptedTerms })}
-          className="flex-row items-start gap-3"
+      <Text style={styles.termsText}>
+        {"J'accepte les "}
+        <Text
+          style={styles.termsLink}
+          onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}
         >
-          <View
-            className={[
-              "w-5 h-5 rounded border-2 items-center justify-center mt-0.5 flex-shrink-0",
-              formData.acceptedTerms ? "bg-primary border-primary" : "border-border bg-card",
-            ].join(" ")}
+          Conditions générales
+        </Text>
+        {" et la "}
+        <Text
+          style={styles.termsLink}
+          onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}
+        >
+          Politique de confidentialité
+        </Text>
+      </Text>
+    </Pressable>
+  );
+}
+
+// ─── Job type picker ──────────────────────────────────────────────────────────
+
+function JobTypePicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.fieldLabel}>Type de métier</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {JOB_TYPES.map((type) => (
+          <Pressable
+            key={type}
+            onPress={() => onChange(type)}
+            style={[
+              styles.jobChip,
+              value === type && styles.jobChipActive,
+            ]}
           >
-            {formData.acceptedTerms && (
-              <Ionicons name="checkmark" size={12} color="#fff" />
-            )}
-          </View>
-          <Text className="text-sm text-muted-foreground flex-1 leading-5">
-            J'accepte les{" "}
-            <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>Conditions générales</Text>
-            {" "}et la{" "}
-            <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>Politique de confidentialité</Text>
-          </Text>
-        </Pressable>
+            <Text style={[styles.jobChipText, value === type && styles.jobChipTextActive]}>
+              {type}
+            </Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   );
 }
 
-// ── Main screen ────────────────────────────────────────────────────────────
+// ─── Step 1 — common ─────────────────────────────────────────────────────────
+
+function Step1({
+  data,
+  onChange,
+  errors,
+}: {
+  data: Step1Data;
+  onChange: (u: Partial<Step1Data>) => void;
+  errors: Partial<Record<keyof Step1Data, string>>;
+}) {
+  return (
+    <View style={{ gap: 16 }}>
+      <View style={styles.titleBlock}>
+        <Text style={styles.title}>Crée ton compte</Text>
+        <Text style={styles.subtitle}>Quelques informations pour commencer</Text>
+      </View>
+
+      <Input
+        label="Prénom"
+        value={data.firstName}
+        onChangeText={(v) => onChange({ firstName: v })}
+        autoCapitalize="words"
+        autoComplete="given-name"
+        leftIcon="person-outline"
+        error={errors.firstName}
+        maxLength={50}
+      />
+
+      <Input
+        label="Email"
+        value={data.email}
+        onChangeText={(v) => onChange({ email: v.trim() })}
+        keyboardType="email-address"
+        autoComplete="email"
+        autoCapitalize="none"
+        leftIcon="mail-outline"
+        error={errors.email}
+        maxLength={254}
+      />
+
+      <View>
+        <Input
+          label="Mot de passe"
+          value={data.password}
+          onChangeText={(v) => onChange({ password: v })}
+          secure
+          autoComplete="new-password"
+          leftIcon="lock-closed-outline"
+          error={errors.password}
+          hint="Au moins 8 caractères, 1 majuscule, 1 chiffre"
+        />
+        <PasswordStrengthBar password={data.password} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Step 2 — client ─────────────────────────────────────────────────────────
+
+function Step2Client({
+  data,
+  onChange,
+  errors,
+}: {
+  data: Step2ClientData;
+  onChange: (u: Partial<Step2ClientData>) => void;
+  errors: Partial<Record<keyof Step2ClientData, string>>;
+}) {
+  return (
+    <View style={{ gap: 16 }}>
+      <View style={styles.titleBlock}>
+        <Text style={styles.title}>Dernière étape</Text>
+        <Text style={styles.subtitle}>Plus qu'un instant !</Text>
+      </View>
+
+      <Input
+        label="Téléphone (optionnel)"
+        value={data.phone}
+        onChangeText={(v) => onChange({ phone: v })}
+        keyboardType="phone-pad"
+        autoComplete="tel"
+        leftIcon="call-outline"
+        placeholder="+33 6 12 34 56 78"
+        error={errors.phone}
+      />
+
+      <TermsCheckbox
+        checked={data.acceptedTerms}
+        onToggle={() => onChange({ acceptedTerms: !data.acceptedTerms })}
+      />
+    </View>
+  );
+}
+
+// ─── Step 2 — pro ────────────────────────────────────────────────────────────
+
+function Step2Pro({
+  data,
+  onChange,
+  errors,
+}: {
+  data: Step2ProData;
+  onChange: (u: Partial<Step2ProData>) => void;
+  errors: Partial<Record<keyof Step2ProData, string>>;
+}) {
+  return (
+    <View style={{ gap: 16 }}>
+      <View style={styles.titleBlock}>
+        <Text style={styles.title}>Ton activité</Text>
+        <Text style={styles.subtitle}>Pour personnaliser ton profil pro</Text>
+      </View>
+
+      <Input
+        label="Nom de l'établissement ou nom complet"
+        value={data.activityName}
+        onChangeText={(v) => onChange({ activityName: v })}
+        leftIcon="storefront-outline"
+        placeholder="Ex. : Studio Blyss"
+        maxLength={100}
+        error={errors.activityName}
+      />
+
+      <JobTypePicker value={data.jobType} onChange={(v) => onChange({ jobType: v })} />
+
+      <Input
+        label="Téléphone"
+        value={data.phone}
+        onChangeText={(v) => onChange({ phone: v })}
+        keyboardType="phone-pad"
+        autoComplete="tel"
+        leftIcon="call-outline"
+        placeholder="+33 6 12 34 56 78"
+        error={errors.phone}
+      />
+
+      <TermsCheckbox
+        checked={data.acceptedTerms}
+        onToggle={() => onChange({ acceptedTerms: !data.acceptedTerms })}
+      />
+    </View>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { signup, isLoading } = useAuth();
+  const { role: roleParam } = useLocalSearchParams<{ role?: string }>();
+  const role: Role = roleParam === "pro" ? "pro" : "client";
 
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    role: "client",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    email: "",
-    birthDate: undefined,
-    activityName: "",
-    city: "",
-    instagramAccount: "",
-    password: "",
-    confirmPassword: "",
-    acceptedTerms: false,
-  });
-  const [stepError, setStepError] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const [s1, setS1] = useState<Step1Data>({ firstName: "", email: "", password: "" });
+  const [s2c, setS2c] = useState<Step2ClientData>({ phone: "", acceptedTerms: false });
+  const [s2p, setS2p] = useState<Step2ProData>({ activityName: "", jobType: "", phone: "", acceptedTerms: false });
+
+  const [s1Errors, setS1Errors] = useState<Partial<Record<keyof Step1Data, string>>>({});
+  const [s2cErrors, setS2cErrors] = useState<Partial<Record<keyof Step2ClientData, string>>>({});
+  const [s2pErrors, setS2pErrors] = useState<Partial<Record<keyof Step2ProData, string>>>({});
+
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (!stepError) return;
+  const shake = useCallback(() => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     Animated.sequence([
       Animated.timing(shakeAnim, { toValue: 8,  duration: 55, useNativeDriver: true }),
       Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
@@ -175,378 +356,138 @@ export default function RegisterScreen() {
       Animated.timing(shakeAnim, { toValue: -5, duration: 45, useNativeDriver: true }),
       Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
     ]).start();
-  }, [stepError, shakeAnim]);
+  }, [shakeAnim]);
 
-  const totalSteps = useMemo(
-    () => (formData.role === "pro" ? 9 : 6),
-    [formData.role],
-  );
-
-  const update = useCallback((updates: Partial<FormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
-    setStepError("");
+  // ── Real-time validation step 1 ───────────────────────────────────────────
+  const updateS1 = useCallback((update: Partial<Step1Data>) => {
+    setS1((prev) => {
+      const next = { ...prev, ...update };
+      const errs: typeof s1Errors = {};
+      if ("firstName" in update && next.firstName.length > 0 && next.firstName.trim().length < 2)
+        errs.firstName = "Minimum 2 caractères";
+      if ("email" in update && next.email.length > 0) {
+        const err = getZodError(emailSchema, next.email);
+        if (err) errs.email = err;
+      }
+      if ("password" in update && next.password.length > 0) {
+        const err = getZodError(passwordSchema, next.password);
+        if (err) errs.password = err;
+      }
+      setS1Errors((prev) => ({ ...prev, ...errs, ...Object.fromEntries(Object.keys(update).filter(k => !(k in errs)).map(k => [k, undefined])) }));
+      setApiError(null);
+      return next;
+    });
   }, []);
 
-  // ── Step validation ──────────────────────────────────────────────────────
-  const isStepValid = (): boolean => {
-    switch (step) {
-      case 1: return true;
-      case 2:
-        return (
-          formData.firstName.trim().length > 0 &&
-          formData.lastName.trim().length > 0
-        );
-      case 3:
-        return VALIDATION.PHONE_REGEX.test(formData.phone.replace(/\s/g, ""));
-      case 4:
-        return (
-          VALIDATION.EMAIL_REGEX.test(formData.email.trim()) &&
-          formData.email.length <= VALIDATION.EMAIL_MAX
-        );
-      case 5:
-        return !!formData.birthDate && getAge(formData.birthDate.toISOString().split("T")[0]) >= VALIDATION.MIN_AGE;
-      case 6:
-        return formData.role === "client" ? formData.acceptedTerms : true;
-      case 7: case 8: return true;
-      case 9: return formData.acceptedTerms;
-      default: return false;
+  const updateS2c = useCallback((update: Partial<Step2ClientData>) => {
+    setS2c((prev) => {
+      const next = { ...prev, ...update };
+      const errs: typeof s2cErrors = {};
+      if ("phone" in update && next.phone.length > 0) {
+        const err = getZodError(phoneSchema, next.phone.replace(/\s/g, ""));
+        if (err) errs.phone = err;
+      }
+      setS2cErrors((prev) => ({ ...prev, ...errs }));
+      setApiError(null);
+      return next;
+    });
+  }, []);
+
+  const updateS2p = useCallback((update: Partial<Step2ProData>) => {
+    setS2p((prev) => {
+      const next = { ...prev, ...update };
+      const errs: typeof s2pErrors = {};
+      if ("phone" in update && next.phone.length > 0) {
+        const err = getZodError(phoneRequiredSchema, next.phone.replace(/\s/g, ""));
+        if (err) errs.phone = err;
+      }
+      setS2pErrors((prev) => ({ ...prev, ...errs }));
+      setApiError(null);
+      return next;
+    });
+  }, []);
+
+  // ── Validation ───────────────────────────────────────────────────────────
+  const validateStep1 = useCallback((): boolean => {
+    const result = step1Schema.safeParse(s1);
+    if (!result.success) {
+      const errs: typeof s1Errors = {};
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as keyof Step1Data;
+        if (!errs[field]) errs[field] = issue.message;
+      }
+      setS1Errors(errs);
+      shake();
+      return false;
     }
-  };
+    setS1Errors({});
+    return true;
+  }, [s1, shake]);
 
-  const isLastStep =
-    (formData.role === "client" && step === 6) ||
-    (formData.role === "pro" && step === 9);
+  const isStep1Valid = useMemo(() => step1Schema.safeParse(s1).success, [s1]);
 
-  const isProOptionalStep =
-    formData.role === "pro" && [6, 7, 8].includes(step);
-
-  const currentOptionalValue =
-    step === 6 ? formData.activityName
-    : step === 7 ? formData.city
-    : step === 8 ? formData.instagramAccount
-    : "";
-
-  const ctaLabel = isLoading
-    ? "Chargement..."
-    : isLastStep
-    ? "Créer mon compte"
-    : isProOptionalStep && !currentOptionalValue.trim()
-    ? "Remplir plus tard"
-    : "Continuer";
+  const isStep2Valid = useMemo(() => {
+    if (role === "client") return step2ClientSchema.safeParse({ ...s2c, phone: s2c.phone.replace(/\s/g, "") }).success;
+    return step2ProSchema.safeParse({ ...s2p, phone: s2p.phone.replace(/\s/g, "") }).success;
+  }, [role, s2c, s2p]);
 
   // ── Navigation ───────────────────────────────────────────────────────────
+  const handleNext = useCallback(async () => {
+    if (step === 1) {
+      if (!validateStep1()) return;
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setStep(2);
+      return;
+    }
+
+    // Step 2 — submit
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setApiError(null);
+
+    const phone = role === "client" ? s2c.phone.replace(/\s/g, "") : s2p.phone.replace(/\s/g, "");
+
+    const res = await signup({
+      first_name: s1.firstName.trim(),
+      last_name: "",
+      email: s1.email.trim().toLowerCase(),
+      password: s1.password,
+      phone_number: phone,
+      birth_date: "",
+      role,
+      accepted_terms: true,
+      activity_name: role === "pro" ? s2p.activityName.trim() || null : null,
+      city: null,
+      instagram_account: null,
+    });
+
+    if (!res.success) {
+      const msg = res.error
+        ? (ERROR_CODES[res.error] ?? res.message ?? "Erreur lors de la création")
+        : (res.message ?? "Erreur lors de la création");
+      setApiError(msg);
+      shake();
+    }
+    // On success, AuthContext redirects via index.tsx
+  }, [step, role, s1, s2c, s2p, signup, validateStep1, shake]);
+
   const handleBack = useCallback(() => {
-    if (step === 1) router.back();
-    else { setStep((s) => s - 1); setStepError(""); }
+    if (step === 2) { setStep(1); setApiError(null); }
+    else router.back();
   }, [step, router]);
 
-  const handleNext = useCallback(async () => {
-    setStepError("");
+  const progress = step === 1 ? 0.5 : 1;
 
-    if (step === 4 && !VALIDATION.EMAIL_REGEX.test(formData.email.trim())) {
-      setStepError("Email invalide");
-      return;
-    }
-    if (step === 5 && (!formData.birthDate || getAge(formData.birthDate.toISOString().split("T")[0]) < VALIDATION.MIN_AGE)) {
-      setStepError("Tu dois avoir au moins 16 ans");
-      return;
-    }
-
-    if (isLastStep) {
-      if (formData.password !== formData.confirmPassword) {
-        setStepError("Les mots de passe ne correspondent pas");
-        return;
-      }
-      if (!VALIDATION.PASSWORD_REGEX.test(formData.password)) {
-        setStepError("Le mot de passe doit contenir une minuscule, une majuscule et un chiffre");
-        return;
-      }
-      if (!formData.acceptedTerms) {
-        setStepError("Tu dois accepter les CGU pour continuer");
-        return;
-      }
-
-      const res = await signup({
-        first_name: formData.firstName.trim(),
-        last_name: formData.lastName.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        phone_number: formData.phone.replace(/\s/g, ""),
-        birth_date: formData.birthDate ? formData.birthDate.toISOString().split("T")[0] : "",
-        role: formData.role,
-        accepted_terms: true,
-        activity_name: formData.activityName.trim() || null,
-        city: formData.city.trim() || null,
-        instagram_account: formData.instagramAccount.trim() || null,
-      });
-
-      if (!res.success) {
-        const msg = res.error
-          ? (ERROR_CODES[res.error] ?? res.message ?? "Erreur lors de la création")
-          : "Erreur lors de la création";
-        setStepError(msg);
-      }
-      return;
-    }
-
-    setStep((s) => s + 1);
-  }, [step, formData, isLastStep, signup]);
-
-  // ── Step content ─────────────────────────────────────────────────────────
-  const renderContent = () => {
-    if (step === 1) {
-      return (
-        <View className="gap-8">
-          <View className="items-center">
-            <Text className="text-3xl font-black text-foreground text-center">
-              Bienvenue sur Blyss
-            </Text>
-            <Text className="text-muted-foreground text-center mt-2">
-              Choisis comment tu utilises Blyss
-            </Text>
-          </View>
-
-          <View className="gap-4">
-            {(["client", "pro"] as Role[]).map((r) => (
-              <Pressable
-                key={r}
-                onPress={() => update({ role: r })}
-                disabled={isLoading}
-                className={[
-                  "flex-row items-center gap-4 rounded-2xl px-5 py-5 border-2",
-                  formData.role === r
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-card",
-                ].join(" ")}
-              >
-                <View className="flex-1">
-                  <Text className="text-base font-semibold text-foreground">
-                    {r === "client" ? "Cliente" : "Prothésiste"}
-                  </Text>
-                  <Text className="text-sm text-muted-foreground mt-0.5">
-                    {r === "client"
-                      ? "Je réserve des prestations manucure"
-                      : "Agenda, réservations, paiements — tout en un"}
-                  </Text>
-                  {r === "pro" && (
-                    <View style={{
-                      marginTop: 6, alignSelf: "flex-start",
-                      backgroundColor: "rgba(255,94,160,0.12)", borderRadius: 8,
-                      paddingHorizontal: 8, paddingVertical: 3,
-                    }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#FF5EA0" }}>
-                        Pour les pros du nail art
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View
-                  className={[
-                    "w-6 h-6 rounded-full border-2 items-center justify-center flex-shrink-0",
-                    formData.role === r
-                      ? "border-primary bg-primary"
-                      : "border-muted-foreground/40",
-                  ].join(" ")}
-                >
-                  {formData.role === r && (
-                    <View className="w-2.5 h-2.5 rounded-full bg-white" />
-                  )}
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      );
-    }
-
-    if (step === 2) {
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black text-foreground">Enchanté</Text>
-            <Text className="text-muted-foreground mt-2">Et toi, c'est ?</Text>
-          </View>
-          <View className="gap-4">
-            <Input
-              label="Prénom"
-              value={formData.firstName}
-              onChangeText={(v) => update({ firstName: v })}
-              autoCapitalize="words"
-              autoComplete="given-name"
-              maxLength={VALIDATION.NAME_MAX}
-            />
-            <Input
-              label="Nom"
-              value={formData.lastName}
-              onChangeText={(v) => update({ lastName: v })}
-              autoCapitalize="words"
-              autoComplete="family-name"
-              maxLength={VALIDATION.NAME_MAX}
-            />
-          </View>
-        </View>
-      );
-    }
-
-    if (step === 3) {
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black text-foreground">
-              Enchanté {formData.firstName}
-            </Text>
-            <Text className="text-muted-foreground mt-2">Un 06 ?</Text>
-          </View>
-          <Input
-            label="Téléphone"
-            value={formData.phone}
-            onChangeText={(v) => update({ phone: formatPhone(v) })}
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            placeholder="06 12 34 56 78"
-            leftIcon="call-outline"
-          />
-        </View>
-      );
-    }
-
-    if (step === 4) {
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black text-foreground">Super !</Text>
-            <Text className="text-muted-foreground mt-2">Ton email ?</Text>
-          </View>
-          <Input
-            label="Email"
-            value={formData.email}
-            onChangeText={(v) => update({ email: v })}
-            keyboardType="email-address"
-            autoComplete="email"
-            placeholder="ton@email.com"
-            leftIcon="mail-outline"
-            maxLength={VALIDATION.EMAIL_MAX}
-          />
-        </View>
-      );
-    }
-
-    if (step === 5) {
-      const maxDate = new Date();
-      maxDate.setFullYear(maxDate.getFullYear() - VALIDATION.MIN_AGE);
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black text-foreground">
-              Ta date de naissance
-            </Text>
-            <Text className="text-muted-foreground mt-2">
-              Tu dois avoir au moins 16 ans
-            </Text>
-          </View>
-          <DatePicker
-            label="Date de naissance"
-            value={formData.birthDate}
-            onChange={(date) => update({ birthDate: date })}
-            maximumDate={maxDate}
-            placeholder="Sélectionner ta date de naissance"
-          />
-        </View>
-      );
-    }
-
-    if (formData.role === "client" && step === 6) {
-      return <PasswordStep formData={formData} update={update} />;
-    }
-
-    if (formData.role === "pro") {
-      if (step === 6) {
-        return (
-          <View className="gap-6">
-            <View>
-              <Text className="text-3xl font-black text-foreground">Ton activité</Text>
-              <Text className="text-muted-foreground mt-2">
-                Nom de ton activité (modifiable plus tard)
-              </Text>
-            </View>
-            <Input
-              label="Nom de l'activité"
-              value={formData.activityName}
-              onChangeText={(v) => update({ activityName: v })}
-              placeholder="Ex. : Studio Blyss"
-              leftIcon="storefront-outline"
-              maxLength={VALIDATION.TEXT_MAX}
-            />
-          </View>
-        );
-      }
-      if (step === 7) {
-        return (
-          <View className="gap-6">
-            <View>
-              <Text className="text-3xl font-black text-foreground">Où exerces-tu ?</Text>
-              <Text className="text-muted-foreground mt-2">Ville ou quartier</Text>
-            </View>
-            <Input
-              label="Ville"
-              value={formData.city}
-              onChangeText={(v) => update({ city: v })}
-              placeholder="Ex. : Paris 11"
-              leftIcon="location-outline"
-              maxLength={VALIDATION.TEXT_MAX}
-            />
-          </View>
-        );
-      }
-      if (step === 8) {
-        return (
-          <View className="gap-6">
-            <View>
-              <Text className="text-3xl font-black text-foreground">Ton Instagram</Text>
-              <Text className="text-muted-foreground mt-2">
-                Tes clientes pourront voir ton travail avant de réserver
-              </Text>
-            </View>
-            <Input
-              label="Compte Instagram"
-              value={formData.instagramAccount}
-              onChangeText={(v) => update({ instagramAccount: v })}
-              placeholder="@ton_instagram"
-              leftIcon="logo-instagram"
-              maxLength={VALIDATION.TEXT_MAX}
-            />
-          </View>
-        );
-      }
-      if (step === 9) {
-        return <PasswordStep formData={formData} update={update} />;
-      }
-    }
-
-    return null;
-  };
-
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView style={styles.root} edges={["top"]}>
       {/* Progress header */}
-      <View className="flex-row items-center gap-4 px-6 py-4">
-        <AnimatedIconButton
-          onPress={handleBack}
-          disabled={isLoading}
-          className="p-2 -ml-2 rounded-xl active:bg-muted"
-        >
-          <Ionicons name="chevron-back" size={24} color="#09090B" />
+      <View style={styles.progressRow}>
+        <AnimatedIconButton onPress={handleBack} disabled={isLoading} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={Colors.foreground} />
         </AnimatedIconButton>
-        <View className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-          <View
-            className="h-full bg-primary rounded-full"
-            style={{ width: `${(step / totalSteps) * 100}%` }}
-          />
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
         </View>
-        <Text className="text-sm font-medium text-muted-foreground w-10 text-right">
-          {step}/{totalSteps}
-        </Text>
+        <Text style={styles.stepCount}>{step}/2</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -555,78 +496,50 @@ export default function RegisterScreen() {
         keyboardVerticalOffset={20}
       >
         <ScrollView
-          className="flex-1 px-6"
-          contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {renderContent()}
+          {step === 1 && (
+            <Step1 data={s1} onChange={updateS1} errors={s1Errors} />
+          )}
+          {step === 2 && role === "client" && (
+            <Step2Client data={s2c} onChange={updateS2c} errors={s2cErrors} />
+          )}
+          {step === 2 && role === "pro" && (
+            <Step2Pro data={s2p} onChange={updateS2p} errors={s2pErrors} />
+          )}
 
-          {stepError ? (
-            <Animated.View
-              style={{
-                transform: [{ translateX: shakeAnim }],
-                marginTop: 16,
-                backgroundColor: "#FFF0F3",
-                borderRadius: 14,
-                borderLeftWidth: 3,
-                borderLeftColor: "#EF4444",
-                paddingVertical: 12,
-                paddingHorizontal: 14,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
-              <Text style={{ flex: 1, fontSize: 13, color: "#EF4444", fontWeight: "500", lineHeight: 18 }}>
-                {stepError}
-              </Text>
+          {apiError && (
+            <Animated.View style={{ marginTop: 16, transform: [{ translateX: shakeAnim }] }}>
+              <ErrorMessage message={apiError} />
             </Animated.View>
-          ) : null}
+          )}
         </ScrollView>
 
-        {/* Fixed bottom CTA */}
-        <View
-          className="px-6 pb-8 pt-4"
-          style={{ backgroundColor: "rgba(255,234,241,0.97)" }}
-        >
+        {/* Fixed CTA */}
+        <View style={styles.ctaZone}>
           <Pressable
             onPress={handleNext}
-            disabled={!isStepValid() || isLoading}
+            disabled={isLoading || (step === 1 ? !isStep1Valid : !isStep2Valid)}
+            style={[
+              styles.ctaBtn,
+              (isLoading || (step === 1 ? !isStep1Valid : !isStep2Valid)) && styles.ctaBtnDisabled,
+            ]}
           >
-            <LinearGradient
-              colors={
-                !isStepValid() || isLoading
-                  ? ["#D1D5DB", "#D1D5DB"]
-                  : ["#FE5D9D", "rgba(254,93,157,0.9)"]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                height: 56,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-                  {ctaLabel}
-                </Text>
-              )}
-            </LinearGradient>
+            {isLoading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.ctaBtnText}>
+                {step === 1 ? "Continuer" : "Créer mon compte"}
+              </Text>
+            )}
           </Pressable>
 
-          {/* Login redirect */}
-          <Text className="text-xs text-muted-foreground text-center mt-4">
+          <Text style={styles.loginHint}>
             Déjà un compte ?{" "}
-            <Text
-              className="text-primary font-semibold"
-              onPress={() => router.push("/(auth)/login")}
-            >
+            <Text style={styles.loginLink} onPress={() => router.push("/(auth)/login")}>
               Se connecter
             </Text>
           </Text>
@@ -635,3 +548,93 @@ export default function RegisterScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.background },
+
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  backBtn: { padding: 8, marginLeft: -8, borderRadius: 12 },
+  progressTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.border,
+    overflow: "hidden",
+  },
+  progressFill: { height: "100%", borderRadius: 3, backgroundColor: Colors.primary },
+  stepCount: { fontSize: 13, fontWeight: "600", color: Colors.mutedForeground, width: 28, textAlign: "right" },
+
+  scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
+
+  titleBlock: { marginBottom: 8 },
+  title: { fontSize: 30, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5, lineHeight: 36 },
+  subtitle: { fontSize: 15, color: Colors.mutedForeground, marginTop: 6, lineHeight: 22 },
+
+  fieldLabel: { fontSize: 13, fontWeight: "600", color: Colors.foreground, marginBottom: 6 },
+
+  termsRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  termsText: { fontSize: 13, color: Colors.mutedForeground, flex: 1, lineHeight: 20 },
+  termsLink: { color: Colors.primary, fontWeight: "600" },
+
+  jobChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  jobChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  jobChipText: { fontSize: 13, fontWeight: "600", color: Colors.mutedForeground },
+  jobChipTextActive: { color: Colors.white },
+
+  ctaZone: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: Colors.background,
+    gap: 12,
+  },
+  ctaBtn: {
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  ctaBtnDisabled: {
+    backgroundColor: Colors.disabled,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  ctaBtnText: { fontSize: 16, fontWeight: "700", color: Colors.white },
+
+  loginHint: { fontSize: 12, color: Colors.mutedForeground, textAlign: "center" },
+  loginLink: { color: Colors.primary, fontWeight: "600" },
+});

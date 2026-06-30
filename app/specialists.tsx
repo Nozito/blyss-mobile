@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect, Suspense } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList, Animated } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList, Animated, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import {
 } from "@/components/screens/client/specialists/SpecialistCard";
 import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
+import { Colors } from "@/constants/colors";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 
 const SpecialistsMapView = React.lazy(
@@ -61,7 +62,7 @@ export default function SpecialistsScreen() {
     })();
   }, []);
 
-  const { data: specialists = [], isLoading, isFetching } = useQuery<Specialist[]>({
+  const { data: specialists = [], isLoading, isFetching, refetch } = useQuery<Specialist[]>({
     queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter],
     queryFn: async () => {
       const res = await specialistsApi.getPros({
@@ -71,7 +72,6 @@ export default function SpecialistsScreen() {
         ...(serviceFilter ? { service: serviceFilter } : {}),
         ...(ratingFilter > 0 ? { min_rating: ratingFilter } : {}),
       });
-      console.log("Total specialists reçus:", res.data?.length, res);
       if (!res.success || !res.data) return [];
       return (res.data as Array<Record<string, unknown>>).map((pro) => ({
         id: pro.id as number,
@@ -164,7 +164,7 @@ export default function SpecialistsScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFEAF1" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
       <SearchHeader
         searchInput={searchInput}
@@ -199,7 +199,7 @@ export default function SpecialistsScreen() {
 
       {/* ── MAP VIEW ── */}
       {viewMode === "map" && (
-        <Suspense fallback={<ActivityIndicator color="#FE5D9D" style={{ flex: 1 }} />}>
+        <Suspense fallback={<ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />}>
           <SpecialistsMapView specialists={specialists} />
         </Suspense>
       )}
@@ -222,19 +222,19 @@ export default function SpecialistsScreen() {
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                backgroundColor: "#F8F5F1",
+                backgroundColor: Colors.cream,
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 16,
               }}
             >
-              <Ionicons name="search-outline" size={24} color="#6D6D78" />
+              <Ionicons name="search-outline" size={24} color={Colors.mutedForeground} />
             </View>
             <Text
               style={{
                 fontSize: 16,
                 fontWeight: "700",
-                color: "#09090B",
+                color: Colors.foreground,
                 textAlign: "center",
                 marginBottom: 6,
               }}
@@ -244,7 +244,7 @@ export default function SpecialistsScreen() {
             <Text
               style={{
                 fontSize: 13,
-                color: "#6D6D78",
+                color: Colors.mutedForeground,
                 textAlign: "center",
                 lineHeight: 20,
                 maxWidth: 240,
@@ -262,12 +262,12 @@ export default function SpecialistsScreen() {
                   paddingHorizontal: 24,
                   height: 44,
                   borderRadius: 16,
-                  backgroundColor: "#FE5D9D",
+                  backgroundColor: Colors.primary,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>
+                <Text style={{ color: Colors.white, fontWeight: "600", fontSize: 14 }}>
                   Voir toutes les expertes
                 </Text>
               </Pressable>
@@ -285,6 +285,9 @@ export default function SpecialistsScreen() {
             }}
             showsVerticalScrollIndicator={false}
             style={{ opacity: isFetching && specialists.length > 0 ? 0.5 : 1 }}
+            refreshControl={
+              <RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={Colors.primary} />
+            }
           />
         )}
       </View>

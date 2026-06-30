@@ -160,8 +160,8 @@ export default function FavoritesScreen() {
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
           }}>
-            <Ionicons name="sparkles" size={20} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+            <Ionicons name="sparkles" size={20} color={Colors.white} />
+            <Text style={{ color: Colors.white, fontSize: 16, fontWeight: "700" }}>
               Découvrir des pros
             </Text>
           </View>
@@ -172,16 +172,16 @@ export default function FavoritesScreen() {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFEAF1", paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View>
-            <Text style={{ fontSize: 28, fontWeight: "800", color: "#111" }}>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.foreground }}>
               Mes favoris
             </Text>
-            <Text style={{ fontSize: 14, color: "#9CA3AF", marginTop: 4 }}>
+            <Text style={{ fontSize: 14, color: Colors.mutedForeground, marginTop: 4 }}>
               {favorites.length > 0
                 ? `${favorites.length} experte${favorites.length > 1 ? "s" : ""} sauvegardée${favorites.length > 1 ? "s" : ""}`
                 : "Retrouve ici tes expertes préférées"}

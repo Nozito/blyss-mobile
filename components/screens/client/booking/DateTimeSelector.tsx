@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
+import { Colors } from "@/constants/colors";
 
 const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -121,7 +122,7 @@ function CalendarGrid({
   return (
     <View
       style={{
-        backgroundColor: "#FFFFFF",
+        backgroundColor: Colors.white,
         borderRadius: 20,
         padding: 20,
         ...Shadows.card,
@@ -136,15 +137,15 @@ function CalendarGrid({
             width: 36,
             height: 36,
             borderRadius: 12,
-            backgroundColor: "#F8F5F1",
+            backgroundColor: Colors.cream,
             alignItems: "center",
             justifyContent: "center",
             opacity: isFirstDayOfCurrentMonth() ? 0.3 : 1,
           }}
         >
-          <Ionicons name="chevron-back" size={18} color="#09090B" />
+          <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
         </Pressable>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: "#09090B" }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
           {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </Text>
         <Pressable
@@ -153,12 +154,12 @@ function CalendarGrid({
             width: 36,
             height: 36,
             borderRadius: 12,
-            backgroundColor: "#F8F5F1",
+            backgroundColor: Colors.cream,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Ionicons name="chevron-forward" size={18} color="#09090B" />
+          <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
         </Pressable>
       </View>
 
@@ -166,7 +167,7 @@ function CalendarGrid({
       <View style={{ flexDirection: "row", marginBottom: 8 }}>
         {DAY_NAMES.map((d) => (
           <View key={d} style={{ width: cellSize, alignItems: "center" }}>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: "#6D6D78" }}>{d}</Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.mutedForeground }}>{d}</Text>
           </View>
         ))}
       </View>
@@ -196,12 +197,12 @@ function CalendarGrid({
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: selected
-                    ? "#FE5D9D"
+                    ? Colors.primary
                     : today_ && !selected
                     ? "transparent"
                     : "transparent",
                   borderWidth: today_ && !selected ? 2 : 0,
-                  borderColor: today_ && !selected ? "#FE5D9D" : "transparent",
+                  borderColor: today_ && !selected ? Colors.primary : "transparent",
                   opacity: past || (!past && !available) ? 0.3 : 1,
                 }}
               >
@@ -209,7 +210,7 @@ function CalendarGrid({
                   style={{
                     fontSize: 13,
                     fontWeight: "600",
-                    color: selected ? "#fff" : past ? "#6D6D78" : "#09090B",
+                    color: selected ? Colors.white : past ? Colors.mutedForeground : Colors.foreground,
                   }}
                 >
                   {date.getDate()}
@@ -222,7 +223,7 @@ function CalendarGrid({
                     width: 4,
                     height: 4,
                     borderRadius: 2,
-                    backgroundColor: "#FE5D9D",
+                    backgroundColor: Colors.primary,
                     marginTop: 2,
                   }}
                 />
@@ -251,10 +252,10 @@ export function DateTimeSelector({
       <View style={{ paddingBottom: 24, gap: 20 }}>
         {/* Header */}
         <View style={{ gap: 4 }}>
-          <Text style={{ fontSize: 26, fontWeight: "800", color: "#09090B", letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
             Quand ?
           </Text>
-          <Text style={{ fontSize: 14, color: "#6D6D78" }}>
+          <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
             Choisis la date et l'horaire qui t'arrangent
           </Text>
         </View>
@@ -262,8 +263,8 @@ export function DateTimeSelector({
         {/* Calendar */}
         <View style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="calendar-outline" size={18} color="#FE5D9D" />
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#09090B" }}>Date</Text>
+            <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Date</Text>
           </View>
           <CalendarGrid
             selectedDate={selectedDate}
@@ -276,26 +277,26 @@ export function DateTimeSelector({
         {/* Time slots */}
         <View style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="time-outline" size={18} color="#FE5D9D" />
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#09090B" }}>Horaire</Text>
+            <Ionicons name="time-outline" size={18} color={Colors.primary} />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Horaire</Text>
           </View>
 
           {isLoadingSlots ? (
             <View style={{ alignItems: "center", paddingVertical: 32 }}>
-              <ActivityIndicator size="small" color="#FE5D9D" />
+              <ActivityIndicator size="small" color={Colors.primary} />
             </View>
           ) : availableSlots.length === 0 ? (
             <View
               style={{
                 alignItems: "center",
                 paddingVertical: 32,
-                backgroundColor: "#FFFFFF",
+                backgroundColor: Colors.white,
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: "#EBE6E0",
+                borderColor: Colors.border,
               }}
             >
-              <Text style={{ fontSize: 13, color: "#6D6D78" }}>
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
                 {selectedDate
                   ? "Aucun créneau disponible pour cette date"
                   : "Sélectionne d'abord une date"}
@@ -316,9 +317,9 @@ export function DateTimeSelector({
                       paddingVertical: 14,
                       alignItems: "center",
                       gap: 2,
-                      backgroundColor: active ? "#FE5D9D" : "#FFFFFF",
+                      backgroundColor: active ? Colors.primary : Colors.white,
                       borderWidth: active ? 0 : 1,
-                      borderColor: "#EBE6E0",
+                      borderColor: Colors.border,
                       ...(active ? Shadows.soft : Shadows.card),
                     }}
                   >
@@ -327,7 +328,7 @@ export function DateTimeSelector({
                         fontSize: 17,
                         fontWeight: "800",
                         lineHeight: 20,
-                        color: active ? "#fff" : "#09090B",
+                        color: active ? Colors.white : Colors.foreground,
                       }}
                     >
                       {slot.time}
@@ -336,7 +337,7 @@ export function DateTimeSelector({
                       style={{
                         fontSize: 11,
                         fontWeight: "500",
-                        color: active ? "rgba(255,255,255,0.7)" : "#6D6D78",
+                        color: active ? "rgba(255,255,255,0.7)" : Colors.mutedForeground,
                       }}
                     >
                       {formatDuration(slot.duration)}

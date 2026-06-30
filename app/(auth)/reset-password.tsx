@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -15,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -26,26 +26,28 @@ export default function ResetPasswordScreen() {
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [success, setSuccess]     = useState(false);
 
   const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,128}$/;
 
   const handleReset = async () => {
+    setError(null);
     if (!password || !PASSWORD_REGEX.test(password)) {
-      Alert.alert("Erreur", "Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.");
+      setError("Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.");
       return;
     }
     if (password !== confirm) {
-      Alert.alert("Erreur", "Les mots de passe ne correspondent pas.");
+      setError("Les mots de passe ne correspondent pas.");
       return;
     }
     setIsLoading(true);
     try {
       await authApi.resetPassword({ token: token ?? "", password });
-      Alert.alert("Succès", "Mot de passe mis à jour !", [
-        { text: "Se connecter", onPress: () => router.replace("/(auth)/login") },
-      ]);
+      setSuccess(true);
+      setTimeout(() => router.replace("/(auth)/login"), 1500);
     } catch {
-      Alert.alert("Erreur", "Lien invalide ou expiré. Demande un nouveau lien.");
+      setError("Lien invalide ou expiré. Demande un nouveau lien.");
     } finally {
       setIsLoading(false);
     }
@@ -133,9 +135,16 @@ export default function ResetPasswordScreen() {
             </View>
           </View>
 
+          {error && <View className="mb-4"><ErrorMessage message={error} /></View>}
+          {success && (
+            <View className="mb-4 p-4 rounded-2xl bg-success/10 border border-success/30">
+              <Text className="text-success font-semibold text-center">Mot de passe mis à jour ! Redirection…</Text>
+            </View>
+          )}
+
           <Pressable
             onPress={handleReset}
-            disabled={isLoading}
+            disabled={isLoading || success}
             className="bg-primary rounded-2xl h-14 items-center justify-center active:opacity-80"
             style={{ opacity: isLoading ? 0.7 : 1 }}
           >
