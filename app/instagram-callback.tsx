@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { safeBack } from "@/lib/navigation";
 
 export default function InstagramCallbackScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
@@ -15,7 +16,7 @@ export default function InstagramCallbackScreen() {
     const handleCallback = async () => {
       if (!token) {
         setStatus("error");
-        setTimeout(() => router.back(), 1500);
+        setTimeout(() => safeBack(router), 1500);
         return;
       }
       try {
@@ -24,7 +25,7 @@ export default function InstagramCallbackScreen() {
       } catch {
         setStatus("error");
       } finally {
-        setTimeout(() => router.back(), 1200);
+        setTimeout(() => safeBack(router), 1200);
       }
     };
     void handleCallback();

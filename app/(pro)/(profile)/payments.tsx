@@ -18,6 +18,7 @@ import { proApi, stripeApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 // ── IBAN validation ───────────────────────────────────────────────────────────
 const IBAN_LENGTHS: Record<string, number> = {
@@ -214,7 +215,7 @@ export default function ProPaymentsScreen() {
       <View style={{ marginBottom: 24 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

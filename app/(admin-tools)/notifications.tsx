@@ -15,6 +15,7 @@ import { adminApi, AdminUser } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
@@ -244,7 +245,7 @@ export default function AdminNotificationsScreen() {
       {/* ── Header ── */}
       <View style={{ marginBottom: 24 }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
           {Platform.OS === "ios"

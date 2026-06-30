@@ -25,6 +25,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { Colors } from "@/constants/colors";
 import { reviewSchema } from "@/lib/validation";
+import { safeBack } from "@/lib/navigation";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -282,7 +283,7 @@ export default function BookingDetailScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <AnimatedIconButton onPress={() => router.back()} style={styles.headerBack}>
+        <AnimatedIconButton onPress={() => safeBack(router)} style={styles.headerBack}>
           <Ionicons name="chevron-back" size={24} color={Colors.foreground} />
         </AnimatedIconButton>
         <Text style={styles.headerTitle}>Détail réservation</Text>

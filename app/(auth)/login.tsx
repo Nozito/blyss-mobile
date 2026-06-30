@@ -27,6 +27,7 @@ import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { emailSchema, getZodError } from "@/lib/validation";
+import { safeBack } from "@/lib/navigation";
 
 function parseLoginError(raw: string): string {
   const r = raw.toLowerCase();
@@ -254,7 +255,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Back */}
-          <AnimatedIconButton onPress={() => router.back()} style={styles.backBtn}>
+          <AnimatedIconButton onPress={() => safeBack(router)} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
           </AnimatedIconButton>
 

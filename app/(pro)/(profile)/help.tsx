@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { safeBack } from "@/lib/navigation";
 
 type Category = "agenda" | "clientes" | "paiement" | "compte";
 
@@ -63,7 +64,7 @@ export default function ProHelpScreen() {
       <View className="mb-6">
         <View className="flex-row items-center mb-2">
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

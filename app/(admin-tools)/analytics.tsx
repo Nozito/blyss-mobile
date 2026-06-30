@@ -16,6 +16,7 @@ import { adminApi, AdminAnalytics } from "@/lib/api";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ADMIN } from "@/constants/adminTheme";
 import { Colors } from "@/constants/colors";
+import { safeBack } from "@/lib/navigation";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -297,7 +298,7 @@ export default function AdminAnalyticsScreen() {
       {/* ── Header ── */}
       <View style={{ marginBottom: 22 }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
           {Platform.OS === "ios"

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/Input";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { safeBack } from "@/lib/navigation";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -74,7 +75,7 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={styles.backBtn}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.mutedForeground} />

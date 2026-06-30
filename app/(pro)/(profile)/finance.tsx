@@ -21,6 +21,7 @@ import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 type Period = "week" | "month" | "year";
 
@@ -265,7 +266,7 @@ export default function ProFinanceScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

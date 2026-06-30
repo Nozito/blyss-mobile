@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
+import { safeBack } from "@/lib/navigation";
 
 type Service = {
   id: number;
@@ -80,7 +81,7 @@ export default function ServicesScreen() {
         paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16,
       }}>
         <AnimatedIconButton
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

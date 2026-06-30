@@ -27,6 +27,7 @@ import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { usePro } from "@/hooks/usePro";
 import type { User } from "@/lib/api";
+import { safeBack } from "@/lib/navigation";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
   return (
@@ -117,7 +118,7 @@ export default function ProSettingsScreen() {
         if (changingPassword) {
           setSuccess("Mot de passe mis à jour avec succès.");
         } else {
-          router.back();
+          safeBack(router);
         }
       } else {
         setError(res.error ?? "Impossible de mettre à jour");
@@ -185,7 +186,7 @@ export default function ProSettingsScreen() {
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
         <AnimatedIconButton
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

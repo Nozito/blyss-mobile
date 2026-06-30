@@ -17,6 +17,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { safeBack } from "@/lib/navigation";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
   return (
@@ -143,7 +144,7 @@ export default function SettingsScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { proProfileSchema } from "@/lib/validation";
+import { safeBack } from "@/lib/navigation";
 
 const SCREEN_W = Dimensions.get("window").width;
 const GALLERY_CELL = (SCREEN_W - 40 - 8) / 3;
@@ -277,7 +278,7 @@ export default function ProPublicProfileScreen() {
         <View className="mb-6">
           <View className="flex-row items-center mb-2">
             <AnimatedIconButton
-              onPress={() => router.back()}
+              onPress={() => safeBack(router)}
               className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
             >
               <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

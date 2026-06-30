@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/Input";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { safeBack } from "@/lib/navigation";
 import {
   step1Schema,
   step2ClientSchema,
@@ -472,7 +473,7 @@ export default function RegisterScreen() {
 
   const handleBack = useCallback(() => {
     if (step === 2) { setStep(1); setApiError(null); }
-    else router.back();
+    else safeBack(router);
   }, [step, router]);
 
   const progress = step === 1 ? 0.5 : 1;

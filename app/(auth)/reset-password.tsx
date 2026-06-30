@@ -15,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function ResetPasswordScreen() {
       >
         <View>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mb-8"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

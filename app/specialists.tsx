@@ -14,6 +14,7 @@ import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
 import { Colors } from "@/constants/colors";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
+import { safeBack } from "@/lib/navigation";
 
 const SpecialistsMapView = React.lazy(
   () => import("@/components/screens/client/specialists/MapView") as Promise<{ default: React.ComponentType<{ specialists: Specialist[] }> }>
@@ -169,7 +170,7 @@ export default function SpecialistsScreen() {
       <SearchHeader
         searchInput={searchInput}
         onChangeText={setSearchInput}
-        onBack={() => router.back()}
+        onBack={() => safeBack(router)}
         count={specialists.length}
         isFetching={isFetching}
         viewMode={viewMode}

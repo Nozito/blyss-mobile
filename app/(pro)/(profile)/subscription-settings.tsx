@@ -17,6 +17,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import * as Haptics from "expo-haptics";
 import { proApi } from "@/lib/api";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
+import { safeBack } from "@/lib/navigation";
 
 const PLAN_META: Record<RCPlan, {
   label: string;
@@ -125,7 +126,7 @@ export default function ProSubscriptionSettingsScreen() {
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <AnimatedIconButton
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

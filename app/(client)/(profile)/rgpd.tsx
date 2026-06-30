@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 interface RGPDRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -124,7 +125,7 @@ export default function ClientRGPDScreen() {
       >
         <View className="flex-row items-center gap-3">
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             className="p-2 -ml-2 rounded-xl"
             style={{ backgroundColor: Colors.muted }}
           >

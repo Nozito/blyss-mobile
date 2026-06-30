@@ -23,6 +23,7 @@ import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
+import { safeBack } from "@/lib/navigation";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -217,7 +218,7 @@ export default function BookingScreen() {
   };
 
   const handleBack = useCallback(() => {
-    if (step === 1) router.back();
+    if (step === 1) safeBack(router);
     else if (step === 5 && paymentMethod === "on_site") setStep(3);
     else setStep((s) => s - 1);
   }, [step, paymentMethod, router]);

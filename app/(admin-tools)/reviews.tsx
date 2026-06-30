@@ -13,6 +13,7 @@ import { ADMIN } from "@/constants/adminTheme";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
+import { safeBack } from "@/lib/navigation";
 
 const BG     = ADMIN.bg;
 const CARD   = ADMIN.surface;
@@ -113,7 +114,7 @@ export default function ReviewsScreen() {
       <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="arrow-back" size={18} color={TEXT1} />

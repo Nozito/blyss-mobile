@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 import { ADMIN } from "@/constants/adminTheme";
+import { safeBack } from "@/lib/navigation";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
@@ -110,7 +111,7 @@ export default function AdminLogsScreen() {
       {/* ── Header ── */}
       <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top + 16, paddingHorizontal: 16, paddingBottom: 16 }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
         >
           {Platform.OS === "ios"

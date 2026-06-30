@@ -25,6 +25,7 @@ import { ReviewModal } from "@/components/ui/ReviewModal";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { safeBack } from "@/lib/navigation";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -176,7 +177,7 @@ export default function SpecialistProfileScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 12 }}>
         <Text style={{ fontSize: 15, color: Colors.mutedForeground }}>Spécialiste introuvable</Text>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => safeBack(router)}>
           <Text style={{ color: Colors.primary, fontWeight: "700" }}>Retour</Text>
         </Pressable>
       </View>
@@ -239,7 +240,7 @@ export default function SpecialistProfileScreen() {
           }}
         >
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{
               width: 40,
               height: 40,

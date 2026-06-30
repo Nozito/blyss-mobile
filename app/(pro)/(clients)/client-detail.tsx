@@ -19,6 +19,7 @@ import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 type Client = {
   id: number;
@@ -81,7 +82,7 @@ export default function ClientDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-clients"] });
       qc.invalidateQueries({ queryKey: ["blocked-clients"] });
-      router.back();
+      safeBack(router);
     },
   });
 
@@ -180,7 +181,7 @@ export default function ClientDetailScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

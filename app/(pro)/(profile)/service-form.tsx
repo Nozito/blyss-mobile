@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/Input";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
 
@@ -100,7 +101,7 @@ export default function ServiceFormScreen() {
     mutationFn: (d: Parameters<typeof proApi.createService>[0]) => proApi.createService(d),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-services"] });
-      router.back();
+      safeBack(router);
     },
     onError: () => setFormError("Impossible de créer la prestation."),
   });
@@ -110,7 +111,7 @@ export default function ServiceFormScreen() {
       proApi.updateService(pid, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-services"] });
-      router.back();
+      safeBack(router);
     },
     onError: () => setFormError("Impossible de modifier la prestation."),
   });
@@ -158,7 +159,7 @@ export default function ServiceFormScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 28 }}>
           <AnimatedIconButton
-            onPress={() => router.back()}
+            onPress={() => safeBack(router)}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

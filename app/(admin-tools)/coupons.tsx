@@ -15,6 +15,7 @@ import { adminApi, AdminCoupon } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { safeBack } from "@/lib/navigation";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
@@ -399,7 +400,7 @@ export default function AdminCouponsScreen() {
       {/* ── Header ── */}
       <View style={{ paddingTop: insets.top + 16, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
         >
           {Platform.OS === "ios"

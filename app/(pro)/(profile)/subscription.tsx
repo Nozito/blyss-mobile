@@ -21,6 +21,7 @@ import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
+import { safeBack } from "@/lib/navigation";
 
 type BillingPeriod = "monthly" | "annual";
 
@@ -195,7 +196,7 @@ export default function SubscriptionScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           {hasActiveSubscription && (
             <AnimatedIconButton
-              onPress={() => router.back()}
+              onPress={() => safeBack(router)}
               style={{
                 width: 40, height: 40, borderRadius: 12,
                 backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
