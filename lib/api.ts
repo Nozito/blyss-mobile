@@ -32,7 +32,7 @@ export interface User {
   years_on_blyss?: number;
   bankaccountname?: string | null;
   IBAN?: string | null;
-  accept_online_payment?: 0 | 1;
+  accept_online_payment?: boolean;
 }
 
 export interface LoginCredentials {
@@ -98,7 +98,7 @@ export interface ProNotificationSettings {
 export interface PaymentsSettings {
   bankaccountname: string | null;
   IBAN: string | null;
-  accept_online_payment: 0 | 1;
+  accept_online_payment: boolean;
 }
 
 export interface SavedCard {
@@ -410,12 +410,12 @@ export const authApi = {
 // ── Bookings API ─────────────────────────────────────────────────────────────
 
 export const bookingsApi = {
-  getAll: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/bookings"),
-  getById: (id: string): Promise<ApiResponse<unknown>> => apiCall(`/api/bookings/${id}`),
+  getAll: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/client/my-booking"),
+  getById: (id: string): Promise<ApiResponse<unknown>> => apiCall(`/api/client/booking-detail/${id}`),
   create: (data: unknown): Promise<ApiResponse<unknown>> =>
-    apiCall("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
+    apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
   cancel: (id: string): Promise<ApiResponse<void>> =>
-    apiCall(`/api/bookings/${id}/cancel`, { method: "POST" }),
+    apiCall(`/api/client/my-booking/${id}/cancel`, { method: "PATCH" }),
 };
 
 // ── Specialists API ───────────────────────────────────────────────────────────
@@ -448,18 +448,6 @@ export const specialistsApi = {
     return apiCall(`/api/users/pros${qs}`);
   },
 
-  getSpecialists: (params?: { page?: number; limit?: number; search?: string; city?: string }) => {
-    const query = params
-      ? "?" + Object.entries(params)
-          .filter(([, v]) => v !== undefined && v !== null && v !== "")
-          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-          .join("&")
-      : "";
-    return apiCall("GET", `/api/client/specialists${query}`);
-  },
-
-  getSpecialistById: (id: number) => apiCall("GET", `/api/client/specialists/${id}`),
-
   getProById: (id: number) => apiCall(`/api/users/pros/${id}`),
 
   getServices: (proId: number) => apiCall("GET", `/api/prestations/pro/${proId}`),
@@ -469,7 +457,7 @@ export const specialistsApi = {
 
 export const reviewsApi = {
   create: (specialistId: string, data: { rating: number; comment: string }): Promise<ApiResponse<unknown>> =>
-    apiCall(`/api/specialists/${specialistId}/reviews`, { method: "POST", body: JSON.stringify(data) }),
+    apiCall("/api/reviews", { method: "POST", body: JSON.stringify({ pro_id: Number(specialistId), ...data }) }),
 
   getBySpecialist: (specialistId: string): Promise<ApiResponse<unknown[]>> =>
     apiCall(`/api/reviews/pro/${specialistId}`),
