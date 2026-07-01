@@ -131,7 +131,7 @@ export default function ClientNotificationsScreen() {
   const markAllAsRead = () => {
     notifications.filter((n) => !n.is_read).forEach((n) => {
       markAsRead(n.id);
-      notificationsApi.markAsRead(String(n.id)).catch(() => {});
+      notificationsApi.markAsRead(Number(n.id)).catch(() => {}); // BLYSS-FIX: 3.1
     });
   };
 

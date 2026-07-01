@@ -23,11 +23,15 @@ import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { SkeletonBox } from "@/components/ui/SkeletonBox"; // BLYSS-FIX: 2.3
 
 type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
 type UpcomingClient = {
   id: number;
+  // BLYSS-FIX: 1.1 — id is the booking ID; client_user_id is the actual user to navigate to
+  // BACKEND TODO: ensure GET /api/pro/dashboard returns client_user_id in upcomingClients items
+  client_user_id: number;
   name: string;
   service: string;
   time: string;
@@ -151,20 +155,25 @@ export default function ProDashboard() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading) { // BLYSS-FIX: 2.3 — shimmer skeletons replacing static boxes
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
         <View style={{ padding: 20, gap: 16 }}>
-          {[1, 2, 3, 4].map((i) => (
-            <View
-              key={i}
-              style={{
-                height: i === 1 ? 120 : i === 2 ? 80 : 64,
-                borderRadius: 16,
-                backgroundColor: `${Colors.muted}99`,
-              }}
-            />
-          ))}
+          {/* Hero gradient area */}
+          <SkeletonBox height={160} borderRadius={20} />
+          {/* Quick actions row */}
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <SkeletonBox height={80} borderRadius={16} style={{ flex: 1 }} />
+            <SkeletonBox height={80} borderRadius={16} style={{ flex: 1 }} />
+            <SkeletonBox height={80} borderRadius={16} style={{ flex: 1 }} />
+          </View>
+          {/* Today forecast */}
+          <SkeletonBox height={80} borderRadius={16} />
+          {/* Stats grid */}
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <SkeletonBox height={100} borderRadius={16} style={{ flex: 1 }} />
+            <SkeletonBox height={100} borderRadius={16} style={{ flex: 1 }} />
+          </View>
         </View>
       </View>
     );
@@ -593,7 +602,7 @@ export default function ProDashboard() {
               return (
                 <Pressable
                   key={client.id}
-                  onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.id}`)}
+                  onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.client_user_id}`)} // BLYSS-FIX: 1.1
                   style={{
                     borderRadius: 12,
                     padding: 16,

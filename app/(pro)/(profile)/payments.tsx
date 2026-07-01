@@ -59,6 +59,17 @@ function formatIBAN(raw: string): string {
   return raw.replace(/\s/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
 }
 
+// BLYSS-FIX: 2.2 — masks IBAN: keep country code (2 chars) + 2 check digits + last 4, replace middle with ••••
+function maskIBAN(raw: string): string {
+  const clean = raw.replace(/\s/g, "").toUpperCase();
+  if (clean.length < 6) return formatIBAN(raw);
+  const prefix = clean.slice(0, 4);
+  const suffix = clean.slice(-4);
+  const middleGroups = Math.max(0, Math.floor((clean.length - 8) / 4));
+  const masked = `${prefix} ${"•••• ".repeat(middleGroups).trim()} ${suffix}`.replace(/\s+/g, " ").trim();
+  return masked;
+}
+
 // ── Deposit options ───────────────────────────────────────────────────────────
 const DEPOSIT_OPTIONS = [
   { value: 0,   label: "0%",    description: "Aucun acompte" },
@@ -75,6 +86,7 @@ export default function ProPaymentsScreen() {
   const qc = useQueryClient();
 
   const [iban, setIban] = useState("");
+  const [ibanEditing, setIbanEditing] = useState(false); // BLYSS-FIX: 2.2
   const [ibanError, setIbanError] = useState<string | undefined>();
   const [acceptOnline, setAcceptOnline] = useState(false);
   const [depositPct, setDepositPct] = useState<DepositValue>(0);
@@ -84,10 +96,10 @@ export default function ProPaymentsScreen() {
   const [payError, setPayError]   = useState<string | null>(null);
   const [paySuccess, setPaySuccess] = useState(false);
 
-  // Payment settings (IBAN, accept_online)
+  // BLYSS-FIX: 3.3 — unified with pro-profile cache (same /api/users endpoint)
   const { data: settingsData, isLoading: settingsLoading } = useQuery({
-    queryKey: ["pro-payment-settings"],
-    queryFn: () => proApi.getPaymentSettings(),
+    queryKey: ["pro-profile"],
+    queryFn: () => proApi.getProfile(),
   });
 
   // Stripe Connect account status
@@ -182,8 +194,9 @@ export default function ProPaymentsScreen() {
     setIsSaving(true);
     try {
       await proApi.updatePaymentSettings({ iban, accept_online: acceptOnline });
-      void qc.invalidateQueries({ queryKey: ["pro-payment-settings"] });
+      void qc.invalidateQueries({ queryKey: ["pro-profile"] }); // BLYSS-FIX: 3.3
       setPaySuccess(true);
+      setIbanEditing(false); // BLYSS-FIX: 2.2 — return to masked display after save
     } catch {
       setPayError("Impossible de mettre à jour les paramètres.");
     } finally {
@@ -375,16 +388,35 @@ export default function ProPaymentsScreen() {
           borderWidth: 1, borderColor: Colors.border,
           shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
         }}>
-          <Input
-            label="IBAN"
-            value={iban}
-            onChangeText={handleIbanChange}
-            placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
-            leftIcon="business-outline"
-            autoCapitalize="characters"
-            hint="Virements automatiques sous 2 jours ouvrés après chaque paiement reçu."
-            error={ibanError}
-          />
+          {/* BLYSS-FIX: 2.2 — masked display when IBAN is saved and not editing */}
+          {iban && !ibanEditing ? (
+            <Pressable
+              onPress={() => setIbanEditing(true)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}
+            >
+              <Ionicons name="business-outline" size={18} color={Colors.mutedForeground} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.mutedForeground, marginBottom: 2 }}>IBAN</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground, letterSpacing: 0.5 }}>
+                  {maskIBAN(iban)}
+                </Text>
+              </View>
+              <Pressable onPress={() => setIbanEditing(true)} style={{ paddingHorizontal: 10, paddingVertical: 6 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primary }}>Modifier</Text>
+              </Pressable>
+            </Pressable>
+          ) : (
+            <Input
+              label="IBAN"
+              value={iban}
+              onChangeText={handleIbanChange}
+              placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+              leftIcon="business-outline"
+              autoCapitalize="characters"
+              hint="Virements automatiques sous 2 jours ouvrés après chaque paiement reçu."
+              error={ibanError}
+            />
+          )}
         </View>
       </View>
 

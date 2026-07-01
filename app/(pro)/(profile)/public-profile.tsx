@@ -358,17 +358,25 @@ export default function ProPublicProfileScreen() {
                 </Text>
               </View>
             )}
-            {/* Icône crayon bas-droit */}
-            <View style={{
-              position: "absolute", bottom: 8, right: 8,
-              width: 32, height: 32, borderRadius: 16,
-              backgroundColor: "rgba(0,0,0,0.45)",
-              alignItems: "center", justifyContent: "center",
-            }}>
-              {bannerUploading
-                ? <ActivityIndicator size="small" color={Colors.white} />
-                : <Ionicons name="camera-outline" size={16} color={Colors.white} />}
-            </View>
+            {/* BLYSS-FIX: 2.4 — full overlay during upload */}
+            {bannerUploading ? (
+              <View style={{
+                position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: "rgba(0,0,0,0.45)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <ActivityIndicator size="large" color={Colors.white} />
+              </View>
+            ) : (
+              <View style={{
+                position: "absolute", bottom: 8, right: 8,
+                width: 32, height: 32, borderRadius: 16,
+                backgroundColor: "rgba(0,0,0,0.45)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="camera-outline" size={16} color={Colors.white} />
+              </View>
+            )}
           </Pressable>
         </View>
 

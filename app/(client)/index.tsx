@@ -210,7 +210,7 @@ function BookingItem({ booking }: { booking: Booking }) {
 
   return (
     <Pressable
-      onPress={() => router.push("/my-bookings")}
+      onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })} // BLYSS-FIX: 1.3
       className="bg-card rounded-2xl border-2 mb-3 p-4 flex-row gap-4 items-center active:opacity-80"
       style={[{ borderColor: "rgba(254,93,157,0.2)" }, Shadows.soft]}
     >

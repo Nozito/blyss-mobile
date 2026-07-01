@@ -3,13 +3,13 @@ import { Animated, ViewStyle } from "react-native";
 import { Colors } from "@/constants/colors";
 
 type Props = {
-  width: number | string;
+  width?: number | string; // BLYSS-FIX: 2.3 — optional, defaults to "100%"
   height: number;
   borderRadius?: number;
   style?: ViewStyle;
 };
 
-export function SkeletonBox({ width, height, borderRadius = 8, style }: Props) {
+export function SkeletonBox({ width = "100%", height, borderRadius = 8, style }: Props) {
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {

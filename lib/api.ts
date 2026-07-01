@@ -410,7 +410,7 @@ export const authApi = {
 // ── Bookings API ─────────────────────────────────────────────────────────────
 
 export const bookingsApi = {
-  getAll: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/client/my-booking"),
+  // BLYSS-FIX: 1.2 — getAll removed (duplicate of clientApi.getMyBookings)
   getById: (id: string): Promise<ApiResponse<unknown>> => apiCall(`/api/client/booking-detail/${id}`),
   create: (data: unknown): Promise<ApiResponse<unknown>> =>
     apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
@@ -482,7 +482,7 @@ export const favoritesApi = {
 
 export const notificationsApi = {
   getAll: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/notifications"),
-  markAsRead: (id: string): Promise<ApiResponse<void>> =>
+  markAsRead: (id: number): Promise<ApiResponse<void>> => // BLYSS-FIX: 3.1
     apiCall(`/api/notifications/${id}/read`, { method: "POST" }),
   getSettings: (): Promise<ApiResponse<ClientNotificationSettings>> =>
     apiCall("/api/client/notification-settings"),
@@ -530,7 +530,7 @@ export const proApi = {
   updateProfile: (data: Record<string, unknown>) =>
     apiCall("/api/users/update", { method: "PUT", body: JSON.stringify(data) }),
 
-  getPaymentSettings: () => apiCall<PaymentsSettings>("/api/users"),
+  // BLYSS-FIX: 3.3 — removed getPaymentSettings (duplicate of getProfile, same /api/users)
 
   updatePaymentSettings: (data: { iban?: string; accept_online?: boolean }) =>
     apiCall("/api/users/payments", { method: "PUT", body: JSON.stringify({

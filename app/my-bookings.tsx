@@ -478,6 +478,9 @@ export default function MyBookingsScreen() {
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 }}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={Colors.primary} />}
+            getItemLayout={(_, index) => ({ length: 112, offset: 112 * index, index })} // BLYSS-FIX: 2.5
+            removeClippedSubviews // BLYSS-FIX: 2.5
+            maxToRenderPerBatch={8} // BLYSS-FIX: 2.5
             ListFooterComponent={activeTab === "upcoming" && bookings.length > 0 ? <WaitingListSection /> : null}
             ListEmptyComponent={
               <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>

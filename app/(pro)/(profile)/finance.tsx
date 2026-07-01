@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -48,6 +48,8 @@ export default function ProFinanceScreen() {
   const [objectiveInput, setObjectiveInput] = useState("");
   const [exporting, setExporting]     = useState(false);
   const [financeError, setFinanceError] = useState<string | null>(null);
+  const [objectiveSaved, setObjectiveSaved] = useState(false); // BLYSS-FIX: 2.1
+  const objectiveSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // BLYSS-FIX: 2.1
   const [showExportModal, setShowExportModal] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -58,9 +60,12 @@ export default function ProFinanceScreen() {
 
   const objectiveMutation = useMutation({
     mutationFn: (obj: number) => proApi.updateFinanceObjective(obj),
-    onSuccess: () => {
+    onSuccess: () => { // BLYSS-FIX: 2.1
       void qc.invalidateQueries({ queryKey: ["pro-finance-stats"] });
       setShowObjectiveModal(false);
+      setObjectiveSaved(true);
+      if (objectiveSavedTimer.current) clearTimeout(objectiveSavedTimer.current);
+      objectiveSavedTimer.current = setTimeout(() => setObjectiveSaved(false), 2000);
     },
     onError: () => setFinanceError("Impossible de mettre à jour l'objectif."),
   });
@@ -369,6 +374,9 @@ export default function ProFinanceScreen() {
                   </View>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {objectiveSaved && ( // BLYSS-FIX: 2.1
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.success }}>Sauvegardé ✓</Text>
+                  )}
                   <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.primary }}>{progress}%</Text>
                   <Ionicons name="pencil-outline" size={14} color={Colors.mutedForeground} />
                 </View>
