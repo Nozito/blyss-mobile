@@ -132,7 +132,7 @@ export default function ProRGPDScreen() {
               icon="download-outline"
               label="Télécharger mes données"
               description="Récupère une copie de tes informations au format JSON"
-              onPress={() => { /* export disponible prochainement */ }}
+              onPress={() => router.push("/(pro)/(profile)/settings")} // BLYSS-NAV: was no-op; export lives in settings screen
             />
             <RGPDRow
               icon="pencil-outline"

@@ -129,8 +129,12 @@ export default function ProPublicProfileScreen() {
   const handleDeleteGalleryPhoto = async (img: GalleryImage) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedGalleryImage(null);
-    await proApi.deleteGallery(img.id);
-    void refetchGallery();
+    try { // BLYSS-NAV: was unhandled — errors silently swallowed
+      await proApi.deleteGallery(img.id);
+      void refetchGallery();
+    } catch {
+      setGalleryError("Impossible de supprimer la photo."); // BLYSS-NAV: surface delete error
+    }
   };
 
   const handleCopyLink = async () => {

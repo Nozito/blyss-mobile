@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, FlatList, Pressable, Switch } from "react-native";
+import { View, Text, FlatList, Pressable, Switch, Alert } from "react-native"; // BLYSS-NAV: Alert added for delete confirmation
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -242,7 +242,14 @@ export default function ServicesScreen() {
 
                   {/* Supprimer */}
                   <Pressable
-                    onPress={() => deleteMutation.mutate(item.id)}
+                    onPress={() => Alert.alert( // BLYSS-NAV: was direct mutate with no confirmation
+                      "Supprimer la prestation",
+                      `Supprimer « ${item.name} » ? Cette action est irréversible.`,
+                      [
+                        { text: "Annuler", style: "cancel" },
+                        { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+                      ]
+                    )}
                     accessibilityLabel="Supprimer la prestation"
                     accessibilityRole="button"
                     style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}

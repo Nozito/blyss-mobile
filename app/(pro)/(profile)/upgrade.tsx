@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
+import { safeBack } from "@/lib/navigation"; // BLYSS-NAV: back button needs safeBack
 
 const PLAN_META: Record<RCPlan, {
   label: string;
@@ -55,7 +56,7 @@ export default function ProUpgradeScreen() {
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
-          onPress={() => router.push("/(pro)/dashboard")}
+          onPress={() => safeBack(router)} // BLYSS-NAV: was router.push("/(pro)/dashboard") — pushes onto stack instead of going back
           style={{ padding: 8, marginLeft: -8, borderRadius: 12, backgroundColor: Colors.muted }}
         >
           <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
