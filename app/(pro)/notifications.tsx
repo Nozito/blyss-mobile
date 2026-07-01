@@ -62,14 +62,6 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         iconBg: "#06B6D420",
         iconColor: "#06B6D4",
       },
-      {
-        key: "client_message",
-        label: "Messages clientes",
-        subtitle: "Quand une cliente t'envoie un message",
-        icon: "chatbubble-outline",
-        iconBg: "#10B98120",
-        iconColor: "#10B981",
-      },
     ],
   },
   {

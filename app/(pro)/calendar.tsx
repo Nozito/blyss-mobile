@@ -383,6 +383,14 @@ export default function ProCalendarScreen() {
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
   useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      void fetchMonthData(selectedYear, selectedMonth);
+      void fetchSlots(selectedDateStr);
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr]);
+
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

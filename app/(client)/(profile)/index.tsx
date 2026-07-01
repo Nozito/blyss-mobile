@@ -26,6 +26,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, refreshProfile, patchUser } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const pickFromGallery = async () => {
@@ -48,13 +49,34 @@ export default function ProfileScreen() {
 
   const handlePickAvatar = () => {
     if (Platform.OS === "ios") {
+      const hasPhoto = !!user?.profile_photo;
+      const options = hasPhoto
+        ? ["Annuler", "Galerie", "Caméra", "Supprimer la photo"]
+        : ["Annuler", "Galerie", "Caméra"];
       ActionSheetIOS.showActionSheetWithOptions(
-        { title: "Photo de profil", options: ["Annuler", "Galerie", "Caméra"], cancelButtonIndex: 0 },
-        (idx) => { if (idx === 1) void pickFromGallery(); else if (idx === 2) void pickFromCamera(); }
+        { title: "Photo de profil", options, cancelButtonIndex: 0, destructiveButtonIndex: hasPhoto ? 3 : undefined },
+        (idx) => {
+          if (idx === 1) void pickFromGallery();
+          else if (idx === 2) void pickFromCamera();
+          else if (idx === 3 && hasPhoto) void deletePhoto();
+        }
       );
     } else {
       void pickFromGallery();
     }
+  };
+
+  const deletePhoto = async () => {
+    setUploadError(null);
+    setDeleting(true);
+    const res = await usersApi.deleteProfilePhoto();
+    setDeleting(false);
+    if (!res.success) {
+      setUploadError("Impossible de supprimer la photo.");
+      return;
+    }
+    patchUser({ profile_photo: null });
+    void refreshProfile();
   };
 
   const uploadPhoto = async (uri: string) => {
@@ -134,7 +156,7 @@ export default function ProfileScreen() {
                   {`${user?.first_name?.[0] ?? ""}${user?.last_name?.[0] ?? ""}`}
                 </Text>
               )}
-              {uploading && (
+              {(uploading || deleting) && (
                 <View style={{
                   ...StyleSheet.absoluteFillObject,
                   backgroundColor: Colors.overlayDark,

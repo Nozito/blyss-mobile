@@ -23,18 +23,18 @@ import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 const VALIDATION = {
   PHONE_REGEX: /^[0-9]{10}$/,
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
+  PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,12}$/,
   NAME_MAX: 50,
   TEXT_MAX: 100,
   EMAIL_MAX: 254,
   PASSWORD_MIN: 8,
-  PASSWORD_MAX: 128,
+  PASSWORD_MAX: 12,
   MIN_AGE: 16,
 } as const;
 
 const ERROR_CODES: Record<string, string> = {
   email_exists: "Cet email est déjà utilisé",
-  weak_password: "Mot de passe trop faible (minuscule, majuscule, chiffre)",
+  weak_password: "Mot de passe trop faible (min. 8 car., majuscule, chiffre, caractère spécial)",
   age_restriction: "Tu dois avoir au moins 16 ans",
   invalid_phone: "Numéro de téléphone invalide",
   invalid_email: "Email invalide",
@@ -102,9 +102,9 @@ function PasswordStep({
           onChangeText={(v) => update({ password: v })}
           secure
           autoComplete="new-password"
-          placeholder="Min. 8 caractères"
+          placeholder="8-12 caractères"
           leftIcon="lock-closed-outline"
-          hint="1 minuscule, 1 majuscule, 1 chiffre minimum"
+          hint="Majuscule, chiffre et caractère spécial (!@#$%^&*)"
         />
         <Input
           label="Confirmer le mot de passe"
@@ -258,7 +258,7 @@ export default function RegisterScreen() {
         return;
       }
       if (!VALIDATION.PASSWORD_REGEX.test(formData.password)) {
-        setStepError("Le mot de passe doit contenir une minuscule, une majuscule et un chiffre");
+        setStepError("8-12 car., une majuscule, un chiffre et un caractère spécial (!@#$%^&*)");
         return;
       }
       if (!formData.acceptedTerms) {
@@ -285,7 +285,9 @@ export default function RegisterScreen() {
           ? (ERROR_CODES[res.error] ?? res.message ?? "Erreur lors de la création")
           : "Erreur lors de la création";
         setStepError(msg);
+        return;
       }
+      setStep(99);
       return;
     }
 
@@ -294,6 +296,35 @@ export default function RegisterScreen() {
 
   // ── Step content ─────────────────────────────────────────────────────────
   const renderContent = () => {
+    if (step === 99) {
+      return (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 }}>
+          <Text style={{ fontSize: 64, marginBottom: 24 }}>🎉</Text>
+          <Text style={{ fontSize: 28, fontWeight: "900", color: "#09090B", textAlign: "center", marginBottom: 8 }}>
+            Bienvenue sur Blyss !
+          </Text>
+          <Text style={{ fontSize: 15, color: "#6D6D78", textAlign: "center", lineHeight: 22, marginBottom: 40, paddingHorizontal: 16 }}>
+            Ton compte a été créé avec succès.{"\n"}On est ravis de t'accueillir !
+          </Text>
+          <Pressable
+            onPress={() => {
+              if (formData.role === "pro") router.replace("/(pro)/dashboard" as any);
+              else router.replace("/(client)" as any);
+            }}
+            style={{ width: "100%", borderRadius: 16, overflow: "hidden" }}
+          >
+            <LinearGradient
+              colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={{ height: 56, alignItems: "center", justifyContent: "center" }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Commencer</Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
+      );
+    }
+
     if (step === 1) {
       return (
         <View className="gap-8">
@@ -530,24 +561,26 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {/* Progress header */}
-      <View className="flex-row items-center gap-4 px-6 py-4">
-        <AnimatedIconButton
-          onPress={handleBack}
-          disabled={isLoading}
-          className="p-2 -ml-2 rounded-xl active:bg-muted"
-        >
-          <Ionicons name="chevron-back" size={24} color="#09090B" />
-        </AnimatedIconButton>
-        <View className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-          <View
-            className="h-full bg-primary rounded-full"
-            style={{ width: `${(step / totalSteps) * 100}%` }}
-          />
+      {step !== 99 && (
+        <View className="flex-row items-center gap-4 px-6 py-4">
+          <AnimatedIconButton
+            onPress={handleBack}
+            disabled={isLoading}
+            className="p-2 -ml-2 rounded-xl active:bg-muted"
+          >
+            <Ionicons name="chevron-back" size={24} color="#09090B" />
+          </AnimatedIconButton>
+          <View className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+            <View
+              className="h-full bg-primary rounded-full"
+              style={{ width: `${(step / totalSteps) * 100}%` }}
+            />
+          </View>
+          <Text className="text-sm font-medium text-muted-foreground w-10 text-right">
+            {step}/{totalSteps}
+          </Text>
         </View>
-        <Text className="text-sm font-medium text-muted-foreground w-10 text-right">
-          {step}/{totalSteps}
-        </Text>
-      </View>
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -587,7 +620,7 @@ export default function RegisterScreen() {
         </ScrollView>
 
         {/* Fixed bottom CTA */}
-        <View
+        {step !== 99 && <View
           className="px-6 pb-8 pt-4"
           style={{ backgroundColor: "rgba(255,234,241,0.97)" }}
         >
@@ -630,7 +663,7 @@ export default function RegisterScreen() {
               Se connecter
             </Text>
           </Text>
-        </View>
+        </View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

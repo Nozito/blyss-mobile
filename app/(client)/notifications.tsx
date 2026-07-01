@@ -82,19 +82,6 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
       { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: "#06B6D420", iconColor: "#06B6D4" },
     ],
   },
-  {
-    title: "Messages",
-    items: [
-      { key: "messages", label: "Nouveaux messages", subtitle: "Quand une experte t'envoie un message", icon: "chatbubble-outline", iconBg: "#10B98120", iconColor: "#10B981" },
-    ],
-  },
-  {
-    title: "Promotions",
-    items: [
-      { key: "offers",        label: "Offres & codes promo", subtitle: "Exclusivités et promotions de tes expertes", icon: "gift-outline", iconBg: "#8B5CF620", iconColor: Colors.pro },
-      { key: "email_summary", label: "Résumé par email", subtitle: "Récap' hebdo de tes rendez-vous", icon: "mail-outline", iconBg: "#6B728020", iconColor: Colors.mutedForeground },
-    ],
-  },
 ];
 
 export default function ClientNotificationsScreen() {
@@ -106,7 +93,7 @@ export default function ClientNotificationsScreen() {
   const [prefsLoading, setPrefsLoading] = useState(true);
   const [preferences, setPreferences] = useState<ClientNotificationSettings>({
     reminders: true, changes: true, messages: true,
-    late: true, offers: true, email_summary: false,
+    late: true, offers: false, email_summary: false,
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [prefsError, setPrefsError] = useState(false);

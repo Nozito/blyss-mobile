@@ -739,6 +739,9 @@ export const usersApi = {
     }
   },
 
+  deleteProfilePhoto: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/users/profile-photo", { method: "DELETE" }),
+
   uploadBannerPhoto: async (uri: string): Promise<ApiResponse<{ banner_photo: string }>> => {
     try {
       const accessToken = await storage.getAccessToken();
