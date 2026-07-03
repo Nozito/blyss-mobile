@@ -145,7 +145,7 @@ export function Modal({
               maxHeight != null ? ({ maxHeight } as object) : undefined,
             ]}
           >
-            <Pressable onPress={(e) => e.stopPropagation()}>
+            <Pressable style={{ flex: 1 }} onPress={(e) => e.stopPropagation()}>
               {!noPadding && (
                 <>
                   {/* Handle */}
@@ -165,7 +165,7 @@ export function Modal({
                   <View className="p-5">{children}</View>
                 </>
               )}
-              {noPadding && children}
+              {noPadding && <>{children}</>}
             </Pressable>
           </Animated.View>
         ) : (

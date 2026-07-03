@@ -1,4 +1,5 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
+import withStoreKitConfig from "./plugins/withStoreKitConfig";
 
 const EAS_PROJECT_ID = "0e3cae8f-7b87-4e19-9fea-e8a16fa399e4";
 
@@ -134,6 +135,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         enableGooglePay: true,
       },
     ],
+    withStoreKitConfig,
   ],
 
   updates: {

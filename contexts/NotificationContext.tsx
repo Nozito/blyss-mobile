@@ -91,13 +91,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data as string) as { type: string; notification?: NotificationItem };
-          if (data.type === "notification" && data.notification) {
-            addNotification(data.notification);
-            Notifications.scheduleNotificationAsync({
+          const msg = JSON.parse(event.data as string) as {
+            type: string;
+            notification?: NotificationItem;
+            data?: NotificationItem & { title?: string };
+          };
+          // Backend sends { type: "new_notification", data: notif }; keep compat with "notification"
+          const notif = msg.notification ?? msg.data;
+          if ((msg.type === "notification" || msg.type === "new_notification") && notif) {
+            addNotification(notif);
+            void Notifications.scheduleNotificationAsync({
               content: {
-                title: "Blyss",
-                body: data.notification.message,
+                title: (notif as { title?: string }).title ?? "Blyss",
+                body: notif.message,
+                data: { type: notif.type, ...(notif.data ?? {}) },
               },
               trigger: null,
             });
@@ -178,6 +185,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
       const reservationId = data?.reservation_id;
+      const notifType = data?.type as string | undefined;
 
       if (user?.role === "client") {
         if (reservationId) {
@@ -186,7 +194,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           router.push("/(client)/notifications" as never);
         }
       } else {
-        router.push("/(pro)/notifications" as never);
+        // new_booking → open agenda directly so pro sees the slot immediately
+        if (notifType === "new_booking") {
+          router.push("/(pro)/calendar" as never);
+        } else {
+          router.push("/(pro)/notifications" as never);
+        }
       }
     });
     return () => sub.remove();

@@ -1,0 +1,127 @@
+{
+  "identifier" : "BlyssStoreKitConfig",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_locale" : "fr_FR",
+    "_storefront" : "FRA"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21000000000001",
+      "localizations" : [],
+      "name" : "Blyss Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "2100000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Abonnement Start mensuel",
+              "displayName" : "Start Mensuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "start_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Start Monthly",
+          "subscriptionGroupID" : "21000000000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "2100000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Abonnement Signature mensuel",
+              "displayName" : "Signature Mensuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "signature_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Signature Monthly",
+          "subscriptionGroupID" : "21000000000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "299.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "2100000003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Abonnement Signature annuel",
+              "displayName" : "Signature Annuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "signature_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Signature Annual",
+          "subscriptionGroupID" : "21000000000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "2100000004",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Abonnement Serenite mensuel",
+              "displayName" : "Serenite Mensuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "serenite_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Serenite Monthly",
+          "subscriptionGroupID" : "21000000000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "399.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "2100000005",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Abonnement Serenite annuel",
+              "displayName" : "Serenite Annuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "serenite_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Serenite Annual",
+          "subscriptionGroupID" : "21000000000001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

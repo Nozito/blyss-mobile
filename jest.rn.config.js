@@ -1,6 +1,7 @@
 module.exports = {
   preset: 'jest-expo',
   testMatch: ['**/__tests__/**/*.test.tsx'],
+  testPathIgnorePatterns: ['/node_modules/', '/.claude/'],
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/$1' },
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
   transformIgnorePatterns: [
