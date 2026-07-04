@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
+  Animated,
   ActivityIndicator,
   Linking,
 } from "react-native";
@@ -12,12 +13,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import * as Haptics from "expo-haptics";
 import { proApi } from "@/lib/api";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const PLAN_META: Record<RCPlan, {
   label: string;
@@ -53,6 +55,8 @@ export default function ProSubscriptionSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const [isChanging, setIsChanging] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
@@ -68,6 +72,7 @@ export default function ProSubscriptionSettingsScreen() {
 
   const handleUpgrade = async (planId: RCPlan) => {
     if (planId === activePlan) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setUpgradeError(null);
     setIsChanging(true);
     try {
@@ -102,9 +107,14 @@ export default function ProSubscriptionSettingsScreen() {
   };
 
   const handleCancel = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     void Linking.openURL("https://apps.apple.com/account/subscriptions");
   };
+
+  useEffect(() => {
+    if (isLoading || reduceMotion) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, contentOpacity]);
 
   if (isLoading) {
     return (
@@ -115,6 +125,7 @@ export default function ProSubscriptionSettingsScreen() {
   }
 
   return (
+    <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
@@ -202,7 +213,10 @@ export default function ProSubscriptionSettingsScreen() {
           return (
             <Pressable
               key={period}
-              onPress={() => setIsAnnual(period === "annual")}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setIsAnnual(period === "annual");
+              }}
               style={{
                 flex: 1, paddingVertical: 10, borderRadius: 14,
                 backgroundColor: active ? Colors.primary : "transparent",
@@ -244,7 +258,7 @@ export default function ProSubscriptionSettingsScreen() {
             : (rcPkg?.priceString ?? "—");
           const isUpgrade = PLAN_ORDER[planId] > PLAN_ORDER[activePlan ?? "start"];
           return (
-            <Pressable
+            <AnimatedPressable
               key={planId}
               onPress={() => { if (!isCurrent) void handleUpgrade(planId); }}
               disabled={isCurrent || isChanging}
@@ -277,7 +291,7 @@ export default function ProSubscriptionSettingsScreen() {
                   </View>
                 )}
               </View>
-            </Pressable>
+            </AnimatedPressable>
           );
         })}
       </View>
@@ -301,14 +315,15 @@ export default function ProSubscriptionSettingsScreen() {
           <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center", marginBottom: 12 }}>
             Tu garderas l'accès jusqu'à la fin de ta période actuelle.
           </Text>
-          <Pressable
+          <AnimatedPressable
             onPress={handleCancel}
             style={{ height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.border }}
           >
             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>Annuler mon abonnement</Text>
-          </Pressable>
+          </AnimatedPressable>
         </>
       )}
     </ScrollView>
+    </Animated.View>
   );
 }

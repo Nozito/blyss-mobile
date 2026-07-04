@@ -15,6 +15,8 @@ import { SearchHeader, type ViewMode } from "@/components/screens/client/special
 import { Colors } from "@/constants/colors";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const SpecialistsMapView = React.lazy(
   () => import("@/components/screens/client/specialists/MapView") as Promise<{ default: React.ComponentType<{ specialists: Specialist[] }> }>
@@ -33,10 +35,12 @@ export default function SpecialistsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ search?: string; service?: string }>();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
+  const fadeAnim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-  }, []);
+  }, [reduceMotion]);
 
   const [searchInput, setSearchInput] = useState(params.search ?? "");
   const debouncedSearch = useDebounce(searchInput, 350);
@@ -257,7 +261,7 @@ export default function SpecialistsScreen() {
                 : "Aucune experte disponible pour le moment."}
             </Text>
             {hasActiveFilters && (
-              <Pressable
+              <AnimatedPressable
                 onPress={clearAll}
                 style={{
                   paddingHorizontal: 24,
@@ -271,7 +275,7 @@ export default function SpecialistsScreen() {
                 <Text style={{ color: Colors.white, fontWeight: "600", fontSize: 14 }}>
                   Voir toutes les expertes
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
             )}
           </View>
         ) : (
@@ -287,7 +291,12 @@ export default function SpecialistsScreen() {
             showsVerticalScrollIndicator={false}
             style={{ opacity: isFetching && specialists.length > 0 ? 0.5 : 1 }}
             refreshControl={
-              <RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={Colors.primary} />
+              <RefreshControl
+                refreshing={isFetching && !isLoading}
+                onRefresh={refetch}
+                tintColor={Colors.primary}
+                progressViewOffset={10}
+              />
             }
           />
         )}

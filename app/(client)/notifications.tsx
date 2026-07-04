@@ -11,10 +11,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 type Tab = "activity" | "preferences";
 type PrefKey = keyof ClientNotificationSettings;
@@ -149,9 +151,12 @@ export default function ClientNotificationsScreen() {
         {/* Segmented control */}
         <View style={{ flexDirection: "row", backgroundColor: Colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
           {([["activity", "Activité"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
-            <Pressable
+            <AnimatedPressable
               key={id}
-              onPress={() => setTab(id)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setTab(id);
+              }}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
                 backgroundColor: tab === id ? Colors.white : "transparent",
@@ -163,7 +168,7 @@ export default function ClientNotificationsScreen() {
               <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? Colors.foreground : Colors.mutedForeground }}>
                 {label}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </View>
 
@@ -194,7 +199,7 @@ export default function ClientNotificationsScreen() {
                     {group.items.map((notif) => {
                       const cfg = NOTIF_CFG[notif.type] ?? NOTIF_CFG.default;
                       return (
-                        <Pressable
+                        <AnimatedPressable
                           key={notif.id}
                           onPress={() => { if (!notif.is_read) markAsRead(notif.id); }}
                           style={{
@@ -220,7 +225,7 @@ export default function ClientNotificationsScreen() {
                           {!notif.is_read && (
                             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, marginTop: 6, flexShrink: 0 }} />
                           )}
-                        </Pressable>
+                        </AnimatedPressable>
                       );
                     })}
                   </View>
@@ -295,7 +300,7 @@ export default function ClientNotificationsScreen() {
                     Système
                   </Text>
                   <View style={{ backgroundColor: Colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
-                    <Pressable
+                    <AnimatedPressable
                       onPress={() => Linking.openSettings()}
                       style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14 }}
                     >
@@ -307,7 +312,7 @@ export default function ClientNotificationsScreen() {
                         <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>Activer les notifications pour Blyss</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
-                    </Pressable>
+                    </AnimatedPressable>
                   </View>
                 </View>
 

@@ -9,15 +9,17 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Device from "expo-device";
 import * as Haptics from "expo-haptics";
-import { Colors as ColorsImport } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useQuery } from "@tanstack/react-query";
 
 import { Card } from "@/components/ui/Card";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { Colors } from "@/constants/colors";
+import { Shadows } from "@/constants/shadows";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { proApi, usersApi } from "@/lib/api";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -57,6 +59,12 @@ export default function ProProfileScreen() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [showAvatarSheet, setShowAvatarSheet] = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [contentOpacity]);
 
   useEffect(() => {
     if (!uploadSuccess) return;
@@ -143,17 +151,23 @@ export default function ProProfileScreen() {
     setShowLogoutConfirm(true);
   };
 
-  const menuItems: Array<{ icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; route: string }> = [
+  // Groupe compte et activité
+  const accountItems: Array<{ icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; route: string }> = [
     { icon: "person-outline", label: "Modifier mon profil", route: "/(pro)/(profile)/settings" },
     { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/(profile)/services" },
     { icon: "trending-up-outline", label: "Finance", route: "/(pro)/(profile)/finance" },
     { icon: "card-outline", label: "Encaissements", route: "/(pro)/(profile)/payments" },
+  ];
+
+  // Groupe aide et données
+  const supportItems: Array<{ icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; route: string }> = [
     { icon: "help-circle-outline", label: "Aide & support", route: "/(pro)/(profile)/help" },
     { icon: "shield-outline", label: "Mes données personnelles", route: "/(pro)/(profile)/rgpd" },
   ];
 
   return (
     <View style={{ flex: 1 }}>
+    <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
@@ -200,7 +214,7 @@ export default function ProProfileScreen() {
                     style={{ width: 72, height: 72 }} />
                 ) : (
                   <Text style={{
-                    fontSize: 24, fontWeight: "800", color: Colors.primary
+                    fontSize: 22, fontWeight: "700", color: Colors.primary
                   }}>
                     {`${user?.first_name?.[0] ?? ""}${user?.last_name?.[0] ?? ""}`}
                   </Text>
@@ -215,60 +229,52 @@ export default function ProProfileScreen() {
                   </View>
                 )}
               </View>
-              {/* Badge caméra */}
+              {/* Badge caméra réduit, fond blanc */}
               <View style={{
-                position: "absolute", bottom: -4, right: -4,
-                width: 26, height: 26, borderRadius: 13,
-                backgroundColor: Colors.primary,
+                position: "absolute", bottom: -2, right: -2,
+                width: 24, height: 24, borderRadius: 12,
+                backgroundColor: Colors.white,
                 alignItems: "center", justifyContent: "center",
-                shadowColor: Colors.primary, shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.4, shadowRadius: 4, elevation: 3,
+                borderWidth: 1, borderColor: Colors.border,
+                shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
               }}>
-                <Ionicons name="camera" size={12} color={Colors.white} />
+                <Ionicons name="camera" size={12} color={Colors.mutedForeground} />
               </View>
             </Pressable>
 
             {/* Texte + barre */}
             <View style={{ flex: 1 }}>
               <Text style={{
-                fontSize: 17, fontWeight: "800",
+                fontSize: 18, fontWeight: "700",
                 color: Colors.foreground, marginBottom: 2
               }}>
                 {`${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim()
                   || "Profil Pro"}
               </Text>
               <Text style={{
-                fontSize: 13, color: Colors.mutedForeground, marginBottom: 10
+                fontSize: 14, color: Colors.mutedForeground, marginBottom: 10
               }}>
                 {user?.activity_name?.trim() || "Non renseignée"}
               </Text>
+              {/* Barre de progression fine */}
               <View style={{
-                flexDirection: "row", alignItems: "center", gap: 8
+                height: 4, backgroundColor: "#F0F0F0",
+                borderRadius: 2, overflow: "hidden", marginBottom: 6,
               }}>
-                <View style={{
-                  flex: 1, height: 4, backgroundColor: "#F0F0F0",
-                  borderRadius: 2, overflow: "hidden"
-                }}>
-                  <LinearGradient
-                    colors={[Colors.primary, "#FE5D9D99"]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={{
-                      height: "100%",
-                      width: `${profileCompleteness}%`,
-                      borderRadius: 2
-                    }}
-                  />
-                </View>
-                <Text style={{
-                  fontSize: 11, fontWeight: "700", color: Colors.primary
-                }}>
-                  {profileCompleteness}%
-                </Text>
+                <View
+                  style={{
+                    height: "100%",
+                    width: `${profileCompleteness}%`,
+                    borderRadius: 2,
+                    backgroundColor: Colors.primary,
+                  }}
+                />
               </View>
               <Text style={{
-                fontSize: 10, color: Colors.mutedForeground, marginTop: 3
+                fontSize: 12, color: Colors.mutedForeground
               }}>
-                Profil complété
+                {`Profil complété à ${profileCompleteness}%`}
               </Text>
             </View>
           </View>
@@ -333,7 +339,7 @@ export default function ProProfileScreen() {
 
       {/* Abonnement card */}
       <View style={{ marginBottom: 20 }}>
-        <Pressable
+        <AnimatedPressable
           onPress={() =>
             router.push(subscription ? "/(pro)/(profile)/subscription-settings" : "/(pro)/(profile)/subscription")
           }
@@ -368,20 +374,15 @@ export default function ProProfileScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
               <View
                 style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 16,
-                  backgroundColor: Colors.primary,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  backgroundColor: "#FE5D9D12",
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: Colors.primary,
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 3,
                 }}
               >
-                <Ionicons name="card-outline" size={22} color={Colors.white} />
+                <Ionicons name="card-outline" size={18} color={Colors.primary} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -408,12 +409,12 @@ export default function ProProfileScreen() {
               <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
             </View>
           </View>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Profil public */}
       <View style={{ marginBottom: 20 }}>
-        <Pressable
+        <AnimatedPressable
           onPress={() => router.push("/(pro)/(profile)/public-profile")}
           style={{
             backgroundColor: Colors.card,
@@ -427,7 +428,7 @@ export default function ProProfileScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: `${Colors.primary}15`,
+              backgroundColor: "#FE5D9D12",
               alignItems: "center", justifyContent: "center",
             }}>
               <Ionicons name="eye-outline" size={18} color={Colors.primary} />
@@ -489,45 +490,71 @@ export default function ProProfileScreen() {
               </View>
             ) : null}
           </View>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
-      {/* Menu */}
-      <View style={{ marginBottom: 16 }}>
-        <Card>
-          {menuItems.map((item, idx) => (
-            <Pressable
-              key={item.label}
+      {/* Menu — groupe compte et activité */}
+      <View style={{ marginBottom: 16, backgroundColor: Colors.card, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
+        {accountItems.map((item, idx) => (
+          <View key={item.label}>
+            <AnimatedPressable
               onPress={() => router.push(item.route as Parameters<typeof router.push>[0])}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 12,
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderBottomWidth: idx < menuItems.length - 1 ? 1 : 0,
-                borderBottomColor: "#F0F0F0",
+                paddingVertical: 18,
+                paddingHorizontal: 20,
               }}
             >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: `${Colors.primary}15`,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons name={item.icon} size={22} color={Colors.primary} />
+              <View style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: "#FE5D9D12",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name={item.icon} size={18} color={Colors.primary} />
               </View>
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: Colors.foreground }}>
+              <Text style={{ flex: 1, marginLeft: 14, fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
                 {item.label}
               </Text>
               <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-            </Pressable>
-          ))}
-        </Card>
+            </AnimatedPressable>
+            {idx < accountItems.length - 1 && (
+              <View style={{ height: 1, marginLeft: 74, backgroundColor: Colors.border }} />
+            )}
+          </View>
+        ))}
+      </View>
+
+      {/* Menu — groupe aide et données */}
+      <View style={{ marginBottom: 16, backgroundColor: Colors.card, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
+        {supportItems.map((item, idx) => (
+          <View key={item.label}>
+            <AnimatedPressable
+              onPress={() => router.push(item.route as Parameters<typeof router.push>[0])}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: 18,
+                paddingHorizontal: 20,
+              }}
+            >
+              <View style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: "#FE5D9D12",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name={item.icon} size={18} color={Colors.primary} />
+              </View>
+              <Text style={{ flex: 1, marginLeft: 14, fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+                {item.label}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+            </AnimatedPressable>
+            {idx < supportItems.length - 1 && (
+              <View style={{ height: 1, marginLeft: 74, backgroundColor: Colors.border }} />
+            )}
+          </View>
+        ))}
       </View>
 
       {/* Admin switcher — admin only */}
@@ -571,37 +598,28 @@ export default function ProProfileScreen() {
         </View>
       )}
 
-      {/* Logout */}
-      <View style={{ marginBottom: 16 }}>
-        <Pressable
+      {/* Menu — zone danger */}
+      <View style={{ marginBottom: 16, backgroundColor: Colors.card, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: "#EF444420" }}>
+        <AnimatedPressable
           onPress={handleLogout}
           style={{
             flexDirection: "row",
             alignItems: "center",
-            gap: 12,
-            padding: 16,
-            borderRadius: 16,
-            backgroundColor: Colors.white,
-            borderWidth: 1,
-            borderColor: "#EF444430",
+            paddingVertical: 18,
+            paddingHorizontal: 20,
           }}
         >
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              backgroundColor: Colors.destructiveLight,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="log-out-outline" size={20} color={Colors.destructive} />
+          <View style={{
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: "#EF444412",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Ionicons name="log-out-outline" size={18} color={Colors.destructive} />
           </View>
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: Colors.destructive }}>
+          <Text style={{ flex: 1, marginLeft: 14, fontSize: 15, fontWeight: "700", color: Colors.destructive }}>
             Se déconnecter
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Footer */}
@@ -609,6 +627,7 @@ export default function ProProfileScreen() {
         <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Blyss Pro v1.0.0</Text>
       </View>
     </ScrollView>
+    </Animated.View>
 
     {/* Toast upload succès */}
     <Animated.View
@@ -632,9 +651,9 @@ export default function ProProfileScreen() {
     {/* Avatar action sheet */}
     <RNModal visible={showAvatarSheet} transparent animationType="slide" onRequestClose={() => setShowAvatarSheet(false)}>
       <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowAvatarSheet(false)} />
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: ColorsImport.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 12 }}>
-        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ColorsImport.border, alignSelf: "center", marginTop: 12, marginBottom: 16 }} />
-        <Text style={{ fontSize: 14, fontWeight: "700", color: ColorsImport.mutedForeground, textAlign: "center", marginBottom: 8 }}>Photo de profil</Text>
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 12 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 16 }} />
+        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.mutedForeground, textAlign: "center", marginBottom: 8 }}>Photo de profil</Text>
         {[
           { label: "Prendre une photo", icon: "camera-outline" as const, onPress: pickFromCamera },
           { label: "Choisir depuis la galerie", icon: "image-outline" as const, onPress: pickFromGallery },
@@ -644,17 +663,17 @@ export default function ProProfileScreen() {
             onPress={item.onPress}
             style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 16 }}
           >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${ColorsImport.primary}15`, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name={item.icon} size={20} color={ColorsImport.primary} />
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name={item.icon} size={20} color={Colors.primary} />
             </View>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: ColorsImport.foreground }}>{item.label}</Text>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: Colors.foreground }}>{item.label}</Text>
           </Pressable>
         ))}
         <Pressable
           onPress={() => setShowAvatarSheet(false)}
-          style={{ marginHorizontal: 20, marginTop: 8, height: 44, borderRadius: 14, backgroundColor: ColorsImport.muted, alignItems: "center", justifyContent: "center" }}
+          style={{ marginHorizontal: 20, marginTop: 8, height: 44, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
         >
-          <Text style={{ fontSize: 15, fontWeight: "600", color: ColorsImport.foreground }}>Annuler</Text>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
         </Pressable>
       </View>
     </RNModal>
@@ -662,19 +681,23 @@ export default function ProProfileScreen() {
     {/* Logout confirmation sheet */}
     <RNModal visible={showLogoutConfirm} transparent animationType="slide" onRequestClose={() => setShowLogoutConfirm(false)}>
       <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowLogoutConfirm(false)} />
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: ColorsImport.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
-        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ColorsImport.border, alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
-        <Text style={{ fontSize: 17, fontWeight: "800", color: ColorsImport.foreground, marginBottom: 6 }}>Déconnexion</Text>
-        <Text style={{ fontSize: 14, color: ColorsImport.mutedForeground, marginBottom: 24 }}>Êtes-vous sûr de vouloir vous déconnecter ?</Text>
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
+        <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 6 }}>Déconnexion</Text>
+        <Text style={{ fontSize: 14, color: Colors.mutedForeground, marginBottom: 24 }}>Êtes-vous sûr de vouloir vous déconnecter ?</Text>
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Pressable
             onPress={() => setShowLogoutConfirm(false)}
-            style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: ColorsImport.muted, alignItems: "center", justifyContent: "center" }}
+            style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
           >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: ColorsImport.foreground }}>Non</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Non</Text>
           </Pressable>
           <Pressable
-            onPress={() => { setShowLogoutConfirm(false); logout(); }}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+              setShowLogoutConfirm(false);
+              logout();
+            }}
             style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
           >
             <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Se déconnecter</Text>

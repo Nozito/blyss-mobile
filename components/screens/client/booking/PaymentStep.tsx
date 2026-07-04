@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useStripe } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import * as Haptics from "expo-haptics";
 
 interface Props {
   amount: number;
@@ -74,15 +75,18 @@ export function PaymentStep({
 
   const handlePay = async () => {
     if (!ready) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setPaying(true);
     const { error } = await presentPaymentSheet();
     setPaying(false);
 
     if (!error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onSuccess();
       return;
     }
     if (error.code === "Canceled") return; // user dismissed, no alert needed
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     onError(error.message);
   };
 
@@ -154,39 +158,34 @@ export function PaymentStep({
         </View>
       ) : (
         /* Pay button — opens Stripe Payment Sheet */
-        <Pressable
+        <AnimatedPressable
           onPress={handlePay}
           disabled={!ready || paying}
-          style={{ opacity: !ready || paying ? 0.6 : 1 }}
+          style={{
+            height: 56,
+            borderRadius: 16,
+            backgroundColor: Colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: Colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 4,
+            opacity: !ready || paying ? 0.6 : 1,
+          }}
         >
-          <LinearGradient
-            colors={[Colors.primary, "rgba(254,93,157,0.9)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{
-              height: 56,
-              borderRadius: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              shadowColor: Colors.primary,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-          >
-            {paying ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="card-outline" size={18} color={Colors.white} />
-                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
-                  Payer {Number(amount).toFixed(2)}€
-                </Text>
-              </View>
-            )}
-          </LinearGradient>
-        </Pressable>
+          {paying ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="card-outline" size={18} color={Colors.white} />
+              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
+                Payer {Number(amount).toFixed(2)}€
+              </Text>
+            </View>
+          )}
+        </AnimatedPressable>
       )}
 
       {/* Security note */}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, type ImageProps, type ViewProps } from 'react-native';
+import { View, Text, type ViewProps } from 'react-native';
+import { Image, type ImageProps } from 'expo-image';
 import { Colors } from '@/constants/colors';
 
 interface AvatarProps extends ViewProps {
@@ -21,7 +22,7 @@ export function Avatar({ size = 40, className = '', uri, name, style, children, 
       {uri !== undefined || name !== undefined ? (
         <>
           {uri ? (
-            <Image source={{ uri }} style={{ width: size, height: size }} resizeMode="cover" />
+            <Image source={{ uri }} style={{ width: size, height: size }} contentFit="cover" />
           ) : (
             <AvatarFallback name={name} size={size} style={{ flex: 1, width: "100%" }} />
           )}
@@ -45,7 +46,7 @@ export function AvatarImage({ uri, size = 40, ...props }: AvatarImageProps) {
       {...props}
       source={{ uri }}
       style={{ width: size, height: size }}
-      resizeMode="cover"
+      contentFit="cover"
     />
   );
 }

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   Switch,
+  Animated,
   ActivityIndicator,
   AppState,
   Linking,
@@ -12,13 +13,15 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi, stripeApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 // ── IBAN validation ───────────────────────────────────────────────────────────
 const IBAN_LENGTHS: Record<string, number> = {
@@ -84,6 +87,8 @@ export default function ProPaymentsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   const [iban, setIban] = useState("");
   const [ibanEditing, setIbanEditing] = useState(false); // BLYSS-FIX: 2.2
@@ -149,6 +154,7 @@ export default function ProPaymentsScreen() {
   };
 
   const handleStripeOnboard = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsOnboarding(true);
     setPayError(null);
     try {
@@ -166,6 +172,7 @@ export default function ProPaymentsScreen() {
   }, []);
 
   const handleDepositChange = async (value: DepositValue) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setDepositPct(value);
     setPayError(null);
     setIsUpdatingDeposit(true);
@@ -180,6 +187,7 @@ export default function ProPaymentsScreen() {
   };
 
   const handleSave = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setPayError(null);
     setPaySuccess(false);
     const { valid, error } = validateIBAN(iban);
@@ -195,9 +203,11 @@ export default function ProPaymentsScreen() {
     try {
       await proApi.updatePaymentSettings({ iban, accept_online: acceptOnline });
       void qc.invalidateQueries({ queryKey: ["pro-profile"] }); // BLYSS-FIX: 3.3
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setPaySuccess(true);
       setIbanEditing(false); // BLYSS-FIX: 2.2 — return to masked display after save
     } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setPayError("Impossible de mettre à jour les paramètres.");
     } finally {
       setIsSaving(false);
@@ -205,6 +215,11 @@ export default function ProPaymentsScreen() {
   };
 
   const isLoading = settingsLoading || stripeLoading;
+
+  useEffect(() => {
+    if (isLoading || reduceMotion) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, contentOpacity]);
 
   if (isLoading) {
     return (
@@ -215,6 +230,7 @@ export default function ProPaymentsScreen() {
   }
 
   return (
+    <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
@@ -298,7 +314,7 @@ export default function ProPaymentsScreen() {
           </View>
 
           {!isStripeConnected && (
-            <Pressable
+            <AnimatedPressable
               onPress={handleStripeOnboard}
               disabled={isOnboarding}
               style={{
@@ -318,7 +334,7 @@ export default function ProPaymentsScreen() {
                   </Text>
                 </>
               )}
-            </Pressable>
+            </AnimatedPressable>
           )}
         </View>
       </View>
@@ -344,7 +360,7 @@ export default function ProPaymentsScreen() {
               {DEPOSIT_OPTIONS.map(({ value, label }) => {
                 const selected = depositPct === value;
                 return (
-                  <Pressable
+                  <AnimatedPressable
                     key={value}
                     onPress={() => void handleDepositChange(value)}
                     disabled={isUpdatingDeposit}
@@ -361,7 +377,7 @@ export default function ProPaymentsScreen() {
                     }}>
                       {label}
                     </Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 );
               })}
             </View>
@@ -502,7 +518,7 @@ export default function ProPaymentsScreen() {
       )}
 
       {/* ── Save ── */}
-      <Pressable
+      <AnimatedPressable
         onPress={handleSave}
         disabled={isSaving}
         style={{
@@ -515,7 +531,8 @@ export default function ProPaymentsScreen() {
         ) : (
           <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Enregistrer</Text>
         )}
-      </Pressable>
+      </AnimatedPressable>
     </ScrollView>
+    </Animated.View>
   );
 }

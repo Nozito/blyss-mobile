@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 export type ViewMode = "list" | "map";
 
@@ -28,7 +29,7 @@ export function SearchHeader({
     <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
       {/* Back + title + toggle */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 20 }}>
-        <Pressable
+        <AnimatedIconButton
           onPress={onBack}
           style={{
             width: 40,
@@ -41,7 +42,7 @@ export function SearchHeader({
           }}
         >
           <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
 
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 18, fontWeight: "700", color: Colors.foreground, lineHeight: 22 }}>
@@ -55,7 +56,7 @@ export function SearchHeader({
         </View>
 
         {/* Liste / Carte toggle */}
-        <Pressable
+        <AnimatedPressable
           onPress={onToggleView}
           style={{
             flexDirection: "row",
@@ -83,7 +84,7 @@ export function SearchHeader({
           >
             {viewMode === "list" ? "Carte" : "Liste"}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Search bar — hidden in map mode to maximise map space */}
@@ -114,7 +115,7 @@ export function SearchHeader({
             autoCorrect={false}
           />
           {searchInput.length > 0 && (
-            <Pressable
+            <AnimatedIconButton
               onPress={() => onChangeText("")}
               style={{
                 width: 24,
@@ -126,7 +127,7 @@ export function SearchHeader({
               }}
             >
               <Ionicons name="close" size={12} color={Colors.foreground} />
-            </Pressable>
+            </AnimatedIconButton>
           )}
         </View>
       )}

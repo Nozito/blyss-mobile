@@ -24,7 +24,8 @@ import { storage } from "@/lib/storage";
 import { Input } from "@/components/ui/Input";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { emailSchema, getZodError } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
@@ -65,6 +66,16 @@ export default function LoginScreen() {
   const [loggedRole, setLoggedRole]         = useState<"pro" | "client">("client");
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
+  const formOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const formTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(formOpacity, { toValue: 1, duration: 340, useNativeDriver: true }),
+      Animated.timing(formTranslateY, { toValue: 0, duration: 340, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const shake = useCallback(() => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -259,6 +270,7 @@ export default function LoginScreen() {
             <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
           </AnimatedIconButton>
 
+          <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}>
           {/* Logo */}
           <View style={styles.logoBlock}>
             <Image
@@ -314,7 +326,7 @@ export default function LoginScreen() {
           </View>
 
           {/* CTA */}
-          <Pressable
+          <AnimatedPressable
             onPress={handleSubmit}
             disabled={isSubmitDisabled}
             style={[styles.ctaBtn, isSubmitDisabled && styles.ctaBtnDisabled]}
@@ -324,7 +336,7 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.ctaBtnText}>Se connecter</Text>
             )}
-          </Pressable>
+          </AnimatedPressable>
 
           {/* Biometric */}
           {bioAvailable && (
@@ -393,6 +405,7 @@ export default function LoginScreen() {
               Politique de confidentialité
             </Text>
           </Text>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
 

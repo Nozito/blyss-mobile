@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useScrollToTop } from "@react-navigation/native";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -263,9 +264,9 @@ export default function AdminDashboard() {
   if (!stats) return (
     <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: TEXT2, fontSize: 14 }}>Impossible de charger les données</Text>
-      <Pressable onPress={onRefresh} style={{ marginTop: 12 }}>
+      <AnimatedPressable onPress={onRefresh} style={{ marginTop: 12 }}>
         <Text style={{ color: Colors.admin, fontWeight: "700" }}>Réessayer</Text>
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 

@@ -1,17 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
+  Animated,
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type Category = "agenda" | "clientes" | "paiement" | "compte";
 
@@ -47,10 +50,17 @@ export default function ProHelpScreen() {
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<Category>("agenda");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [contentOpacity]);
 
   const filteredFaqs = faqs.filter((f) => f.category === activeCategory);
 
   return (
+    <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
       className="flex-1 bg-background"
       contentContainerStyle={{
@@ -98,7 +108,11 @@ export default function ProHelpScreen() {
           {CATEGORIES.map((cat) => (
             <Pressable
               key={cat.id}
-              onPress={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setActiveCategory(cat.id);
+                setOpenIndex(null);
+              }}
               className="px-4 py-2 rounded-full"
               style={{ backgroundColor: activeCategory === cat.id ? Colors.primary : Colors.muted }}
             >
@@ -123,7 +137,10 @@ export default function ProHelpScreen() {
               key={globalIdx}
             >
               <Pressable
-                onPress={() => setOpenIndex(isOpen ? null : globalIdx)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setOpenIndex(isOpen ? null : globalIdx);
+                }}
                 className="bg-card rounded-2xl p-4 border border-border"
                 style={{ shadowColor: Colors.black, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
               >
@@ -148,8 +165,11 @@ export default function ProHelpScreen() {
 
       {/* Contact */}
       <View className="gap-3">
-        <Pressable
-          onPress={() => Linking.openURL("mailto:pro@blyssapp.fr")}
+        <AnimatedPressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            Linking.openURL("mailto:pro@blyssapp.fr");
+          }}
           className="rounded-2xl p-4 flex-row items-center justify-between"
           style={{ backgroundColor: Colors.primary }}
         >
@@ -161,8 +181,9 @@ export default function ProHelpScreen() {
             </View>
           </View>
           <Ionicons name="chevron-forward" size={16} color={Colors.white} />
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </ScrollView>
+    </Animated.View>
   );
 }

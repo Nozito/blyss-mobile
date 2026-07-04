@@ -16,6 +16,7 @@ import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
@@ -84,9 +85,9 @@ function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
       </View>
 
       {onClear ? (
-        <Pressable onPress={onClear} style={{ padding: 4 }}>
+        <AnimatedIconButton onPress={onClear} style={{ padding: 4 }}>
           <Ionicons name="close-circle" size={20} color={TEXT3} />
-        </Pressable>
+        </AnimatedIconButton>
       ) : (
         <Ionicons name="chevron-forward" size={14} color={TEXT3} />
       )}
@@ -151,9 +152,9 @@ function UserPicker({
         />
         {isFetching && <ActivityIndicator size="small" color={TEXT3} />}
         {search.length > 0 && !isFetching && (
-          <Pressable onPress={() => setSearch("")}>
+          <AnimatedIconButton onPress={() => setSearch("")}>
             <Ionicons name="close-circle" size={16} color={TEXT3} />
-          </Pressable>
+          </AnimatedIconButton>
         )}
       </View>
 
@@ -171,7 +172,7 @@ function UserPicker({
           borderColor: BORDER, overflow: "hidden",
         }}>
           {users.map((u) => (
-            <Pressable
+            <AnimatedPressable
               key={u.id}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -180,7 +181,7 @@ function UserPicker({
               }}
             >
               <UserRow user={u} />
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </View>
       )}
@@ -244,7 +245,7 @@ export default function AdminNotificationsScreen() {
     >
       {/* ── Header ── */}
       <View style={{ marginBottom: 24 }}>
-        <Pressable
+        <AnimatedPressable
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
@@ -252,7 +253,7 @@ export default function AdminNotificationsScreen() {
             ? <SymbolView name="chevron.left" size={16} tintColor={ADMIN.accent} />
             : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
           <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
-        </Pressable>
+        </AnimatedPressable>
         <Text style={{ fontSize: 32, fontWeight: "900", color: TEXT1, letterSpacing: -0.8 }}>Notifications</Text>
         <Text style={{ fontSize: 13, color: TEXT2, marginTop: 2 }}>Envoi push en temps réel</Text>
       </View>
@@ -275,7 +276,7 @@ export default function AdminNotificationsScreen() {
           {TARGET_OPTS.map((opt) => {
             const active = target === opt.value;
             return (
-              <Pressable
+              <AnimatedPressable
                 key={opt.value}
                 onPress={() => {
                   setTarget(opt.value);
@@ -291,7 +292,7 @@ export default function AdminNotificationsScreen() {
               >
                 <Ionicons name={opt.icon} size={16} color={active ? opt.color : TEXT2} />
                 <Text style={{ fontSize: 13, fontWeight: "700", color: active ? opt.color : TEXT2 }}>{opt.label}</Text>
-              </Pressable>
+              </AnimatedPressable>
             );
           })}
         </View>
@@ -357,7 +358,7 @@ export default function AdminNotificationsScreen() {
 
       {/* ── Envoyer ── */}
       {sendError && <View style={{ marginBottom: 12 }}><ErrorMessage message={sendError} /></View>}
-      <Pressable
+      <AnimatedPressable
         onPress={() => {
           if (!canSend) return;
           setSendError(null);
@@ -386,7 +387,7 @@ export default function AdminNotificationsScreen() {
               </Text>
             </>
           )}
-      </Pressable>
+      </AnimatedPressable>
     </ScrollView>
   );
 }

@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useCallback, memo } from "react";
 import { View, Text, FlatList, Pressable, Switch, Alert } from "react-native"; // BLYSS-NAV: Alert added for delete confirmation
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import * as Haptics from "expo-haptics";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useRouter } from "expo-router";
 import { proApi } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
@@ -28,6 +29,128 @@ function formatDuration(minutes: number): string {
   if (m === 0) return `${h}h`;
   return `${h}h${m}`;
 }
+
+const ServiceRow = memo(function ServiceRow({
+  item,
+  onToggleActive,
+  onDuplicate,
+  onEdit,
+  onDelete,
+}: {
+  item: Service;
+  onToggleActive: (id: number, active: boolean) => void;
+  onDuplicate: (id: number) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number, name: string) => void;
+}) {
+  const inactive = item.active === false;
+  return (
+    <View style={{
+      backgroundColor: Colors.card, borderRadius: 20, marginBottom: 12,
+      borderWidth: 1,
+      borderColor: inactive ? Colors.border : `${Colors.primary}25`,
+      overflow: "hidden",
+    }}>
+      {/* Ligne principale */}
+      <View style={{ padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+        <View style={{
+          width: 48, height: 48, borderRadius: 14,
+          backgroundColor: inactive ? Colors.muted : `${Colors.primary}15`,
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <Ionicons
+            name="sparkles-outline"
+            size={22}
+            color={inactive ? Colors.mutedForeground : Colors.primary}
+          />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {inactive && <Badge variant="secondary" size="sm">Inactif</Badge>}
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.primary }}>
+              {(typeof item.price === "number" ? item.price : parseFloat(String(item.price ?? "0"))).toFixed(2)} €
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="time-outline" size={13} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                {formatDuration(item.duration_minutes)}
+              </Text>
+            </View>
+          </View>
+          {item.description ? (
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 4 }} numberOfLines={1}>
+              {item.description}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      {/* Barre d'actions */}
+      <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: Colors.border, alignItems: "center" }}>
+        {/* Toggle actif */}
+        <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, gap: 6 }}>
+          <Ionicons
+            name={inactive ? "pause-circle-outline" : "checkmark-circle-outline"}
+            size={15}
+            color={inactive ? Colors.mutedForeground : Colors.success}
+          />
+          <Text style={{ fontSize: 12, fontWeight: "600", color: inactive ? Colors.mutedForeground : Colors.success }}>
+            {inactive ? "Inactive" : "Active"}
+          </Text>
+          <Switch
+            value={!inactive}
+            onValueChange={(val) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              onToggleActive(item.id, val);
+            }}
+            trackColor={{ false: Colors.border, true: Colors.primary }}
+            thumbColor={Colors.white}
+            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
+          />
+        </View>
+
+        {/* Dupliquer */}
+        <AnimatedPressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            onDuplicate(item.id);
+          }}
+          accessibilityLabel="Dupliquer la prestation"
+          accessibilityRole="button"
+          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
+        >
+          <Ionicons name="copy-outline" size={18} color={Colors.mutedForeground} />
+        </AnimatedPressable>
+
+        {/* Modifier */}
+        <AnimatedPressable
+          onPress={() => onEdit(item.id)}
+          accessibilityLabel="Modifier la prestation"
+          accessibilityRole="button"
+          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
+        >
+          <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
+        </AnimatedPressable>
+
+        {/* Supprimer */}
+        <AnimatedPressable
+          onPress={() => onDelete(item.id, item.name)}
+          accessibilityLabel="Supprimer la prestation"
+          accessibilityRole="button"
+          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
+        >
+          <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
+        </AnimatedPressable>
+      </View>
+    </View>
+  );
+});
 
 export default function ServicesScreen() {
   const insets = useSafeAreaInsets();
@@ -72,6 +195,51 @@ export default function ServicesScreen() {
 
   const services = (data?.data as Service[] | undefined) ?? [];
   const activeCount = services.filter((s) => s.active !== false).length;
+
+  const handleToggleActive = useCallback(
+    (id: number, active: boolean) => toggleMutation.mutate({ id, active }),
+    [toggleMutation]
+  );
+  const handleDuplicate = useCallback(
+    (id: number) => duplicateMutation.mutate(id),
+    [duplicateMutation]
+  );
+  const handleEdit = useCallback(
+    (id: number) => router.push(`/(pro)/(profile)/service-form?id=${id}`),
+    [router]
+  );
+  const handleDelete = useCallback(
+    (id: number, name: string) =>
+      Alert.alert(
+        "Supprimer la prestation",
+        `Supprimer « ${name} » ? Cette action est irréversible.`,
+        [
+          { text: "Annuler", style: "cancel" },
+          {
+            text: "Supprimer",
+            style: "destructive",
+            onPress: () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+              deleteMutation.mutate(id);
+            },
+          },
+        ]
+      ),
+    [deleteMutation]
+  );
+
+  const renderServiceItem = useCallback(
+    ({ item }: { item: Service }) => (
+      <ServiceRow
+        item={item}
+        onToggleActive={handleToggleActive}
+        onDuplicate={handleDuplicate}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+    ),
+    [handleToggleActive, handleDuplicate, handleEdit, handleDelete]
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
@@ -150,116 +318,7 @@ export default function ServicesScreen() {
               </Pressable>
             </View>
           }
-          renderItem={({ item }) => {
-            const inactive = item.active === false;
-            return (
-              <View style={{
-                backgroundColor: Colors.card, borderRadius: 20, marginBottom: 12,
-                borderWidth: 1,
-                borderColor: inactive ? Colors.border : `${Colors.primary}25`,
-                overflow: "hidden",
-              }}>
-                {/* Ligne principale */}
-                <View style={{ padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                  <View style={{
-                    width: 48, height: 48, borderRadius: 14,
-                    backgroundColor: inactive ? Colors.muted : `${Colors.primary}15`,
-                    alignItems: "center", justifyContent: "center",
-                  }}>
-                    <Ionicons
-                      name="sparkles-outline"
-                      size={22}
-                      color={inactive ? Colors.mutedForeground : Colors.primary}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground, flex: 1 }} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      {inactive && <Badge variant="secondary" size="sm">Inactif</Badge>}
-                    </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.primary }}>
-                        {(typeof item.price === "number" ? item.price : parseFloat(String(item.price ?? "0"))).toFixed(2)} €
-                      </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Ionicons name="time-outline" size={13} color={Colors.mutedForeground} />
-                        <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
-                          {formatDuration(item.duration_minutes)}
-                        </Text>
-                      </View>
-                    </View>
-                    {item.description ? (
-                      <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 4 }} numberOfLines={1}>
-                        {item.description}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-
-                {/* Barre d'actions */}
-                <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: Colors.border, alignItems: "center" }}>
-                  {/* Toggle actif */}
-                  <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, gap: 6 }}>
-                    <Ionicons
-                      name={inactive ? "pause-circle-outline" : "checkmark-circle-outline"}
-                      size={15}
-                      color={inactive ? Colors.mutedForeground : Colors.success}
-                    />
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: inactive ? Colors.mutedForeground : Colors.success }}>
-                      {inactive ? "Inactive" : "Active"}
-                    </Text>
-                    <Switch
-                      value={!inactive}
-                      onValueChange={(val) => toggleMutation.mutate({ id: item.id, active: val })}
-                      trackColor={{ false: Colors.border, true: Colors.primary }}
-                      thumbColor={Colors.white}
-                      style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
-                    />
-                  </View>
-
-                  {/* Dupliquer */}
-                  <Pressable
-                    onPress={() => duplicateMutation.mutate(item.id)}
-                    accessibilityLabel="Dupliquer la prestation"
-                    accessibilityRole="button"
-                    style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
-                  >
-                    <Ionicons name="copy-outline" size={18} color={Colors.mutedForeground} />
-                  </Pressable>
-
-                  {/* Modifier */}
-                  <Pressable
-                    onPress={() => router.push(`/(pro)/(profile)/service-form?id=${item.id}`)}
-                    accessibilityLabel="Modifier la prestation"
-                    accessibilityRole="button"
-                    style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
-                  >
-                    <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
-                  </Pressable>
-
-                  {/* Supprimer */}
-                  <Pressable
-                    onPress={() => Alert.alert( // BLYSS-NAV: was direct mutate with no confirmation
-                      "Supprimer la prestation",
-                      `Supprimer « ${item.name} » ? Cette action est irréversible.`,
-                      [
-                        { text: "Annuler", style: "cancel" },
-                        { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-                      ]
-                    )}
-                    accessibilityLabel="Supprimer la prestation"
-                    accessibilityRole="button"
-                    style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
-                  </Pressable>
-                </View>
-              </View>
-            );
-          }}
+          renderItem={renderServiceItem}
         />
       )}
     </View>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Pressable,
   Modal,
   TextInput,
+  Animated,
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -13,15 +14,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as Print from "expo-print";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type Period = "week" | "month" | "year";
 
@@ -42,6 +45,8 @@ export default function ProFinanceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("month");
   const [showObjectiveModal, setShowObjectiveModal] = useState(false);
@@ -61,6 +66,7 @@ export default function ProFinanceScreen() {
   const objectiveMutation = useMutation({
     mutationFn: (obj: number) => proApi.updateFinanceObjective(obj),
     onSuccess: () => { // BLYSS-FIX: 2.1
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       void qc.invalidateQueries({ queryKey: ["pro-finance-stats"] });
       setShowObjectiveModal(false);
       setObjectiveSaved(true);
@@ -69,6 +75,11 @@ export default function ProFinanceScreen() {
     },
     onError: () => setFinanceError("Impossible de mettre à jour l'objectif."),
   });
+
+  useEffect(() => {
+    if (isLoading || reduceMotion) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, contentOpacity]);
 
   const rawStats = data?.data as Record<string, unknown> | undefined;
 
@@ -136,7 +147,9 @@ export default function ProFinanceScreen() {
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(fileUri, { mimeType: "text/csv", UTI: "public.comma-separated-values-text" });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setFinanceError("Impossible de générer l'export CSV.");
     } finally {
       setExporting(false);
@@ -241,7 +254,9 @@ export default function ProFinanceScreen() {
       const destUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.moveAsync({ from: uri, to: destUri });
       await Sharing.shareAsync(destUri, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setFinanceError("Impossible de générer l'export PDF.");
     } finally {
       setExporting(false);
@@ -259,6 +274,7 @@ export default function ProFinanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 16,
@@ -298,7 +314,10 @@ export default function ProFinanceScreen() {
           {(["week", "month", "year"] as Period[]).map((p) => (
             <Pressable
               key={p}
-              onPress={() => setSelectedPeriod(p)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setSelectedPeriod(p);
+              }}
               style={{
                 flex: 1,
                 paddingVertical: 8,
@@ -321,11 +340,8 @@ export default function ProFinanceScreen() {
         ) : stats ? (
           <>
             {/* Hero card */}
-            <LinearGradient
-              colors={[Colors.primary, `${Colors.primary}E6`]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 20, padding: 20, overflow: "hidden" }}
+            <View
+              style={{ borderRadius: 20, padding: 20, overflow: "hidden", backgroundColor: Colors.primary }}
             >
               {/* Glow */}
               <View style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.12)" }} />
@@ -354,13 +370,30 @@ export default function ProFinanceScreen() {
               <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
                 Prévision fin de mois : {stats.forecast.toFixed(2).replace(".", ",")} €
               </Text>
-            </LinearGradient>
+            </View>
 
             {/* Objectif mensuel */}
-            <Pressable
-              onPress={() => { setObjectiveInput(String(stats.objective || "")); setShowObjectiveModal(true); }}
+            <AnimatedPressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setObjectiveInput(String(stats.objective || ""));
+                setShowObjectiveModal(true);
+              }}
               style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}
             >
+              {objectiveSaved && ( // BLYSS-FIX: 2.1 — floating badge, doesn't reflow sibling content
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute", top: -10, right: 12,
+                    backgroundColor: Colors.success, borderRadius: 20,
+                    paddingHorizontal: 10, paddingVertical: 4,
+                    shadowColor: Colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.white }}>Sauvegardé ✓</Text>
+                </View>
+              )}
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
@@ -374,9 +407,6 @@ export default function ProFinanceScreen() {
                   </View>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {objectiveSaved && ( // BLYSS-FIX: 2.1
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.success }}>Sauvegardé ✓</Text>
-                  )}
                   <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.primary }}>{progress}%</Text>
                   <Ionicons name="pencil-outline" size={14} color={Colors.mutedForeground} />
                 </View>
@@ -397,7 +427,7 @@ export default function ProFinanceScreen() {
                   </Text>
                 </>
               )}
-            </Pressable>
+            </AnimatedPressable>
 
             {/* Stats grid */}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -427,7 +457,6 @@ export default function ProFinanceScreen() {
             {stats.topServices.length > 0 && (
               <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <View style={{ width: 4, height: 20, backgroundColor: Colors.primary, borderRadius: 2 }} />
                   <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Top prestations</Text>
                 </View>
 
@@ -476,6 +505,7 @@ export default function ProFinanceScreen() {
           </View>
         )}
       </ScrollView>
+      </Animated.View>
 
       {/* Objective modal */}
       <Modal visible={showObjectiveModal} transparent animationType="slide" onRequestClose={() => setShowObjectiveModal(false)}>
@@ -525,21 +555,22 @@ export default function ProFinanceScreen() {
               <Text style={{ fontSize: 17, fontWeight: "700", color: Colors.primary }}>€</Text>
             </View>
 
-            <Pressable
+            <AnimatedPressable
               onPress={() => {
                 const val = parseFloat(objectiveInput);
                 if (!val || val <= 0) { setFinanceError("Entre un montant valide."); return; }
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                 objectiveMutation.mutate(val);
               }}
               disabled={objectiveMutation.isPending}
-              style={{ height: 52, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: objectiveMutation.isPending ? 0.7 : 1 }}
+              style={{ height: 56, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: objectiveMutation.isPending ? 0.7 : 1 }}
             >
               {objectiveMutation.isPending ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Enregistrer</Text>
               )}
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </View>
       </Modal>
@@ -551,14 +582,20 @@ export default function ProFinanceScreen() {
             <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 6 }}>Exporter les données</Text>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 20 }}>Choisir le format :</Text>
             <View style={{ gap: 10 }}>
-              <Pressable onPress={exportCSV} style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+              <AnimatedPressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); exportCSV(); }}
+                style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
+              >
                 <Ionicons name="document-text-outline" size={18} color={Colors.primary} />
                 <Text style={{ fontWeight: "700", color: Colors.primary }}>CSV</Text>
-              </Pressable>
-              <Pressable onPress={exportPDF} style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); exportPDF(); }}
+                style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
+              >
                 <Ionicons name="document-outline" size={18} color={Colors.primary} />
                 <Text style={{ fontWeight: "700", color: Colors.primary }}>PDF</Text>
-              </Pressable>
+              </AnimatedPressable>
               <Pressable onPress={() => setShowExportModal(false)} style={{ height: 48, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontWeight: "600", color: Colors.mutedForeground }}>Annuler</Text>
               </Pressable>

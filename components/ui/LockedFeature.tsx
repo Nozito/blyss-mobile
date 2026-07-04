@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Colors, withAlpha } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface LockedFeatureProps {
   onUnlock: () => void;
@@ -31,9 +32,9 @@ export function LockedFeature({ onUnlock, ctaLabel = "Débloquer" }: LockedFeatu
         <Text style={styles.subtitle}>
           Cette fonctionnalité est réservée aux abonnés Blyss Pro.
         </Text>
-        <Pressable onPress={handlePress} style={styles.btn}>
+        <AnimatedPressable onPress={handlePress} style={styles.btn}>
           <Text style={styles.btnText}>{ctaLabel}</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </View>
   );

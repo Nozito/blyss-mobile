@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Modal,
   ActivityIndicator,
   ScrollView,
+  Animated,
   Linking,
 } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -21,6 +22,8 @@ import { clientApi, nailTechApi, type WaitingListEntry } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 
 interface Booking {
@@ -41,6 +44,7 @@ interface Booking {
 
 type Tab = "upcoming" | "past" | "cancelled";
 const TAB_LABELS: Record<Tab, string> = { upcoming: "À venir", past: "Passé", cancelled: "Annulé" };
+const TABS: Tab[] = ["upcoming", "past", "cancelled"];
 
 const fmtDate = (s: string) =>
   new Date(s).toLocaleDateString("fr-FR", { day: "numeric", month: "short", weekday: "short" });
@@ -132,12 +136,12 @@ function RescheduleModal({
                 const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
                 const active = selectedDate === key;
                 return (
-                  <Pressable key={key} onPress={() => handleSelectDate(date)} style={{ width: 52, paddingVertical: 10, borderRadius: 14, alignItems: "center", backgroundColor: active ? Colors.primary : Colors.muted }}>
+                  <AnimatedPressable key={key} onPress={() => handleSelectDate(date)} style={{ width: 52, paddingVertical: 10, borderRadius: 14, alignItems: "center", backgroundColor: active ? Colors.primary : Colors.muted }}>
                     <Text style={{ fontSize: 10, fontWeight: "600", color: active ? "rgba(255,255,255,0.8)" : Colors.mutedForeground, marginBottom: 2 }}>
                       {date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3)}
                     </Text>
                     <Text style={{ fontSize: 16, fontWeight: "800", color: active ? Colors.white : Colors.foreground }}>{date.getDate()}</Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 );
               })}
             </View>
@@ -155,9 +159,9 @@ function RescheduleModal({
                   {slots.map((slot) => {
                     const active = selectedSlot?.id === slot.id;
                     return (
-                      <Pressable key={slot.id} onPress={() => setSelectedSlot(slot)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: active ? Colors.primary : Colors.muted }}>
+                      <AnimatedPressable key={slot.id} onPress={() => setSelectedSlot(slot)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: active ? Colors.primary : Colors.muted }}>
                         <Text style={{ fontSize: 13, fontWeight: "700", color: active ? Colors.white : Colors.foreground }}>{slot.time}</Text>
-                      </Pressable>
+                      </AnimatedPressable>
                     );
                   })}
                 </View>
@@ -167,12 +171,12 @@ function RescheduleModal({
 
           {rescheduleError && <View style={{ marginBottom: 12 }}><ErrorMessage message={rescheduleError} /></View>}
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <Pressable onPress={onClose} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+            <AnimatedPressable onPress={onClose} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
-            </Pressable>
-            <Pressable onPress={handleConfirm} disabled={!selectedSlot || isSubmitting} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: !selectedSlot || isSubmitting ? 0.5 : 1 }}>
+            </AnimatedPressable>
+            <AnimatedPressable onPress={handleConfirm} disabled={!selectedSlot || isSubmitting} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: !selectedSlot || isSubmitting ? 0.5 : 1 }}>
               {isSubmitting ? <ActivityIndicator size="small" color={Colors.white} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Confirmer</Text>}
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </View>
       </View>
@@ -194,12 +198,21 @@ function BookingCard({
   onCancel?: (id: number) => void;
 }) {
   const router = useRouter();
+  const scale = useRef(new Animated.Value(1)).current;
   const proName = booking.activity_name || `${booking.pro_first_name} ${booking.pro_last_name}`.trim() || "Professionnel";
+
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start();
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
 
   if (isUpcoming) {
     return (
+      <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
         onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", borderWidth: 2, borderColor: `${Colors.primary}33`, marginBottom: 12, ...Shadows.card }}
       >
         <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -237,27 +250,37 @@ function BookingCard({
         </View>
         {onReschedule && onCancel && (
           <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: Colors.border }}>
-            <Pressable onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })} style={{ flex: 1, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, borderRightWidth: 1, borderRightColor: Colors.border }}>
+            <AnimatedPressable onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })} style={{ flex: 1, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, borderRightWidth: 1, borderRightColor: Colors.border }}>
               <Ionicons name="calendar-outline" size={14} color={Colors.mutedForeground} />
               <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.mutedForeground }}>Détails</Text>
-            </Pressable>
-            <Pressable onPress={() => onReschedule(booking)} style={{ flex: 1, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, borderRightWidth: 1, borderRightColor: Colors.border }}>
+            </AnimatedPressable>
+            <AnimatedPressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onReschedule(booking);
+              }}
+              style={{ flex: 1, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, borderRightWidth: 1, borderRightColor: Colors.border }}
+            >
               <Ionicons name="calendar-clear-outline" size={14} color={Colors.primary} />
               <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.primary }}>Reporter</Text>
-            </Pressable>
-            <Pressable onPress={() => onCancel(booking.id)} style={{ flex: 1, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}>
+            </AnimatedPressable>
+            <AnimatedPressable
+              onPress={() => onCancel(booking.id)}
+              style={{ flex: 1, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+            >
               <Ionicons name="close-circle-outline" size={14} color={Colors.destructive} />
               <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.destructive }}>Annuler</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         )}
       </Pressable>
+      </Animated.View>
     );
   }
 
   const isCompleted = booking.status === "completed";
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })}
       style={{ backgroundColor: Colors.white, borderRadius: 18, borderWidth: 1, borderColor: Colors.border, marginBottom: 8, ...Shadows.card }}
     >
@@ -292,7 +315,7 @@ function BookingCard({
         </View>
         <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -343,9 +366,9 @@ function WaitingListSection() {
             {entry.prestation_name && <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{entry.prestation_name}</Text>}
             {entry.preferred_date && <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Souhaité : {new Date(entry.preferred_date).toLocaleDateString("fr-FR")}</Text>}
           </View>
-          <Pressable onPress={() => leaveMutation.mutate(entry.pro_id)} disabled={leaveMutation.isPending} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+          <AnimatedIconButton onPress={() => leaveMutation.mutate(entry.pro_id)} disabled={leaveMutation.isPending} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="notifications-off-outline" size={14} color={Colors.mutedForeground} />
-          </Pressable>
+          </AnimatedIconButton>
         </View>
       ))}
     </View>
@@ -357,8 +380,41 @@ function WaitingListSection() {
 export default function MyBookingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
+
+  // ── Tab fade + sliding indicator ──────────────────────────────────────────
+  const listOpacity = useRef(new Animated.Value(1)).current;
+  const [tabBarWidth, setTabBarWidth] = useState(0);
+  const tabIndicatorX = useRef(new Animated.Value(0)).current;
+  const segmentWidth = tabBarWidth > 0 ? (tabBarWidth - 8) / TABS.length : 0;
+
+  useEffect(() => {
+    if (!segmentWidth) return;
+    Animated.spring(tabIndicatorX, {
+      toValue: TABS.indexOf(activeTab) * segmentWidth,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+  }, [activeTab, segmentWidth, tabIndicatorX]);
+
+  const handleTabChange = useCallback(
+    (tab: Tab) => {
+      if (tab === activeTab) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      if (reduceMotion) {
+        setActiveTab(tab);
+        return;
+      }
+      Animated.timing(listOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => {
+        setActiveTab(tab);
+        Animated.timing(listOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      });
+    },
+    [activeTab, reduceMotion, listOpacity]
+  );
 
   const { data: bookings = [], isLoading, refetch, isFetching } = useQuery<Booking[]>({
     queryKey: ["client-bookings"],
@@ -437,12 +493,34 @@ export default function MyBookingsScreen() {
             Mes réservations
           </Text>
           {/* Segmented control */}
-          <View style={{ flexDirection: "row", backgroundColor: Colors.muted, borderRadius: 14, padding: 4 }}>
-            {(["upcoming", "past", "cancelled"] as Tab[]).map((tab) => (
+          <View
+            onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
+            style={{ flexDirection: "row", backgroundColor: Colors.muted, borderRadius: 14, padding: 4 }}
+          >
+            {segmentWidth > 0 && (
+              <Animated.View
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  width: segmentWidth,
+                  borderRadius: 10,
+                  backgroundColor: Colors.white,
+                  transform: [{ translateX: tabIndicatorX }],
+                  shadowColor: Colors.black,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              />
+            )}
+            {TABS.map((tab) => (
               <Pressable
                 key={tab}
-                onPress={() => setActiveTab(tab)}
-                style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: activeTab === tab ? Colors.white : "transparent", shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: activeTab === tab ? 0.08 : 0, shadowRadius: 4, elevation: activeTab === tab ? 2 : 0 }}
+                onPress={() => handleTabChange(tab)}
+                style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center" }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "600", color: activeTab === tab ? Colors.foreground : Colors.mutedForeground }}>
                   {TAB_LABELS[tab]}{tab === "upcoming" && upcoming.length > 0 ? ` (${upcoming.length})` : ""}
@@ -458,10 +536,10 @@ export default function MyBookingsScreen() {
             <LinearGradient colors={[Colors.primaryLight, "#FFF4F9"]} style={{ padding: 20, borderWidth: 2, borderColor: `${Colors.primary}33`, borderRadius: 20 }}>
               <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Prête pour un nouveau soin ?</Text>
               <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 12, lineHeight: 18 }}>Retrouve nos expertes et réserve ta prochaine prestation !</Text>
-              <Pressable onPress={() => router.push("/specialists")} style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+              <AnimatedPressable onPress={() => router.push("/specialists")} style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
                 <Ionicons name="sparkles-outline" size={16} color={Colors.white} />
                 <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 13 }}>Réserve dès maintenant</Text>
-              </Pressable>
+              </AnimatedPressable>
             </LinearGradient>
           </View>
         )}
@@ -471,6 +549,7 @@ export default function MyBookingsScreen() {
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         ) : (
+          <Animated.View style={{ flex: 1, opacity: listOpacity }}>
           <FlatList
             data={activeList}
             keyExtractor={(item) => String(item.id)}
@@ -491,14 +570,15 @@ export default function MyBookingsScreen() {
                   {activeTab === "upcoming" ? "Aucune réservation à venir" : activeTab === "past" ? "Aucun historique" : "Aucune annulation"}
                 </Text>
                 {activeTab === "upcoming" && (
-                  <Pressable onPress={() => router.push("/specialists")} style={{ marginTop: 8, backgroundColor: Colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <AnimatedPressable onPress={() => router.push("/specialists")} style={{ marginTop: 8, backgroundColor: Colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Ionicons name="sparkles-outline" size={16} color={Colors.white} />
                     <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Découvrir les expertes</Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 )}
               </View>
             }
           />
+          </Animated.View>
         )}
       </View>
 
@@ -525,21 +605,24 @@ export default function MyBookingsScreen() {
             </Text>
             {cancelError && <View style={{ marginBottom: 12 }}><ErrorMessage message={cancelError} /></View>}
             <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => setCancelTargetId(null)}
                 style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Retour</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => { if (cancelTargetId != null) cancelMutation.mutate(cancelTargetId); }}
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+                  if (cancelTargetId != null) cancelMutation.mutate(cancelTargetId);
+                }}
                 disabled={cancelMutation.isPending}
                 style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", opacity: cancelMutation.isPending ? 0.7 : 1 }}
               >
                 {cancelMutation.isPending
                   ? <ActivityIndicator size="small" color={Colors.white} />
                   : <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Confirmer l'annulation</Text>}
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
         </View>

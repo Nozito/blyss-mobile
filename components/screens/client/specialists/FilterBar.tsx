@@ -1,7 +1,8 @@
 import React, { useCallback } from "react";
-import { View, Text, Pressable, FlatList } from "react-native";
+import { View, Text, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const SERVICE_CHIPS = [
   { label: "Gel", query: "gel" },
@@ -64,7 +65,7 @@ function Chip({
   children: React.ReactNode;
 }) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Filtre ${label}${active ? ", sélectionné" : ""}`}
@@ -80,7 +81,7 @@ function Chip({
       }}
     >
       {children}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -189,7 +190,7 @@ export function FilterBar({
               ? `${activeFiltersCount} filtre${activeFiltersCount > 1 ? "s" : ""} actif${activeFiltersCount > 1 ? "s" : ""}`
               : "Filtres actifs"}
           </Text>
-          <Pressable
+          <AnimatedPressable
             onPress={onClearAll}
             accessibilityRole="button"
             accessibilityLabel="Effacer tous les filtres"
@@ -197,7 +198,7 @@ export function FilterBar({
           >
             <Ionicons name="close" size={10} color={Colors.primary} />
             <Text style={{ fontSize: 12, color: Colors.primary, fontWeight: "600" }}>Tout effacer</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       )}
     </View>

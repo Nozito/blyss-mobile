@@ -15,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -102,7 +103,7 @@ function TxCard({
             </Text>
           )}
           {isSucceeded && (
-            <Pressable
+            <AnimatedPressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 onRefund(tx);
@@ -111,7 +112,7 @@ function TxCard({
             >
               <Ionicons name="refresh-outline" size={12} color={Colors.destructive} />
               <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.destructive }}>Rembourser</Text>
-            </Pressable>
+            </AnimatedPressable>
           )}
         </View>
       )}
@@ -244,9 +245,9 @@ export default function AdminPaymentsScreen() {
       <View style={{ flex: 1, backgroundColor: A_BG, alignItems: "center", justifyContent: "center", gap: 12 }}>
         <Ionicons name="cloud-offline-outline" size={40} color="rgba(255,255,255,0.3)" />
         <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Impossible de charger les paiements.</Text>
-        <Pressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.1)" }}>
+        <AnimatedPressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.1)" }}>
           <Text style={{ color: Colors.white, fontWeight: "700" }}>Réessayer</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     );
   }
@@ -268,21 +269,24 @@ export default function AdminPaymentsScreen() {
               </Text>
             )}
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => setRefundTarget(null)}
                 style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ color: ADMIN.textSub, fontWeight: "700" }}>Annuler</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => refundTarget && refundMut.mutate(refundTarget.id)}
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+                  if (refundTarget) refundMut.mutate(refundTarget.id);
+                }}
                 disabled={refundMut.isPending}
                 style={{ flex: 1, height: 46, borderRadius: 14, backgroundColor: `${Colors.destructive}18`, borderWidth: 1, borderColor: `${Colors.destructive}40`, alignItems: "center", justifyContent: "center" }}
               >
                 {refundMut.isPending
                   ? <ActivityIndicator size="small" color={Colors.destructive} />
                   : <Text style={{ color: Colors.destructive, fontWeight: "800" }}>Rembourser</Text>}
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
         </View>
@@ -357,9 +361,9 @@ export default function AdminPaymentsScreen() {
               returnKeyType="search"
             />
             {search.length > 0 && (
-              <Pressable onPress={() => setSearch("")}>
+              <AnimatedIconButton onPress={() => setSearch("")}>
                 <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.45)" />
-              </Pressable>
+              </AnimatedIconButton>
             )}
           </View>
           <Pressable
@@ -384,7 +388,7 @@ export default function AdminPaymentsScreen() {
             const cfg    = f !== "all" ? STATUS_CFG[f] : null;
             const active = statusFilter === f;
             return (
-              <Pressable
+              <AnimatedPressable
                 key={f}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
@@ -394,7 +398,7 @@ export default function AdminPaymentsScreen() {
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : "rgba(255,255,255,0.45)" }}>
                   {f === "all" ? "Tous" : cfg?.label}
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
             );
           })}
         </ScrollView>

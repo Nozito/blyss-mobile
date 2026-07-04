@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { safeBack } from "@/lib/navigation"; // BLYSS-NAV: back button needs safeBack
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const PLAN_META: Record<RCPlan, {
   label: string;
@@ -55,12 +56,12 @@ export default function ProUpgradeScreen() {
         backgroundColor: Colors.background, borderBottomWidth: 1, borderBottomColor: Colors.border,
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
-        <Pressable
+        <AnimatedIconButton
           onPress={() => safeBack(router)} // BLYSS-NAV: was router.push("/(pro)/dashboard") — pushes onto stack instead of going back
           style={{ padding: 8, marginLeft: -8, borderRadius: 12, backgroundColor: Colors.muted }}
         >
           <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
         <Text style={{ fontSize: 17, fontWeight: "700", color: Colors.foreground }}>
           Upgrade requis
         </Text>
@@ -137,7 +138,7 @@ export default function ProUpgradeScreen() {
 
         {/* CTAs */}
         <View style={{ gap: 10 }}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => router.push("/(pro)/(profile)/subscription")}
             style={{
               height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center",
@@ -149,9 +150,9 @@ export default function ProUpgradeScreen() {
             <Text style={{ color: Colors.white, fontWeight: "800", fontSize: 15 }}>
               Passer au plan {meta.label}
             </Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
+          <AnimatedPressable
             onPress={() => router.push("/(pro)/dashboard")}
             style={{
               height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center",
@@ -161,7 +162,7 @@ export default function ProUpgradeScreen() {
             <Text style={{ color: Colors.foreground, fontWeight: "600", fontSize: 14 }}>
               Retour au tableau de bord
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </ScrollView>
     </View>

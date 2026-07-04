@@ -19,6 +19,7 @@ import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 // ── Dark design tokens ────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
@@ -164,15 +165,15 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
               <Text style={{ fontSize: 17, fontWeight: "800", color: TEXT1 }}>Offrir un abonnement</Text>
               <Text style={{ fontSize: 13, color: TEXT2 }}>pour {user.first_name} {user.last_name}</Text>
             </View>
-            <Pressable onPress={onClose} style={styles.closeBtn}>
+            <AnimatedIconButton onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={18} color={TEXT2} />
-            </Pressable>
+            </AnimatedIconButton>
           </View>
 
           <Text style={styles.label}>Plan</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
             {PLAN_OPTS.map((p) => (
-              <Pressable key={p}
+              <AnimatedPressable key={p}
                 onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{
                   flex: 1, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, alignItems: "center",
@@ -182,14 +183,14 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
                 <Text style={{ fontSize: 12, fontWeight: "700", color: plan === p ? Colors.admin : TEXT2 }}>
                   {PLAN_LABELS[p]}
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
             ))}
           </View>
 
           <Text style={styles.label}>Durée</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 28 }}>
             {MONTHS_OPTS.map((m) => (
-              <Pressable key={m}
+              <AnimatedPressable key={m}
                 onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{
                   flex: 1, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, alignItems: "center",
@@ -197,13 +198,13 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
                   backgroundColor: months === m ? `${Colors.admin}22` : "rgba(255,255,255,0.07)",
                 }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: months === m ? Colors.admin : TEXT2 }}>{m}m</Text>
-              </Pressable>
+              </AnimatedPressable>
             ))}
           </View>
 
           {grantError && <View style={{ marginBottom: 12 }}><ErrorMessage message={grantError} /></View>}
 
-          <Pressable
+          <AnimatedPressable
             onPress={() => { setGrantError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
             disabled={grantMut.isPending} style={{ opacity: grantMut.isPending ? 0.7 : 1 }}>
             <LinearGradient colors={["#EA6000", Colors.admin, "#FBAB6A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -213,7 +214,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
                 : <><Ionicons name="gift-outline" size={20} color={Colors.white} />
                     <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white }}>Accorder l'abonnement</Text></>}
             </LinearGradient>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </View>
     </Modal>
@@ -309,14 +310,14 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                   </View>
                 )}
               </View>
-              <Pressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6, opacity: 0.85 }}>
+              <AnimatedPressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6, opacity: 0.85 }}>
                 <Ionicons name="mail-outline" size={13} color={Colors.white} />
                 <Text style={{ fontSize: 12, color: Colors.white }}>{full.email}</Text>
                 <Ionicons name="share-outline" size={12} color="rgba(255,255,255,0.7)" />
-              </Pressable>
-              <Pressable onPress={onClose} style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
+              </AnimatedPressable>
+              <AnimatedIconButton onPress={onClose} style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={18} color={Colors.white} />
-              </Pressable>
+              </AnimatedIconButton>
             </LinearGradient>
 
             <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 12 }}>
@@ -749,9 +750,9 @@ export default function AdminUsersScreen() {
               clearButtonMode={Platform.OS === "ios" ? "while-editing" : "never"}
             />
             {Platform.OS !== "ios" && search.length > 0 && (
-              <Pressable onPress={() => setSearch("")} hitSlop={8}>
+              <AnimatedIconButton onPress={() => setSearch("")} hitSlop={8}>
                 <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.4)" />
-              </Pressable>
+              </AnimatedIconButton>
             )}
           </View>
 
@@ -760,7 +761,7 @@ export default function AdminUsersScreen() {
             {FILTERS.map(({ value, label, icon, color: pillColor }) => {
               const active = roleFilter === value;
               return (
-                <Pressable key={value}
+                <AnimatedPressable key={value}
                   onPress={() => { setRoleFilter(value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                   style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, borderWidth: 1,
                     backgroundColor: active ? `${pillColor}28` : "rgba(255,255,255,0.06)",
@@ -768,7 +769,7 @@ export default function AdminUsersScreen() {
                   }}>
                   <Ionicons name={icon} size={12} color={active ? pillColor : TEXT2} />
                   <Text style={{ fontSize: 12, fontWeight: "700", color: active ? pillColor : TEXT2 }}>{label}</Text>
-                </Pressable>
+                </AnimatedPressable>
               );
             })}
           </ScrollView>
@@ -804,6 +805,9 @@ export default function AdminUsersScreen() {
             contentContainerStyle={{ backgroundColor: BG, paddingHorizontal: 16, paddingTop: 14, paddingBottom: insets.bottom + 100 }}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={7}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
             ListEmptyComponent={
               <View style={{ alignItems: "center", paddingVertical: 80 }}>

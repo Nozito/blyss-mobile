@@ -17,6 +17,7 @@ import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ADMIN } from "@/constants/adminTheme";
 import { Colors } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -297,7 +298,7 @@ export default function AdminAnalyticsScreen() {
     >
       {/* ── Header ── */}
       <View style={{ marginBottom: 22 }}>
-        <Pressable
+        <AnimatedPressable
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
@@ -305,7 +306,7 @@ export default function AdminAnalyticsScreen() {
             ? <SymbolView name="chevron.left" size={16} tintColor={ADMIN.accent} />
             : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
           <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
-        </Pressable>
+        </AnimatedPressable>
         <Text style={{ fontSize: 34, fontWeight: "900", color: Colors.white, letterSpacing: -1 }}>
           Analytics
         </Text>

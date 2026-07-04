@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import { favoritesApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Specialist } from "@/components/screens/client/specialists/SpecialistCard";
@@ -85,10 +86,14 @@ export function useFavorites() {
 
   const toggle = useCallback(
     (proId: number) => {
-      if (isFavorited(proId)) {
-        removeMutation.mutate(proId);
-      } else {
+      const willFavorite = !isFavorited(proId);
+      Haptics.impactAsync(
+        willFavorite ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Rigid
+      ).catch(() => {});
+      if (willFavorite) {
         addMutation.mutate(proId);
+      } else {
+        removeMutation.mutate(proId);
       }
     },
     [isFavorited, addMutation, removeMutation]

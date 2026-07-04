@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -78,9 +79,9 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Passer */}
       <View style={styles.header}>
-        <Pressable onPress={handleSkip} hitSlop={12}>
+        <AnimatedPressable onPress={handleSkip} hitSlop={12}>
           <Text style={styles.skipText}>Passer</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Slides */}
@@ -124,27 +125,30 @@ export default function OnboardingScreen() {
         {isLast ? (
           /* Last slide: 2 CTA buttons */
           <View style={styles.ctaGroup}>
-            <Pressable
+            <AnimatedPressable
               onPress={() => handleRole("client")}
               style={styles.ctaPrimary}
             >
               <Text style={styles.ctaPrimaryText}>Je suis cliente</Text>
-            </Pressable>
-            <Pressable
+            </AnimatedPressable>
+            <AnimatedPressable
               onPress={() => handleRole("pro")}
               style={styles.ctaOutline}
             >
               <Text style={styles.ctaOutlineText}>Je suis professionnelle</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         ) : (
           /* Next button */
-          <Pressable
-            onPress={handleNext}
+          <AnimatedPressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              handleNext();
+            }}
             style={styles.ctaPrimary}
           >
             <Text style={styles.ctaPrimaryText}>Continuer</Text>
-          </Pressable>
+          </AnimatedPressable>
         )}
       </View>
     </SafeAreaView>

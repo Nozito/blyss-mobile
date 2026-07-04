@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   TextInput,
   Switch,
+  Animated,
   ActivityIndicator,
   Modal,
   Share,
@@ -24,10 +25,11 @@ import { Colors } from "@/constants/colors";
 import { proApi, usersApi, instagramApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { proProfileSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const SCREEN_W = Dimensions.get("window").width;
 const GALLERY_CELL = (SCREEN_W - 40 - 8) / 3;
@@ -43,6 +45,8 @@ export default function ProPublicProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, patchUser, refreshProfile } = useAuth();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   const [bannerUploading, setBannerUploading] = useState(false);
 
@@ -260,6 +264,11 @@ export default function ProPublicProfileScreen() {
     }
   };
 
+  useEffect(() => {
+    if (isLoading || reduceMotion) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, contentOpacity]);
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
@@ -270,6 +279,7 @@ export default function ProPublicProfileScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 16,
@@ -580,27 +590,34 @@ export default function ProPublicProfileScreen() {
           <SectionTitle title="Votre lien professionnel" />
           <View style={{ backgroundColor: Colors.primaryLight, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: `${Colors.primary}30` }}>
             {copyToast && (
-              <View style={{ backgroundColor: Colors.success, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 10, alignSelf: "flex-start" }}>
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute", top: -10, left: 16,
+                  backgroundColor: Colors.success, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12,
+                  shadowColor: Colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
+                }}
+              >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.white }}>Lien copié !</Text>
               </View>
             )}
             <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 4 }}>Ton profil Blyss</Text>
             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.primary, marginBottom: 14 }} numberOfLines={1}>{profileUrl}</Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
+              <AnimatedPressable
                 onPress={handleCopyLink}
                 style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.white, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: `${Colors.primary}30` }}
               >
                 <Ionicons name="copy-outline" size={16} color={Colors.primary} />
                 <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Copier</Text>
-              </Pressable>
-              <Pressable
+              </AnimatedPressable>
+              <AnimatedPressable
                 onPress={handleShareLink}
                 style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
               >
                 <Ionicons name="share-outline" size={16} color={Colors.white} />
                 <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Partager</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
         </View>
@@ -642,6 +659,7 @@ export default function ProPublicProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      </Animated.View>
 
       {/* Sticky save button */}
       <View
@@ -655,7 +673,7 @@ export default function ProPublicProfileScreen() {
             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.successText }}>Profil public mis à jour !</Text>
           </View>
         )}
-        <Pressable
+        <AnimatedPressable
           onPress={handleSave}
           disabled={!hasChanges || isSaving}
           className="h-14 rounded-2xl items-center justify-center flex-row gap-2"
@@ -677,7 +695,7 @@ export default function ProPublicProfileScreen() {
               <Text className="font-semibold text-sm text-muted-foreground">Profil à jour</Text>
             </>
           )}
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Gallery image detail modal */}

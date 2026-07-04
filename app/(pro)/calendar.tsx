@@ -14,6 +14,7 @@ import {
   Alert,
 } from "react-native";
 import * as Notifications from "expo-notifications";
+import * as Haptics from "expo-haptics";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Modal } from "@/components/ui/Modal";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -25,7 +26,7 @@ import { proApi, nailTechApi } from "@/lib/api";
 import { toLocalDate } from "@/lib/dateUtils";
 import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -220,11 +221,11 @@ function CalendarGrid({
         <AnimatedIconButton onPress={onPrevMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
         </AnimatedIconButton>
-        <Pressable onPress={onToday}>
+        <AnimatedPressable onPress={onToday}>
           <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground }}>
             {MONTHS[month]} {year}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
         <AnimatedIconButton onPress={onNextMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
         </AnimatedIconButton>
@@ -253,7 +254,7 @@ function CalendarGrid({
           const isU = isUnavail(day);
 
           return (
-            <Pressable
+            <AnimatedPressable
               key={day}
               onPress={() => onSelectDay(thisDate)}
               style={{
@@ -275,7 +276,7 @@ function CalendarGrid({
               {hasA && !isSel && (
                 <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isTod ? Colors.primary : Colors.mutedForeground, marginTop: 1 }} />
               )}
-            </Pressable>
+            </AnimatedPressable>
           );
         })}
       </View>
@@ -291,7 +292,7 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
   const clientName = apt.client_name ?? `${apt.client_first_name ?? ""} ${apt.client_last_name ?? ""}`.trim();
   const canAct = ["pending", "ongoing", "past_pending"].includes(statusKey);
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card, borderLeftWidth: 3, borderLeftColor: cfg.color }}
     >
@@ -319,7 +320,7 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
           <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Appuie pour gérer</Text>
         </View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -380,6 +381,7 @@ export default function ProCalendarScreen() {
   const toggleAnim = useRef(new Animated.Value(1)).current;
 
   const toggleViewMode = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     Animated.sequence([
       Animated.timing(toggleAnim, { toValue: 0.7, duration: 100, useNativeDriver: true }),
       Animated.spring(toggleAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }),
@@ -555,6 +557,7 @@ export default function ProCalendarScreen() {
   };
 
   const deleteSlot = async (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     const backup = [...slots];
     setShowDeleteSlotId(null);
     setSlots((prev) => prev.filter((s) => s.id !== id));
@@ -567,6 +570,7 @@ export default function ProCalendarScreen() {
   };
 
   const handleComplete = async (apt: Appointment) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "completed" } : a));
     try {
@@ -577,6 +581,7 @@ export default function ProCalendarScreen() {
   };
 
   const handleCancel = async (apt: Appointment) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "cancelled" } : a));
     try {
@@ -587,6 +592,7 @@ export default function ProCalendarScreen() {
   };
 
   const handleNoShow = async (apt: Appointment) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "no_show" } : a));
     try {
@@ -733,7 +739,7 @@ export default function ProCalendarScreen() {
             </Text>
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <Pressable
+            <AnimatedPressable
               onPress={() => {
                 const t = new Date();
                 setSelectedDate(t);
@@ -742,13 +748,13 @@ export default function ProCalendarScreen() {
               style={{ height: 40, paddingHorizontal: 14, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
             >
               <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>Auj.</Text>
-            </Pressable>
-            <Pressable
+            </AnimatedPressable>
+            <AnimatedPressable
               onPress={() => setIsSearchOpen((v) => !v)}
               style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
             >
               <Ionicons name={isSearchOpen ? "close" : "search-outline"} size={18} color={Colors.foreground} />
-            </Pressable>
+            </AnimatedPressable>
             <Pressable
               onPress={toggleViewMode}
               style={{
@@ -852,7 +858,7 @@ export default function ProCalendarScreen() {
                 const hasApt   = appointments.some(a => toLocalDate(new Date(a.date)) === baseKey);
                 const isUnavail = unavailabilities.some(u => baseKey >= u.start_date && baseKey <= u.end_date);
                 return (
-                  <Pressable
+                  <AnimatedPressable
                     key={i}
                     onPress={() => handleSelectDate(new Date(base))}
                     style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 14,
@@ -881,7 +887,7 @@ export default function ProCalendarScreen() {
                       <View style={{ width: 18, height: 3, borderRadius: 2, marginTop: 2,
                         backgroundColor: isActive ? withAlpha(Colors.white, 0.8) : Colors.warning }} />
                     )}
-                  </Pressable>
+                  </AnimatedPressable>
                 );
               })}
             </View>
@@ -890,7 +896,7 @@ export default function ProCalendarScreen() {
 
         {/* ── PLANNING & ABSENCES CARDS ── */}
         <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowPlanningModal(true)}
             style={{ flex: 1, backgroundColor: PLANNING.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: PLANNING.border }}
           >
@@ -899,8 +905,8 @@ export default function ProCalendarScreen() {
             </View>
             <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>Planning</Text>
             <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>Semaine type & horaires</Text>
-          </Pressable>
-          <Pressable
+          </AnimatedPressable>
+          <AnimatedPressable
             onPress={() => setShowUnavailModal(true)}
             style={{ flex: 1, backgroundColor: ABSENCES.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: ABSENCES.border }}
           >
@@ -909,24 +915,23 @@ export default function ProCalendarScreen() {
             </View>
             <Text style={{ fontSize: 14, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
             <Text style={{ fontSize: 11, color: ABSENCES.color, lineHeight: 15 }}>Congés & indisponibilités</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* ── SELECTED DAY LABEL ── */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14, paddingHorizontal: 2 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ width: 4, height: 20, backgroundColor: Colors.primary, borderRadius: 2 }} />
             <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground, textTransform: "capitalize" }}>
               {selectedDateLabel}
             </Text>
           </View>
-          <Pressable
+          <AnimatedPressable
             onPress={() => setShowAddSlot(true)}
             style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
           >
             <Ionicons name="add" size={16} color={Colors.white} />
             <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.white }}>Créneau</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         {/* ── ABSENCE BANNER ── */}
@@ -937,9 +942,9 @@ export default function ProCalendarScreen() {
               <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.warningTextDark }}>Tu es absente ce jour</Text>
               <Text style={{ fontSize: 11, color: Colors.warningText, marginTop: 2 }}>Tes clientes ne peuvent pas réserver pour cette date</Text>
             </View>
-            <Pressable onPress={() => setShowUnavailModal(true)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.warningBorder }}>
+            <AnimatedPressable onPress={() => setShowUnavailModal(true)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.warningBorder }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.warningTextDark }}>Gérer</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         )}
 
@@ -976,7 +981,7 @@ export default function ProCalendarScreen() {
                           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             <View style={{ flexDirection: "row", gap: 6 }}>
                               {QUICK_TIMES.map((t) => (
-                                <Pressable
+                                <AnimatedPressable
                                   key={t}
                                   onPress={() => setEditTime(t)}
                                   style={{
@@ -989,14 +994,14 @@ export default function ProCalendarScreen() {
                                   <Text style={{ fontSize: 12, fontWeight: "600", color: editTime === t ? Colors.white : Colors.foreground }}>
                                     {t}
                                   </Text>
-                                </Pressable>
+                                </AnimatedPressable>
                               ))}
                             </View>
                           </ScrollView>
                         </View>
                         <View style={{ flexDirection: "row", gap: 8 }}>
                           {[30, 45, 60, 90, 120].map((d) => (
-                            <Pressable
+                            <AnimatedPressable
                               key={d}
                               onPress={() => setEditDur(d)}
                               style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: editDur === d ? Colors.primary : Colors.muted }}
@@ -1004,22 +1009,22 @@ export default function ProCalendarScreen() {
                               <Text style={{ fontSize: 12, fontWeight: "600", color: editDur === d ? Colors.white : Colors.foreground }}>
                                 {formatDuration(d)}
                               </Text>
-                            </Pressable>
+                            </AnimatedPressable>
                           ))}
                         </View>
                         <View style={{ flexDirection: "row", gap: 8 }}>
-                          <Pressable
+                          <AnimatedPressable
                             onPress={() => setEditingSlotId(null)}
-                            style={{ flex: 1, height: 40, borderRadius: 12, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
+                            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                           >
                             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
-                          </Pressable>
-                          <Pressable
+                          </AnimatedPressable>
+                          <AnimatedPressable
                             onPress={confirmEditSlot}
-                            style={{ flex: 1, height: 40, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
+                            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
                           >
                             <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Confirmer</Text>
-                          </Pressable>
+                          </AnimatedPressable>
                         </View>
                       </View>
                     ) : (
@@ -1047,28 +1052,28 @@ export default function ProCalendarScreen() {
 
                         {!slot.isPast && !isBooked && (
                           <View style={{ flexDirection: "row", gap: 6 }}>
-                            <Pressable
+                            <AnimatedPressable
                               onPress={() => toggleSlot(slot.id)}
-                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isOpen ? withAlpha(Colors.primary, 0.10) : Colors.muted, alignItems: "center", justifyContent: "center" }}
+                              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isOpen ? withAlpha(Colors.primary, 0.10) : Colors.muted, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name={isOpen ? "lock-open-outline" : "lock-closed-outline"} size={16} color={isOpen ? Colors.primary : Colors.mutedForeground} />
-                            </Pressable>
-                            <Pressable
+                            </AnimatedPressable>
+                            <AnimatedPressable
                               onPress={() => {
                                 setEditTime(slot.time);
                                 setEditDur(parseDuration(slot.duration));
                                 setEditingSlotId(slot.id);
                               }}
-                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
+                              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name="pencil-outline" size={16} color={Colors.mutedForeground} />
-                            </Pressable>
-                            <Pressable
+                            </AnimatedPressable>
+                            <AnimatedPressable
                               onPress={() => setShowDeleteSlotId(slot.id)}
-                              style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.destructiveLight, alignItems: "center", justifyContent: "center" }}
+                              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.destructiveLight, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
-                            </Pressable>
+                            </AnimatedPressable>
                           </View>
                         )}
                       </View>
@@ -1097,12 +1102,12 @@ export default function ProCalendarScreen() {
               <View style={{ gap: 16 }}>
                 {allMonthSearchResults.map(([date, apts]) => (
                   <View key={date}>
-                    <Pressable onPress={() => handleSelectDate(new Date(date + "T12:00:00"))} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <AnimatedPressable onPress={() => handleSelectDate(new Date(date + "T12:00:00"))} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                       <View style={{ width: 4, height: 16, backgroundColor: Colors.border, borderRadius: 2 }} />
                       <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.mutedForeground, textTransform: "capitalize" }}>
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                       </Text>
-                    </Pressable>
+                    </AnimatedPressable>
                     <View style={{ gap: 8 }}>
                       {apts.map((apt) => <AptCard key={apt.id} apt={apt} onPress={() => { const canAct = ["pending","ongoing","past_pending"].includes(getAptStatus(apt)); if (canAct) setSelectedApt(apt); }} />)}
                     </View>
@@ -1160,12 +1165,12 @@ export default function ProCalendarScreen() {
                   <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 1, textTransform: "capitalize" }}>{selectedDateLabel}</Text>
                 </View>
               </View>
-              <Pressable
+              <AnimatedIconButton
                 onPress={() => setShowAddSlot(false)}
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(Colors.primary, 0.08), alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={Colors.primary} />
-              </Pressable>
+              </AnimatedIconButton>
             </View>
           </View>
 
@@ -1177,7 +1182,7 @@ export default function ProCalendarScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {QUICK_TIMES.map((t) => (
-                    <Pressable
+                    <AnimatedPressable
                       key={t}
                       onPress={() => setNewSlotTime(t)}
                       style={{
@@ -1188,7 +1193,7 @@ export default function ProCalendarScreen() {
                       <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotTime === t ? Colors.white : Colors.foreground }}>
                         {t}
                       </Text>
-                    </Pressable>
+                    </AnimatedPressable>
                   ))}
                 </View>
               </ScrollView>
@@ -1200,7 +1205,7 @@ export default function ProCalendarScreen() {
               </Text>
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 {[30, 45, 60, 75, 90, 120].map((d) => (
-                  <Pressable
+                  <AnimatedPressable
                     key={d}
                     onPress={() => setNewSlotDuration(d)}
                     style={{
@@ -1211,7 +1216,7 @@ export default function ProCalendarScreen() {
                     <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotDuration === d ? Colors.white : Colors.foreground }}>
                       {formatDuration(d)}
                     </Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 ))}
               </View>
             </View>
@@ -1233,12 +1238,12 @@ export default function ProCalendarScreen() {
             </View>
 
             {slotError && <View style={{ marginBottom: 4 }}><ErrorMessage message={slotError} /></View>}
-            <Pressable
+            <AnimatedPressable
               onPress={addSlot}
-              style={{ height: 52, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
+              style={{ height: 56, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
             >
               <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Créer ce créneau</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </View>
       </RNModal>
@@ -1278,19 +1283,19 @@ export default function ProCalendarScreen() {
                       {selectedApt.prestation_name ? ` · ${selectedApt.prestation_name}` : ""}
                     </Text>
                   </View>
-                  <Pressable
+                  <AnimatedIconButton
                     onPress={() => setSelectedApt(null)}
                     style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                   >
                     <Ionicons name="close" size={18} color={Colors.foreground} />
-                  </Pressable>
+                  </AnimatedIconButton>
                 </View>
               </View>
 
               <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8 }}>
                 {["pending", "ongoing", "past_pending"].includes(getAptStatus(selectedApt)) && (
                   <>
-                    <Pressable
+                    <AnimatedPressable
                       onPress={() => handleComplete(selectedApt)}
                       style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
                     >
@@ -1302,14 +1307,14 @@ export default function ProCalendarScreen() {
                         <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>Le rendez-vous est bien passé</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-                    </Pressable>
+                    </AnimatedPressable>
                     <View style={{ height: 1, backgroundColor: Colors.border }} />
                   </>
                 )}
 
                 {getAptStatus(selectedApt) === "past_pending" && (
                   <>
-                    <Pressable
+                    <AnimatedPressable
                       onPress={() => handleNoShow(selectedApt)}
                       style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
                     >
@@ -1321,13 +1326,13 @@ export default function ProCalendarScreen() {
                         <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>Enregistrer l'absence</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-                    </Pressable>
+                    </AnimatedPressable>
                     <View style={{ height: 1, backgroundColor: Colors.border }} />
                   </>
                 )}
 
                 {getAptStatus(selectedApt) === "pending" && (
-                  <Pressable
+                  <AnimatedPressable
                     onPress={() => setShowCancelAptId(selectedApt.id)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
                   >
@@ -1339,7 +1344,7 @@ export default function ProCalendarScreen() {
                       <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>La cliente sera notifiée</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={Colors.destructive} />
-                  </Pressable>
+                  </AnimatedPressable>
                 )}
               </View>
             </View>
@@ -1363,12 +1368,12 @@ export default function ProCalendarScreen() {
                   <Text style={{ fontSize: 12, color: ABSENCES.color, marginTop: 1 }}>Bloque des périodes d'indisponibilité</Text>
                 </View>
               </View>
-              <Pressable
+              <AnimatedIconButton
                 onPress={() => setShowUnavailModal(false)}
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ABSENCES.closeBg, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={ABSENCES.colorDark} />
-              </Pressable>
+              </AnimatedIconButton>
             </View>
           </View>
 
@@ -1378,7 +1383,7 @@ export default function ProCalendarScreen() {
                 <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
                   Du
                 </Text>
-                <Pressable
+                <AnimatedPressable
                   onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}
                   style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? ABSENCES.color : Colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                 >
@@ -1386,7 +1391,7 @@ export default function ProCalendarScreen() {
                     {unavailStartDate ? unavailStartDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
                   </Text>
                   <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
-                </Pressable>
+                </AnimatedPressable>
                 {showStartPicker && (
                   <DateTimePicker
                     value={unavailStartDate ?? new Date()}
@@ -1410,7 +1415,7 @@ export default function ProCalendarScreen() {
                 <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
                   Au
                 </Text>
-                <Pressable
+                <AnimatedPressable
                   onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}
                   style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? ABSENCES.color : Colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                 >
@@ -1418,7 +1423,7 @@ export default function ProCalendarScreen() {
                     {unavailEndDate ? unavailEndDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
                   </Text>
                   <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
-                </Pressable>
+                </AnimatedPressable>
                 {showEndPicker && (
                   <DateTimePicker
                     value={unavailEndDate ?? unavailStartDate ?? new Date()}
@@ -1468,12 +1473,12 @@ export default function ProCalendarScreen() {
                       </Text>
                       {u.reason && <Text style={{ fontSize: 11, color: ABSENCES.color, marginTop: 2 }}>{u.reason}</Text>}
                     </View>
-                    <Pressable
+                    <AnimatedIconButton
                       onPress={() => removeUnavailability(u.id)}
-                      style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: withAlpha(Colors.destructive, 0.10), alignItems: "center", justifyContent: "center", marginLeft: 8 }}
+                      style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(Colors.destructive, 0.10), alignItems: "center", justifyContent: "center", marginLeft: 8 }}
                     >
                       <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
-                    </Pressable>
+                    </AnimatedIconButton>
                   </View>
                 ))}
               </View>
@@ -1510,12 +1515,12 @@ export default function ProCalendarScreen() {
                   <Text style={{ fontSize: 12, color: PLANNING.color, marginTop: 1 }}>Appliqué sur les 4 prochaines semaines</Text>
                 </View>
               </View>
-              <Pressable
+              <AnimatedIconButton
                 onPress={() => setShowPlanningModal(false)}
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PLANNING.closeBg, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={PLANNING.colorDark} />
-              </Pressable>
+              </AnimatedIconButton>
             </View>
           </View>
 
@@ -1526,7 +1531,7 @@ export default function ProCalendarScreen() {
               </Text>
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 {[30, 45, 60, 75, 90, 120].map((d) => (
-                  <Pressable
+                  <AnimatedPressable
                     key={d}
                     onPress={() => setPlanningDuration(d)}
                     style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
@@ -1535,7 +1540,7 @@ export default function ProCalendarScreen() {
                     <Text style={{ fontSize: 13, fontWeight: "700", color: planningDuration === d ? Colors.white : Colors.foreground }}>
                       {formatDuration(d)}
                     </Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 ))}
               </View>
             </View>
@@ -1546,7 +1551,7 @@ export default function ProCalendarScreen() {
               </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {[2, 4, 6, 8].map((w) => (
-                  <Pressable
+                  <AnimatedPressable
                     key={w}
                     onPress={() => setPlanConfirmWeeks(w)}
                     style={{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
@@ -1556,7 +1561,7 @@ export default function ProCalendarScreen() {
                       color: planConfirmWeeks === w ? Colors.white : Colors.mutedForeground }}>
                       {w} sem.
                     </Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 ))}
               </View>
             </View>
@@ -1570,7 +1575,7 @@ export default function ProCalendarScreen() {
                   const dayNum = idx + 1;
                   const isActive = activeDays.includes(dayNum);
                   return (
-                    <Pressable
+                    <AnimatedPressable
                       key={d}
                       onPress={() =>
                         setActiveDays((prev) =>
@@ -1585,7 +1590,7 @@ export default function ProCalendarScreen() {
                       <Text style={{ fontSize: 12, fontWeight: "700", color: isActive ? Colors.white : Colors.mutedForeground }}>
                         {d}
                       </Text>
-                    </Pressable>
+                    </AnimatedPressable>
                   );
                 })}
               </View>
@@ -1599,13 +1604,13 @@ export default function ProCalendarScreen() {
                   </Text>
                   <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 2 }}>Durée par défaut : 1h</Text>
                 </View>
-                <Pressable
+                <AnimatedPressable
                   onPress={() => setShowPlanTimePicker(true)}
                   style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}
                 >
                   <Ionicons name="add" size={14} color={PLANNING.color} />
                   <Text style={{ fontSize: 12, fontWeight: "700", color: PLANNING.color }}>Ajouter</Text>
-                </Pressable>
+                </AnimatedPressable>
               </View>
 
               {showPlanTimePicker && (
@@ -1630,7 +1635,7 @@ export default function ProCalendarScreen() {
                     accentColor={PLANNING.color}
                   />
                   {Platform.OS === "ios" && (
-                    <Pressable
+                    <AnimatedPressable
                       onPress={() => {
                         const h = String(newPlanTime.getHours()).padStart(2, "0");
                         const m = String(newPlanTime.getMinutes()).padStart(2, "0");
@@ -1641,7 +1646,7 @@ export default function ProCalendarScreen() {
                       style={{ margin: 12, height: 44, borderRadius: 12, backgroundColor: PLANNING.color, alignItems: "center", justifyContent: "center" }}
                     >
                       <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Confirmer</Text>
-                    </Pressable>
+                    </AnimatedPressable>
                   )}
                 </View>
               )}
@@ -1651,9 +1656,9 @@ export default function ProCalendarScreen() {
                   <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}>
                     <Ionicons name="time-outline" size={13} color={PLANNING.color} />
                     <Text style={{ fontSize: 13, fontWeight: "700", color: PLANNING.colorDark }}>{t}</Text>
-                    <Pressable onPress={() => setPlanningSlots((prev) => prev.filter((s) => s !== t))}>
+                    <AnimatedIconButton onPress={() => setPlanningSlots((prev) => prev.filter((s) => s !== t))}>
                       <Ionicons name="close-circle" size={16} color={PLANNING.color} />
-                    </Pressable>
+                    </AnimatedIconButton>
                   </View>
                 ))}
                 {planningSlots.length === 0 && (
@@ -1705,12 +1710,15 @@ export default function ProCalendarScreen() {
             <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, textAlign: "center" }}>Supprimer ce créneau ?</Text>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center" }}>Cette action est irréversible.</Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <Pressable onPress={() => setShowDeleteSlotId(null)} style={{ flex: 1, height: 46, borderRadius: 13, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedPressable onPress={() => setShowDeleteSlotId(null)} style={{ flex: 1, height: 48, borderRadius: 13, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
-              </Pressable>
-              <Pressable onPress={() => { if (showDeleteSlotId) void deleteSlot(showDeleteSlotId); }} style={{ flex: 1, height: 46, borderRadius: 13, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}>
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={() => { if (showDeleteSlotId) void deleteSlot(showDeleteSlotId); }}
+                style={{ flex: 1, height: 48, borderRadius: 13, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
+              >
                 <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
         </View>
@@ -1725,10 +1733,10 @@ export default function ProCalendarScreen() {
             <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground, textAlign: "center", marginBottom: 8 }}>Annuler le rendez-vous ?</Text>
             <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 20 }}>Cette action est irréversible. La cliente sera notifiée.</Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <Pressable onPress={() => setShowCancelAptId(null)} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedPressable onPress={() => setShowCancelAptId(null)} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Retour</Text>
-              </Pressable>
-              <Pressable
+              </AnimatedPressable>
+              <AnimatedPressable
                 onPress={() => {
                   const apt = appointments.find((a) => a.id === showCancelAptId);
                   if (apt) { setShowCancelAptId(null); void handleCancel(apt); }
@@ -1736,7 +1744,7 @@ export default function ProCalendarScreen() {
                 style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Annuler le RDV</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
         </View>

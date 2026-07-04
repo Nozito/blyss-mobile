@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   FlatList,
   Pressable,
+  Animated,
   TextInput,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,13 +12,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { proApi, nailTechApi } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/ui/Avatar";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { BlockedClient } from "@/lib/api";
 
 type Client = {
@@ -38,10 +42,59 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const NEW_CLIENT_DAYS = 7;
 
+function BlockedClientRow({
+  item,
+  onUnblock,
+  isUnblocking,
+}: {
+  item: BlockedClient;
+  onUnblock: (clientId: number) => void;
+  isUnblocking: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row", alignItems: "center", gap: 12,
+        backgroundColor: Colors.card, borderRadius: 20, padding: 14,
+        marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+      }}
+    >
+      <Avatar name={`${item.first_name} ${item.last_name}`} size={46} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+          {item.first_name} {item.last_name}
+        </Text>
+        <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.email}</Text>
+        {item.reason && (
+          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>
+            {item.reason}
+          </Text>
+        )}
+      </View>
+      <AnimatedPressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          onUnblock(item.client_id);
+        }}
+        disabled={isUnblocking}
+        style={{
+          paddingHorizontal: 12, paddingVertical: 7,
+          backgroundColor: `${Colors.success}15`,
+          borderRadius: 12, borderWidth: 1, borderColor: `${Colors.success}30`,
+          opacity: isUnblocking ? 0.5 : 1,
+        }}
+      >
+        <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.success }}>Débloquer</Text>
+      </AnimatedPressable>
+    </View>
+  );
+}
+
 export default function ProClientsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState<TabKey>("clients");
   const [search, setSearch] = useState("");
   const [clientError, setClientError] = useState<string | null>(null);
@@ -49,6 +102,16 @@ export default function ProClientsScreen() {
 
   const listRef = useRef(null);
   useScrollToTop(listRef);
+
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [contentOpacity]);
+
+  const handleTabChange = useCallback((key: TabKey) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setTab(key);
+  }, []);
 
   const { data: clientsData, isLoading: loadingClients } = useQuery({
     queryKey: ["pro-clients"],
@@ -95,7 +158,7 @@ export default function ProClientsScreen() {
   );
 
   const renderClientItem = useCallback(({ item }: { item: Client }) => (
-    <Pressable
+    <AnimatedPressable
       onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${item.id}`)}
       style={{
         flexDirection: "row", alignItems: "center", gap: 12,
@@ -126,11 +189,11 @@ export default function ProClientsScreen() {
         </View>
       </View>
       <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-    </Pressable>
+    </AnimatedPressable>
   ), [router]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
+    <Animated.View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top, opacity: contentOpacity }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
         <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5, marginBottom: clientError ? 8 : 16 }}>
           Mes clientes
@@ -142,7 +205,7 @@ export default function ProClientsScreen() {
           {TABS.map(({ key, label, icon }) => (
             <Pressable
               key={key}
-              onPress={() => setTab(key)}
+              onPress={() => handleTabChange(key)}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 12,
                 flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
@@ -258,39 +321,14 @@ export default function ProClientsScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 12,
-              backgroundColor: Colors.card, borderRadius: 20, padding: 14,
-              marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
-            }}>
-              <Avatar name={`${item.first_name} ${item.last_name}`} size={46} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
-                  {item.first_name} {item.last_name}
-                </Text>
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.email}</Text>
-                {item.reason && (
-                  <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>
-                    {item.reason}
-                  </Text>
-                )}
-              </View>
-              <Pressable
-                onPress={() => unblockMutation.mutate(item.client_id)}
-                disabled={unblockMutation.isPending}
-                style={{
-                  paddingHorizontal: 12, paddingVertical: 7,
-                  backgroundColor: `${Colors.success}15`,
-                  borderRadius: 12, borderWidth: 1, borderColor: `${Colors.success}30`,
-                  opacity: unblockMutation.isPending ? 0.5 : 1,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.success }}>Débloquer</Text>
-              </Pressable>
-            </View>
+            <BlockedClientRow
+              item={item}
+              onUnblock={(clientId) => unblockMutation.mutate(clientId)}
+              isUnblocking={unblockMutation.isPending}
+            />
           )}
         />
       )}
-    </View>
+    </Animated.View>
   );
 }

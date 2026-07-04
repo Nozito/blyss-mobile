@@ -29,12 +29,12 @@ const variantStyles: Record<BadgeVariant, { container: string; text: string }> =
     text: 'text-foreground',
   },
   success: {
-    container: 'bg-green-100 border-transparent',
-    text: 'text-green-700',
+    container: 'bg-success-light border-transparent',
+    text: 'text-success-text',
   },
   warning: {
-    container: 'bg-amber-100 border-transparent',
-    text: 'text-amber-700',
+    container: 'bg-warning-light border-transparent',
+    text: 'text-warning-text',
   },
 };
 

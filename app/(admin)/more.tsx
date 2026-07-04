@@ -15,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
@@ -171,7 +172,7 @@ export default function AdminMoreScreen() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}
       >
@@ -274,7 +275,7 @@ export default function AdminMoreScreen() {
           {stats.map(({ label, value, symbol, icon, color, route }, i) => (
             <React.Fragment key={label}>
               <Link href={route as any} asChild>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
                 style={{ flex: 1, alignItems: "center" }}
               >
@@ -295,7 +296,7 @@ export default function AdminMoreScreen() {
                 <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
                   {label}
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
               </Link>
               {i < stats.length - 1 && (
                 <View style={{
@@ -311,7 +312,7 @@ export default function AdminMoreScreen() {
 
         <View style={{ paddingHorizontal: 20 }}>
           {/* ── Changer d'interface ── */}
-          <Pressable
+          <AnimatedPressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setShowSwitchModal(true);
@@ -358,7 +359,7 @@ export default function AdminMoreScreen() {
                 <Ionicons name="chevron-forward" size={14} color="rgba(249,115,22,0.6)" />
               )}
             </LinearGradient>
-          </Pressable>
+          </AnimatedPressable>
 
           {/* ── Outils Admin ── */}
           <Text style={{

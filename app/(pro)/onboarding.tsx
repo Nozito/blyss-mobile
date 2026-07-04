@@ -10,8 +10,10 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const STORAGE_KEY = "pro_onboarding_done";
 
@@ -64,6 +66,7 @@ export default function ProOnboardingScreen() {
   const slide = SLIDES[currentSlide];
 
   const handleNext = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (!isLast) {
       setCurrentSlide((p) => p + 1);
     } else {
@@ -86,9 +89,9 @@ export default function ProOnboardingScreen() {
     <View style={[styles.container, { backgroundColor: slide.bg }]}>
       {/* Skip */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={handleSkip} style={styles.skipBtn}>
+        <AnimatedPressable onPress={handleSkip} style={styles.skipBtn}>
           <Text style={[styles.skipText, { color: `${slide.color}80` }]}>Passer</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Slide content */}
@@ -107,7 +110,7 @@ export default function ProOnboardingScreen() {
         {/* Progress dots */}
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
-            <Pressable
+            <AnimatedPressable
               key={i}
               onPress={() => setCurrentSlide(i)}
               hitSlop={8}
@@ -122,12 +125,12 @@ export default function ProOnboardingScreen() {
                   },
                 ]}
               />
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </View>
 
         {/* CTA */}
-        <Pressable
+        <AnimatedPressable
           onPress={handleNext}
           style={[
             styles.cta,
@@ -145,7 +148,7 @@ export default function ProOnboardingScreen() {
             size={20}
             color={Colors.white}
           />
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </View>
   );

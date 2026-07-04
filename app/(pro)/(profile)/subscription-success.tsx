@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated, Pressable } from "react-native"; // BLYSS-NAV: Pressable added for manual dashboard CTA
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import ConfettiCannon from "react-native-confetti-cannon";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors } from "@/constants/colors";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 type PlanId = "start" | "serenite" | "signature";
 
@@ -102,12 +103,12 @@ export default function ProSubscriptionSuccessScreen() {
         <Text style={[styles.redirect, { color: Colors.mutedForeground }]}>
           Redirection en cours…
         </Text>
-        <Pressable // BLYSS-NAV: manual CTA if auto-redirect hangs or user wants to skip the wait
+        <AnimatedPressable // manual CTA if auto-redirect hangs or user wants to skip the wait
           onPress={() => router.replace("/(pro)/dashboard")}
           style={{ marginTop: 16, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, backgroundColor: Colors.primary }}
         >
           <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Aller au dashboard</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </View>
   );

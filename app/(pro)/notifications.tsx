@@ -13,6 +13,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi, ProNotificationSettings } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const DEFAULT_PREFS: ProNotificationSettings = {
   new_reservation: true,
@@ -222,7 +223,7 @@ export default function ProNotificationsScreen() {
           borderWidth: 1,
           borderColor: Colors.border,
         }}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => Linking.openSettings()}
             style={{
               flexDirection: "row", alignItems: "center",
@@ -245,7 +246,7 @@ export default function ProNotificationsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </View>
 

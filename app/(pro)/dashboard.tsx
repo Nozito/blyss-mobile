@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   Pressable,
+  Animated,
   ActivityIndicator,
   Platform,
   RefreshControl,
@@ -18,12 +19,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox"; // BLYSS-FIX: 2.3
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
@@ -59,6 +63,124 @@ function n(v: unknown): number {
   return parseFloat(normalized) || 0;
 }
 
+function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: number }) {
+  const router = useRouter();
+  const reduceMotion = useReducedMotion();
+  const scale = useRef(new Animated.Value(1)).current;
+  const entryOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const entryTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 12)).current;
+  const cfg = STATUS_CFG[client.status] ?? STATUS_CFG.upcoming;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const delay = Math.min(index, 6) * 60;
+    Animated.parallel([
+      Animated.timing(entryOpacity, { toValue: 1, duration: 280, delay, useNativeDriver: true }),
+      Animated.timing(entryTranslateY, { toValue: 0, duration: 280, delay, useNativeDriver: true }),
+    ]).start();
+    // Animate once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: entryOpacity,
+        transform: [{ translateY: entryTranslateY }, { scale }],
+      }}
+    >
+      <Pressable
+        onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.client_user_id}`)} // BLYSS-FIX: 1.1
+        onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start()}
+        onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start()}
+        style={{
+          borderRadius: 12,
+          padding: 16,
+          backgroundColor: Colors.card,
+          borderWidth: 1,
+          borderColor: Colors.border,
+          shadowColor: Colors.black,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.04,
+          shadowRadius: 4,
+          elevation: 1,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              backgroundColor: Colors.primary,
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: Colors.primary,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.25,
+              shadowRadius: 6,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 14 }}>
+              {client.avatar}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 6,
+              }}
+            >
+              <Text
+                style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }}
+                numberOfLines={1}
+              >
+                {client.name}
+              </Text>
+              <View
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 20,
+                  backgroundColor: cfg.bg,
+                }}
+              >
+                <Text style={{ fontSize: 9, fontWeight: "700", color: cfg.text }}>
+                  {cfg.label}
+                </Text>
+              </View>
+            </View>
+            <Text
+              style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }}
+              numberOfLines={1}
+            >
+              {client.service}
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
+                <Text style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "600" }}>
+                  {client.time}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                <Ionicons name="cash-outline" size={14} color={Colors.primary} />
+                <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.primary }}>
+                  {n(client.price).toFixed(2).replace(".", ",")}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 const STATUS_CFG = {
   ongoing:   { label: "En cours",  bg: "rgba(52,199,89,0.15)",  text: "#34C759" },
   upcoming:  { label: "À venir",   bg: "rgba(0,122,255,0.15)",  text: "#007AFF" },
@@ -71,6 +193,9 @@ export default function ProDashboard() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const contentTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockDate, setBlockDate] = useState<Date>(new Date());
@@ -101,6 +226,14 @@ export default function ProDashboard() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
+
+  useEffect(() => {
+    if (isLoading || reduceMotion) return;
+    Animated.parallel([
+      Animated.timing(contentOpacity, { toValue: 1, duration: 360, useNativeDriver: true }),
+      Animated.timing(contentTranslateY, { toValue: 0, duration: 360, useNativeDriver: true }),
+    ]).start();
+  }, [isLoading, reduceMotion, contentOpacity, contentTranslateY]);
 
   const raw = data?.data as DashData | undefined;
 
@@ -180,6 +313,7 @@ export default function ProDashboard() {
   }
 
   return (
+    <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }}>
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
@@ -202,7 +336,10 @@ export default function ProDashboard() {
             letterSpacing: -0.5,
           }}
         >
-          Bonjour {user?.first_name ?? ""} 👋
+          Bonjour {user?.first_name ?? ""}
+        </Text>
+        <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>
+          👋 Voici comment se porte ton activité
         </Text>
       </View>
 
@@ -288,9 +425,12 @@ export default function ProDashboard() {
             { label: "Bloquer",  icon: "ban-outline" as const, onPress: openBlockModal, color: Colors.destructive, iconBg: "#FFE8E8" },
             { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: Colors.primary, iconBg: "#FFE8F3" },
           ].map(({ label, icon, onPress, color, iconBg }) => (
-            <Pressable
+            <AnimatedPressable
               key={label}
-              onPress={onPress}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onPress();
+              }}
               style={{
                 flex: 1,
                 borderRadius: 12,
@@ -322,7 +462,7 @@ export default function ProDashboard() {
               <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.foreground }}>
                 {label}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </View>
       </View>
@@ -551,7 +691,6 @@ export default function ProDashboard() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ width: 4, height: 20, backgroundColor: Colors.primary, borderRadius: 2 }} />
             <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.2 }}>
               Prochaines clientes
             </Text>
@@ -597,98 +736,9 @@ export default function ProDashboard() {
           </View>
         ) : (
           <View style={{ gap: 10 }}>
-            {upcomingClients.map((client) => {
-              const cfg = STATUS_CFG[client.status] ?? STATUS_CFG.upcoming;
-              return (
-                <Pressable
-                  key={client.id}
-                  onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.client_user_id}`)} // BLYSS-FIX: 1.1
-                  style={{
-                    borderRadius: 12,
-                    padding: 16,
-                    backgroundColor: Colors.card,
-                    borderWidth: 1,
-                    borderColor: Colors.border,
-                    shadowColor: Colors.black,
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.04,
-                    shadowRadius: 4,
-                    elevation: 1,
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 12,
-                        backgroundColor: Colors.primary,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        shadowColor: Colors.primary,
-                        shadowOffset: { width: 0, height: 3 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 6,
-                        elevation: 2,
-                      }}
-                    >
-                      <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 14 }}>
-                        {client.avatar}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          marginBottom: 6,
-                        }}
-                      >
-                        <Text
-                          style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }}
-                          numberOfLines={1}
-                        >
-                          {client.name}
-                        </Text>
-                        <View
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
-                            borderRadius: 20,
-                            backgroundColor: cfg.bg,
-                          }}
-                        >
-                          <Text style={{ fontSize: 9, fontWeight: "700", color: cfg.text }}>
-                            {cfg.label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text
-                        style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }}
-                        numberOfLines={1}
-                      >
-                        {client.service}
-                      </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
-                          <Text style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "600" }}>
-                            {client.time}
-                          </Text>
-                        </View>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                          <Ionicons name="cash-outline" size={14} color={Colors.primary} />
-                          <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.primary }}>
-                            {n(client.price).toFixed(2).replace(".", ",")}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
+            {upcomingClients.map((client, i) => (
+              <UpcomingClientRow key={client.id} client={client} index={i} />
+            ))}
           </View>
         )}
       </View>
@@ -712,7 +762,6 @@ export default function ProDashboard() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <View style={{ width: 4, height: 20, backgroundColor: Colors.primary, borderRadius: 2 }} />
                 <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Top prestations</Text>
               </View>
               <Ionicons name="star" size={16} color={Colors.primary} />
@@ -790,7 +839,6 @@ export default function ProDashboard() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <View style={{ width: 4, height: 20, backgroundColor: Colors.primary, borderRadius: 2 }} />
                 <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>
                   Revenus de la semaine
                 </Text>
@@ -876,20 +924,25 @@ export default function ProDashboard() {
         <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
           Ouvrez de nouveaux créneaux depuis votre calendrier pour permettre à vos clientes de réserver.
         </Text>
-        <Pressable
-          onPress={() => { setShowSlotsModal(false); router.push("/(pro)/calendar"); }}
-          style={{ overflow: "hidden", borderRadius: 12 }}
+        <AnimatedPressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            setShowSlotsModal(false);
+            router.push("/(pro)/calendar");
+          }}
+          style={{
+            borderRadius: 12,
+            backgroundColor: Colors.primary,
+            paddingVertical: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
         >
-          <LinearGradient
-            colors={[Colors.primary, `${Colors.primary}E6`]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
-          >
-            <Ionicons name="calendar-outline" size={18} color={Colors.white} />
-            <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
-          </LinearGradient>
-        </Pressable>
+          <Ionicons name="calendar-outline" size={18} color={Colors.white} />
+          <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
+        </AnimatedPressable>
       </Modal>
 
       {/* ── BLOCK MODAL ── */}
@@ -945,28 +998,40 @@ export default function ProDashboard() {
           >
             <Text style={{ fontWeight: "700", color: Colors.foreground, fontSize: 14 }}>Annuler</Text>
           </Pressable>
-          <Pressable onPress={handleBlockDay} disabled={blockLoading} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}>
-            <LinearGradient
-              colors={[Colors.destructive, `${Colors.destructive}E6`]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ paddingVertical: 14, flexDirection: "row", alignItems: "center",
-                justifyContent: "center", gap: 8, opacity: blockLoading ? 0.7 : 1 }}
-            >
-              {blockLoading ? (
-                <ActivityIndicator color={Colors.white} size="small" />
-              ) : (
-                <>
-                  <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color={Colors.white} />
-                  <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>
-                    {isBlockedDay(blockDate) ? "Débloquer" : "Bloquer"}
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </Pressable>
+          <AnimatedPressable
+            onPress={() => {
+              Haptics.impactAsync(
+                isBlockedDay(blockDate) ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Heavy
+              ).catch(() => {});
+              handleBlockDay();
+            }}
+            disabled={blockLoading}
+            style={{
+              flex: 1,
+              borderRadius: 12,
+              backgroundColor: Colors.destructive,
+              paddingVertical: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              opacity: blockLoading ? 0.7 : 1,
+            }}
+          >
+            {blockLoading ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <>
+                <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color={Colors.white} />
+                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>
+                  {isBlockedDay(blockDate) ? "Débloquer" : "Bloquer"}
+                </Text>
+              </>
+            )}
+          </AnimatedPressable>
         </View>
       </Modal>
     </ScrollView>
+    </Animated.View>
   );
 }

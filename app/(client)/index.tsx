@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   Pressable,
-  ActivityIndicator,
   Animated,
   RefreshControl,
   type ListRenderItem,
@@ -16,15 +15,19 @@ import { useScrollToTop } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { specialistsApi, favoritesApi, clientApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 // ── Style constants (module-level → never recreated) ─────────────────────────
 const CATEGORY_LIST_STYLE  = { paddingHorizontal: 24, gap: 8, paddingBottom: 4 } as const;
 const SPECIALIST_LIST_STYLE = { paddingHorizontal: 24, gap: 16, paddingVertical: 8 } as const;
 const MAIN_LIST_STYLE       = { paddingBottom: 100 } as const;
+const CARD_WIDTH = 280;
+const CARD_SNAP_INTERVAL = CARD_WIDTH + 16;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -60,24 +63,121 @@ interface Booking {
   price?: number | string;
 }
 
+// ── ShimmerBlock ──────────────────────────────────────────────────────────────
+function ShimmerBlock({ style }: { style: object }) {
+  const translateX = useRef(new Animated.Value(-1)).current;
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const loop = Animated.loop(
+      Animated.timing(translateX, {
+        toValue: 1,
+        duration: 1100,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [translateX, reduceMotion]);
+
+  return (
+    <View style={[{ backgroundColor: Colors.muted, overflow: "hidden" }, style]}>
+      {!reduceMotion && (
+        <Animated.View
+          style={[
+            StyleSheetAbsoluteFillWide,
+            {
+              transform: [
+                {
+                  translateX: translateX.interpolate({
+                    inputRange: [-1, 1],
+                    outputRange: [-160, 160],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={["transparent", "rgba(255,255,255,0.55)", "transparent"]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={{ width: 120, height: "100%" }}
+          />
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+const StyleSheetAbsoluteFillWide = {
+  position: "absolute",
+  top: 0,
+  bottom: 0,
+  left: -40,
+  right: -40,
+} as const;
+
+// ── SpecialistCardSkeleton ────────────────────────────────────────────────────
+function SpecialistCardSkeleton() {
+  return (
+    <View
+      style={[{ width: CARD_WIDTH, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
+      className="border-2 border-border bg-card"
+    >
+      <ShimmerBlock style={{ width: "100%", height: 192 }} />
+      <View className="px-4 py-3 flex-row items-center justify-between">
+        <ShimmerBlock style={{ width: 70, height: 12, borderRadius: 6 }} />
+        <ShimmerBlock style={{ width: 40, height: 20, borderRadius: 10 }} />
+      </View>
+    </View>
+  );
+}
+
 // ── SpecialistCard ────────────────────────────────────────────────────────────
 function SpecialistCard({
   pro,
+  index,
   isFavorite,
   onToggleFav,
 }: {
   pro: Pro;
+  index: number;
   isFavorite: boolean;
   onToggleFav: (id: number) => void;
 }) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const heartScale = useRef(new Animated.Value(1)).current;
   const cardScale = useRef(new Animated.Value(1)).current;
+  const entryOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const entryTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
   const displayName = pro.activity_name ?? `${pro.first_name} ${pro.last_name}`;
   const specialty = pro.pro_specialties?.[0] ?? "Nail Artist";
   const bannerUrl = pro.banner_photo ?? pro.profile_photo;
 
+  useEffect(() => {
+    if (reduceMotion) return;
+    Animated.parallel([
+      Animated.timing(entryOpacity, {
+        toValue: 1,
+        duration: 320,
+        delay: index * 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(entryTranslateY, {
+        toValue: 0,
+        duration: 320,
+        delay: index * 60,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    // Only animate once on mount — deliberately ignore index changes from list re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleHeartPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     Animated.sequence([
       Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 80 }),
       Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 40 }),
@@ -91,12 +191,17 @@ function SpecialistCard({
     Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
 
   return (
-    <Animated.View style={{ transform: [{ scale: cardScale }] }}>
+    <Animated.View
+      style={{
+        transform: [{ scale: cardScale }, { translateY: entryTranslateY }],
+        opacity: entryOpacity,
+      }}
+    >
     <Pressable
       onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: pro.id } })}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[{ width: 280, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
+      style={[{ width: CARD_WIDTH, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
       className="border-2 border-border bg-card"
     >
       {/* Cover image */}
@@ -180,7 +285,7 @@ function SpecialistCard({
           {pro.avg_rating != null && (
             <View
               className="flex-row items-center gap-1 px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "#fefce8" }}
+              style={{ backgroundColor: Colors.warningLight }}
             >
               <Ionicons name="star" size={12} color="#FACC15" />
               <Text className="text-xs font-bold text-foreground">
@@ -201,6 +306,7 @@ function SpecialistCard({
 // ── BookingItem ───────────────────────────────────────────────────────────────
 function BookingItem({ booking }: { booking: Booking }) {
   const router = useRouter();
+  const scale = useRef(new Animated.Value(1)).current;
   const proName =
     booking.pro_activity_name ??
     `${booking.pro_first_name ?? ""} ${booking.pro_last_name ?? ""}`.trim();
@@ -208,35 +314,71 @@ function BookingItem({ booking }: { booking: Booking }) {
   const dateStr = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   const timeStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start();
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
+
   return (
-    <Pressable
-      onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })} // BLYSS-FIX: 1.3
-      className="bg-card rounded-2xl border-2 mb-3 p-4 flex-row gap-4 items-center active:opacity-80"
-      style={[{ borderColor: "rgba(254,93,157,0.2)" }, Shadows.soft]}
-    >
-      <View className="w-14 h-14 rounded-xl bg-primary items-center justify-center flex-shrink-0">
-        <Text className="text-white font-bold text-lg">
-          {(proName[0] ?? "?").toUpperCase()}
-        </Text>
-      </View>
-      <View className="flex-1">
-        <Text className="font-bold text-base text-foreground">{proName}</Text>
-        <Text className="text-sm text-muted-foreground mt-0.5">
-          {booking.prestation_name ?? "Prestation"}
-        </Text>
-        <View className="flex-row gap-3 mt-2 items-center">
-          <View className="flex-row gap-1 items-center">
-            <Ionicons name="calendar-outline" size={12} color={Colors.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">{dateStr}</Text>
-          </View>
-          <View className="flex-row gap-1 items-center">
-            <Ionicons name="time-outline" size={12} color={Colors.primary} />
-            <Text className="text-xs text-primary font-semibold">{timeStr}</Text>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })} // BLYSS-FIX: 1.3
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        className="bg-card rounded-2xl border-2 mb-3 p-4 flex-row gap-4 items-center"
+        style={[{ borderColor: "rgba(254,93,157,0.2)" }, Shadows.soft]}
+      >
+        <View className="w-14 h-14 rounded-xl bg-primary items-center justify-center flex-shrink-0">
+          <Text className="text-white font-bold text-lg">
+            {(proName[0] ?? "?").toUpperCase()}
+          </Text>
+        </View>
+        <View className="flex-1">
+          <Text className="font-bold text-base text-foreground">{proName}</Text>
+          <Text className="text-sm text-muted-foreground mt-0.5">
+            {booking.prestation_name ?? "Prestation"}
+          </Text>
+          <View className="flex-row gap-3 mt-2 items-center">
+            <View className="flex-row gap-1 items-center">
+              <Ionicons name="calendar-outline" size={12} color={Colors.mutedForeground} />
+              <Text className="text-xs text-muted-foreground">{dateStr}</Text>
+            </View>
+            <View className="flex-row gap-1 items-center">
+              <Ionicons name="time-outline" size={12} color={Colors.primary} />
+              <Text className="text-xs text-primary font-semibold">{timeStr}</Text>
+            </View>
           </View>
         </View>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={Colors.mutedForeground} />
-    </Pressable>
+        <Ionicons name="chevron-forward" size={20} color={Colors.mutedForeground} />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ── EmptyBookingsPulse ────────────────────────────────────────────────────────
+function EmptyBookingsIcon() {
+  const reduceMotion = useReducedMotion();
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.12, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse, reduceMotion]);
+
+  return (
+    <Animated.View
+      style={{ transform: [{ scale: pulse }] }}
+      className="w-12 h-12 rounded-2xl bg-primary items-center justify-center flex-shrink-0"
+    >
+      <Ionicons name="calendar-outline" size={22} color={Colors.white} />
+    </Animated.View>
   );
 }
 
@@ -245,20 +387,44 @@ export default function ClientHome() {
   const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const reduceMotion = useReducedMotion();
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const flatListRef = useRef(null);
   useScrollToTop(flatListRef);
 
   // ── Entrance animation ──────────────────────────────────────────────────
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fadeAnim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideAnim = useRef(new Animated.Value(reduceMotion ? 0 : 30)).current;
+  const nameSlide = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(nameSlide, { toValue: 0, duration: 380, delay: 80, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  // ── Search bar press feedback ─────────────────────────────────────────────
+  const searchScale = useRef(new Animated.Value(1)).current;
+  const searchBorderAnim = useRef(new Animated.Value(0)).current;
+  const handleSearchPressIn = () => {
+    Animated.parallel([
+      Animated.spring(searchScale, { toValue: 1.02, useNativeDriver: true, speed: 40 }),
+      Animated.timing(searchBorderAnim, { toValue: 1, duration: 150, useNativeDriver: false }),
+    ]).start();
+  };
+  const handleSearchPressOut = () => {
+    Animated.parallel([
+      Animated.spring(searchScale, { toValue: 1, useNativeDriver: true, speed: 30 }),
+      Animated.timing(searchBorderAnim, { toValue: 0, duration: 200, useNativeDriver: false }),
+    ]).start();
+  };
+  const searchBorderColor = searchBorderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [Colors.border, Colors.primary],
+  });
 
   // ── Data queries ─────────────────────────────────────────────────────────
   const [refreshing, setRefreshing] = useState(false);
@@ -340,31 +506,58 @@ export default function ClientHome() {
     [bookings]
   );
 
-  const greeting = user?.first_name ? `Salut ${user.first_name}` : "Bienvenue";
+  const greetingPrefix = user?.first_name ? "Salut" : "Bienvenue";
+  const greetingName = user?.first_name ?? "";
 
   // ── Render helpers ────────────────────────────────────────────────────────
-  const renderCategory = useCallback<ListRenderItem<(typeof CATEGORIES)[number]>>(
-    ({ item }) => (
-      <Pressable
-        onPress={() => router.push({ pathname: "/specialists", params: { search: item.query } })}
-        className="px-3.5 py-2 rounded-xl bg-card border-2 border-border active:border-primary active:opacity-80"
-      >
-        <Text className="text-xs font-semibold text-foreground">{item.label}</Text>
-      </Pressable>
-    ),
+  const handleCategoryPress = useCallback(
+    (item: (typeof CATEGORIES)[number]) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      setSelectedCategory((prev) => (prev === item.query ? null : item.query));
+      router.push({ pathname: "/specialists", params: { search: item.query } });
+    },
     [router]
   );
 
+  const renderCategory = useCallback<ListRenderItem<(typeof CATEGORIES)[number]>>(
+    ({ item }) => {
+      const isSelected = selectedCategory === item.query;
+      return (
+        <Pressable
+          onPress={() => handleCategoryPress(item)}
+          className={`px-3.5 py-2 rounded-xl border-2 active:opacity-80 ${
+            isSelected ? "bg-primary/10 border-primary" : "bg-card border-border"
+          }`}
+        >
+          <Text
+            className={`text-xs font-semibold ${
+              isSelected ? "text-primary" : "text-foreground"
+            }`}
+          >
+            {item.label}
+          </Text>
+        </Pressable>
+      );
+    },
+    [selectedCategory, handleCategoryPress]
+  );
+
   const renderSpecialist = useCallback<ListRenderItem<Pro>>(
-    ({ item }) => (
+    ({ item, index }) => (
       <SpecialistCard
         pro={item}
+        index={index}
         isFavorite={favoriteIds.has(item.id)}
         onToggleFav={(id) => toggleFavMutation.mutate(id)}
       />
     ),
     [favoriteIds, toggleFavMutation]
   );
+
+  const handlePrimaryCta = (path: "/specialists") => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    router.push(path);
+  };
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
@@ -379,31 +572,64 @@ export default function ClientHome() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={MAIN_LIST_STYLE}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            progressViewOffset={10}
+          />
         }
         ListHeaderComponent={
           <>
             {/* ── Header ─────────────────────────────────────────────────── */}
             <View className="px-6 pt-4 pb-2">
               <Text className="text-2xl font-black text-foreground tracking-tight">
-                {greeting} 👋
+                {greetingPrefix}{" "}
+                <Animated.Text style={{ transform: [{ translateX: nameSlide }] }}>
+                  {greetingName}
+                </Animated.Text>
               </Text>
               <Text className="text-sm text-muted-foreground mt-0.5">
-                Tes nails parfaites, en quelques clics ✨
+                👋 Tes nails parfaites, en quelques clics ✨
               </Text>
             </View>
 
             {/* ── Search bar (tap → specialists) ─────────────────────────── */}
-            <Pressable
-              onPress={() => router.push("/specialists")}
-              className="mx-6 mb-3 h-14 flex-row items-center gap-3 bg-card border-2 border-border rounded-2xl px-4"
-              style={Shadows.card}
+            <Animated.View
+              style={{
+                marginHorizontal: 24,
+                marginBottom: 12,
+                transform: [{ scale: searchScale }],
+              }}
             >
-              <Ionicons name="search-outline" size={20} color={Colors.mutedForeground} />
-              <Text className="text-muted-foreground text-sm flex-1">
-                Experte, ville, prestation...
-              </Text>
-            </Pressable>
+              <Pressable
+                onPress={() => router.push("/specialists")}
+                onPressIn={handleSearchPressIn}
+                onPressOut={handleSearchPressOut}
+              >
+                <Animated.View
+                  style={[
+                    {
+                      height: 56,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      backgroundColor: Colors.card,
+                      borderWidth: 2,
+                      borderColor: searchBorderColor,
+                      borderRadius: 16,
+                      paddingHorizontal: 16,
+                    },
+                    Shadows.card,
+                  ]}
+                >
+                  <Ionicons name="search-outline" size={20} color={Colors.mutedForeground} />
+                  <Text className="text-muted-foreground text-sm flex-1">
+                    Experte, ville, prestation...
+                  </Text>
+                </Animated.View>
+              </Pressable>
+            </Animated.View>
 
             {/* ── Category chips ──────────────────────────────────────────── */}
             <FlatList
@@ -427,8 +653,8 @@ export default function ClientHome() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => router.push("/specialists")}
-                className="flex-row items-center gap-1 px-4 py-2 rounded-full bg-primary"
+                onPress={() => handlePrimaryCta("/specialists")}
+                className="flex-row items-center gap-1 px-4 py-2 rounded-full bg-primary active:opacity-80"
                 style={Shadows.soft}
               >
                 <Text className="text-xs font-semibold text-white">Tout voir</Text>
@@ -438,9 +664,15 @@ export default function ClientHome() {
 
             {/* ── Specialist cards (FlatList horizontal) ─────────────────── */}
             {loadingPros ? (
-              <View className="h-64 items-center justify-center">
-                <ActivityIndicator color={Colors.primary} />
-              </View>
+              <FlatList
+                horizontal
+                data={[1, 2, 3]}
+                keyExtractor={(item) => String(item)}
+                renderItem={() => <SpecialistCardSkeleton />}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={SPECIALIST_LIST_STYLE}
+                scrollEnabled={false}
+              />
             ) : (
               <FlatList
                 horizontal
@@ -449,22 +681,11 @@ export default function ClientHome() {
                 renderItem={renderSpecialist}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={SPECIALIST_LIST_STYLE}
+                snapToInterval={CARD_SNAP_INTERVAL}
+                snapToAlignment="start"
+                decelerationRate="fast"
               />
             )}
-
-            {/* ── CTA "Voir toutes les expertes" ─────────────────────────── */}
-            <Pressable
-              onPress={() => router.push("/specialists")}
-              className="mx-6 mt-3 py-3.5 rounded-2xl bg-primary items-center justify-center"
-              style={Shadows.soft}
-            >
-              <View className="flex-row gap-2 items-center">
-                <Text className="text-white font-semibold text-sm">
-                  Voir toutes les expertes
-                </Text>
-                <Ionicons name="arrow-forward" size={18} color={Colors.white} />
-              </View>
-            </Pressable>
 
             {/* ── Tes nails à venir ──────────────────────────────────────── */}
             <View className="px-6 mt-8 mb-3">
@@ -485,9 +706,7 @@ export default function ClientHome() {
                 }}
               >
                 <View className="flex-row gap-4 items-start">
-                  <View className="w-12 h-12 rounded-2xl bg-primary items-center justify-center flex-shrink-0">
-                    <Ionicons name="calendar-outline" size={22} color={Colors.white} />
-                  </View>
+                  <EmptyBookingsIcon />
                   <View className="flex-1">
                     <Text className="font-semibold text-base text-foreground">
                       Aucun rendez-vous prévu
@@ -496,8 +715,8 @@ export default function ClientHome() {
                       Réserve dès maintenant auprès d'une experte près de chez toi
                     </Text>
                     <Pressable
-                      onPress={() => router.push("/specialists")}
-                      className="mt-3 px-4 py-2 rounded-xl bg-primary self-start"
+                      onPress={() => handlePrimaryCta("/specialists")}
+                      className="mt-3 px-4 py-3 rounded-xl bg-primary self-start active:opacity-80"
                     >
                       <View className="flex-row gap-1.5 items-center">
                         <Ionicons name="sparkles-outline" size={14} color={Colors.white} />

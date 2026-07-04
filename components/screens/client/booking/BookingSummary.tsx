@@ -1,8 +1,9 @@
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface Props {
   prestationName: string;
@@ -41,7 +42,7 @@ function PaymentChoice({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
       style={{
@@ -89,7 +90,7 @@ function PaymentChoice({
       >
         {selected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,19 +7,22 @@ import {
   Pressable,
   Switch,
   Linking,
+  Animated,
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { Colors } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type Client = {
   id: number;
@@ -54,6 +57,8 @@ export default function ClientDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
 
   const [notes, setNotes] = useState("");
@@ -119,6 +124,7 @@ export default function ClientDetailScreen() {
   }, [notes, allergies, shape, style, patchTest, initial]);
 
   const handleSave = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setSaveError(null);
     setIsSaving(true);
     try {
@@ -130,6 +136,7 @@ export default function ClientDetailScreen() {
         patch_test_done: patchTest,
       });
       if (res.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         qc.invalidateQueries({ queryKey: ["client-notes", clientId] });
         setInitial({ notes, allergies, shape, style, patchTest });
         setHasChanges(false);
@@ -142,6 +149,11 @@ export default function ClientDetailScreen() {
       setIsSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (loadingNotes || (loadingClients && !notesData) || reduceMotion) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [loadingNotes, loadingClients, notesData, reduceMotion, contentOpacity]);
 
   if (loadingNotes || (loadingClients && !notesData)) {
     return (
@@ -169,6 +181,7 @@ export default function ClientDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 16,
@@ -390,8 +403,11 @@ export default function ClientDetailScreen() {
 
         {/* Bloquer */}
         <SectionTitle title="Zone critique" />
-        <Pressable
-          onPress={() => blockMutation.mutate()}
+        <AnimatedPressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+            blockMutation.mutate();
+          }}
           style={{
             backgroundColor: "#FFF0F0", borderRadius: 16,
             borderWidth: 1, borderColor: `${Colors.destructive}30`,
@@ -412,7 +428,7 @@ export default function ClientDetailScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={Colors.destructive} />
-        </Pressable>
+        </AnimatedPressable>
       </ScrollView>
 
       {/* Sticky save */}
@@ -424,7 +440,7 @@ export default function ClientDetailScreen() {
           backgroundColor: "rgba(255,234,241,0.97)",
         }}>
           {saveError && <View style={{ marginBottom: 10 }}><ErrorMessage message={saveError} /></View>}
-          <Pressable
+          <AnimatedPressable
             onPress={handleSave}
             disabled={isSaving}
             style={{
@@ -446,9 +462,10 @@ export default function ClientDetailScreen() {
                 <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>Enregistrer les notes</Text>
               </>
             )}
-          </Pressable>
+          </AnimatedPressable>
         </View>
       )}
+      </Animated.View>
     </View>
   );
 }

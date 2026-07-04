@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -130,7 +131,7 @@ function CalendarGrid({
     >
       {/* Month header */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <Pressable
+        <AnimatedIconButton
           onPress={goToPrev}
           disabled={isFirstDayOfCurrentMonth()}
           style={{
@@ -144,11 +145,11 @@ function CalendarGrid({
           }}
         >
           <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
         <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
           {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </Text>
-        <Pressable
+        <AnimatedIconButton
           onPress={goToNext}
           style={{
             width: 36,
@@ -160,7 +161,7 @@ function CalendarGrid({
           }}
         >
           <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
-        </Pressable>
+        </AnimatedIconButton>
       </View>
 
       {/* Day names */}
@@ -187,7 +188,7 @@ function CalendarGrid({
 
           return (
             <View key={date.toISOString()} style={{ width: cellSize, alignItems: "center", marginBottom: 4 }}>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => selectable && onSelectDate(new Date(date))}
                 disabled={!selectable}
                 style={{
@@ -215,7 +216,7 @@ function CalendarGrid({
                 >
                   {date.getDate()}
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
               {/* Availability dot */}
               {available && !selected && (
                 <View
@@ -307,7 +308,7 @@ export function DateTimeSelector({
               {availableSlots.map((slot) => {
                 const active = selectedTime === slot.time;
                 return (
-                  <Pressable
+                  <AnimatedPressable
                     key={slot.id}
                     onPress={() => onSelectTime(slot.time)}
                     style={{
@@ -342,7 +343,7 @@ export function DateTimeSelector({
                     >
                       {formatDuration(slot.duration)}
                     </Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 );
               })}
             </View>

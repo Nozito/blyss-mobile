@@ -1,5 +1,5 @@
-import React from "react";
-import { ActivityIndicator, Pressable, Text, type ViewStyle } from "react-native";
+import React, { useRef } from "react";
+import { ActivityIndicator, Animated, Pressable, Text, type ViewStyle } from "react-native";
 import { Colors } from "@/constants/colors";
 
 interface LoadingButtonProps {
@@ -30,39 +30,48 @@ export function LoadingButton({
 }: LoadingButtonProps) {
   const isDisabled = disabled || loading;
   const bg = BG[variant] ?? Colors.primary;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start();
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={isDisabled}
-      style={[
-        {
-          height: 52,
-          borderRadius: 16,
-          backgroundColor: variant === "ghost" ? "transparent" : bg,
-          borderWidth: variant === "ghost" ? 1.5 : 0,
-          borderColor: variant === "ghost" ? Colors.border : "transparent",
-          alignItems: "center",
-          justifyContent: "center",
-          opacity: isDisabled ? 0.6 : 1,
-          alignSelf: fullWidth ? "stretch" : "auto",
-        },
-        style,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color={variant === "ghost" ? Colors.foreground : Colors.white} />
-      ) : (
-        <Text
-          style={{
-            fontSize: 15,
-            fontWeight: "700",
-            color: variant === "ghost" ? Colors.foreground : Colors.white,
-          }}
-        >
-          {label}
-        </Text>
-      )}
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale }], alignSelf: fullWidth ? "stretch" : "auto" }}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isDisabled}
+        style={[
+          {
+            height: 56,
+            borderRadius: 16,
+            backgroundColor: variant === "ghost" ? "transparent" : bg,
+            borderWidth: variant === "ghost" ? 1.5 : 0,
+            borderColor: variant === "ghost" ? Colors.border : "transparent",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: isDisabled ? 0.6 : 1,
+          },
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={variant === "ghost" ? Colors.foreground : Colors.white} />
+        ) : (
+          <Text
+            style={{
+              fontSize: 15,
+              fontWeight: "700",
+              color: variant === "ghost" ? Colors.foreground : Colors.white,
+            }}
+          >
+            {label}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }

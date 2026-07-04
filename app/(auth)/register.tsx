@@ -11,13 +11,15 @@ import {
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { Colors } from "@/constants/colors";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 // ── Constants (mirrored from web) ──────────────────────────────────────────
 const VALIDATION = {
@@ -143,6 +145,66 @@ function PasswordStep({
   );
 }
 
+// ── Success step ─────────────────────────────────────────────────────────────
+function RegisterSuccess({ onPress }: { onPress: () => void }) {
+  const reduceMotion = useReducedMotion();
+  const scale = useRef(new Animated.Value(reduceMotion ? 1 : 0.5)).current;
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+
+  useEffect(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (reduceMotion) return;
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 10 }),
+      Animated.timing(opacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 }}>
+      <Animated.View
+        style={{
+          width: 88,
+          height: 88,
+          borderRadius: 44,
+          backgroundColor: Colors.primary,
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 24,
+          shadowColor: Colors.primary,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.35,
+          shadowRadius: 18,
+          elevation: 8,
+          transform: [{ scale }],
+          opacity,
+        }}
+      >
+        <Ionicons name="checkmark" size={40} color={Colors.white} />
+      </Animated.View>
+      <Text style={{ fontSize: 28, fontWeight: "900", color: Colors.foreground, textAlign: "center", marginBottom: 8 }}>
+        Bienvenue sur Blyss !
+      </Text>
+      <Text style={{ fontSize: 15, color: Colors.mutedForeground, textAlign: "center", lineHeight: 22, marginBottom: 40, paddingHorizontal: 16 }}>
+        Ton compte a été créé avec succès.{"\n"}On est ravis de t'accueillir !
+      </Text>
+      <AnimatedPressable
+        onPress={onPress}
+        style={{
+          width: "100%",
+          height: 56,
+          borderRadius: 16,
+          backgroundColor: Colors.primary,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>Commencer</Text>
+      </AnimatedPressable>
+    </View>
+  );
+}
+
 // ── Main screen ────────────────────────────────────────────────────────────
 export default function RegisterScreen() {
   const router = useRouter();
@@ -241,6 +303,7 @@ export default function RegisterScreen() {
   }, [step, router]);
 
   const handleNext = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setStepError("");
 
     if (step === 4 && !VALIDATION.EMAIL_REGEX.test(formData.email.trim())) {
@@ -298,30 +361,13 @@ export default function RegisterScreen() {
   const renderContent = () => {
     if (step === 99) {
       return (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 }}>
-          <Text style={{ fontSize: 64, marginBottom: 24 }}>🎉</Text>
-          <Text style={{ fontSize: 28, fontWeight: "900", color: "#09090B", textAlign: "center", marginBottom: 8 }}>
-            Bienvenue sur Blyss !
-          </Text>
-          <Text style={{ fontSize: 15, color: "#6D6D78", textAlign: "center", lineHeight: 22, marginBottom: 40, paddingHorizontal: 16 }}>
-            Ton compte a été créé avec succès.{"\n"}On est ravis de t'accueillir !
-          </Text>
-          <Pressable
-            onPress={() => {
-              if (formData.role === "pro") router.replace("/(pro)/dashboard" as any);
-              else router.replace("/(client)" as any);
-            }}
-            style={{ width: "100%", borderRadius: 16, overflow: "hidden" }}
-          >
-            <LinearGradient
-              colors={["#FE5D9D", "rgba(254,93,157,0.9)"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={{ height: 56, alignItems: "center", justifyContent: "center" }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Commencer</Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
+        <RegisterSuccess
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            if (formData.role === "pro") router.replace("/(pro)/dashboard" as any);
+            else router.replace("/(client)" as any);
+          }}
+        />
       );
     }
 
@@ -624,34 +670,25 @@ export default function RegisterScreen() {
           className="px-6 pb-8 pt-4"
           style={{ backgroundColor: "rgba(255,234,241,0.97)" }}
         >
-          <Pressable
+          <AnimatedPressable
             onPress={handleNext}
             disabled={!isStepValid() || isLoading}
+            style={{
+              height: 56,
+              borderRadius: 16,
+              backgroundColor: !isStepValid() || isLoading ? Colors.disabled : Colors.primary,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <LinearGradient
-              colors={
-                !isStepValid() || isLoading
-                  ? ["#D1D5DB", "#D1D5DB"]
-                  : ["#FE5D9D", "rgba(254,93,157,0.9)"]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                height: 56,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-                  {ctaLabel}
-                </Text>
-              )}
-            </LinearGradient>
-          </Pressable>
+            {isLoading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>
+                {ctaLabel}
+              </Text>
+            )}
+          </AnimatedPressable>
 
           {/* Login redirect */}
           <Text className="text-xs text-muted-foreground text-center mt-4">

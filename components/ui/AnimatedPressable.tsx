@@ -23,11 +23,11 @@ export function AnimatedPressable({ onPress, style, children, ...rest }: Props) 
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} accessibilityRole="button" {...rest}>
+    <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} accessibilityRole="button" {...rest}>
+      <Animated.View style={[{ transform: [{ scale }] }, style]}>
         {children}
-      </Pressable>
-    </Animated.View>
+      </Animated.View>
+    </Pressable>
   );
 }
 

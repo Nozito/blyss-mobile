@@ -13,6 +13,8 @@ import * as WebBrowser from "expo-web-browser";
 import { Fonts } from "@/constants/fonts";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 // ─── Pills data ───────────────────────────────────────────────────────────────
 
@@ -77,6 +79,7 @@ const PillRow = React.memo(function PillRow({
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
 
   // — Entrée —
   const logoOpacity     = useRef(new Animated.Value(0)).current;
@@ -97,6 +100,18 @@ export default function WelcomeScreen() {
   const ctaScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      logoOpacity.setValue(1);
+      logoScale.setValue(1);
+      titleOpacity.setValue(1);
+      titleY.setValue(0);
+      subtitleOpacity.setValue(1);
+      pillsOpacity.setValue(1);
+      buttonsOpacity.setValue(1);
+      buttonsY.setValue(0);
+      return;
+    }
+
     Animated.sequence([
       Animated.parallel([
         Animated.timing(logoOpacity, { toValue: 1, duration: 480, useNativeDriver: true }),
@@ -138,7 +153,7 @@ export default function WelcomeScreen() {
     }, 1200);
 
     return () => clearTimeout(t);
-  }, []);
+  }, [reduceMotion]);
 
   const pressIn = () => {
     Animated.spring(ctaScale, { toValue: 0.96, damping: 15, stiffness: 300, useNativeDriver: true }).start();
@@ -200,9 +215,15 @@ export default function WelcomeScreen() {
           </Animated.View>
         </Pressable>
 
-        <Pressable onPress={() => router.push("/(auth)/login")} style={styles.secondaryBtn}>
+        <AnimatedPressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            router.push("/(auth)/login");
+          }}
+          style={styles.secondaryBtn}
+        >
           <Text style={styles.secondaryBtnText}>J'ai déjà un compte</Text>
-        </Pressable>
+        </AnimatedPressable>
 
         <Text style={styles.legal}>
           {"En continuant tu acceptes nos "}
@@ -230,8 +251,8 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   logoImg: {
-    width: 130,
-    height: 130,
+    width: 88,
+    height: 88,
   },
 
   // Hero

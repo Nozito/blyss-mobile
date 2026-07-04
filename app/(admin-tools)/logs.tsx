@@ -11,6 +11,7 @@ import { Colors } from "@/constants/colors";
 import { adminApi } from "@/lib/api";
 import { ADMIN } from "@/constants/adminTheme";
 import { safeBack } from "@/lib/navigation";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const BG     = ADMIN.bg;
 const CARD   = "rgba(255,255,255,0.05)";
@@ -110,7 +111,7 @@ export default function AdminLogsScreen() {
     <View style={{ flex: 1, backgroundColor: BG }}>
       {/* ── Header ── */}
       <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top + 16, paddingHorizontal: 16, paddingBottom: 16 }}>
-        <Pressable
+        <AnimatedPressable
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
         >
@@ -118,7 +119,7 @@ export default function AdminLogsScreen() {
             ? <SymbolView name="chevron.left" size={16} tintColor={ADMIN.accent} />
             : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
           <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
-        </Pressable>
+        </AnimatedPressable>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.info }} />
@@ -140,9 +141,9 @@ export default function AdminLogsScreen() {
             style={{ flex: 1, fontSize: 14, color: TEXT1 }}
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery("")}>
+            <AnimatedIconButton onPress={() => setSearchQuery("")}>
               <Ionicons name="close-circle" size={16} color={TEXT2} />
-            </Pressable>
+            </AnimatedIconButton>
           )}
         </View>
 
@@ -151,7 +152,7 @@ export default function AdminLogsScreen() {
           {[{ id: "all", label: "Tous" }, ...Object.entries(TYPE_CONFIG).map(([id, c]) => ({ id, label: c.label }))].map((f) => {
             const active = typeFilter === f.id;
             return (
-              <Pressable
+              <AnimatedPressable
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setTypeFilter(f.id); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
@@ -159,7 +160,7 @@ export default function AdminLogsScreen() {
                   borderColor: active ? ADMIN.accent : BORDER }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
-              </Pressable>
+              </AnimatedPressable>
             );
           })}
         </ScrollView>
@@ -169,7 +170,7 @@ export default function AdminLogsScreen() {
           {DATE_FILTERS.map((f) => {
             const active = dateFilter === f.id;
             return (
-              <Pressable
+              <AnimatedPressable
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setDateFilter(f.id); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
@@ -177,7 +178,7 @@ export default function AdminLogsScreen() {
                   borderColor: active ? ADMIN.accent : BORDER }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "700", color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
-              </Pressable>
+              </AnimatedPressable>
             );
           })}
         </ScrollView>
@@ -207,9 +208,9 @@ export default function AdminLogsScreen() {
               <Ionicons name="cloud-offline-outline" size={32} color={TEXT3} />
             </View>
             <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les logs</Text>
-            <Pressable onPress={fetchLogs} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: `${ADMIN.accent}20`, borderWidth: 1, borderColor: ADMIN.accent }}>
+            <AnimatedPressable onPress={fetchLogs} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: `${ADMIN.accent}20`, borderWidth: 1, borderColor: ADMIN.accent }}>
               <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         ) : filtered.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 60 }}>

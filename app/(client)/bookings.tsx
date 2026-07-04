@@ -1,21 +1,23 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   Pressable,
+  type ListRenderItem,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Booking {
@@ -163,31 +165,55 @@ function BookingCard({ booking, index }: { booking: Booking; index: number }) {
 // ─── Empty State ──────────────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.08, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
   return (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
+      <Animated.View style={[styles.emptyIcon, { transform: [{ scale: pulse }] }]}>
         <Ionicons name="calendar" size={36} color={Colors.primary} />
-      </View>
+      </Animated.View>
       <Text style={styles.emptyTitle}>Aucune réservation</Text>
       <Text style={styles.emptySubtitle}>
         Tes prochains rendez-vous beauté apparaîtront ici
       </Text>
-      <TouchableOpacity
+      <AnimatedPressable
         style={styles.ctaButton}
-        onPress={() => router.push("/specialists")}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          router.push("/specialists");
+        }}
       >
         <Text style={styles.ctaText}>Trouver une spécialiste</Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </View>
   );
 }
+
+// ─── Row model (flat list — properly virtualized) ────────────────────────────
+type Row =
+  | { kind: "skeleton"; key: string }
+  | { kind: "empty"; key: string }
+  | { kind: "promo"; key: string }
+  | { kind: "section"; key: string; title: string; compact?: boolean }
+  | { kind: "booking"; key: string; booking: Booking; index: number };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function BookingsScreen() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const scrollRef = useRef(null);
-  useScrollToTop(scrollRef);
+  const listRef = useRef(null);
+  useScrollToTop(listRef);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["client-bookings"],
@@ -200,11 +226,83 @@ export default function BookingsScreen() {
     ? (data.data as Booking[])
     : [];
 
-  const upcomingBookings = bookings.filter(
-    (b) => b.status === "confirmed" || b.status === "pending"
+  const { upcomingBookings, pastBookings } = useMemo(
+    () => ({
+      upcomingBookings: bookings.filter(
+        (b) => b.status === "confirmed" || b.status === "pending"
+      ),
+      pastBookings: bookings.filter(
+        (b) => b.status === "completed" || b.status === "cancelled"
+      ),
+    }),
+    [bookings]
   );
-  const pastBookings = bookings.filter(
-    (b) => b.status === "completed" || b.status === "cancelled"
+
+  // Promo banner only makes sense once the client already has booking history —
+  // otherwise it duplicates the EmptyState's own CTA on the same screen.
+  const showPromoBanner = !isLoading && bookings.length > 0;
+
+  const rows = useMemo<Row[]>(() => {
+    if (isLoading) {
+      return [0, 1, 2].map((i) => ({ kind: "skeleton" as const, key: `skeleton-${i}` }));
+    }
+    const list: Row[] = [];
+    if (showPromoBanner) list.push({ kind: "promo", key: "promo" });
+    if (!isError && bookings.length === 0) {
+      list.push({ kind: "empty", key: "empty" });
+      return list;
+    }
+    if (upcomingBookings.length > 0) {
+      list.push({ kind: "section", key: "section-upcoming", title: `À venir (${upcomingBookings.length})` });
+      upcomingBookings.forEach((b, i) => list.push({ kind: "booking", key: `up-${b.id}`, booking: b, index: i }));
+    }
+    if (pastBookings.length > 0) {
+      list.push({
+        kind: "section",
+        key: "section-past",
+        title: `Historique (${pastBookings.length})`,
+        compact: upcomingBookings.length > 0,
+      });
+      pastBookings.forEach((b, i) => list.push({ kind: "booking", key: `past-${b.id}`, booking: b, index: i }));
+    }
+    return list;
+  }, [isLoading, isError, bookings.length, showPromoBanner, upcomingBookings, pastBookings]);
+
+  const handlePromoPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    router.push("/specialists");
+  }, [router]);
+
+  const renderRow = useCallback<ListRenderItem<Row>>(
+    ({ item }) => {
+      switch (item.kind) {
+        case "skeleton":
+          return <SkeletonCard />;
+        case "empty":
+          return <EmptyState />;
+        case "promo":
+          return (
+            <View style={styles.ctaBanner}>
+              <Text style={styles.ctaBannerTitle}>Prête pour un nouveau soin ?</Text>
+              <Text style={styles.ctaBannerSubtitle}>
+                Retrouve nos expertes et réserve ta prochaine prestation en quelques clics.
+              </Text>
+              <AnimatedPressable style={styles.ctaBannerButton} onPress={handlePromoPress}>
+                <Text style={styles.ctaText}>Réserve dès maintenant</Text>
+              </AnimatedPressable>
+            </View>
+          );
+        case "section":
+          return (
+            <Text style={[styles.sectionTitle, item.compact && { marginTop: 8 }]}>
+              {item.title}
+            </Text>
+          );
+        case "booking":
+          return <BookingCard booking={item.booking} index={item.index} />;
+      }
+    },
+    [handlePromoPress]
   );
 
   return (
@@ -214,49 +312,16 @@ export default function BookingsScreen() {
         <Text style={styles.headerSubtitle}>Retrouve tous tes rendez-vous ici</Text>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
+      <FlatList
+        ref={listRef}
+        data={rows}
+        keyExtractor={(item) => item.key}
+        renderItem={renderRow}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Bannière CTA — toujours visible */}
-        <View style={styles.ctaBanner}>
-          <Text style={styles.ctaBannerTitle}>Prête pour un nouveau soin ?</Text>
-          <Text style={styles.ctaBannerSubtitle}>
-            Retrouve nos expertes et réserve ta prochaine prestation en quelques clics.
-          </Text>
-          <TouchableOpacity
-            style={styles.ctaBannerButton}
-            onPress={() => router.push("/specialists")}
-          >
-            <Text style={styles.ctaText}>Réserve dès maintenant</Text>
-          </TouchableOpacity>
-        </View>
-
-        {isLoading && [0, 1, 2].map((i) => <SkeletonCard key={i} />)}
-
-        {!isLoading && !isError && bookings.length === 0 && <EmptyState />}
-
-        {!isLoading && upcomingBookings.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>À venir ({upcomingBookings.length})</Text>
-            {upcomingBookings.map((b, i) => (
-              <BookingCard key={b.id} booking={b} index={i} />
-            ))}
-          </>
-        )}
-
-        {!isLoading && pastBookings.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, upcomingBookings.length > 0 && { marginTop: 8 }]}>
-              Historique ({pastBookings.length})
-            </Text>
-            {pastBookings.map((b, i) => (
-              <BookingCard key={b.id} booking={b} index={i} />
-            ))}
-          </>
-        )}
-      </ScrollView>
+        removeClippedSubviews
+        maxToRenderPerBatch={8}
+      />
     </SafeAreaView>
   );
 }

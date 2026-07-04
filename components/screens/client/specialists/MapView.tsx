@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Specialist } from "./SpecialistCard";
 import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 
 const PARIS: Region = {
@@ -85,9 +86,9 @@ function ProBottomCard({
 
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
-      <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
+      <AnimatedIconButton onPress={onClose} style={styles.closeBtn} hitSlop={8}>
         <Ionicons name="close" size={18} color={Colors.mutedForeground} />
-      </Pressable>
+      </AnimatedIconButton>
 
       {/* Avatar + infos */}
       <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
@@ -232,9 +233,9 @@ export default function SpecialistsMapView({ specialists }: Props) {
       )}
 
       {Platform.OS === "ios" && (
-        <Pressable onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)} style={styles.locBtn}>
+        <AnimatedIconButton onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)} style={styles.locBtn}>
           <Ionicons name="locate-outline" size={20} color={Colors.primary} />
-        </Pressable>
+        </AnimatedIconButton>
       )}
     </View>
   );

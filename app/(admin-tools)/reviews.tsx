@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { safeBack } from "@/lib/navigation";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const BG     = ADMIN.bg;
 const CARD   = ADMIN.surface;
@@ -113,12 +114,12 @@ export default function ReviewsScreen() {
       {/* Header */}
       <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 }}>
-          <Pressable
+          <AnimatedIconButton
             onPress={() => safeBack(router)}
             style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="arrow-back" size={18} color={TEXT1} />
-          </Pressable>
+          </AnimatedIconButton>
           <Text style={{ fontSize: 26, fontWeight: "900", color: TEXT1, letterSpacing: -0.6 }}>Avis signalés</Text>
           {!isLoading && reviews.length > 0 && (
             <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: `${Colors.destructive}18`, borderWidth: 1, borderColor: `${Colors.destructive}30` }}>
@@ -136,6 +137,9 @@ export default function ReviewsScreen() {
           data={reviews}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 40 }}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
           ListEmptyComponent={
             <EmptyState
@@ -183,7 +187,7 @@ export default function ReviewsScreen() {
 
               {/* Actions */}
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable
+                <AnimatedPressable
                   onPress={() => { setActionError(null); ignoreMut.mutate(item.id); }}
                   disabled={ignoreMut.isPending}
                   style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
@@ -191,8 +195,8 @@ export default function ReviewsScreen() {
                   {ignoreMut.isPending
                     ? <ActivityIndicator size="small" color={TEXT2} />
                     : <Text style={{ fontSize: 12, fontWeight: "600", color: TEXT2 }}>Ignorer le signalement</Text>}
-                </Pressable>
-                <Pressable
+                </AnimatedPressable>
+                <AnimatedPressable
                   onPress={() => { setActionError(null); void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); deleteMut.mutate(item.id); }}
                   disabled={deleteMut.isPending}
                   style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: `${Colors.destructive}18`, borderWidth: 1, borderColor: `${Colors.destructive}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
@@ -203,7 +207,7 @@ export default function ReviewsScreen() {
                         <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
                         <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Supprimer l'avis</Text>
                       </>}
-                </Pressable>
+                </AnimatedPressable>
               </View>
             </View>
           )}

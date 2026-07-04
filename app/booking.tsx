@@ -1,15 +1,17 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { stripePaymentsApi, specialistsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -20,10 +22,11 @@ import {
 import { DateTimeSelector, type Slot } from "@/components/screens/client/booking/DateTimeSelector";
 import { BookingSummary } from "@/components/screens/client/booking/BookingSummary";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -58,6 +61,89 @@ const calculateEndDateTime = (
 };
 
 const TOTAL_STEPS = 5;
+
+// ── StepIndicator ─────────────────────────────────────────────────────────────
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  const reduceMotion = useReducedMotion();
+  const anims = useRef(
+    Array.from({ length: total }, (_, i) => new Animated.Value(i < current ? 1 : 0))
+  ).current;
+
+  useEffect(() => {
+    const animations = anims.map((val, i) =>
+      Animated.timing(val, {
+        toValue: i < current ? 1 : 0,
+        duration: reduceMotion ? 0 : 260,
+        useNativeDriver: false,
+      })
+    );
+    Animated.stagger(reduceMotion ? 0 : 40, animations).start();
+  }, [current, anims, reduceMotion]);
+
+  return (
+    <View style={{ flexDirection: "row", gap: 4 }}>
+      {anims.map((val, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 3,
+            borderRadius: 99,
+            backgroundColor: Colors.border,
+            overflow: "hidden",
+          }}
+        >
+          <Animated.View
+            style={{
+              height: "100%",
+              borderRadius: 99,
+              backgroundColor: Colors.primary,
+              width: val.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+            }}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ── SuccessCheckmark ─────────────────────────────────────────────────────────
+function SuccessCheckmark() {
+  const reduceMotion = useReducedMotion();
+  const scale = useRef(new Animated.Value(reduceMotion ? 1 : 0.4)).current;
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 10 }),
+      Animated.timing(opacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        backgroundColor: Colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 8,
+        transform: [{ scale }],
+        opacity,
+      }}
+    >
+      <Ionicons name="checkmark" size={48} color={Colors.white} />
+    </Animated.View>
+  );
+}
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -218,6 +304,7 @@ export default function BookingScreen() {
   };
 
   const handleBack = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (step === 1) safeBack(router);
     else if (step === 5 && paymentMethod === "on_site") setStep(3);
     else setStep((s) => s - 1);
@@ -288,6 +375,7 @@ export default function BookingScreen() {
   };
 
   const handleNext = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     if (step === 3) {
       void handleConfirmBooking();
       return;
@@ -418,23 +506,7 @@ export default function BookingScreen() {
         return (
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={{ alignItems: "center", paddingVertical: 48, gap: 24 }}>
-              <View
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 48,
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: Colors.primary,
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 20,
-                  elevation: 8,
-                }}
-              >
-                <Ionicons name="checkmark" size={48} color={Colors.white} />
-              </View>
+              <SuccessCheckmark />
 
               <View style={{ alignItems: "center", gap: 6 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -553,16 +625,7 @@ export default function BookingScreen() {
               <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
             </AnimatedIconButton>
 
-            <View style={{ height: 6, backgroundColor: Colors.border, borderRadius: 3, overflow: "hidden" }}>
-              <View
-                style={{
-                  height: "100%",
-                  borderRadius: 3,
-                  backgroundColor: Colors.primary,
-                  width: `${(step / TOTAL_STEPS) * 100}%`,
-                }}
-              />
-            </View>
+            <StepIndicator current={step} total={TOTAL_STEPS} />
           </View>
         )}
 
@@ -576,7 +639,7 @@ export default function BookingScreen() {
 
         {step === 3 && (
           <View style={{ paddingVertical: 16 }}>
-            <Pressable
+            <AnimatedPressable
               onPress={handleNext}
               disabled={!isStepValid() || isSubmitting}
               style={{ opacity: !isStepValid() || isSubmitting ? 0.5 : 1 }}
@@ -612,7 +675,7 @@ export default function BookingScreen() {
                   </View>
                 )}
               </LinearGradient>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         )}
       </View>

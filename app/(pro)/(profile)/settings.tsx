@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   TextInput,
+  Animated,
   ActivityIndicator,
   Linking,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
@@ -23,11 +23,12 @@ import { phoneSchema, bioSchema, getZodError } from "@/lib/validation";
 import { Input } from "@/components/ui/Input";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { usePro } from "@/hooks/usePro";
 import type { User } from "@/lib/api";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
   return (
@@ -43,6 +44,11 @@ export default function ProSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isPro } = usePro();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [contentOpacity]);
   const { data: subData } = useQuery({
     queryKey: ["pro-subscription"],
     queryFn: () => proApi.getSubscription(),
@@ -111,6 +117,7 @@ export default function ProSettingsScreen() {
 
       const res = await usersApi.update(payload);
       if (res.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         await refreshProfile();
         setCurrentPassword("");
         setNewPassword("");
@@ -121,6 +128,7 @@ export default function ProSettingsScreen() {
           safeBack(router);
         }
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
         setError(res.error ?? "Impossible de mettre à jour");
       }
     } finally {
@@ -145,6 +153,7 @@ export default function ProSettingsScreen() {
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(fileUri, res.data, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(fileUri, { mimeType: "application/json", UTI: "public.json" });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch {
       setError("Impossible de générer l'export.");
     } finally {
@@ -153,6 +162,7 @@ export default function ProSettingsScreen() {
   };
 
   const handleDeleteAccount = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     setIsDeleting(true);
     try {
       const res = await authApi.deleteAccount();
@@ -172,6 +182,7 @@ export default function ProSettingsScreen() {
   };
 
   return (
+    <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
@@ -216,7 +227,7 @@ export default function ProSettingsScreen() {
                   )}
                 </View>
               </View>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   void Linking.openURL("https://apps.apple.com/account/subscriptions");
@@ -226,10 +237,10 @@ export default function ProSettingsScreen() {
                 <Ionicons name="settings-outline" size={16} color={Colors.primary} />
                 <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Gérer mon abonnement</Text>
                 <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-              </Pressable>
+              </AnimatedPressable>
             </>
           ) : (
-            <Pressable
+            <AnimatedPressable
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push("/(pro)/(profile)/subscription" as Parameters<typeof router.push>[0]);
@@ -244,7 +255,7 @@ export default function ProSettingsScreen() {
                 <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Débloquer toutes les fonctionnalités</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-            </Pressable>
+            </AnimatedPressable>
           )}
         </View>
       </View>
@@ -348,11 +359,11 @@ export default function ProSettingsScreen() {
             <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 16 }}>
               Au moins 8 caractères, une majuscule et un chiffre.
             </Text>
-            <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
+            <AnimatedPressable onPress={() => router.push("/(auth)/forgot-password")}>
               <Text style={{ fontSize: 12, color: Colors.primary, fontWeight: "500" }}>
                 Mot de passe oublié ?
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </View>
       </View>
@@ -365,20 +376,25 @@ export default function ProSettingsScreen() {
       )}
 
       {/* Save CTA */}
-      <Pressable onPress={handleSubmit(onSubmit)} disabled={saving} style={{ opacity: saving ? 0.7 : 1 }}>
-        <LinearGradient
-          colors={[Colors.primary, `${Colors.primary}E6`]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{ height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
-        >
-          {saving ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>Enregistrer les modifications</Text>
-          )}
-        </LinearGradient>
-      </Pressable>
+      <AnimatedPressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          handleSubmit(onSubmit)();
+        }}
+        disabled={saving}
+        style={{
+          height: 56, borderRadius: 16, backgroundColor: Colors.primary,
+          alignItems: "center", justifyContent: "center",
+          shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+          opacity: saving ? 0.7 : 1,
+        }}
+      >
+        {saving ? (
+          <ActivityIndicator color={Colors.white} />
+        ) : (
+          <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>Enregistrer les modifications</Text>
+        )}
+      </AnimatedPressable>
 
       {/* ── DONNÉES & CONFIDENTIALITÉ ── */}
       <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
@@ -386,17 +402,20 @@ export default function ProSettingsScreen() {
           Données & confidentialité
         </Text>
 
-        <Pressable
+        <AnimatedPressable
           onPress={() => router.push("/(pro)/(profile)/rgpd")}
           style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
         >
           <Ionicons name="shield-outline" size={16} color={Colors.primary} />
           <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Mes droits RGPD</Text>
           <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-        </Pressable>
+        </AnimatedPressable>
 
-        <Pressable
-          onPress={handleExport}
+        <AnimatedPressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            handleExport();
+          }}
           disabled={isExporting}
           style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border, opacity: isExporting ? 0.5 : 1 }}
         >
@@ -404,16 +423,19 @@ export default function ProSettingsScreen() {
           <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>
             {isExporting ? "Export en cours…" : "Exporter mes données"}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
 
         {!showDeleteConfirm ? (
-          <Pressable
-            onPress={() => setShowDeleteConfirm(true)}
+          <AnimatedPressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setShowDeleteConfirm(true);
+            }}
             style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
           >
             <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
             <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>Supprimer mon compte</Text>
-          </Pressable>
+          </AnimatedPressable>
         ) : (
           <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.destructiveLight, gap: 12 }}>
             <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.destructiveText }}>
@@ -439,13 +461,13 @@ export default function ProSettingsScreen() {
               }}
             />
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
+              <AnimatedPressable
                 onPress={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
                 style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
-              </Pressable>
-              <Pressable
+              </AnimatedPressable>
+              <AnimatedPressable
                 onPress={handleDeleteAccount}
                 disabled={isDeleting || deleteConfirmText !== "SUPPRIMER"}
                 style={{
@@ -459,11 +481,12 @@ export default function ProSettingsScreen() {
                 ) : (
                   <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
                 )}
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
         )}
       </View>
     </ScrollView>
+    </Animated.View>
   );
 }

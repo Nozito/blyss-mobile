@@ -5,6 +5,7 @@ import RNDateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface DatePickerProps {
   label?: string;
@@ -59,14 +60,14 @@ export function DatePicker({
         <Text className="text-sm font-medium text-foreground">{label}</Text>
       )}
 
-      <Pressable
+      <AnimatedPressable
         onPress={() => {
           setTempDate(value ?? new Date());
           setOpen(true);
         }}
         accessibilityLabel={label ?? "Sélectionner une date"}
         className={[
-          "flex-row items-center h-10 px-3 bg-background rounded-md border",
+          "flex-row items-center h-11 px-3 bg-background rounded-md border",
           error ? "border-destructive" : "border-input",
         ].join(" ")}
       >
@@ -82,7 +83,7 @@ export function DatePicker({
           {value ? formatDate(value) : placeholder}
         </Text>
         <Ionicons name="chevron-down" size={14} color={Colors.mutedForeground} />
-      </Pressable>
+      </AnimatedPressable>
 
       {error && <Text className="text-xs text-destructive">{error}</Text>}
       {!error && hint && (
@@ -115,15 +116,15 @@ export function DatePicker({
           <View className="bg-card rounded-t-3xl px-4 pt-4 pb-8">
             {/* Modal header */}
             <View className="flex-row items-center justify-between mb-2">
-              <Pressable onPress={() => setOpen(false)} className="p-2">
+              <AnimatedPressable onPress={() => setOpen(false)} className="p-2">
                 <Text className="text-base text-muted-foreground">Annuler</Text>
-              </Pressable>
+              </AnimatedPressable>
               <Text className="text-base font-semibold text-foreground">
                 {label ?? "Choisir une date"}
               </Text>
-              <Pressable onPress={handleConfirmIOS} className="p-2">
+              <AnimatedPressable onPress={handleConfirmIOS} className="p-2">
                 <Text className="text-base font-semibold text-primary">Valider</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
 
             <RNDateTimePicker

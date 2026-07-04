@@ -13,8 +13,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import { reviewsApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const s0 = useRef(new Animated.Value(1)).current;
@@ -63,10 +65,14 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
   const mutation = useMutation({
     mutationFn: () => reviewsApi.create(String(proId), { rating, comment }),
     onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onSuccess?.();
       onClose();
       setRating(0);
       setComment("");
+    },
+    onError: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     },
   });
 
@@ -91,18 +97,21 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
             onChangeText={setComment}
           />
           <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
-            <Pressable style={s.cancelBtn} onPress={onClose}>
+            <AnimatedPressable style={s.cancelBtn} onPress={onClose}>
               <Text style={s.cancelText}>Annuler</Text>
-            </Pressable>
-            <Pressable
+            </AnimatedPressable>
+            <AnimatedPressable
               style={[s.submitBtn, (rating === 0 || mutation.isPending) && { opacity: 0.6 }]}
-              onPress={() => mutation.mutate()}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                mutation.mutate();
+              }}
               disabled={rating === 0 || mutation.isPending}
             >
               {mutation.isPending
                 ? <ActivityIndicator color={Colors.white} size="small" />
                 : <Text style={s.submitText}>Envoyer</Text>}
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </View>
       </KeyboardAvoidingView>

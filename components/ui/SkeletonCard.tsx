@@ -1,18 +1,23 @@
 import React, { useRef, useEffect } from "react";
 import { Animated, View } from "react-native";
 import { Colors } from "@/constants/colors";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 export function SkeletonCard() {
-  const shimmer = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReducedMotion();
+  const shimmer = useRef(new Animated.Value(reduceMotion ? 0.7 : 0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    if (reduceMotion) return;
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmer, { toValue: 1, duration: 800, useNativeDriver: true }),
         Animated.timing(shimmer, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
-    ).start();
-  }, [shimmer]);
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shimmer, reduceMotion]);
 
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] });
 

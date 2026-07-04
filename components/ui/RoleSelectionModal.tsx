@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SymbolView } from "expo-symbols";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 // Mêmes tokens que dashboard.tsx
 const CARD   = "rgba(255,255,255,0.045)";
@@ -228,7 +229,7 @@ export default function RoleSelectionModal({
         }} />
 
         {/* Bouton fermer */}
-        <Pressable
+        <AnimatedIconButton
           onPress={onClose}
           hitSlop={12}
           style={{
@@ -244,7 +245,7 @@ export default function RoleSelectionModal({
           ) : (
             <Ionicons name="close" size={15} color={TEXT2} />
           )}
-        </Pressable>
+        </AnimatedIconButton>
 
         {/* Header */}
         <Animated.View style={{

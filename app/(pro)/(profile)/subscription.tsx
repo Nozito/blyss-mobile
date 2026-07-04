@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
+  Animated,
   ActivityIndicator,
   Linking,
 } from "react-native";
@@ -17,11 +18,12 @@ import { Fonts } from "@/constants/fonts";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
 import { safeBack } from "@/lib/navigation";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type BillingPeriod = "monthly" | "annual";
 
@@ -109,6 +111,8 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const reduceMotion = useReducedMotion();
+  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
   const [purchasing, setPurchasing] = useState<RCPlan | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -125,6 +129,11 @@ export default function SubscriptionScreen() {
     queryFn: () => proApi.getSubscription(),
   });
 
+  useEffect(() => {
+    if (isLoading || reduceMotion) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, contentOpacity]);
+
   const handleCancelSubscription = () => {
     void Linking.openURL("https://apps.apple.com/account/subscriptions");
   };
@@ -133,6 +142,7 @@ export default function SubscriptionScreen() {
   const isAnnual = billing === "annual";
 
   const handlePurchase = useCallback(async (planKey: RCPlan) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setPurchasing(planKey);
 
     const rcPkg = packages.find((p) => p.key === planKey);
@@ -184,6 +194,7 @@ export default function SubscriptionScreen() {
         gestureEnabled: hasActiveSubscription,
         headerBackVisible: false,
       }} />
+      <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -220,8 +231,9 @@ export default function SubscriptionScreen() {
               </View>
             )}
             {syncWarning && (
-              <View style={{ marginBottom: 16, backgroundColor: Colors.warningLight, borderRadius: 12, padding: 12, borderLeftWidth: 3, borderLeftColor: Colors.warning }}>
-                <Text style={{ fontSize: 13, color: Colors.warningText, lineHeight: 18 }}>
+              <View style={{ marginBottom: 16, backgroundColor: Colors.warningLight, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                <Ionicons name="alert-circle-outline" size={16} color={Colors.warning} style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, fontSize: 13, color: Colors.warningText, lineHeight: 18 }}>
                   Abonnement actif. Synchronisation mineure échouée — redémarre l'app si certaines fonctionnalités manquent.
                 </Text>
               </View>
@@ -322,7 +334,10 @@ export default function SubscriptionScreen() {
                 return (
                   <Pressable
                     key={p}
-                    onPress={() => setBilling(p)}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setBilling(p);
+                    }}
                     style={{
                       flex: 1, paddingVertical: 11, borderRadius: 14,
                       backgroundColor: active ? Colors.primary : "transparent",
@@ -457,7 +472,7 @@ export default function SubscriptionScreen() {
                       </View>
 
                       {!isCurrent && (
-                        <Pressable
+                        <AnimatedPressable
                           onPress={() => handlePurchase(planKey)}
                           disabled={!!purchasing}
                           style={{
@@ -477,7 +492,7 @@ export default function SubscriptionScreen() {
                               <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Choisir {config.label}</Text>
                             </>
                           )}
-                        </Pressable>
+                        </AnimatedPressable>
                       )}
                     </View>
                   </View>
@@ -507,6 +522,7 @@ export default function SubscriptionScreen() {
           </>
         )}
       </ScrollView>
+      </Animated.View>
     </View>
   );
 }

@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ export default function BookingConfirmationScreen() {
 
         {/* CTAs */}
         <Animated.View style={[styles.ctas, { opacity: opacAnim }]}>
-          <Pressable
+          <AnimatedPressable
             onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push("/(client)/bookings" as Parameters<typeof router.push>[0]);
@@ -113,16 +114,16 @@ export default function BookingConfirmationScreen() {
           >
             <Ionicons name="calendar-outline" size={18} color={Colors.white} />
             <Text style={styles.ctaPrimaryText}>Voir mes réservations</Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
+          <AnimatedPressable
             onPress={() => {
               router.replace("/(client)" as Parameters<typeof router.replace>[0]);
             }}
             style={styles.ctaGhost}
           >
             <Text style={styles.ctaGhostText}>Retour à l'accueil</Text>
-          </Pressable>
+          </AnimatedPressable>
         </Animated.View>
       </ScrollView>
     </SafeAreaView>

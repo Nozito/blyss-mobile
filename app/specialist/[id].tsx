@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import {
   specialistsApi,
   reviewsApi,
@@ -154,6 +155,9 @@ export default function SpecialistProfileScreen() {
   );
 
   const toggleFav = () => {
+    Haptics.impactAsync(
+      isFavorited ? Haptics.ImpactFeedbackStyle.Rigid : Haptics.ImpactFeedbackStyle.Light
+    ).catch(() => {});
     Animated.sequence([
       Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 80, bounciness: 10 }),
       Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 0 }),

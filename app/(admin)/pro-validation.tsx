@@ -14,6 +14,7 @@ import { ADMIN } from "@/constants/adminTheme";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const BG     = ADMIN.bg;
 const CARD   = ADMIN.surface;
@@ -115,16 +116,16 @@ function ProDetailModal({
                     </View>
                   )}
                 </View>
-                <Pressable onPress={onClose} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" }}>
+                <AnimatedIconButton onPress={onClose} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="close" size={16} color={TEXT2} />
-                </Pressable>
+                </AnimatedIconButton>
               </View>
             </LinearGradient>
 
             <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 16 }}>
               {/* Contact */}
               <View style={{ gap: 10 }}>
-                <Pressable
+                <AnimatedPressable
                   onPress={() => pro.phone_number && void Linking.openURL(`tel:${pro.phone_number}`)}
                   style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: BORDER }}
                 >
@@ -132,7 +133,7 @@ function ProDetailModal({
                   <Text style={{ fontSize: 14, color: pro.phone_number ? TEXT1 : TEXT3 }}>
                     {pro.phone_number ?? "Non renseigné"}
                   </Text>
-                </Pressable>
+                </AnimatedPressable>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: BORDER }}>
                   <Ionicons name="mail-outline" size={18} color={Colors.info} />
                   <Text style={{ fontSize: 14, color: TEXT1 }}>{pro.email}</Text>
@@ -198,36 +199,45 @@ function ProDetailModal({
               <View style={{ flexDirection: "row", gap: 12 }}>
                 {!showReject ? (
                   <>
-                    <Pressable
-                      onPress={() => setShowReject(true)}
+                    <AnimatedPressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setShowReject(true);
+                      }}
                       style={{ flex: 1, height: 50, borderRadius: 15, borderWidth: 1.5, borderColor: Colors.destructive, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
                     >
                       <Ionicons name="close-circle-outline" size={18} color={Colors.destructive} />
                       <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.destructive }}>Refuser</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={onApprove}
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      onPress={() => {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                        onApprove();
+                      }}
                       style={{ flex: 1, height: 50, borderRadius: 15, backgroundColor: Colors.success, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
                     >
                       <Ionicons name="checkmark-circle-outline" size={18} color={Colors.white} />
                       <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Valider</Text>
-                    </Pressable>
+                    </AnimatedPressable>
                   </>
                 ) : (
                   <>
-                    <Pressable
+                    <AnimatedPressable
                       onPress={() => { setShowReject(false); setRejectError(null); setRejectReason(""); }}
                       style={{ flex: 1, height: 50, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}
                     >
                       <Text style={{ fontSize: 14, fontWeight: "600", color: TEXT2 }}>Annuler</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={handleReject}
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+                        handleReject();
+                      }}
                       style={{ flex: 1, height: 50, borderRadius: 15, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
                     >
                       <Ionicons name="send-outline" size={16} color={Colors.white} />
                       <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Envoyer</Text>
-                    </Pressable>
+                    </AnimatedPressable>
                   </>
                 )}
               </View>
@@ -299,6 +309,9 @@ export default function ProValidationScreen() {
           data={pros}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 80 }}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
           ListEmptyComponent={
             <EmptyState
@@ -308,7 +321,7 @@ export default function ProValidationScreen() {
             />
           }
           renderItem={({ item }) => (
-            <Pressable
+            <AnimatedPressable
               onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelected(item); setActionError(null); }}
               style={{ backgroundColor: CARD, borderRadius: 18, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}
             >
@@ -334,17 +347,17 @@ export default function ProValidationScreen() {
               </View>
 
               {item.phone_number && (
-                <Pressable
+                <AnimatedPressable
                   onPress={() => void Linking.openURL(`tel:${item.phone_number}`)}
                   style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}
                 >
                   <Ionicons name="call-outline" size={13} color={Colors.info} />
                   <Text style={{ fontSize: 12, color: Colors.info }}>{item.phone_number}</Text>
-                </Pressable>
+                </AnimatedPressable>
               )}
 
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable
+                <AnimatedPressable
                   onPress={() => {
                     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                     setSelected(item);
@@ -352,8 +365,8 @@ export default function ProValidationScreen() {
                   style={{ flex: 1, height: 40, borderRadius: 12, borderWidth: 1, borderColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.destructive }}>Refuser</Text>
-                </Pressable>
-                <Pressable
+                </AnimatedPressable>
+                <AnimatedPressable
                   onPress={() => {
                     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     setActionError(null);
@@ -365,9 +378,9 @@ export default function ProValidationScreen() {
                   {approveMut.isPending
                     ? <ActivityIndicator size="small" color={Colors.white} />
                     : <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Valider</Text>}
-                </Pressable>
+                </AnimatedPressable>
               </View>
-            </Pressable>
+            </AnimatedPressable>
           )}
         />
       )}

@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 export interface Prestation {
   id: number;
@@ -130,7 +131,7 @@ export function ServiceSelector({
           {prestations.map((prestation) => {
             const isSelected = selectedId === prestation.id;
             return (
-              <Pressable
+              <AnimatedPressable
                 key={prestation.id}
                 onPress={() => onSelect(prestation.id)}
                 style={{
@@ -185,7 +186,7 @@ export function ServiceSelector({
                     {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
                   </View>
                 </View>
-              </Pressable>
+              </AnimatedPressable>
             );
           })}
         </View>
