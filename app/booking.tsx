@@ -607,7 +607,7 @@ export default function BookingScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
         {step < 4 && (
-          <View style={{ paddingTop: 12, paddingBottom: 16 }}>
+          <View style={{ paddingTop: 0, paddingBottom: 16 }}>
             <AnimatedIconButton
               onPress={handleBack}
               style={{

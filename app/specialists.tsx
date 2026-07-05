@@ -124,7 +124,8 @@ export default function SpecialistsScreen() {
       const prev = queryClient.getQueryData<Set<number>>(["favorites-ids"]);
       queryClient.setQueryData<Set<number>>(["favorites-ids"], (old = new Set()) => {
         const next = new Set(old);
-        next.has(proId) ? next.delete(proId) : next.add(proId);
+        if (next.has(proId)) next.delete(proId);
+        else next.add(proId);
         return next;
       });
       return { prev };

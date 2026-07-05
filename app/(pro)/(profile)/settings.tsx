@@ -186,7 +186,7 @@ export default function ProSettingsScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingBottom: insets.bottom + 32,
         paddingHorizontal: 20,
         gap: 20,

@@ -12,6 +12,8 @@ interface Props extends Omit<PressableProps, "style"> {
   children: React.ReactNode;
 }
 
+const AnimatedPressableBase = Animated.createAnimatedComponent(Pressable);
+
 // Scale-down on press — for cards and large buttons
 export function AnimatedPressable({ onPress, style, children, ...rest }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -23,11 +25,16 @@ export function AnimatedPressable({ onPress, style, children, ...rest }: Props) 
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
 
   return (
-    <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} accessibilityRole="button" {...rest}>
-      <Animated.View style={[{ transform: [{ scale }] }, style]}>
-        {children}
-      </Animated.View>
-    </Pressable>
+    <AnimatedPressableBase
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      accessibilityRole="button"
+      style={[{ transform: [{ scale }] }, style]}
+      {...rest}
+    >
+      {children}
+    </AnimatedPressableBase>
   );
 }
 

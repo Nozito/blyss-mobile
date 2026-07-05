@@ -16,6 +16,7 @@
     "create:admin": "node scripts/create-admin.mjs"
   },
   "dependencies": {
+    "@eslint/js": "^9",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.14",
@@ -26,6 +27,10 @@
     "@shopify/flash-list": "2.3.2",
     "@stripe/stripe-react-native": "^0.67.0",
     "@tanstack/react-query": "^5.101.0",
+    "eslint": "^9",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-native": "^5.0.0",
     "expo": "~54.0.35",
     "expo-apple-authentication": "~8.0.8",
     "expo-blur": "~15.0.8",
@@ -67,6 +72,7 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-worklets": "^0.8.0",
+    "typescript-eslint": "^8.62.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: Colors.background,
+    paddingHorizontal: 16, paddingTop: 0, paddingBottom: 12, backgroundColor: Colors.background,
   },
   headerBack: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.white,

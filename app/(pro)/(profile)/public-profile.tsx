@@ -194,29 +194,32 @@ export default function ProPublicProfileScreen() {
   });
   const services = ((servicesData?.data as Service[] | undefined) ?? []).filter((s) => s.active !== false);
 
-  const { isLoading } = useQuery({
+  const { data: profileData, isLoading } = useQuery({
     queryKey: ["pro-public-profile"],
     queryFn: async () => {
       const res = await proApi.getProfile();
       return res?.data ?? null;
     },
-    onSuccess: (data: any) => {
-      if (!data) return;
-      const vals = {
-        activityName: data.activity_name || "",
-        city: data.city || "",
-        bio: data.bio || "",
-        instagram: data.instagram_account || "",
-        isPublic: data.profile_visibility !== "private",
-      };
-      setActivityName(vals.activityName);
-      setCity(vals.city);
-      setBio(vals.bio);
-      setInstagram(vals.instagram);
-      setIsPublic(vals.isPublic);
-      setInitial(vals);
-    },
-  } as any);
+  });
+
+  // TanStack Query v5 removed useQuery's onSuccess — pre-fill the form on data arrival instead.
+  useEffect(() => {
+    if (!profileData) return;
+    const vals = {
+      activityName: profileData.activity_name || "",
+      city: profileData.city || "",
+      bio: profileData.bio || "",
+      instagram: profileData.instagram_account || "",
+      isPublic: profileData.profile_visibility !== "private",
+    };
+    setActivityName(vals.activityName);
+    setCity(vals.city);
+    setBio(vals.bio);
+    setInstagram(vals.instagram);
+    setIsPublic(vals.isPublic);
+    setInitial(vals);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileData]);
 
   useEffect(() => {
     const changed =
@@ -282,7 +285,7 @@ export default function ProPublicProfileScreen() {
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingBottom: insets.bottom + 120,
           paddingHorizontal: 20,
         }}

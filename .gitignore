@@ -19,3 +19,6 @@ android/
 # OS
 .DS_Store
 *.log
+
+# Claude Code local state
+.claude/

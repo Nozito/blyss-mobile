@@ -169,7 +169,7 @@ export default function WelcomeScreen() {
       <Animated.View
         style={[
           styles.logoBlock,
-          { paddingTop: insets.top + 24 },
+          { paddingTop: insets.top + 8 },
           { opacity: logoOpacity, transform: [{ scale: logoScale }] },
         ]}
       >

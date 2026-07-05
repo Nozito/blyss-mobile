@@ -234,7 +234,7 @@ export default function ProPaymentsScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingBottom: insets.bottom + 40,
         paddingHorizontal: 20,
       }}

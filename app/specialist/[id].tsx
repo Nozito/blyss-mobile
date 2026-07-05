@@ -85,7 +85,7 @@ export default function SpecialistProfileScreen() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["specialist", id],
-    queryFn: () => specialistsApi.getSpecialistById(Number(id)),
+    queryFn: () => specialistsApi.getProById(Number(id)),
     enabled: Boolean(id),
   });
 

@@ -110,7 +110,7 @@ export default function AdminLogsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       {/* ── Header ── */}
-      <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top + 16, paddingHorizontal: 16, paddingBottom: 16 }}>
+      <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top, paddingHorizontal: 16, paddingBottom: 16 }}>
         <AnimatedPressable
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}

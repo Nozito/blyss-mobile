@@ -318,7 +318,7 @@ export default function ProDashboard() {
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
         paddingHorizontal: 20,
         gap: 16,

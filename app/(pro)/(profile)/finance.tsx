@@ -277,7 +277,7 @@ export default function ProFinanceScreen() {
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingBottom: insets.bottom + 40,
           paddingHorizontal: 20,
           gap: 16,

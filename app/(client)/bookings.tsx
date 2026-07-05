@@ -330,7 +330,7 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
 
-  header: { flexShrink: 0, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, backgroundColor: Colors.background },
+  header: { flexShrink: 0, paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12, backgroundColor: Colors.background },
   headerTitle: { fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
   headerSubtitle: { fontSize: 13, color: Colors.mutedForeground, marginTop: 4 },
 

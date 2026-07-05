@@ -26,7 +26,7 @@ export function SearchHeader({
   onToggleView,
 }: Props) {
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: 0 }}>
       {/* Back + title + toggle */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 20 }}>
         <AnimatedIconButton

@@ -132,7 +132,7 @@ export default function ProNotificationsScreen() {
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingHorizontal: 20,
         paddingBottom: 100,
       }}

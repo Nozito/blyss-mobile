@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 0,
     paddingBottom: 0,
   },
   skipText: {

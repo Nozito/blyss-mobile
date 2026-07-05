@@ -402,7 +402,7 @@ export default function AdminBookingsScreen() {
 
   // ── Header ─────────────────────────────────────────────────────────────────
   const ListHeader = useMemo(() => (
-    <View style={{ paddingTop: insets.top + 16, paddingBottom: 4 }}>
+    <View style={{ paddingTop: insets.top, paddingBottom: 4 }}>
       {/* Title row */}
       <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 6 }}>
         <View>

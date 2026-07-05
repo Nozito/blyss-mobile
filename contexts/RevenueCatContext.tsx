@@ -175,9 +175,11 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       const { customerInfo: info } = await Purchases.purchasePackage(pkg);
       setCustomerInfo(info);
       return { success: true, paymentId: pkg.identifier };
-    } catch (e: any) {
-      if (e?.userCancelled) return { success: false, error: "cancelled" };
-      return { success: false, error: e?.message ?? "purchase_failed" };
+    } catch (e: unknown) {
+      // react-native-purchases doesn't export a typed error shape for this
+      const err = e as { userCancelled?: boolean; message?: string } | undefined;
+      if (err?.userCancelled) return { success: false, error: "cancelled" };
+      return { success: false, error: err?.message ?? "purchase_failed" };
     }
   }, []);
 

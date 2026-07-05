@@ -635,7 +635,7 @@ export default function RegisterScreen() {
       >
         <ScrollView
           className="flex-1 px-6"
-          contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >

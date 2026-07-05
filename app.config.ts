@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   assetBundlePatterns: ["**/*"],
 
   ios: {
-    bundleIdentifier: "app.blyss.mobile",
+    bundleIdentifier: "blyss.app",
     buildNumber: "1",
     supportsTablet: false,
     requireFullScreen: true,
@@ -54,7 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Blyss utilise cet identifiant pour personnaliser ton expérience et améliorer nos services.",
       CFBundleURLTypes: [
         {
-          CFBundleURLName: "app.blyss.mobile",
+          CFBundleURLName: "blyss.app",
           CFBundleURLSchemes: ["blyss"],
         },
       ],
@@ -62,7 +62,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
 
   android: {
-    package: "com.blyss.app",
+    package: "blyss.app",
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
@@ -131,12 +131,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "@stripe/stripe-react-native",
       {
-        merchantIdentifier: "merchant.app.blyss.mobile",
+        merchantIdentifier: "merchant.com.blyss.app",
         enableGooglePay: true,
       },
     ],
     withStoreKitConfig,
-  ],
+  ] as ExpoConfig["plugins"],
 
   updates: {
     url: `https://u.expo.dev/${EAS_PROJECT_ID}`,

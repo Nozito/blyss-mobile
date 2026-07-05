@@ -123,7 +123,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
         showsVerticalScrollIndicator={false}
       >
         {/* Page title */}

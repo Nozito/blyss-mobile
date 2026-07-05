@@ -182,7 +182,7 @@ export default function AdminMoreScreen() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
-            paddingTop: insets.top + 28,
+            paddingTop: insets.top,
             paddingBottom: 32,
             paddingHorizontal: 24,
             alignItems: "center",

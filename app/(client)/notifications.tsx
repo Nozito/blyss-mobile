@@ -144,7 +144,7 @@ export default function ClientNotificationsScreen() {
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
         {/* Header */}
-        <View style={{ paddingTop: 16, paddingBottom: 16 }}>
+        <View style={{ paddingTop: 0, paddingBottom: 16 }}>
           <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
         </View>
 

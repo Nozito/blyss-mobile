@@ -184,7 +184,7 @@ export default function ClientDetailScreen() {
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
         }}

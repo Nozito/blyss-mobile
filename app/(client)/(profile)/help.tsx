@@ -56,7 +56,7 @@ export default function ClientHelpScreen() {
     <ScrollView
       className="flex-1 bg-background"
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingBottom: insets.bottom + 40,
         paddingHorizontal: 20,
       }}

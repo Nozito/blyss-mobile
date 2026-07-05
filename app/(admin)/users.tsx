@@ -68,13 +68,12 @@ function roleName(user: Pick<AdminUser, "is_admin" | "role">) {
   return "Client";
 }
 function getActivePlan(user: AdminUser): string | null {
-  const active = ((user as any).subscription_history ?? []).find((s: any) => s.status === "active");
+  const active = (user.subscription_history ?? []).find((s) => s.status === "active");
   return active ? (PLAN_LABELS[active.plan] ?? active.plan) : null;
 }
 function joinedDate(user: AdminUser): string | null {
-  const raw = (user as any).created_at;
-  if (!raw) return null;
-  return new Date(raw).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  if (!user.created_at) return null;
+  return new Date(user.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
@@ -339,10 +338,10 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               )}
 
               {/* Subscription history */}
-              {((full as any).subscription_history ?? []).length > 0 && (
+              {(full.subscription_history ?? []).length > 0 && (
                 <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 18, padding: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={styles.label}>Abonnements</Text>
-                  {((full as any).subscription_history ?? []).slice(0, 4).map((sub: any, i: number) => (
+                  {(full.subscription_history ?? []).slice(0, 4).map((sub, i) => (
                     <View key={sub.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "rgba(255,255,255,0.07)" }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: sub.status === "active" ? Colors.success : "rgba(255,255,255,0.2)" }} />
@@ -717,7 +716,7 @@ export default function AdminUsersScreen() {
     <View style={{ flex: 1, backgroundColor: BG }}>
 
         {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
-        <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: "rgba(10,10,15,0.85)", overflow: "hidden" }}>
+        <View style={{ paddingTop: insets.top, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: "rgba(10,10,15,0.85)", overflow: "hidden" }}>
           <BlurView tint="dark" intensity={60} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
 
           {/* Title row */}

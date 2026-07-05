@@ -488,7 +488,7 @@ export default function MyBookingsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <View style={{ flex: 1 }}>
         {/* Header */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12 }}>
           <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.foreground, marginBottom: 20 }}>
             Mes réservations
           </Text>

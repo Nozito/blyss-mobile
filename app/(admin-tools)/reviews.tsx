@@ -112,7 +112,7 @@ export default function ReviewsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       {/* Header */}
-      <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
+      <View style={{ paddingTop: insets.top, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}

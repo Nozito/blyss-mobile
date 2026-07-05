@@ -149,7 +149,7 @@ export default function ServiceFormScreen() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 200,
         }}

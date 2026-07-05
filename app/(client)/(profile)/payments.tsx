@@ -279,7 +279,7 @@ export default function PaymentsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setAddModalOpen(false)}
       >
-        <View style={[styles.modal, { paddingTop: insets.top + 16 }]}>
+        <View style={[styles.modal, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Ajouter une carte</Text>
             <Pressable onPress={() => setAddModalOpen(false)} style={styles.closeBtn}>

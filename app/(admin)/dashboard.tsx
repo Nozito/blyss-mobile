@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { SymbolView } from "expo-symbols";
+import type { SFSymbol } from "sf-symbols-typescript";
 import { Link } from "expo-router";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,7 +70,7 @@ function PulseDot({ color }: { color: string }) {
 // ── Section Header ────────────────────────────────────────────────────────────
 function SectionHeader({ title, accent = Colors.admin, icon, rightContent }: {
   title: string; accent?: string;
-  icon?: { ios: any; android: any };
+  icon?: { ios: SFSymbol; android: React.ComponentProps<typeof Ionicons>["name"] };
   rightContent?: React.ReactNode;
 }) {
   return (
@@ -112,7 +113,7 @@ const QUICK_ACTIONS = [
 ];
 
 // ── Activity config ───────────────────────────────────────────────────────────
-const ACTIVITY_CFG: Record<string, { color: string; label: string; icon: any; gradient: [string, string] }> = {
+const ACTIVITY_CFG: Record<string, { color: string; label: string; icon: string; gradient: [string, string] }> = {
   booking: { color: Colors.pro,     label: "RDV",        icon: "calendar",       gradient: [Colors.pro,     `${Colors.pro}BB`] },
   user:    { color: Colors.info,    label: "Inscription", icon: "person.badge.plus", gradient: [Colors.info,    `${Colors.info}BB`] },
   payment: { color: Colors.success, label: "Paiement",   icon: "eurosign.circle", gradient: [Colors.success, `${Colors.success}BB`] },
@@ -283,7 +284,7 @@ export default function AdminDashboard() {
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: BG }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 12 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
     >

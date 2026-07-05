@@ -18,18 +18,18 @@ import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { Colors } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
-import { proApi, usersApi } from "@/lib/api";
+import { proApi, usersApi, type User } from "@/lib/api";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-function calculateProfileCompleteness(user: any): number {
+function calculateProfileCompleteness(user: User | null | undefined): number {
   if (!user) return 0;
   let score = 0;
   if (user.profile_photo) score += 10;
-  if (user.activity_name?.trim().length >= 2) score += 15;
-  if (user.city?.trim().length >= 2) score += 15;
-  if (user.bio?.trim().length >= 20) score += 15;
+  if ((user.activity_name?.trim()?.length ?? 0) >= 2) score += 15;
+  if ((user.city?.trim()?.length ?? 0) >= 2) score += 15;
+  if ((user.bio?.trim()?.length ?? 0) >= 20) score += 15;
   if (user.instagram_account?.startsWith("@")) score += 10;
   if (user.profile_visibility === "public") score += 5;
   // baseline name + email always present
@@ -172,7 +172,7 @@ export default function ProProfileScreen() {
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
         paddingHorizontal: 20,
       }}

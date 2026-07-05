@@ -16,6 +16,15 @@ import type { Specialist } from "./SpecialistCard";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
+// react-native-map-clustering types renderCluster's argument as `any` upstream —
+// this describes the actual GeoJSON-like supercluster feature shape it passes.
+interface ClusterFeature {
+  id: string | number;
+  geometry: { coordinates: [number, number] };
+  onPress: () => void;
+  properties: { point_count: number };
+}
+
 
 const PARIS: Region = {
   latitude: 46.603354,
@@ -182,7 +191,7 @@ export default function SpecialistsMapView({ specialists }: Props) {
         clusterTextColor={Colors.white}
         clusterFontFamily="System"
         onPress={() => selectedPro && handleClose()}
-        renderCluster={(cluster: any) => {
+        renderCluster={(cluster: ClusterFeature) => {
           const { geometry, onPress, properties } = cluster;
           const count: number = properties.point_count;
           const size = count < 5 ? 40 : count < 15 ? 50 : 60;
