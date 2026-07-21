@@ -35,13 +35,10 @@ const PLAN_META: Record<RCPlan, {
 
 const PLAN_ORDER: Record<RCPlan, number> = { start: 0, serenite: 1, signature: 2 };
 
-async function syncSubscriptionWithRetry(
-  payload: Parameters<typeof proApi.updateSubscription>[0],
-  maxAttempts = 3
-): Promise<boolean> {
+async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await proApi.updateSubscription(payload);
+      const res = await proApi.syncSubscription();
       if (res.success) return true;
     } catch {}
     if (attempt < maxAttempts) {
@@ -84,12 +81,7 @@ export default function ProSubscriptionSettingsScreen() {
       const pkg = isAnnual && rcPkg.annualRcPackage ? rcPkg.annualRcPackage : rcPkg.rcPackage;
       const result = await purchase(pkg);
       if (result.success) {
-        const synced = await syncSubscriptionWithRetry({
-          plan: planId,
-          billingType: isAnnual ? "one_time" : "monthly",
-          monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
-          paymentId: result.paymentId ?? pkg.identifier,
-        });
+        const synced = await syncSubscriptionWithRetry();
         if (!synced) {
           setUpgradeError("Abonnement actif, mais la synchronisation a échoué. Réessaie dans quelques instants.");
         }
@@ -138,6 +130,7 @@ export default function ProSubscriptionSettingsScreen() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <AnimatedIconButton
           onPress={() => safeBack(router)}
+          accessibilityLabel="Retour"
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

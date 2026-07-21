@@ -16,6 +16,11 @@
  *  L. Restore purchases — abonnement retrouvé
  *  M. Restore purchases — rien à restaurer
  *  N. Plan déjà actif → pas d'achat
+ *
+ * Le backend ne fait plus confiance au plan/prix envoyé par le client — la
+ * synchronisation post-achat (`syncSubscription`) ne prend plus aucun
+ * paramètre : le plan vient exclusivement de l'état RevenueCat côté serveur
+ * (voir POST /api/pro/subscription/sync). Ces tests reflètent ce contrat.
  */
 
 // ── Mock RevenueCat ───────────────────────────────────────────────────────────
@@ -24,18 +29,17 @@ const mockPurchase = jest.fn();
 const mockRestorePurchases = jest.fn();
 const mockRefreshActivePlan = jest.fn();
 
-const mockUpdateSubscription = jest.fn();
+const mockSyncSubscription = jest.fn();
 
 jest.mock("@/lib/api", () => ({
   proApi: {
-    updateSubscription: (...args: unknown[]) => mockUpdateSubscription(...args),
+    syncSubscription: (...args: unknown[]) => mockSyncSubscription(...args),
   },
 }));
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type RCPlan = "start" | "serenite" | "signature";
-type BillingType = "monthly" | "one_time";
 
 interface RCPackage {
   identifier: string;
@@ -47,22 +51,12 @@ interface PurchaseResult {
   error?: string;
 }
 
-interface SyncPayload {
-  plan: RCPlan;
-  billingType: BillingType;
-  monthlyPrice: number;
-  paymentId: string;
-}
-
 // ── syncSubscriptionWithRetry (copie exacte de subscription-settings.tsx) ─────
 
-async function syncSubscriptionWithRetry(
-  payload: SyncPayload,
-  maxAttempts = 3
-): Promise<boolean> {
+async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await mockUpdateSubscription(payload) as { success: boolean };
+      const res = (await mockSyncSubscription()) as { success: boolean };
       if (res.success) return true;
     } catch {}
     if (attempt < maxAttempts) {
@@ -87,7 +81,6 @@ interface UpgradeParams {
     annualMonthlyPrice: number;
   }>;
   purchase: typeof mockPurchase;
-  updateSubscription: typeof mockUpdateSubscription;
   refreshActivePlan: typeof mockRefreshActivePlan;
 }
 
@@ -109,21 +102,14 @@ async function handleUpgrade(params: UpgradeParams): Promise<
 
   const pkg = isAnnual && rcPkg.annualRcPackage ? rcPkg.annualRcPackage : rcPkg.rcPackage;
 
-  const result = await purchase(pkg) as PurchaseResult;
+  const result = (await purchase(pkg)) as PurchaseResult;
 
   if (!result.success) {
     if (result.error === "cancelled") return { success: false, cancelled: true };
     return { success: false, error: result.error ?? "Erreur inconnue" };
   }
 
-  const payload: SyncPayload = {
-    plan: planId,
-    billingType: isAnnual ? "one_time" : "monthly",
-    monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
-    paymentId: result.paymentId ?? pkg.identifier,
-  };
-
-  const synced = await syncSubscriptionWithRetry(payload);
+  const synced = await syncSubscriptionWithRetry();
   await refreshActivePlan();
 
   return { success: true, plan: planId, synced };
@@ -158,7 +144,6 @@ const PACKAGES: UpgradeParams["packages"] = [
 const BASE_PARAMS: Omit<UpgradeParams, "planId" | "activePlan" | "isAnnual"> = {
   packages: PACKAGES,
   purchase: mockPurchase,
-  updateSubscription: mockUpdateSubscription,
   refreshActivePlan: mockRefreshActivePlan,
 };
 
@@ -171,14 +156,14 @@ beforeEach(() => {
 // A-C. Achat initial par plan
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe.each<[string, RCPlan, number]>([
-  ["Start", "start", 19],
-  ["Sérénité", "serenite", 39],
-  ["Signature", "signature", 59],
-])("Scénario achat plan %s (mensuel)", (_label, plan, price) => {
+describe.each<[string, RCPlan]>([
+  ["Start", "start"],
+  ["Sérénité", "serenite"],
+  ["Signature", "signature"],
+])("Scénario achat plan %s (mensuel)", (_label, plan) => {
   it(`achète ${_label} et sync le backend`, async () => {
     mockPurchase.mockResolvedValue({ success: true, paymentId: `pay_${plan}` });
-    mockUpdateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true });
 
     const result = await handleUpgrade({
       ...BASE_PARAMS,
@@ -188,12 +173,9 @@ describe.each<[string, RCPlan, number]>([
     });
 
     expect(result).toEqual({ success: true, plan, synced: true });
-    expect(mockUpdateSubscription).toHaveBeenCalledWith({
-      plan,
-      billingType: "monthly",
-      monthlyPrice: price,
-      paymentId: `pay_${plan}`,
-    });
+    // Le backend ne reçoit aucun payload — le plan est vérifié côté serveur
+    // via RevenueCat, jamais transmis par le client.
+    expect(mockSyncSubscription).toHaveBeenCalledWith();
     expect(mockRefreshActivePlan).toHaveBeenCalledTimes(1);
   });
 });
@@ -203,9 +185,9 @@ describe.each<[string, RCPlan, number]>([
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("Scénario D — Upgrade Start → Signature", () => {
-  it("utilise le package signature et sync avec le bon prix", async () => {
+  it("achète le package signature et sync le backend", async () => {
     mockPurchase.mockResolvedValue({ success: true, paymentId: "pay_upgrade" });
-    mockUpdateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true });
 
     const result = await handleUpgrade({
       ...BASE_PARAMS,
@@ -215,9 +197,7 @@ describe("Scénario D — Upgrade Start → Signature", () => {
     });
 
     expect(result).toEqual({ success: true, plan: "signature", synced: true });
-    expect(mockUpdateSubscription).toHaveBeenCalledWith(
-      expect.objectContaining({ plan: "signature", monthlyPrice: 59 })
-    );
+    expect(mockPurchase).toHaveBeenCalledWith({ identifier: "signature_monthly" });
   });
 });
 
@@ -228,7 +208,7 @@ describe("Scénario D — Upgrade Start → Signature", () => {
 describe("Scénario E — Downgrade Signature → Start", () => {
   it("fonctionne comme un upgrade normal (RC gère le downgrade)", async () => {
     mockPurchase.mockResolvedValue({ success: true, paymentId: "pay_downgrade" });
-    mockUpdateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true });
 
     const result = await handleUpgrade({
       ...BASE_PARAMS,
@@ -238,9 +218,7 @@ describe("Scénario E — Downgrade Signature → Start", () => {
     });
 
     expect(result).toEqual({ success: true, plan: "start", synced: true });
-    expect(mockUpdateSubscription).toHaveBeenCalledWith(
-      expect.objectContaining({ plan: "start", monthlyPrice: 19 })
-    );
+    expect(mockPurchase).toHaveBeenCalledWith({ identifier: "start_monthly" });
   });
 });
 
@@ -248,10 +226,10 @@ describe("Scénario E — Downgrade Signature → Start", () => {
 // F. Achat annuel
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("Scénario F — Achat annuel (billingType=one_time)", () => {
-  it("utilise annualRcPackage et monthlyPrice=annualMonthlyPrice", async () => {
+describe("Scénario F — Achat annuel", () => {
+  it("utilise annualRcPackage", async () => {
     mockPurchase.mockResolvedValue({ success: true, paymentId: "pay_annual" });
-    mockUpdateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true });
 
     const result = await handleUpgrade({
       ...BASE_PARAMS,
@@ -261,12 +239,7 @@ describe("Scénario F — Achat annuel (billingType=one_time)", () => {
     });
 
     expect(mockPurchase).toHaveBeenCalledWith({ identifier: "signature_annual" });
-    expect(mockUpdateSubscription).toHaveBeenCalledWith({
-      plan: "signature",
-      billingType: "one_time",
-      monthlyPrice: 49,
-      paymentId: "pay_annual",
-    });
+    expect(mockSyncSubscription).toHaveBeenCalledWith();
     expect(result).toMatchObject({ success: true, plan: "signature" });
   });
 });
@@ -277,17 +250,12 @@ describe("Scénario F — Achat annuel (billingType=one_time)", () => {
 
 describe("Scénario G — Sync backend immédiat", () => {
   it("retourne synced=true si le 1er appel réussit", async () => {
-    mockUpdateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true });
 
-    const synced = await syncSubscriptionWithRetry({
-      plan: "start",
-      billingType: "monthly",
-      monthlyPrice: 19,
-      paymentId: "pay_abc",
-    });
+    const synced = await syncSubscriptionWithRetry();
 
     expect(synced).toBe(true);
-    expect(mockUpdateSubscription).toHaveBeenCalledTimes(1);
+    expect(mockSyncSubscription).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -297,19 +265,14 @@ describe("Scénario G — Sync backend immédiat", () => {
 
 describe("Scénario H — Retry sync (réussit au 2e essai)", () => {
   it("réessaie et retourne synced=true", async () => {
-    mockUpdateSubscription
+    mockSyncSubscription
       .mockResolvedValueOnce({ success: false })
       .mockResolvedValueOnce({ success: true });
 
-    const synced = await syncSubscriptionWithRetry({
-      plan: "serenite",
-      billingType: "monthly",
-      monthlyPrice: 39,
-      paymentId: "pay_def",
-    });
+    const synced = await syncSubscriptionWithRetry();
 
     expect(synced).toBe(true);
-    expect(mockUpdateSubscription).toHaveBeenCalledTimes(2);
+    expect(mockSyncSubscription).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -319,31 +282,21 @@ describe("Scénario H — Retry sync (réussit au 2e essai)", () => {
 
 describe("Scénario I — Sync épuisée (3 échecs)", () => {
   it("retourne synced=false après 3 tentatives", async () => {
-    mockUpdateSubscription.mockResolvedValue({ success: false });
+    mockSyncSubscription.mockResolvedValue({ success: false });
 
-    const synced = await syncSubscriptionWithRetry({
-      plan: "signature",
-      billingType: "one_time",
-      monthlyPrice: 49,
-      paymentId: "pay_ghi",
-    });
+    const synced = await syncSubscriptionWithRetry();
 
     expect(synced).toBe(false);
-    expect(mockUpdateSubscription).toHaveBeenCalledTimes(3);
+    expect(mockSyncSubscription).toHaveBeenCalledTimes(3);
   });
 
   it("continue à réessayer même si le backend throw", async () => {
-    mockUpdateSubscription.mockRejectedValue(new Error("timeout"));
+    mockSyncSubscription.mockRejectedValue(new Error("timeout"));
 
-    const synced = await syncSubscriptionWithRetry({
-      plan: "start",
-      billingType: "monthly",
-      monthlyPrice: 19,
-      paymentId: "pay_timeout",
-    });
+    const synced = await syncSubscriptionWithRetry();
 
     expect(synced).toBe(false);
-    expect(mockUpdateSubscription).toHaveBeenCalledTimes(3);
+    expect(mockSyncSubscription).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -362,7 +315,7 @@ describe("Scénario J — Achat annulé (cancelled)", () => {
       isAnnual: false,
     });
 
-    expect(mockUpdateSubscription).not.toHaveBeenCalled();
+    expect(mockSyncSubscription).not.toHaveBeenCalled();
     expect(result).toEqual({ success: false, cancelled: true });
   });
 });
@@ -385,7 +338,7 @@ describe("Scénario K — Erreur RC (non-cancelled)", () => {
       isAnnual: false,
     });
 
-    expect(mockUpdateSubscription).not.toHaveBeenCalled();
+    expect(mockSyncSubscription).not.toHaveBeenCalled();
     expect(result).toEqual({ success: false, error: "payment_failed" });
   });
 });
@@ -401,7 +354,7 @@ describe("Restore purchases", () => {
       activeSubscriptions: ["serenite_monthly"],
     });
 
-    const result = await mockRestorePurchases() as {
+    const result = (await mockRestorePurchases()) as {
       success: boolean;
       activeSubscriptions: string[];
     };
@@ -416,7 +369,7 @@ describe("Restore purchases", () => {
       activeSubscriptions: [],
     });
 
-    const result = await mockRestorePurchases() as {
+    const result = (await mockRestorePurchases()) as {
       success: boolean;
       activeSubscriptions: string[];
     };
@@ -450,7 +403,7 @@ describe("Scénario N — Plan déjà actif", () => {
 describe("refreshActivePlan post-achat", () => {
   it("refreshActivePlan est toujours appelé après un achat réussi, même si sync échoue", async () => {
     mockPurchase.mockResolvedValue({ success: true, paymentId: "pay_xyz" });
-    mockUpdateSubscription.mockResolvedValue({ success: false });
+    mockSyncSubscription.mockResolvedValue({ success: false });
 
     await handleUpgrade({
       ...BASE_PARAMS,

@@ -519,11 +519,14 @@ export const proApi = {
 
   cancelSubscription: () => apiCall("/api/pro/subscription/cancel", { method: "PUT" }),
 
-  createSubscription: (data: { plan: string; billingType: "monthly" | "one_time"; monthlyPrice: number; paymentId: string }) =>
-    apiCall("/api/pro/subscription", { method: "POST", body: JSON.stringify(data) }),
-
-  updateSubscription: (data: { plan: string; billingType?: "monthly" | "one_time"; monthlyPrice?: number; paymentId?: string }) =>
-    apiCall("/api/pro/subscription/change", { method: "PUT", body: JSON.stringify(data) }),
+  /**
+   * Reconciles the backend's subscription state with RevenueCat's live
+   * entitlement data. Call after a purchase or restore completes — the
+   * RevenueCat webhook is the primary activation path, but this closes the
+   * gap when it's delayed, without trusting any client-supplied plan/price.
+   */
+  syncSubscription: () =>
+    apiCall<{ reconciled: boolean; plan?: string }>("/api/pro/subscription/sync", { method: "POST" }),
 
   getProfile: () => apiCall<User>("/api/users"),
 

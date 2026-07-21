@@ -27,13 +27,10 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type BillingPeriod = "monthly" | "annual";
 
-async function syncSubscriptionWithRetry(
-  payload: Parameters<typeof proApi.createSubscription>[0],
-  maxAttempts = 3
-): Promise<boolean> {
+async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await proApi.createSubscription(payload);
+      const res = await proApi.syncSubscription();
       if (res.success) return true;
     } catch {}
     if (attempt < maxAttempts) {
@@ -157,12 +154,7 @@ export default function SubscriptionScreen() {
 
       if (result.success) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const synced = await syncSubscriptionWithRetry({
-          plan: planKey,
-          billingType: isAnnual ? "one_time" : "monthly",
-          monthlyPrice: isAnnual ? rcPkg.annualMonthlyPrice : rcPkg.monthlyPrice,
-          paymentId: result.paymentId ?? pkg.identifier,
-        });
+        const synced = await syncSubscriptionWithRetry();
         if (!synced) setSyncWarning(true);
         await refreshProfile();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
@@ -208,6 +200,7 @@ export default function SubscriptionScreen() {
           {hasActiveSubscription && (
             <AnimatedIconButton
               onPress={() => safeBack(router)}
+              accessibilityLabel="Retour"
               style={{
                 width: 40, height: 40, borderRadius: 12,
                 backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

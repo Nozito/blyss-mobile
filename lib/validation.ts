@@ -10,9 +10,11 @@ export const emailSchema = z
 export const passwordSchema = z
   .string()
   .min(8, "Min. 8 caractères")
+  .max(128, "Max. 128 caractères")
   .regex(/[A-Z]/, "Au moins une majuscule")
   .regex(/[0-9]/, "Au moins un chiffre")
-  .regex(/[a-z]/, "Au moins une minuscule");
+  .regex(/[a-z]/, "Au moins une minuscule")
+  .regex(/[!@#$%^&*]/, "Au moins un caractère spécial (!@#$%^&*)");
 
 // French phone — required (non-empty)
 export const phoneRequiredSchema = z

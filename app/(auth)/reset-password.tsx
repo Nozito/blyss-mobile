@@ -30,12 +30,12 @@ export default function ResetPasswordScreen() {
   const [error, setError]         = useState<string | null>(null);
   const [success, setSuccess]     = useState(false);
 
-  const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,128}$/;
+  const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,128}$/;
 
   const handleReset = async () => {
     setError(null);
     if (!password || !PASSWORD_REGEX.test(password)) {
-      setError("Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.");
+      setError("Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (!@#$%^&*).");
       return;
     }
     if (password !== confirm) {
@@ -68,6 +68,7 @@ export default function ResetPasswordScreen() {
         <View>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
+            accessibilityLabel="Retour"
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mb-8"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
@@ -100,7 +101,12 @@ export default function ResetPasswordScreen() {
                 secureTextEntry={!showPwd}
                 autoCapitalize="none"
               />
-              <Pressable onPress={() => setShowPwd((p) => !p)}>
+              <Pressable
+                onPress={() => setShowPwd((p) => !p)}
+                accessibilityRole="button"
+                accessibilityLabel={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                accessibilityState={{ checked: showPwd }}
+              >
                 <Ionicons
                   name={showPwd ? "eye-off-outline" : "eye-outline"}
                   size={18}
@@ -126,7 +132,12 @@ export default function ResetPasswordScreen() {
                 secureTextEntry={!showConfirm}
                 autoCapitalize="none"
               />
-              <Pressable onPress={() => setShowConfirm((p) => !p)}>
+              <Pressable
+                onPress={() => setShowConfirm((p) => !p)}
+                accessibilityRole="button"
+                accessibilityLabel={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                accessibilityState={{ checked: showConfirm }}
+              >
                 <Ionicons
                   name={showConfirm ? "eye-off-outline" : "eye-outline"}
                   size={18}

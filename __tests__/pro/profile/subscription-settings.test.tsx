@@ -86,13 +86,13 @@ jest.mock('@/components/ui/ErrorMessage', () => ({
 jest.mock('@/lib/navigation', () => ({ safeBack: jest.fn() }));
 
 const mockGetSubscription = jest.fn();
-const mockUpdateSubscription = jest.fn();
+const mockSyncSubscription = jest.fn();
 const mockCancelSubscription = jest.fn();
 
 jest.mock('@/lib/api', () => ({
   proApi: {
     getSubscription: (...args: any[]) => mockGetSubscription(...args),
-    updateSubscription: (...args: any[]) => mockUpdateSubscription(...args),
+    syncSubscription: (...args: any[]) => mockSyncSubscription(...args),
     cancelSubscription: (...args: any[]) => mockCancelSubscription(...args),
   },
 }));
@@ -122,7 +122,7 @@ describe('ProSubscriptionSettingsScreen', () => {
         cancelAtPeriodEnd: false,
       },
     });
-    mockUpdateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true, data: { reconciled: true } });
     mockCancelSubscription.mockResolvedValue({ success: true });
     mockPurchase.mockResolvedValue({ customerInfo: { entitlements: { active: {} } } });
   });

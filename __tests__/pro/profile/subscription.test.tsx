@@ -94,12 +94,12 @@ jest.mock('@/components/ui/AnimatedPressable', () => ({
 jest.mock('@/lib/navigation', () => ({ safeBack: jest.fn() }));
 
 const mockGetSubscription = jest.fn();
-const mockCreateSubscription = jest.fn();
+const mockSyncSubscription = jest.fn();
 
 jest.mock('@/lib/api', () => ({
   proApi: {
     getSubscription: (...args: any[]) => mockGetSubscription(...args),
-    createSubscription: (...args: any[]) => mockCreateSubscription(...args),
+    syncSubscription: (...args: any[]) => mockSyncSubscription(...args),
   },
 }));
 
@@ -120,7 +120,7 @@ describe('ProSubscriptionScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetSubscription.mockResolvedValue({ success: true, data: { plan: null, status: null } });
-    mockCreateSubscription.mockResolvedValue({ success: true });
+    mockSyncSubscription.mockResolvedValue({ success: true, data: { reconciled: true } });
     mockPurchase.mockResolvedValue({ customerInfo: { entitlements: { active: {} } } });
     mockRefreshActivePlan.mockResolvedValue(undefined);
   });

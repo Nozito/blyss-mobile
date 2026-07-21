@@ -25,12 +25,12 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 const VALIDATION = {
   PHONE_REGEX: /^[0-9]{10}$/,
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,12}$/,
+  PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,128}$/,
   NAME_MAX: 50,
   TEXT_MAX: 100,
   EMAIL_MAX: 254,
   PASSWORD_MIN: 8,
-  PASSWORD_MAX: 12,
+  PASSWORD_MAX: 128,
   MIN_AGE: 16,
 } as const;
 
@@ -321,7 +321,7 @@ export default function RegisterScreen() {
         return;
       }
       if (!VALIDATION.PASSWORD_REGEX.test(formData.password)) {
-        setStepError("8-12 car., une majuscule, un chiffre et un caractère spécial (!@#$%^&*)");
+        setStepError("8 car. min., une majuscule, un chiffre et un caractère spécial (!@#$%^&*)");
         return;
       }
       if (!formData.acceptedTerms) {
@@ -612,6 +612,7 @@ export default function RegisterScreen() {
           <AnimatedIconButton
             onPress={handleBack}
             disabled={isLoading}
+            accessibilityLabel="Retour"
             className="p-2 -ml-2 rounded-xl active:bg-muted"
           >
             <Ionicons name="chevron-back" size={24} color="#09090B" />
