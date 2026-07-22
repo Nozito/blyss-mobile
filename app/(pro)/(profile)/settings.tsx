@@ -198,6 +198,7 @@ export default function ProSettingsScreen() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
         <AnimatedIconButton
           onPress={() => safeBack(router)}
+          accessibilityLabel="Retour"
           style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="chevron-back" size={20} color={Colors.foreground} />

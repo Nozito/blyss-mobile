@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TextInput, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 export type ViewMode = "list" | "map";
@@ -31,6 +31,7 @@ export function SearchHeader({
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 20 }}>
         <AnimatedIconButton
           onPress={onBack}
+          accessibilityLabel="Retour"
           style={{
             width: 40,
             height: 40,
@@ -117,11 +118,12 @@ export function SearchHeader({
           {searchInput.length > 0 && (
             <AnimatedIconButton
               onPress={() => onChangeText("")}
+              accessibilityLabel="Effacer la recherche"
               style={{
                 width: 24,
                 height: 24,
                 borderRadius: 12,
-                backgroundColor: "#09090B1A",
+                backgroundColor: withAlpha(Colors.foreground, 0.10),
                 alignItems: "center",
                 justifyContent: "center",
               }}

@@ -16,6 +16,8 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import { queryClient } from "@/lib/queryClient";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ActionSheetProvider } from "@/components/ui/ActionSheet";
 import { validateEnv, ENV } from "@/lib/env";
 
 validateEnv();
@@ -124,18 +126,22 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <OfflineBanner />
-        <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <RevenueCatProvider>
-                <NotificationProvider>
-                  <AppContent />
-                </NotificationProvider>
-              </RevenueCatProvider>
-            </AuthProvider>
-          </QueryClientProvider>
-        </StripeProvider>
+        <ToastProvider>
+          <ActionSheetProvider>
+            <OfflineBanner />
+            <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
+              <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                  <RevenueCatProvider>
+                    <NotificationProvider>
+                      <AppContent />
+                    </NotificationProvider>
+                  </RevenueCatProvider>
+                </AuthProvider>
+              </QueryClientProvider>
+            </StripeProvider>
+          </ActionSheetProvider>
+        </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

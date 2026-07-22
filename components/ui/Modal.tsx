@@ -156,7 +156,7 @@ export function Modal({
                   {title && (
                     <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
                       <Text className="text-lg font-semibold text-foreground">{title}</Text>
-                      <AnimatedIconButton onPress={onClose} className="p-1">
+                      <AnimatedIconButton onPress={onClose} className="p-1" accessibilityLabel="Fermer">
                         <Ionicons name="close" size={22} color={Colors.mutedForeground} />
                       </AnimatedIconButton>
                     </View>
@@ -187,7 +187,7 @@ export function Modal({
                 {title && (
                   <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
                     <Text className="text-lg font-semibold text-foreground">{title}</Text>
-                    <AnimatedIconButton onPress={onClose} className="p-1">
+                    <AnimatedIconButton onPress={onClose} className="p-1" accessibilityLabel="Fermer">
                       <Ionicons name="close" size={22} color={Colors.mutedForeground} />
                     </AnimatedIconButton>
                   </View>

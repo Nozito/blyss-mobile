@@ -96,6 +96,7 @@ export default function ProRGPDScreen() {
             onPress={() => safeBack(router)}
             className="p-2 -ml-2 rounded-xl"
             style={{ backgroundColor: Colors.muted }}
+            accessibilityLabel="Retour"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
           </AnimatedIconButton>

@@ -242,7 +242,11 @@ export default function ProClientsScreen() {
               autoCorrect={false}
             />
             {search.length > 0 && (
-              <Pressable onPress={() => setSearch("")}>
+              <Pressable
+                onPress={() => setSearch("")}
+                accessibilityRole="button"
+                accessibilityLabel="Effacer la recherche"
+              >
                 <Ionicons name="close-circle" size={16} color="#A1A1AA" />
               </Pressable>
             )}

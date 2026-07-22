@@ -11,8 +11,8 @@ import {
   Dimensions,
   Platform,
   RefreshControl,
-  Alert,
 } from "react-native";
+import { useActionSheet } from "@/components/ui/ActionSheet";
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -218,7 +218,7 @@ function CalendarGrid({
     <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 16, ...Shadows.card, marginBottom: 16 }}>
       {/* Month nav */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <AnimatedIconButton onPress={onPrevMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+        <AnimatedIconButton onPress={onPrevMonth} accessibilityLabel="Mois précédent" style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
         </AnimatedIconButton>
         <AnimatedPressable onPress={onToday}>
@@ -226,7 +226,7 @@ function CalendarGrid({
             {MONTHS[month]} {year}
           </Text>
         </AnimatedPressable>
-        <AnimatedIconButton onPress={onNextMonth} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+        <AnimatedIconButton onPress={onNextMonth} accessibilityLabel="Mois suivant" style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
         </AnimatedIconButton>
       </View>
@@ -329,6 +329,7 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
 export default function ProCalendarScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const showActionSheet = useActionSheet();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -641,19 +642,19 @@ export default function ProCalendarScreen() {
 
     const totalSlots = activeDays.length * planConfirmWeeks * planningSlots.length;
     const weeks = planConfirmWeeks;
-    Alert.alert(
-      "Confirmer le planning",
-      `${totalSlots} créneaux sur ${weeks} semaines (${activeDays.length} jour${activeDays.length > 1 ? "s" : ""} × ${planningSlots.length} créneau${planningSlots.length > 1 ? "x" : ""}/jour · ${formatDuration(planningDuration)}).\n\nLes créneaux déjà existants ou passés seront ignorés.`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Appliquer",
-          onPress: () => {
-            setShowPlanningModal(false);
-            void doApplyWeeklyPlanning(weeks);
-          },
-        },
-      ]
+    showActionSheet(
+      {
+        title: "Confirmer le planning",
+        message: `${totalSlots} créneaux sur ${weeks} semaines (${activeDays.length} jour${activeDays.length > 1 ? "s" : ""} × ${planningSlots.length} créneau${planningSlots.length > 1 ? "x" : ""}/jour · ${formatDuration(planningDuration)}). Les créneaux déjà existants ou passés seront ignorés.`,
+        options: ["Annuler", "Appliquer"],
+        cancelButtonIndex: 0,
+      },
+      (idx) => {
+        if (idx === 1) {
+          setShowPlanningModal(false);
+          void doApplyWeeklyPlanning(weeks);
+        }
+      }
     );
   };
 
@@ -751,12 +752,17 @@ export default function ProCalendarScreen() {
             </AnimatedPressable>
             <AnimatedPressable
               onPress={() => setIsSearchOpen((v) => !v)}
+              accessibilityLabel={isSearchOpen ? "Fermer la recherche" : "Rechercher"}
+              accessibilityState={{ checked: isSearchOpen }}
               style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
             >
               <Ionicons name={isSearchOpen ? "close" : "search-outline"} size={18} color={Colors.foreground} />
             </AnimatedPressable>
             <Pressable
               onPress={toggleViewMode}
+              accessibilityLabel={viewMode === "month" ? "Passer à la vue semaine" : "Passer à la vue mois"}
+              accessibilityRole="button"
+              accessibilityState={{ checked: viewMode === "week" }}
               style={{
                 width: 40, height: 40, borderRadius: 12,
                 backgroundColor: viewMode === "week" ? Colors.primary : Colors.white,
@@ -823,6 +829,7 @@ export default function ProCalendarScreen() {
                   p.setDate(p.getDate() - 7);
                   handleSelectDate(p);
                 }}
+                accessibilityLabel="Semaine précédente"
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
@@ -842,6 +849,7 @@ export default function ProCalendarScreen() {
                   n.setDate(n.getDate() + 7);
                   handleSelectDate(n);
                 }}
+                accessibilityLabel="Semaine suivante"
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
@@ -1054,6 +1062,8 @@ export default function ProCalendarScreen() {
                           <View style={{ flexDirection: "row", gap: 6 }}>
                             <AnimatedPressable
                               onPress={() => toggleSlot(slot.id)}
+                              accessibilityLabel={isOpen ? "Bloquer le créneau" : "Ouvrir le créneau"}
+                              accessibilityState={{ checked: isOpen }}
                               style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isOpen ? withAlpha(Colors.primary, 0.10) : Colors.muted, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name={isOpen ? "lock-open-outline" : "lock-closed-outline"} size={16} color={isOpen ? Colors.primary : Colors.mutedForeground} />
@@ -1064,12 +1074,14 @@ export default function ProCalendarScreen() {
                                 setEditDur(parseDuration(slot.duration));
                                 setEditingSlotId(slot.id);
                               }}
+                              accessibilityLabel="Modifier le créneau"
                               style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name="pencil-outline" size={16} color={Colors.mutedForeground} />
                             </AnimatedPressable>
                             <AnimatedPressable
                               onPress={() => setShowDeleteSlotId(slot.id)}
+                              accessibilityLabel="Supprimer le créneau"
                               style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.destructiveLight, alignItems: "center", justifyContent: "center" }}
                             >
                               <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
@@ -1167,6 +1179,7 @@ export default function ProCalendarScreen() {
               </View>
               <AnimatedIconButton
                 onPress={() => setShowAddSlot(false)}
+                accessibilityLabel="Fermer"
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(Colors.primary, 0.08), alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={Colors.primary} />
@@ -1285,6 +1298,7 @@ export default function ProCalendarScreen() {
                   </View>
                   <AnimatedIconButton
                     onPress={() => setSelectedApt(null)}
+                    accessibilityLabel="Fermer"
                     style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
                   >
                     <Ionicons name="close" size={18} color={Colors.foreground} />
@@ -1370,6 +1384,7 @@ export default function ProCalendarScreen() {
               </View>
               <AnimatedIconButton
                 onPress={() => setShowUnavailModal(false)}
+                accessibilityLabel="Fermer"
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ABSENCES.closeBg, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={ABSENCES.colorDark} />
@@ -1475,6 +1490,7 @@ export default function ProCalendarScreen() {
                     </View>
                     <AnimatedIconButton
                       onPress={() => removeUnavailability(u.id)}
+                      accessibilityLabel="Supprimer cette période d'absence"
                       style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(Colors.destructive, 0.10), alignItems: "center", justifyContent: "center", marginLeft: 8 }}
                     >
                       <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
@@ -1517,6 +1533,7 @@ export default function ProCalendarScreen() {
               </View>
               <AnimatedIconButton
                 onPress={() => setShowPlanningModal(false)}
+                accessibilityLabel="Fermer"
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PLANNING.closeBg, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={PLANNING.colorDark} />
@@ -1656,7 +1673,7 @@ export default function ProCalendarScreen() {
                   <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}>
                     <Ionicons name="time-outline" size={13} color={PLANNING.color} />
                     <Text style={{ fontSize: 13, fontWeight: "700", color: PLANNING.colorDark }}>{t}</Text>
-                    <AnimatedIconButton onPress={() => setPlanningSlots((prev) => prev.filter((s) => s !== t))}>
+                    <AnimatedIconButton onPress={() => setPlanningSlots((prev) => prev.filter((s) => s !== t))} accessibilityLabel="Supprimer cet horaire">
                       <Ionicons name="close-circle" size={16} color={PLANNING.color} />
                     </AnimatedIconButton>
                   </View>

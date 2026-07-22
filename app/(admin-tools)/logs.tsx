@@ -141,7 +141,7 @@ export default function AdminLogsScreen() {
             style={{ flex: 1, fontSize: 14, color: TEXT1 }}
           />
           {searchQuery.length > 0 && (
-            <AnimatedIconButton onPress={() => setSearchQuery("")}>
+            <AnimatedIconButton onPress={() => setSearchQuery("")} accessibilityLabel="Effacer la recherche">
               <Ionicons name="close-circle" size={16} color={TEXT2} />
             </AnimatedIconButton>
           )}

@@ -610,6 +610,7 @@ export default function BookingScreen() {
           <View style={{ paddingTop: 0, paddingBottom: 16 }}>
             <AnimatedIconButton
               onPress={handleBack}
+              accessibilityLabel="Retour"
               style={{
                 width: 44,
                 height: 44,

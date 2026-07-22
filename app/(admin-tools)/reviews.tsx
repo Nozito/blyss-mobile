@@ -116,6 +116,7 @@ export default function ReviewsScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
+            accessibilityLabel="Retour"
             style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="arrow-back" size={18} color={TEXT1} />

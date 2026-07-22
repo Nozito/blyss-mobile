@@ -232,6 +232,7 @@ export default function RoleSelectionModal({
         <AnimatedIconButton
           onPress={onClose}
           hitSlop={12}
+          accessibilityLabel="Fermer"
           style={{
             position: "absolute", top: 14, right: 18, zIndex: 10,
             width: 32, height: 32, borderRadius: 16,

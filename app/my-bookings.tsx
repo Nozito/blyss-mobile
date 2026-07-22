@@ -366,7 +366,7 @@ function WaitingListSection() {
             {entry.prestation_name && <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{entry.prestation_name}</Text>}
             {entry.preferred_date && <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Souhaité : {new Date(entry.preferred_date).toLocaleDateString("fr-FR")}</Text>}
           </View>
-          <AnimatedIconButton onPress={() => leaveMutation.mutate(entry.pro_id)} disabled={leaveMutation.isPending} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
+          <AnimatedIconButton onPress={() => leaveMutation.mutate(entry.pro_id)} disabled={leaveMutation.isPending} accessibilityLabel="Se désinscrire de la liste d'attente" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="notifications-off-outline" size={14} color={Colors.mutedForeground} />
           </AnimatedIconButton>
         </View>

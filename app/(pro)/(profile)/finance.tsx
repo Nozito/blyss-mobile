@@ -288,6 +288,7 @@ export default function ProFinanceScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
+            accessibilityLabel="Retour"
             style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
@@ -299,6 +300,8 @@ export default function ProFinanceScreen() {
           <Pressable
             onPress={handleExport}
             disabled={exporting || !stats}
+            accessibilityRole="button"
+            accessibilityLabel="Exporter les données"
             style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", opacity: exporting || !stats ? 0.5 : 1, ...Shadows.card }}
           >
             {exporting ? (
@@ -522,6 +525,8 @@ export default function ProFinanceScreen() {
               <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground }}>Objectif mensuel</Text>
               <Pressable
                 onPress={() => setShowObjectiveModal(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Fermer"
                 style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={18} color={Colors.foreground} />

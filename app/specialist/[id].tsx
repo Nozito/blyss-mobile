@@ -23,7 +23,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewModal } from "@/components/ui/ReviewModal";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
@@ -219,7 +219,7 @@ export default function SpecialistProfileScreen() {
       contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
     >
       {/* Hero banner */}
-      <View style={{ height: 200, backgroundColor: "#FE5D9D20" }}>
+      <View style={{ height: 200, backgroundColor: withAlpha(Colors.primary, 0.13) }}>
         {bannerUrl ? (
           <Image
             source={{ uri: bannerUrl }}
@@ -228,7 +228,7 @@ export default function SpecialistProfileScreen() {
           />
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="sparkles" size={48} color="#FE5D9D40" />
+            <Ionicons name="sparkles" size={48} color={withAlpha(Colors.primary, 0.25)} />
           </View>
         )}
 
@@ -245,6 +245,7 @@ export default function SpecialistProfileScreen() {
         >
           <AnimatedIconButton
             onPress={() => safeBack(router)}
+            accessibilityLabel="Retour"
             style={{
               width: 40,
               height: 40,
@@ -261,6 +262,9 @@ export default function SpecialistProfileScreen() {
           <Animated.View style={{ transform: [{ scale: heartScale }] }}>
             <Pressable
               onPress={toggleFav}
+              accessibilityLabel={isFavorited ? "Retirer des favoris" : "Ajouter aux favoris"}
+              accessibilityRole="button"
+              accessibilityState={{ checked: isFavorited }}
               style={{
                 width: 40,
                 height: 40,
@@ -288,7 +292,7 @@ export default function SpecialistProfileScreen() {
             width: 88,
             height: 88,
             borderRadius: 24,
-            backgroundColor: "#FE5D9D20",
+            backgroundColor: withAlpha(Colors.primary, 0.13),
             borderWidth: 3,
             borderColor: Colors.white,
             alignItems: "center",
@@ -351,7 +355,7 @@ export default function SpecialistProfileScreen() {
           <View style={{ marginTop: 10 }}>
             <View
               style={{
-                backgroundColor: "#FE5D9D15",
+                backgroundColor: withAlpha(Colors.primary, 0.08),
                 borderRadius: 999,
                 paddingHorizontal: 14,
                 paddingVertical: 5,
@@ -578,7 +582,7 @@ export default function SpecialistProfileScreen() {
               style={{
                 marginTop: 12,
                 borderWidth: 1,
-                borderColor: "#FE5D9D40",
+                borderColor: withAlpha(Colors.primary, 0.25),
                 borderRadius: 999,
                 paddingVertical: 14,
                 alignItems: "center",

@@ -146,6 +146,7 @@ export default function SettingsScreen() {
           <AnimatedIconButton
             onPress={() => safeBack(router)}
             style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
+            accessibilityLabel="Retour"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
           </AnimatedIconButton>

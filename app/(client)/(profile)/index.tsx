@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, ActionSheetIOS, Platform, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
+import { useActionSheet } from "@/components/ui/ActionSheet";
 import { Image } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -11,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usersApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
@@ -36,6 +37,7 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const showActionSheet = useActionSheet();
 
   const pickFromGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -56,22 +58,18 @@ export default function ProfileScreen() {
   };
 
   const handlePickAvatar = () => {
-    if (Platform.OS === "ios") {
-      const hasPhoto = !!user?.profile_photo;
-      const options = hasPhoto
-        ? ["Annuler", "Galerie", "Caméra", "Supprimer la photo"]
-        : ["Annuler", "Galerie", "Caméra"];
-      ActionSheetIOS.showActionSheetWithOptions(
-        { title: "Photo de profil", options, cancelButtonIndex: 0, destructiveButtonIndex: hasPhoto ? 3 : undefined },
-        (idx) => {
-          if (idx === 1) void pickFromGallery();
-          else if (idx === 2) void pickFromCamera();
-          else if (idx === 3 && hasPhoto) void deletePhoto();
-        }
-      );
-    } else {
-      void pickFromGallery();
-    }
+    const hasPhoto = !!user?.profile_photo;
+    const options = hasPhoto
+      ? ["Annuler", "Galerie", "Caméra", "Supprimer la photo"]
+      : ["Annuler", "Galerie", "Caméra"];
+    showActionSheet(
+      { title: "Photo de profil", options, cancelButtonIndex: 0, destructiveButtonIndex: hasPhoto ? 3 : undefined },
+      (idx) => {
+        if (idx === 1) void pickFromGallery();
+        else if (idx === 2) void pickFromCamera();
+        else if (idx === 3 && hasPhoto) void deletePhoto();
+      }
+    );
   };
 
   const deletePhoto = async () => {
@@ -151,10 +149,11 @@ export default function ProfileScreen() {
         >
           {/* Avatar avec badge caméra */}
           <AnimatedPressable onPress={handlePickAvatar}
+            accessibilityLabel="Modifier la photo de profil"
             style={{ position: "relative", width: 72, height: 72 }}>
             <View style={{
               width: 72, height: 72, borderRadius: 20,
-              backgroundColor: "#FE5D9D20",
+              backgroundColor: withAlpha(Colors.primary, 0.13),
               alignItems: "center", justifyContent: "center",
               overflow: "hidden",
             }}>
@@ -232,7 +231,7 @@ export default function ProfileScreen() {
               >
                 <View style={{
                   width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: "#FE5D9D12",
+                  backgroundColor: withAlpha(Colors.primary, 0.07),
                   alignItems: "center", justifyContent: "center",
                 }}>
                   <Ionicons name={item.icon} size={18} color={Colors.primary} />
@@ -264,7 +263,7 @@ export default function ProfileScreen() {
               >
                 <View style={{
                   width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: "#FE5D9D12",
+                  backgroundColor: withAlpha(Colors.primary, 0.07),
                   alignItems: "center", justifyContent: "center",
                 }}>
                   <Ionicons name={item.icon} size={18} color={Colors.primary} />
@@ -323,7 +322,7 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu — zone danger */}
-        <View style={{ marginBottom: 16, backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: "#EF444420" }}>
+        <View style={{ marginBottom: 16, backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: withAlpha(Colors.destructive, 0.13) }}>
           <AnimatedPressable
             onPress={handleLogout}
             style={{
@@ -335,7 +334,7 @@ export default function ProfileScreen() {
           >
             <View style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: "#EF444412",
+              backgroundColor: withAlpha(Colors.destructive, 0.07),
               alignItems: "center", justifyContent: "center",
             }}>
               <Ionicons name="log-out-outline" size={18} color={Colors.destructive} />

@@ -1,5 +1,6 @@
 import React, { useCallback, memo } from "react";
-import { View, Text, FlatList, Pressable, Switch, Alert } from "react-native"; // BLYSS-NAV: Alert added for delete confirmation
+import { View, Text, FlatList, Pressable, Switch } from "react-native";
+import { useActionSheet } from "@/components/ui/ActionSheet";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -156,6 +157,7 @@ export default function ServicesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const showActionSheet = useActionSheet();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["pro-services"],
@@ -210,22 +212,22 @@ export default function ServicesScreen() {
   );
   const handleDelete = useCallback(
     (id: number, name: string) =>
-      Alert.alert(
-        "Supprimer la prestation",
-        `Supprimer « ${name} » ? Cette action est irréversible.`,
-        [
-          { text: "Annuler", style: "cancel" },
-          {
-            text: "Supprimer",
-            style: "destructive",
-            onPress: () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-              deleteMutation.mutate(id);
-            },
-          },
-        ]
+      showActionSheet(
+        {
+          title: "Supprimer la prestation",
+          message: `Supprimer « ${name} » ? Cette action est irréversible.`,
+          options: ["Annuler", "Supprimer"],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 1,
+        },
+        (idx) => {
+          if (idx === 1) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+            deleteMutation.mutate(id);
+          }
+        }
       ),
-    [deleteMutation]
+    [deleteMutation, showActionSheet]
   );
 
   const renderServiceItem = useCallback(
@@ -250,6 +252,7 @@ export default function ServicesScreen() {
       }}>
         <AnimatedIconButton
           onPress={() => safeBack(router)}
+          accessibilityLabel="Retour"
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
@@ -268,6 +271,8 @@ export default function ServicesScreen() {
         </View>
         <Pressable
           onPress={() => router.push("/(pro)/(profile)/service-form")}
+          accessibilityLabel="Ajouter une prestation"
+          accessibilityRole="button"
           style={{
             width: 40, height: 40, borderRadius: 14,
             backgroundColor: Colors.primary,

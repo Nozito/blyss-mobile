@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Card } from "@/components/ui/Card";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { proApi, usersApi, type User } from "@/lib/api";
@@ -202,10 +202,12 @@ export default function ProProfileScreen() {
 
             {/* Avatar avec badge caméra */}
             <Pressable onPress={handlePickAvatar}
+              accessibilityRole="button"
+              accessibilityLabel="Modifier la photo de profil"
               style={{ position: "relative", width: 72, height: 72 }}>
               <View style={{
                 width: 72, height: 72, borderRadius: 20,
-                backgroundColor: "#FE5D9D20",
+                backgroundColor: withAlpha(Colors.primary, 0.13),
                 alignItems: "center", justifyContent: "center",
                 overflow: "hidden",
               }}>
@@ -377,7 +379,7 @@ export default function ProProfileScreen() {
                   width: 40,
                   height: 40,
                   borderRadius: 12,
-                  backgroundColor: "#FE5D9D12",
+                  backgroundColor: withAlpha(Colors.primary, 0.07),
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -428,7 +430,7 @@ export default function ProProfileScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: "#FE5D9D12",
+              backgroundColor: withAlpha(Colors.primary, 0.07),
               alignItems: "center", justifyContent: "center",
             }}>
               <Ionicons name="eye-outline" size={18} color={Colors.primary} />
@@ -480,7 +482,7 @@ export default function ProProfileScreen() {
             {profileCompleteness < 100 ? (
               <View style={{
                 flexDirection: "row", alignItems: "center", gap: 4,
-                alignSelf: "flex-start", backgroundColor: "#FE5D9D15",
+                alignSelf: "flex-start", backgroundColor: withAlpha(Colors.primary, 0.08),
                 borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6,
               }}>
                 <Ionicons name="trending-up-outline" size={11} color={Colors.primary} />
@@ -508,7 +510,7 @@ export default function ProProfileScreen() {
             >
               <View style={{
                 width: 40, height: 40, borderRadius: 12,
-                backgroundColor: "#FE5D9D12",
+                backgroundColor: withAlpha(Colors.primary, 0.07),
                 alignItems: "center", justifyContent: "center",
               }}>
                 <Ionicons name={item.icon} size={18} color={Colors.primary} />
@@ -540,7 +542,7 @@ export default function ProProfileScreen() {
             >
               <View style={{
                 width: 40, height: 40, borderRadius: 12,
-                backgroundColor: "#FE5D9D12",
+                backgroundColor: withAlpha(Colors.primary, 0.07),
                 alignItems: "center", justifyContent: "center",
               }}>
                 <Ionicons name={item.icon} size={18} color={Colors.primary} />
@@ -599,7 +601,7 @@ export default function ProProfileScreen() {
       )}
 
       {/* Menu — zone danger */}
-      <View style={{ marginBottom: 16, backgroundColor: Colors.card, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: "#EF444420" }}>
+      <View style={{ marginBottom: 16, backgroundColor: Colors.card, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: withAlpha(Colors.destructive, 0.13) }}>
         <AnimatedPressable
           onPress={handleLogout}
           style={{
@@ -611,7 +613,7 @@ export default function ProProfileScreen() {
         >
           <View style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: "#EF444412",
+            backgroundColor: withAlpha(Colors.destructive, 0.07),
             alignItems: "center", justifyContent: "center",
           }}>
             <Ionicons name="log-out-outline" size={18} color={Colors.destructive} />
@@ -650,7 +652,7 @@ export default function ProProfileScreen() {
 
     {/* Avatar action sheet */}
     <RNModal visible={showAvatarSheet} transparent animationType="slide" onRequestClose={() => setShowAvatarSheet(false)}>
-      <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowAvatarSheet(false)} />
+      <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowAvatarSheet(false)} accessibilityRole="button" accessibilityLabel="Fermer" />
       <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 12 }}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 16 }} />
         <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.mutedForeground, textAlign: "center", marginBottom: 8 }}>Photo de profil</Text>
@@ -680,7 +682,7 @@ export default function ProProfileScreen() {
 
     {/* Logout confirmation sheet */}
     <RNModal visible={showLogoutConfirm} transparent animationType="slide" onRequestClose={() => setShowLogoutConfirm(false)}>
-      <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowLogoutConfirm(false)} />
+      <Pressable style={{ flex: 1, backgroundColor: Colors.overlayDark }} onPress={() => setShowLogoutConfirm(false)} accessibilityRole="button" accessibilityLabel="Fermer" />
       <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
         <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 6 }}>Déconnexion</Text>

@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi, ProNotificationSettings } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const DEFAULT_PREFS: ProNotificationSettings = {
@@ -44,7 +44,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         label: "Nouvelles réservations",
         subtitle: "Dès qu'une cliente réserve un créneau",
         icon: "notifications-outline",
-        iconBg: "#FE5D9D20",
+        iconBg: withAlpha(Colors.primary, 0.13),
         iconColor: Colors.primary,
       },
       {
@@ -52,7 +52,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         label: "Changements & annulations",
         subtitle: "Modification d'horaire ou annulation par la cliente",
         icon: "calendar-outline",
-        iconBg: "#F59E0B20",
+        iconBg: withAlpha(Colors.warning, 0.13),
         iconColor: Colors.warning,
       },
       {
@@ -60,7 +60,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         label: "Rappels du jour",
         subtitle: "Récap' de tes rendez-vous du jour le matin",
         icon: "star-outline",
-        iconBg: "#06B6D420",
+        iconBg: withAlpha("#06B6D4", 0.13),
         iconColor: "#06B6D4",
       },
     ],
@@ -73,7 +73,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         label: "Acomptes & garanties",
         subtitle: "Quand un paiement ou acompte est encaissé",
         icon: "card-outline",
-        iconBg: "#8B5CF620",
+        iconBg: withAlpha(Colors.pro, 0.13),
         iconColor: Colors.pro,
       },
       {
@@ -81,7 +81,7 @@ const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
         label: "Résumé d'activité",
         subtitle: "Aperçu de ton CA et rendez-vous en fin de journée",
         icon: "trending-up-outline",
-        iconBg: "#FE5D9D20",
+        iconBg: withAlpha(Colors.primary, 0.13),
         iconColor: Colors.primary,
       },
     ],

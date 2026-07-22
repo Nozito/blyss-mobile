@@ -68,6 +68,7 @@ export default function ClientHelpScreen() {
           <AnimatedIconButton
             onPress={() => safeBack(router)}
             className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
+            accessibilityLabel="Retour"
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
           </AnimatedIconButton>

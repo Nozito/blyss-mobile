@@ -85,7 +85,7 @@ function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
       </View>
 
       {onClear ? (
-        <AnimatedIconButton onPress={onClear} style={{ padding: 4 }}>
+        <AnimatedIconButton onPress={onClear} accessibilityLabel="Retirer l'utilisateur sélectionné" style={{ padding: 4 }}>
           <Ionicons name="close-circle" size={20} color={TEXT3} />
         </AnimatedIconButton>
       ) : (
@@ -152,7 +152,7 @@ function UserPicker({
         />
         {isFetching && <ActivityIndicator size="small" color={TEXT3} />}
         {search.length > 0 && !isFetching && (
-          <AnimatedIconButton onPress={() => setSearch("")}>
+          <AnimatedIconButton onPress={() => setSearch("")} accessibilityLabel="Effacer la recherche">
             <Ionicons name="close-circle" size={16} color={TEXT3} />
           </AnimatedIconButton>
         )}

@@ -44,6 +44,8 @@ export function LoadingButton({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
         style={[
           {
             height: 56,

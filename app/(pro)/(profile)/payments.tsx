@@ -245,6 +245,7 @@ export default function ProPaymentsScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
+            accessibilityLabel="Retour"
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,

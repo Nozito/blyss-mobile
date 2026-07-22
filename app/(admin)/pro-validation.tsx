@@ -116,7 +116,7 @@ function ProDetailModal({
                     </View>
                   )}
                 </View>
-                <AnimatedIconButton onPress={onClose} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" }}>
+                <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="close" size={16} color={TEXT2} />
                 </AnimatedIconButton>
               </View>

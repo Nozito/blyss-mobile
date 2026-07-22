@@ -13,7 +13,7 @@ import type { SFSymbol } from "sf-symbols-typescript";
 import { Link } from "expo-router";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
         >
           {/* Glow orbs */}
           <View style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: `${Colors.admin}18` }} />
-          <View style={{ position: "absolute", bottom: -30, left: -20, width: 120, height: 120, borderRadius: 60, backgroundColor: "#8B5CF618" }} />
+          <View style={{ position: "absolute", bottom: -30, left: -20, width: 120, height: 120, borderRadius: 60, backgroundColor: withAlpha(Colors.pro, 0.09) }} />
 
           <BlurView tint="dark" intensity={10} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }} />
 

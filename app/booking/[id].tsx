@@ -283,7 +283,7 @@ export default function BookingDetailScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <AnimatedIconButton onPress={() => safeBack(router)} style={styles.headerBack}>
+        <AnimatedIconButton onPress={() => safeBack(router)} style={styles.headerBack} accessibilityLabel="Retour">
           <Ionicons name="chevron-back" size={24} color={Colors.foreground} />
         </AnimatedIconButton>
         <Text style={styles.headerTitle}>Détail réservation</Text>
@@ -447,7 +447,7 @@ export default function BookingDetailScreen() {
           <View style={{ backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground }}>Paiement du solde</Text>
-              <Pressable onPress={() => setBalanceVisible(false)}>
+              <Pressable onPress={() => setBalanceVisible(false)} accessibilityRole="button" accessibilityLabel="Fermer">
                 <Ionicons name="close" size={24} color={Colors.foreground} />
               </Pressable>
             </View>

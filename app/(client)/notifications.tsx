@@ -15,8 +15,9 @@ import * as Haptics from "expo-haptics";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Tab = "activity" | "preferences";
 type PrefKey = keyof ClientNotificationSettings;
@@ -79,9 +80,9 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
   {
     title: "Rendez-vous",
     items: [
-      { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: "#FE5D9D20", iconColor: Colors.primary },
-      { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: "#F59E0B20", iconColor: Colors.warning },
-      { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: "#06B6D420", iconColor: "#06B6D4" },
+      { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: withAlpha(Colors.primary, 0.13), iconColor: Colors.primary },
+      { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: withAlpha(Colors.warning, 0.13), iconColor: Colors.warning },
+      { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: withAlpha("#06B6D4", 0.13), iconColor: "#06B6D4" },
     ],
   },
 ];
@@ -174,15 +175,11 @@ export default function ClientNotificationsScreen() {
 
         {tab === "activity" ? (
           notifications.length === 0 ? (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="notifications-outline" size={26} color={Colors.mutedForeground} />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Aucune notification</Text>
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", maxWidth: 220, lineHeight: 18 }}>
-                Tes notifications apparaîtront ici en temps réel.
-              </Text>
-            </View>
+            <EmptyState
+              icon="notifications-outline"
+              title="Aucune notification"
+              description="Tes notifications apparaîtront ici en temps réel."
+            />
           ) : (
             <FlatList
               ref={listRef}
@@ -207,7 +204,7 @@ export default function ClientNotificationsScreen() {
                             padding: 14, borderRadius: 16,
                             backgroundColor: notif.is_read ? Colors.muted : Colors.white,
                             borderWidth: notif.is_read ? 0 : 1,
-                            borderColor: "#FE5D9D1A",
+                            borderColor: withAlpha(Colors.primary, 0.10),
                             ...(notif.is_read ? {} : Shadows.card),
                           }}
                         >
@@ -254,7 +251,7 @@ export default function ClientNotificationsScreen() {
             renderItem={() => (
               <View>
                 {/* Bandeau info */}
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#FE5D9D15", borderRadius: 12, padding: 14, marginBottom: 24 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: withAlpha(Colors.primary, 0.08), borderRadius: 12, padding: 14, marginBottom: 24 }}>
                   <Ionicons name="notifications-outline" size={18} color={Colors.primary} />
                   <Text style={{ flex: 1, fontSize: 13, color: Colors.primary, lineHeight: 18 }}>
                     Choisis les alertes que tu souhaites recevoir.{" "}

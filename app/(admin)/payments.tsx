@@ -361,7 +361,7 @@ export default function AdminPaymentsScreen() {
               returnKeyType="search"
             />
             {search.length > 0 && (
-              <AnimatedIconButton onPress={() => setSearch("")}>
+              <AnimatedIconButton onPress={() => setSearch("")} accessibilityLabel="Effacer la recherche">
                 <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.45)" />
               </AnimatedIconButton>
             )}
@@ -369,6 +369,8 @@ export default function AdminPaymentsScreen() {
           <Pressable
             onPress={handleExportPDF}
             disabled={exporting || thisMonth.length === 0}
+            accessibilityLabel="Exporter les transactions en PDF"
+            accessibilityRole="button"
             style={({ pressed }) => [{
               width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)",
               borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", alignItems: "center", justifyContent: "center",

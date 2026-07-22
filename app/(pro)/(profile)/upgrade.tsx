@@ -58,6 +58,7 @@ export default function ProUpgradeScreen() {
       }}>
         <AnimatedIconButton
           onPress={() => safeBack(router)} // BLYSS-NAV: was router.push("/(pro)/dashboard") — pushes onto stack instead of going back
+          accessibilityLabel="Retour"
           style={{ padding: 8, marginLeft: -8, borderRadius: 12, backgroundColor: Colors.muted }}
         >
           <Ionicons name="chevron-back" size={22} color={Colors.foreground} />

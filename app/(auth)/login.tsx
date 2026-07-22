@@ -266,7 +266,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Back */}
-          <AnimatedIconButton onPress={() => safeBack(router)} style={styles.backBtn}>
+          <AnimatedIconButton onPress={() => safeBack(router)} accessibilityLabel="Retour" style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
           </AnimatedIconButton>
 

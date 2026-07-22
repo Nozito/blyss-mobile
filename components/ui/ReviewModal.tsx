@@ -38,7 +38,11 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
     <View style={{ flexDirection: "row", gap: 10, justifyContent: "center" }}>
       {[0, 1, 2, 3, 4].map((i) => (
         <Animated.View key={i} style={{ transform: [{ scale: scales[i] }] }}>
-          <Pressable onPress={() => handlePress(i)}>
+          <Pressable
+            onPress={() => handlePress(i)}
+            accessibilityRole="button"
+            accessibilityLabel={`Noter ${i + 1} étoile${i + 1 > 1 ? "s" : ""} sur 5`}
+          >
             <Ionicons
               name={i < value ? "star" : "star-outline"}
               size={36}
@@ -107,6 +111,7 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
                 mutation.mutate();
               }}
               disabled={rating === 0 || mutation.isPending}
+              accessibilityLabel="Envoyer l'avis"
             >
               {mutation.isPending
                 ? <ActivityIndicator color={Colors.white} size="small" />

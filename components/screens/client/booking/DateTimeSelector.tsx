@@ -134,6 +134,7 @@ function CalendarGrid({
         <AnimatedIconButton
           onPress={goToPrev}
           disabled={isFirstDayOfCurrentMonth()}
+          accessibilityLabel="Mois précédent"
           style={{
             width: 36,
             height: 36,
@@ -151,6 +152,7 @@ function CalendarGrid({
         </Text>
         <AnimatedIconButton
           onPress={goToNext}
+          accessibilityLabel="Mois suivant"
           style={{
             width: 36,
             height: 36,

@@ -2,8 +2,9 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, Pressable, TextInput,
   ActivityIndicator, Modal, Switch, Share, RefreshControl,
-  Animated, ActionSheetIOS, Platform,
+  Animated, Platform,
 } from "react-native";
+import { useActionSheet } from "@/components/ui/ActionSheet";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -128,7 +129,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
               <Text style={{ fontSize: 20, fontWeight: "800", color: TEXT1 }}>Nouveau coupon</Text>
-              <AnimatedIconButton onPress={close} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: MUTED, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedIconButton onPress={close} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: MUTED, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={18} color={TEXT2} />
               </AnimatedIconButton>
             </View>
@@ -144,7 +145,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
                 autoCorrect={false}
                 style={{ flex: 1, backgroundColor: MUTED, borderRadius: 14, paddingHorizontal: 16, height: 48, fontSize: 17, fontWeight: "900", color: ADMIN.accent, letterSpacing: 2, borderWidth: 1, borderColor: BORDER, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}
               />
-              <AnimatedIconButton onPress={generate} style={{ height: 48, paddingHorizontal: 14, borderRadius: 14, backgroundColor: `${ADMIN.accent}15`, borderWidth: 1, borderColor: `${ADMIN.accent}35`, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedIconButton onPress={generate} accessibilityLabel="Générer un code aléatoire" style={{ height: 48, paddingHorizontal: 14, borderRadius: 14, backgroundColor: `${ADMIN.accent}15`, borderWidth: 1, borderColor: `${ADMIN.accent}35`, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="shuffle-outline" size={20} color={ADMIN.accent} />
               </AnimatedIconButton>
             </View>
@@ -326,6 +327,7 @@ function CouponCard({
           </View>
           <AnimatedIconButton
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onDelete(coupon); }}
+            accessibilityLabel="Supprimer le coupon"
             style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.destructive}12`, borderWidth: 1, borderColor: `${Colors.destructive}28`, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
           </AnimatedIconButton>
@@ -344,6 +346,7 @@ export default function AdminCouponsScreen() {
   const [statusFilter, setStatusFilter] = useState<"all" | CouponStatus>("all");
   const [refreshing, setRefreshing]     = useState(false);
   const [couponError, setCouponError]   = useState<string | null>(null);
+  const showActionSheet = useActionSheet();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-coupons"],
@@ -376,17 +379,15 @@ export default function AdminCouponsScreen() {
   };
 
   const handleCouponLongPress = useCallback((coupon: AdminCoupon) => {
-    if (Platform.OS === "ios") {
-      const isActive = coupon.is_active;
-      ActionSheetIOS.showActionSheetWithOptions(
-        { title: coupon.code, options: ["Annuler", "📋  Copier le code", isActive ? "⛔  Désactiver" : "✅  Activer", "🗑  Supprimer"], cancelButtonIndex: 0, destructiveButtonIndex: [3] },
-        async (idx) => {
-          if (idx === 1) { await Share.share({ message: coupon.code }); }
-          else if (idx === 2) { toggleMut.mutate({ id: coupon.id, active: !isActive }); }
-          else if (idx === 3) { handleDelete(coupon); }
-        }
-      );
-    }
+    const isActive = coupon.is_active;
+    showActionSheet(
+      { title: coupon.code, options: ["Annuler", "📋  Copier le code", isActive ? "⛔  Désactiver" : "✅  Activer", "🗑  Supprimer"], cancelButtonIndex: 0, destructiveButtonIndex: 3 },
+      async (idx) => {
+        if (idx === 1) { await Share.share({ message: coupon.code }); }
+        else if (idx === 2) { toggleMut.mutate({ id: coupon.id, active: !isActive }); }
+        else if (idx === 3) { handleDelete(coupon); }
+      }
+    );
   }, [toggleMut]);
 
   const STATUS_FILTERS = [

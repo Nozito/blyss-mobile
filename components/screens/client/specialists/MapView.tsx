@@ -95,7 +95,7 @@ function ProBottomCard({
 
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>
-      <AnimatedIconButton onPress={onClose} style={styles.closeBtn} hitSlop={8}>
+      <AnimatedIconButton onPress={onClose} style={styles.closeBtn} hitSlop={8} accessibilityLabel="Fermer">
         <Ionicons name="close" size={18} color={Colors.mutedForeground} />
       </AnimatedIconButton>
 
@@ -242,7 +242,11 @@ export default function SpecialistsMapView({ specialists }: Props) {
       )}
 
       {Platform.OS === "ios" && (
-        <AnimatedIconButton onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)} style={styles.locBtn}>
+        <AnimatedIconButton
+          onPress={() => mapRef.current?.animateToRegion(initialRegion, 600)}
+          style={styles.locBtn}
+          accessibilityLabel="Centrer la carte sur ma position"
+        >
           <Ionicons name="locate-outline" size={20} color={Colors.primary} />
         </AnimatedIconButton>
       )}

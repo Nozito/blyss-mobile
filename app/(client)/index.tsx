@@ -228,6 +228,9 @@ function SpecialistCard({
         {/* Favorite button with bounce */}
         <Pressable
           onPress={handleHeartPress}
+          accessibilityRole="button"
+          accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+          accessibilityState={{ checked: isFavorite }}
           style={{
             position: "absolute", top: 12, right: 12,
             width: 36, height: 36, borderRadius: 18,

@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Shadows } from "@/constants/shadows";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
@@ -100,7 +100,7 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
           borderRadius: 16,
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: "#EBE6E066",
+          borderColor: withAlpha(Colors.border, 0.4),
           marginBottom: 12,
           ...Shadows.card,
         }}
@@ -129,6 +129,7 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
             onPress={handleHeartPress}
             accessibilityRole="button"
             accessibilityLabel={isFav ? `Retirer ${item.business_name} des favoris` : `Ajouter ${item.business_name} aux favoris`}
+            accessibilityState={{ checked: isFav }}
             style={{
               position: "absolute",
               top: 8,

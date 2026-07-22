@@ -297,6 +297,7 @@ export default function ProPublicProfileScreen() {
             <AnimatedIconButton
               onPress={() => safeBack(router)}
               className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
+              accessibilityLabel="Retour"
             >
               <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
             </AnimatedIconButton>
@@ -305,6 +306,8 @@ export default function ProPublicProfileScreen() {
               onPress={() => setShowPreview(true)}
               className="w-10 h-10 rounded-xl items-center justify-center"
               style={{ backgroundColor: `${Colors.primary}15` }}
+              accessibilityRole="button"
+              accessibilityLabel="Aperçu du profil"
             >
               <Ionicons name="eye-outline" size={20} color={Colors.primary} />
             </Pressable>
@@ -349,6 +352,8 @@ export default function ProPublicProfileScreen() {
           <SectionTitle title="Photo de couverture" />
           <Pressable
             onPress={handlePickBanner}
+            accessibilityRole="button"
+            accessibilityLabel="Modifier la photo de couverture"
             style={{
               height: 140,
               borderRadius: 12,
@@ -503,6 +508,8 @@ export default function ProPublicProfileScreen() {
               <Pressable
                 key={img.id}
                 onPress={() => setSelectedGalleryImage(img)}
+                accessibilityRole="button"
+                accessibilityLabel="Voir la photo de réalisation"
                 style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: Colors.muted }}
               >
                 <Image source={{ uri: img.thumbnail || img.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
@@ -512,6 +519,8 @@ export default function ProPublicProfileScreen() {
               <Pressable
                 onPress={handleAddGalleryPhoto}
                 disabled={galleryUploading}
+                accessibilityRole="button"
+                accessibilityLabel="Ajouter une photo à la galerie"
                 style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, backgroundColor: Colors.muted, borderWidth: 1.5, borderColor: Colors.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" }}
               >
                 {galleryUploading
@@ -551,6 +560,8 @@ export default function ProPublicProfileScreen() {
                         key={photo.id}
                         onPress={() => void handleImportIgPhoto(photo.id)}
                         disabled={igImporting === photo.id}
+                        accessibilityRole="button"
+                        accessibilityLabel="Importer cette photo Instagram"
                         style={{ width: "33.333%", aspectRatio: 1, position: "relative" }}
                       >
                         <Image source={{ uri: photo.thumbnail || photo.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
@@ -705,7 +716,12 @@ export default function ProPublicProfileScreen() {
       <Modal visible={selectedGalleryImage != null} transparent animationType="fade" onRequestClose={() => setSelectedGalleryImage(null)}>
         {selectedGalleryImage && (
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}>
-            <Pressable style={{ position: "absolute", top: insets.top + 16, right: 16, zIndex: 10 }} onPress={() => setSelectedGalleryImage(null)}>
+            <Pressable
+              style={{ position: "absolute", top: insets.top + 16, right: 16, zIndex: 10 }}
+              onPress={() => setSelectedGalleryImage(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Fermer"
+            >
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={20} color={Colors.white} />
               </View>
@@ -737,6 +753,8 @@ export default function ProPublicProfileScreen() {
             <Pressable
               onPress={() => setShowPreview(false)}
               className="w-8 h-8 rounded-full bg-muted items-center justify-center"
+              accessibilityRole="button"
+              accessibilityLabel="Fermer l'aperçu"
             >
               <Ionicons name="close" size={18} color={Colors.foreground} />
             </Pressable>

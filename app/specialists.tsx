@@ -14,9 +14,9 @@ import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
 import { Colors } from "@/constants/colors";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const SpecialistsMapView = React.lazy(
   () => import("@/components/screens/client/specialists/MapView") as Promise<{ default: React.ComponentType<{ specialists: Specialist[] }> }>
@@ -222,63 +222,17 @@ export default function SpecialistsScreen() {
             ))}
           </ScrollView>
         ) : specialists.length === 0 ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: Colors.cream,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 16,
-              }}
-            >
-              <Ionicons name="search-outline" size={24} color={Colors.mutedForeground} />
-            </View>
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "700",
-                color: Colors.foreground,
-                textAlign: "center",
-                marginBottom: 6,
-              }}
-            >
-              Aucun résultat
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: Colors.mutedForeground,
-                textAlign: "center",
-                lineHeight: 20,
-                maxWidth: 240,
-                marginBottom: 24,
-              }}
-            >
-              {hasActiveFilters
+          <EmptyState
+            icon="search-outline"
+            title="Aucun résultat"
+            description={
+              hasActiveFilters
                 ? "Aucune experte ne correspond à ces critères."
-                : "Aucune experte disponible pour le moment."}
-            </Text>
-            {hasActiveFilters && (
-              <AnimatedPressable
-                onPress={clearAll}
-                style={{
-                  paddingHorizontal: 24,
-                  height: 44,
-                  borderRadius: 16,
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ color: Colors.white, fontWeight: "600", fontSize: 14 }}>
-                  Voir toutes les expertes
-                </Text>
-              </AnimatedPressable>
-            )}
-          </View>
+                : "Aucune experte disponible pour le moment."
+            }
+            ctaLabel={hasActiveFilters ? "Voir toutes les expertes" : undefined}
+            onCta={hasActiveFilters ? clearAll : undefined}
+          />
         ) : (
           <FlatList
             data={specialists}

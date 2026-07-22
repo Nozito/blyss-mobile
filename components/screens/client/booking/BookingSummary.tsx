@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface Props {
@@ -229,7 +229,7 @@ export function BookingSummary({
         <View style={{
           flexDirection: "row", alignItems: "center", gap: 12,
           backgroundColor: "#FFF8EC", borderRadius: 14,
-          padding: 14, borderWidth: 1, borderColor: "#F39C1240",
+          padding: 14, borderWidth: 1, borderColor: withAlpha("#F39C12", 0.25),
         }}>
           <View style={{
             width: 36, height: 36, borderRadius: 10,

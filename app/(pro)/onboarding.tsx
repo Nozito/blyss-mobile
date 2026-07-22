@@ -114,6 +114,7 @@ export default function ProOnboardingScreen() {
               key={i}
               onPress={() => setCurrentSlide(i)}
               hitSlop={8}
+              accessibilityLabel={`Aller à l'étape ${i + 1}`}
             >
               <View
                 style={[

@@ -167,13 +167,25 @@ export default function PaymentsScreen() {
           </View>
           <View style={styles.cardActions}>
             {!item.is_default && (
-              <Pressable onPress={() => setDefaultMutation.mutate(item.id)} style={styles.actionBtn} disabled={isSettingDefault}>
+              <Pressable
+                onPress={() => setDefaultMutation.mutate(item.id)}
+                style={styles.actionBtn}
+                disabled={isSettingDefault}
+                accessibilityRole="button"
+                accessibilityLabel="Définir comme carte par défaut"
+              >
                 {isSettingDefault
                   ? <ActivityIndicator size="small" color={Colors.primary} />
                   : <Ionicons name="checkmark-circle-outline" size={22} color={Colors.primary} />}
               </Pressable>
             )}
-            <Pressable onPress={() => confirmDelete(item)} style={styles.actionBtn} disabled={isDeleting}>
+            <Pressable
+              onPress={() => confirmDelete(item)}
+              style={styles.actionBtn}
+              disabled={isDeleting}
+              accessibilityRole="button"
+              accessibilityLabel="Supprimer la carte"
+            >
               {isDeleting
                 ? <ActivityIndicator size="small" color={Colors.destructive} />
                 : <Ionicons name="trash-outline" size={22} color={Colors.destructive} />}
@@ -190,7 +202,7 @@ export default function PaymentsScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <AnimatedIconButton onPress={() => router.push("/(client)/(profile)")} style={styles.backBtn}>
+        <AnimatedIconButton onPress={() => router.push("/(client)/(profile)")} style={styles.backBtn} accessibilityLabel="Retour">
           <Ionicons name="arrow-back" size={24} color={Colors.foreground} />
         </AnimatedIconButton>
         <Text style={styles.title}>Moyens de paiement</Text>
@@ -282,7 +294,7 @@ export default function PaymentsScreen() {
         <View style={[styles.modal, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Ajouter une carte</Text>
-            <Pressable onPress={() => setAddModalOpen(false)} style={styles.closeBtn}>
+            <Pressable onPress={() => setAddModalOpen(false)} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Fermer">
               <Ionicons name="close" size={24} color={Colors.foreground} />
             </Pressable>
           </View>

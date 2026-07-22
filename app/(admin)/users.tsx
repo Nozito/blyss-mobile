@@ -2,8 +2,9 @@ import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   View, Text, Pressable, TextInput, StyleSheet,
   ActivityIndicator, ScrollView, RefreshControl, FlatList,
-  Modal, ActionSheetIOS, Platform, Animated, Share,
+  Modal, Platform, Animated, Share,
 } from "react-native";
+import { useActionSheet } from "@/components/ui/ActionSheet";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
@@ -164,7 +165,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
               <Text style={{ fontSize: 17, fontWeight: "800", color: TEXT1 }}>Offrir un abonnement</Text>
               <Text style={{ fontSize: 13, color: TEXT2 }}>pour {user.first_name} {user.last_name}</Text>
             </View>
-            <AnimatedIconButton onPress={onClose} style={styles.closeBtn}>
+            <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={styles.closeBtn}>
               <Ionicons name="close" size={18} color={TEXT2} />
             </AnimatedIconButton>
           </View>
@@ -314,7 +315,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 <Text style={{ fontSize: 12, color: Colors.white }}>{full.email}</Text>
                 <Ionicons name="share-outline" size={12} color="rgba(255,255,255,0.7)" />
               </AnimatedPressable>
-              <AnimatedIconButton onPress={onClose} style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
+              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={18} color={Colors.white} />
               </AnimatedIconButton>
             </LinearGradient>
@@ -591,6 +592,7 @@ export default function AdminUsersScreen() {
   const listRef = useRef<FlatList>(null);
   useScrollToTop(listRef);
   const qc = useQueryClient();
+  const showActionSheet = useActionSheet();
   const [search, setSearch]             = useState("");
   const [roleFilter, setRoleFilter]     = useState<RoleFilter>("all");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -652,32 +654,28 @@ export default function AdminUsersScreen() {
 
   const handleLongPress = useCallback((item: AdminUser) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {});
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: `${item.first_name} ${item.last_name}`,
-          message: item.email,
-          options: ["Annuler", "👁  Voir le profil", "🎁  Offrir un abonnement",
-            item.is_active ? "⚠️  Bannir" : "✅  Réactiver", "🗑  Supprimer"],
-          cancelButtonIndex: 0,
-          destructiveButtonIndex: item.is_active ? [3, 4] : [4],
-        },
-        (idx) => {
-          if      (idx === 1) { setSelectedUser(item); }
-          else if (idx === 2) { setGrantTarget(item); }
-          else if (idx === 3) {
-            setUsersError(null);
-            banMut.mutate(item.id);
-          } else if (idx === 4) {
-            setUsersError(null);
-            deleteMut.mutate(item.id);
-          }
+    showActionSheet(
+      {
+        title: `${item.first_name} ${item.last_name}`,
+        message: item.email,
+        options: ["Annuler", "👁  Voir le profil", "🎁  Offrir un abonnement",
+          item.is_active ? "⚠️  Bannir" : "✅  Réactiver", "🗑  Supprimer"],
+        cancelButtonIndex: 0,
+        destructiveButtonIndex: item.is_active ? [3, 4] : [4],
+      },
+      (idx) => {
+        if      (idx === 1) { setSelectedUser(item); }
+        else if (idx === 2) { setGrantTarget(item); }
+        else if (idx === 3) {
+          setUsersError(null);
+          banMut.mutate(item.id);
+        } else if (idx === 4) {
+          setUsersError(null);
+          deleteMut.mutate(item.id);
         }
-      );
-    } else {
-      setSelectedUser(item);
-    }
-  }, [banMut, deleteMut]);
+      }
+    );
+  }, [banMut, deleteMut, showActionSheet]);
 
   const FILTERS: { value: RoleFilter; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
     { value: "all",    label: "Tous",    icon: "people-outline",    color: Colors.admin },
@@ -749,7 +747,7 @@ export default function AdminUsersScreen() {
               clearButtonMode={Platform.OS === "ios" ? "while-editing" : "never"}
             />
             {Platform.OS !== "ios" && search.length > 0 && (
-              <AnimatedIconButton onPress={() => setSearch("")} hitSlop={8}>
+              <AnimatedIconButton onPress={() => setSearch("")} accessibilityLabel="Effacer la recherche" hitSlop={8}>
                 <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.4)" />
               </AnimatedIconButton>
             )}
