@@ -11,7 +11,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-BUNDLE_ID="app.blyss.mobile"
+BUNDLE_ID="blyss.app"
 SCHEME="Blyss"
 WORKSPACE="ios/Blyss.xcworkspace"
 DERIVED_DATA="ios/build"
