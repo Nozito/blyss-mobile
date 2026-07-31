@@ -38,9 +38,3 @@ export async function restorePurchases(): Promise<CustomerInfo> {
 export async function getCustomerInfo(): Promise<CustomerInfo> {
   return Purchases.getCustomerInfo();
 }
-
-/** Returns true if any Blyss Pro plan is active. */
-export function hasProEntitlement(info: CustomerInfo): boolean {
-  const ents = info.entitlements.active;
-  return "start" in ents || "serenite" in ents || "signature" in ents;
-}

@@ -19,9 +19,6 @@ import { useScrollToTop } from "@react-navigation/native";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SpecialistCard, type Specialist } from "@/components/screens/client/specialists/SpecialistCard";
 
-// Module-level style constants — never recreated
-const CATEGORY_LIST_STYLE = { paddingBottom: 4, paddingHorizontal: 20, paddingTop: 8 } as const;
-
 export default function FavoritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();

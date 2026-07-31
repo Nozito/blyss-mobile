@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   Switch,
-  Pressable,
   Linking,
   ActivityIndicator,
 } from "react-native";

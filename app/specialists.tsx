@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect, Suspense } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList, Animated, RefreshControl } from "react-native";
+import { View, ScrollView, ActivityIndicator, FlatList, Animated, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { specialistsApi } from "@/lib/api";
 import {

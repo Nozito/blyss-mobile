@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Pressable,
   ScrollView,
   ActivityIndicator,
   Dimensions,

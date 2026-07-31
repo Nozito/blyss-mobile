@@ -66,7 +66,7 @@ async function processBooking(
     return { error: resaResult.message ?? "Erreur lors de la réservation" };
   }
 
-  const { id, deposit_percentage, deposit_amount } = resaResult.data;
+  const { id, deposit_percentage } = resaResult.data;
 
   if (payload.payment_method === "on_site") {
     return { step: 5, paymentMethod: "on_site" };

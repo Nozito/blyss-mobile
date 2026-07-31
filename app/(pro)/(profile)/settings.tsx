@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
   TextInput,
   Animated,
   ActivityIndicator,

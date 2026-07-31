@@ -4,7 +4,6 @@ import {
   ActivityIndicator, RefreshControl, Animated, Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -398,7 +397,7 @@ export default function AdminBookingsScreen() {
     cancelMut.mutate(b.id);
   };
 
-  const handleEdit = (_b: AdminBooking) => { /* edition via écran dédié */ };
+  const handleEdit = () => { /* edition via écran dédié */ };
 
   // ── Header ─────────────────────────────────────────────────────────────────
   const ListHeader = useMemo(() => (

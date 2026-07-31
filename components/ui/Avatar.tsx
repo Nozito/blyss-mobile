@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, type ViewProps } from 'react-native';
-import { Image, type ImageProps } from 'expo-image';
+import { Image } from 'expo-image';
 import { Colors } from '@/constants/colors';
 
 interface AvatarProps extends ViewProps {
@@ -31,23 +31,6 @@ export function Avatar({ size = 40, className = '', uri, name, style, children, 
         children
       )}
     </View>
-  );
-}
-
-interface AvatarImageProps extends Omit<ImageProps, 'source'> {
-  uri?: string | null;
-  size?: number;
-}
-
-export function AvatarImage({ uri, size = 40, ...props }: AvatarImageProps) {
-  if (!uri) return null;
-  return (
-    <Image
-      {...props}
-      source={{ uri }}
-      style={{ width: size, height: size }}
-      contentFit="cover"
-    />
   );
 }
 

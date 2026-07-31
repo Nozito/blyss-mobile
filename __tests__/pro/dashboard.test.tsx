@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../utils/testQueryClient';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ describe('ProDashboard', () => {
 
   it('shows skeleton while loading', () => {
     mockGetDashboard.mockReturnValue(new Promise(() => {})); // never resolves
-    const { UNSAFE_queryAllByType } = renderDashboard();
+    renderDashboard();
     // SkeletonBox is mocked to null but the loading branch renders a View
     // Check that we rendered something (no crash)
     expect(true).toBe(true);

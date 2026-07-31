@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  Pressable,
   Dimensions,
   StyleSheet,
   Platform,

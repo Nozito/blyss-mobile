@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../../utils/testQueryClient';
 
@@ -115,15 +115,6 @@ describe('ServicesScreen', () => {
     const { findByText } = renderServices();
     // Wait for screen to load
     await findByText('Pose gel full cover');
-    // The add button (Ionicons "add") is in header — find it by pressing the header button
-    // We can check by looking at the Pressable that calls router.push
-    // The screen renders a pressable with onPress={() => router.push("/(pro)/(profile)/service-form")}
-    // Trigger: find the plus button area (header has a Pressable that calls push)
-    // Since it's an Ionicons icon without text, let's fire on the accessible button
-    const { getByRole } = renderServices();
-    // Try accessible role — the + button doesn't have text but we can verify push was called
-    // after pressing any element that should navigate
-    // Let's check the empty state "Créer une prestation" button too
     mockGetServices.mockResolvedValue({ success: true, data: [] });
     const freshRender = renderServices();
     const createBtn = await freshRender.findByText('Créer une prestation');

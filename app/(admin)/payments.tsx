@@ -17,10 +17,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
-const A_BG     = ADMIN.bg;
-const A_BORDER = ADMIN.border;
-
-
+const A_BG = ADMIN.bg;
 
 
 type TxStatus = "pending" | "processing" | "succeeded" | "failed" | "refunded";

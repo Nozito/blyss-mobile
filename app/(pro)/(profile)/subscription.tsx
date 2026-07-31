@@ -117,7 +117,7 @@ export default function SubscriptionScreen() {
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [syncWarning, setSyncWarning] = useState(false);
 
-  const { user, refreshProfile, logout } = useAuth();
+  const { refreshProfile, logout } = useAuth();
   const { packages, purchase, restorePurchases, activePlan, isReady, refreshActivePlan } = useRevenueCat();
   const { showToast } = useToast();
   const [restoring, setRestoring] = useState(false);
@@ -190,11 +190,6 @@ export default function SubscriptionScreen() {
       setPurchaseError("Ce plan n'est pas disponible pour l'instant. Réessaie plus tard.");
     }
   }, [isAnnual, packages, purchase, qc, router, refreshProfile, refreshActivePlan, subscription]);
-
-  const savings = savingsPercent(
-    PLAN_CONFIG.start.fallbackMonthly,
-    annualMonthlyFallback(PLAN_CONFIG.start.fallbackMonthly)
-  );
 
   const screenTitle = activePlan ? "Modifier ta formule" : "Choisis ta formule";
   const screenSubtitle = activePlan

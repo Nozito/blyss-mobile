@@ -218,7 +218,6 @@ export default function ProPublicProfileScreen() {
     setInstagram(vals.instagram);
     setIsPublic(vals.isPublic);
     setInitial(vals);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileData]);
 
   useEffect(() => {
@@ -883,15 +882,6 @@ function SectionTitle({ title }: { title: string }) {
       <View className="flex-1 h-px bg-border" />
       <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</Text>
       <View className="flex-1 h-px bg-border" />
-    </View>
-  );
-}
-
-function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View>
-      <Text className="text-xs font-semibold text-muted-foreground mb-2">{label}</Text>
-      {children}
     </View>
   );
 }

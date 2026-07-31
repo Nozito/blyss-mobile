@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, ActivityIndicator, View, type PressableProps, type ViewStyle } from 'react-native';
+import { Pressable, Text, ActivityIndicator, type PressableProps, type ViewStyle } from 'react-native';
 
 type Variant = 'default' | 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
 type Size = 'sm' | 'default' | 'md' | 'lg' | 'icon';

@@ -7,23 +7,6 @@ export const emailSchema = z
   .email("Adresse email invalide")
   .max(254, "Email trop long");
 
-export const passwordSchema = z
-  .string()
-  .min(8, "Min. 8 caractères")
-  .max(128, "Max. 128 caractères")
-  .regex(/[A-Z]/, "Au moins une majuscule")
-  .regex(/[0-9]/, "Au moins un chiffre")
-  .regex(/[a-z]/, "Au moins une minuscule")
-  .regex(/[!@#$%^&*]/, "Au moins un caractère spécial (!@#$%^&*)");
-
-// French phone — required (non-empty)
-export const phoneRequiredSchema = z
-  .string()
-  .regex(
-    /^(\+33|0033|0)[1-9](\d{2}){4}$/,
-    "Numéro invalide (ex: +33 6 12 34 56 78)"
-  );
-
 // French phone — optional (empty string passes)
 export const phoneSchema = z
   .string()
@@ -37,35 +20,6 @@ export const bioSchema = z
   .max(300, "Maximum 300 caractères")
   .optional()
   .or(z.literal(""));
-
-// ─── Auth schemas ─────────────────────────────────────────────────────────────
-
-export const loginSchema = z.object({
-  email: emailSchema,
-  password: z.string().min(1, "Mot de passe requis"),
-});
-
-export const step1Schema = z.object({
-  firstName: z.string().trim().min(2, "Minimum 2 caractères").max(50),
-  email: emailSchema,
-  password: passwordSchema,
-});
-
-export const step2ClientSchema = z.object({
-  phone: phoneSchema,
-  acceptedTerms: z.literal(true, {
-    errorMap: () => ({ message: "Accepte les CGU pour continuer" }),
-  }),
-});
-
-export const step2ProSchema = z.object({
-  activityName: z.string().trim().min(1, "Nom de l'activité requis").max(100),
-  jobType: z.string().min(1, "Choisis un type de métier"),
-  phone: phoneRequiredSchema,
-  acceptedTerms: z.literal(true, {
-    errorMap: () => ({ message: "Accepte les CGU pour continuer" }),
-  }),
-});
 
 // ─── Pro profile schema ───────────────────────────────────────────────────────
 
@@ -81,14 +35,6 @@ export const proProfileSchema = z.object({
 export const reviewSchema = z.object({
   rating: z.number().int().min(1, "Note requise").max(5),
   comment: z.string().max(200, "Maximum 200 caractères").optional().or(z.literal("")),
-});
-
-// ─── Booking schema ───────────────────────────────────────────────────────────
-
-export const bookingSchema = z.object({
-  specialistId: z.number().int().positive(),
-  serviceId: z.number().int().positive(),
-  slotId: z.string().min(1),
 });
 
 // ─── Utility ──────────────────────────────────────────────────────────────────

@@ -167,7 +167,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     } else {
       fetchBackendPlanRef.current().finally(() => setBackendPlanChecked(true));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rcReady, isAuthenticated, customerInfo]);
 
   // backendPlanChecked ne redevient jamais true tant que l'utilisateur est

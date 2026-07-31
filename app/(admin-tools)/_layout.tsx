@@ -2,7 +2,6 @@ import React from "react";
 import { Redirect } from "expo-router";
 import { Stack } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import { ADMIN } from "@/constants/adminTheme";
 
 export default function AdminToolsLayout() {
   const { user, isLoading } = useAuth();

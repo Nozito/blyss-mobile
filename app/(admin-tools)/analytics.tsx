@@ -19,8 +19,7 @@ import { Colors } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
-const A_BG     = ADMIN.bg;
-const A_BORDER = ADMIN.border;
+const A_BG = ADMIN.bg;
 const DAYS_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 
 type Period = "week" | "month" | "year";

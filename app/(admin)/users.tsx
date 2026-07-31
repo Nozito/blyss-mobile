@@ -571,7 +571,7 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
                   { icon: "checkmark-outline" as const, value: stats.completed,                                 label: "Terminés", color: Colors.success },
                   { icon: "close-outline"     as const, value: stats.cancelled,                                 label: "Annulés",  color: Colors.destructive },
                   { icon: "card-outline"      as const, value: `${Number(stats.total_spent ?? 0).toFixed(0)}€`, label: "Dépensé",  color: Colors.admin },
-                ]).map(({ icon, value, label, color: c }, idx, arr) => (
+                ]).map(({ value, label, color: c }, idx, arr) => (
                   <View key={label} style={{ flex: 1, alignItems: "center", borderRightWidth: idx < arr.length - 1 ? 1 : 0, borderRightColor: "rgba(255,255,255,0.06)" }}>
                     <Text style={{ fontSize: 13, fontWeight: "800", color: c }}>{value}</Text>
                     <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{label}</Text>

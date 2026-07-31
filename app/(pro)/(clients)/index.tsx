@@ -39,8 +39,6 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
-const NEW_CLIENT_DAYS = 7;
-
 function BlockedClientRow({
   item,
   onUnblock,

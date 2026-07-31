@@ -2,9 +2,6 @@ import { storage } from "./storage";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-export const getApiEndpoint = (path: string): string =>
-  `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
-
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -1083,23 +1080,4 @@ export const adminApi = {
     apiCall(`/api/admin/reviews/${id}`, { method: "DELETE" }),
   ignoreReviewFlag: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/admin/reviews/${id}/ignore`, { method: "PATCH" }),
-};
-
-export default {
-  auth: authApi,
-  bookings: bookingsApi,
-  specialists: specialistsApi,
-  reviews: reviewsApi,
-  favorites: favoritesApi,
-  notifications: notificationsApi,
-  payments: paymentsApi,
-  stripePayments: stripePaymentsApi,
-  stripe: stripeApi,
-  instagram: instagramApi,
-  users: usersApi,
-  client: clientApi,
-  pro: proApi,
-  nailTech: nailTechApi,
-  cancellation: cancellationApi,
-  admin: adminApi,
 };

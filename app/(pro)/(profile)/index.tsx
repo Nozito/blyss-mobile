@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet, Animated, Modal as RNModal } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, StyleSheet, Animated, Modal as RNModal } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";

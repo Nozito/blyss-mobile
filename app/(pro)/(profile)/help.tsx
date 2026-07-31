@@ -130,7 +130,7 @@ export default function ProHelpScreen() {
 
       {/* FAQ items */}
       <View className="gap-3 mb-4">
-        {filteredFaqs.map((faq, idx) => {
+        {filteredFaqs.map((faq) => {
           const globalIdx = faqs.indexOf(faq);
           const isOpen = openIndex === globalIdx;
           return (

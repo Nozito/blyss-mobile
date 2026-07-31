@@ -17,8 +17,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
-const A_BG     = ADMIN.bg;
-const A_BORDER = ADMIN.border;
+const A_BG = ADMIN.bg;
 
 const TOOLS = [
   { key: "validation", label: "Validation pros", sub: "Comptes en attente", symbol: "checkmark.seal.fill",              color: Colors.admin,   route: "/(admin)/pro-validation" },
