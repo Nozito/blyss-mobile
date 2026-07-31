@@ -23,7 +23,6 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { Colors } from "@/constants/colors";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox"; // BLYSS-FIX: 2.3
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
@@ -254,6 +253,40 @@ export default function ProDashboard() {
     [weeklyRevenue]
   );
 
+  const heroState = useMemo(() => {
+    const count = upcomingClients.length;
+
+    if (count === 0) {
+      return {
+        headline: "Aucun rendez-vous\npour l'instant",
+        sub: weeklyStats.services > 0
+          ? `${weeklyStats.services} prestation${weeklyStats.services > 1 ? "s" : ""} réalisée${weeklyStats.services > 1 ? "s" : ""} cette semaine`
+          : "Semaine en démarrage",
+        ctaLabel: "Relancer une cliente",
+        ctaIcon: "person-add-outline" as const,
+        onPressCta: () => router.push("/(pro)/(clients)"),
+      };
+    }
+
+    if (count <= 2) {
+      return {
+        headline: "Journée calme\naujourd'hui",
+        sub: `${todayForecast.toFixed(0)} € prévus aujourd'hui`,
+        ctaLabel: "Ouvrir des créneaux",
+        ctaIcon: "add-circle-outline" as const,
+        onPressCta: () => setShowSlotsModal(true),
+      };
+    }
+
+    return {
+      headline: `${count} rendez-vous\naujourd'hui`,
+      sub: `${todayForecast.toFixed(0)} € prévus aujourd'hui`,
+      ctaLabel: "Voir le planning",
+      ctaIcon: "calendar-outline" as const,
+      onPressCta: () => router.push("/(pro)/calendar"),
+    };
+  }, [upcomingClients.length, weeklyStats.services, todayForecast, router]);
+
   const isBlockedDay = (d: Date) => {
     const s = toLocalDate(d);
     return unavailabilities.some((u) => s >= u.start_date && s <= u.end_date);
@@ -319,7 +352,7 @@ export default function ProDashboard() {
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
-        paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
+        paddingBottom: insets.bottom + 24,
         paddingHorizontal: 20,
         gap: 16,
       }}
@@ -339,7 +372,7 @@ export default function ProDashboard() {
           Bonjour {user?.first_name ?? ""}
         </Text>
         <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>
-          👋 Voici comment se porte ton activité
+          Ton planning du jour
         </Text>
       </View>
 
@@ -369,12 +402,12 @@ export default function ProDashboard() {
             {/* Label */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
-                <Ionicons name="pulse-outline" size={12} color={Colors.white} />
+                <Ionicons name="today-outline" size={12} color={Colors.white} />
                 <Text style={{ color: Colors.white, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>
-                  Cette semaine
+                  Aujourd'hui
                 </Text>
               </View>
-              {/* Trend badge */}
+              {/* Trend badge — pouls hebdo, conservé en repère secondaire */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: weeklyStats.isUp ? "rgba(255,255,255,0.22)" : Colors.overlayLight, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}>
                 <Ionicons name={weeklyStats.isUp ? "trending-up" : "trending-down"} size={14} color={Colors.white} />
                 <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 13, letterSpacing: -0.2 }}>
@@ -383,39 +416,80 @@ export default function ProDashboard() {
               </View>
             </View>
 
-            {/* Nombre principal */}
+            {/* État du jour — plus un chiffre passif, un verdict */}
             <View>
-              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}>
-                <Text style={{ fontSize: 60, fontWeight: "900", color: Colors.white, letterSpacing: -2, lineHeight: 62 }}>
-                  {weeklyStats.services}
-                </Text>
-                <Text style={{ fontSize: 18, fontWeight: "700", color: "rgba(255,255,255,0.85)", marginBottom: 8 }}>
-                  {weeklyStats.services > 1 ? "prestations" : "prestation"}
-                </Text>
-              </View>
-              {totalRevenue > 0 && (
-                <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginTop: 2 }}>
-                  {totalRevenue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} € générés
-                </Text>
-              )}
+              <Text style={{ fontSize: 26, fontWeight: "900", color: Colors.white, letterSpacing: -0.6, lineHeight: 30 }}>
+                {heroState.headline}
+              </Text>
+              <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: "600", marginTop: 8 }}>
+                {heroState.sub}
+              </Text>
             </View>
 
-            {/* Divider + footer */}
+            {/* Divider + CTA contextuel */}
             <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.18)" }} />
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "500" }}>
                 vs semaine dernière
               </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: weeklyStats.isUp ? "#A7F3D0" : "#FCA5A5" }} />
-                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: "700" }}>
-                  {weeklyStats.isUp ? "En progression" : "En baisse"}
+              <AnimatedPressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  heroState.onPressCta();
+                }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.22)",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.3)",
+                }}
+              >
+                <Ionicons name={heroState.ctaIcon} size={14} color={Colors.white} />
+                <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.white }}>
+                  {heroState.ctaLabel}
                 </Text>
-              </View>
+              </AnimatedPressable>
             </View>
           </View>
         </LinearGradient>
       </View>
+
+      {/* ── UPCOMING CLIENTS ── */}
+      {/* Détail opérationnel, après le verdict du hero — pas besoin de répéter
+          l'état vide ici, le hero l'a déjà annoncé avec son CTA. */}
+      {upcomingClients.length > 0 && (
+        <View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+              paddingHorizontal: 4,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.2 }}>
+                Prochaines clientes
+              </Text>
+            </View>
+            <Pressable onPress={() => router.push("/(pro)/calendar")}>
+              <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "700" }}>Voir tout →</Text>
+            </Pressable>
+          </View>
+
+          <View style={{ gap: 10 }}>
+            {upcomingClients.map((client, i) => (
+              <UpcomingClientRow key={client.id} client={client} index={i} />
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* ── QUICK ACTIONS ── */}
       <View>
@@ -677,70 +751,6 @@ export default function ProDashboard() {
             </View>
           </View>
         </View>
-      </View>
-
-      {/* ── UPCOMING CLIENTS ── */}
-      <View>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
-            paddingHorizontal: 4,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.2 }}>
-              Prochaines clientes
-            </Text>
-          </View>
-          <Pressable onPress={() => router.push("/(pro)/calendar")}>
-            <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "700" }}>Voir tout →</Text>
-          </Pressable>
-        </View>
-
-        {upcomingClients.length === 0 ? (
-          <View
-            style={{
-              borderRadius: 12,
-              padding: 32,
-              backgroundColor: "rgba(0,0,0,0.02)",
-              borderWidth: 2,
-              borderStyle: "dashed",
-              borderColor: Colors.border,
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 16,
-                backgroundColor: `${Colors.muted}80`,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="calendar-outline" size={24} color={Colors.mutedForeground} />
-            </View>
-            <View style={{ alignItems: "center", gap: 4 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>
-                Aucune cliente prévue
-              </Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center" }}>
-                Les prochains rendez-vous apparaîtront ici
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={{ gap: 10 }}>
-            {upcomingClients.map((client, i) => (
-              <UpcomingClientRow key={client.id} client={client} index={i} />
-            ))}
-          </View>
-        )}
       </View>
 
       {/* ── TOP SERVICES ── */}

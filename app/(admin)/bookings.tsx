@@ -485,7 +485,7 @@ export default function AdminBookingsScreen() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{
             paddingHorizontal: 16,
-            paddingBottom: insets.bottom + 90,
+            paddingBottom: insets.bottom + 24,
           }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}

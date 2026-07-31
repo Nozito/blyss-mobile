@@ -308,7 +308,7 @@ export default function ProValidationScreen() {
         <FlatList
           data={pros}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 80 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 24 }}
           removeClippedSubviews
           maxToRenderPerBatch={10}
           windowSize={7}

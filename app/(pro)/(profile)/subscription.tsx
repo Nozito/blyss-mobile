@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { Stack } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ import { Colors } from "@/constants/colors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/Toast";
 import * as Haptics from "expo-haptics";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -117,6 +119,25 @@ export default function SubscriptionScreen() {
 
   const { user, refreshProfile, logout } = useAuth();
   const { packages, purchase, restorePurchases, activePlan, isReady, refreshActivePlan } = useRevenueCat();
+  const { showToast } = useToast();
+  const [restoring, setRestoring] = useState(false);
+
+  const handleRestore = useCallback(async () => {
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (!result.success) {
+        showToast("La restauration a échoué. Réessaie.", "error");
+      } else if (result.restored) {
+        showToast("Achats restaurés avec succès", "success");
+        await refreshActivePlan();
+      } else {
+        showToast("Aucun abonnement actif trouvé pour ce compte Apple", "error");
+      }
+    } finally {
+      setRestoring(false);
+    }
+  }, [restorePurchases, refreshActivePlan, showToast]);
 
   // hasActiveSubscription basé sur RC, pas sur user.pro_status (backend peut être lent)
   const hasActiveSubscription = activePlan !== null;
@@ -191,7 +212,7 @@ export default function SubscriptionScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingTop: insets.top,
-          paddingBottom: insets.bottom + 100,
+          paddingBottom: insets.bottom + 24,
           paddingHorizontal: 20,
         }}
         showsVerticalScrollIndicator={false}
@@ -249,18 +270,6 @@ export default function SubscriptionScreen() {
                 <Text style={{ fontSize: 14, color: Colors.mutedForeground, lineHeight: 22, marginBottom: 16 }}>
                   1 rendez-vous suffit à rentabiliser ton abonnement mensuel.
                 </Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {["Annulable à tout moment", "Paiement Apple sécurisé", "Remboursée sous 14j"].map((label) => (
-                    <View key={label} style={{
-                      flexDirection: "row", alignItems: "center", gap: 5,
-                      backgroundColor: Colors.muted, borderRadius: 20,
-                      paddingHorizontal: 10, paddingVertical: 5,
-                    }}>
-                      <Ionicons name="checkmark-circle" size={13} color={Colors.success} />
-                      <Text style={{ fontSize: 12, color: Colors.foreground, fontWeight: "500" }}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
               </View>
             )}
 
@@ -494,17 +503,36 @@ export default function SubscriptionScreen() {
             )}
 
             <View style={{ alignItems: "center", marginTop: 8, marginBottom: 4 }}>
-              <Pressable onPress={restorePurchases}>
-                <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
+              <Pressable onPress={() => void handleRestore()} disabled={restoring} hitSlop={8}>
+                {restoring ? (
+                  <ActivityIndicator size="small" color={Colors.mutedForeground} />
+                ) : (
+                  <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
+                )}
               </Pressable>
             </View>
             <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", marginTop: 8, lineHeight: 16 }}>
               Annule à tout moment • Paiement sécurisé
             </Text>
 
+            {/* Mentions légales obligatoires (Apple Guideline 3.1.2) — doivent être visibles
+                près du bouton d'achat, pas seulement dans les réglages post-achat. */}
+            <Text style={{ fontSize: 10, color: Colors.mutedForeground, textAlign: "center", lineHeight: 15, marginTop: 12, paddingHorizontal: 8 }}>
+              {"L'abonnement se renouvelle automatiquement pour la même durée sauf annulation au moins 24h avant la fin de la période en cours, via Réglages > Apple ID > Abonnements. Le paiement est débité sur ton compte Apple à la confirmation de l'achat."}
+            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 8 }}>
+              <Pressable onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")} hitSlop={8}>
+                <Text style={{ fontSize: 11, color: Colors.primary, textDecorationLine: "underline" }}>Conditions d'utilisation</Text>
+              </Pressable>
+              <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>•</Text>
+              <Pressable onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")} hitSlop={8}>
+                <Text style={{ fontSize: 11, color: Colors.primary, textDecorationLine: "underline" }}>Politique de confidentialité</Text>
+              </Pressable>
+            </View>
+
             {!hasActiveSubscription && (
               <Pressable
-                onPress={() => { void logout(); }}
+                onPress={() => { void logout().then(() => router.replace("/(auth)/login")); }}
                 style={{ alignItems: "center", paddingVertical: 16 }}
               >
                 <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>

@@ -7,7 +7,7 @@ import {
   Platform,
   Animated,
 } from "react-native";
-import { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import { Circle, Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import ClusteredMapView from "react-native-map-clustering";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -127,6 +127,16 @@ function ProBottomCard({
         </View>
       </View>
 
+      {!item.address_visible && item.service_radius_km ? (
+        <View style={styles.privacyNotice}>
+          <Ionicons name="lock-closed-outline" size={13} color={Colors.mutedForeground} />
+          <Text style={styles.privacyNoticeText}>
+            Adresse non affichée publiquement — intervient dans un rayon de {item.service_radius_km} km
+            {item.service_area_label ? ` (${item.service_area_label})` : ""}
+          </Text>
+        </View>
+      ) : null}
+
       {/* Bouton Réserver */}
       <Pressable
         onPress={onBook}
@@ -209,6 +219,21 @@ export default function SpecialistsMapView({ specialists }: Props) {
           );
         }}
       >
+        {mapped.map((item) =>
+          // Address hidden: show only a coverage circle around the approximate public
+          // point, never a precise pin — a pin here would defeat the whole point of
+          // the pro's privacy choice.
+          !item.address_visible && item.service_radius_km ? (
+            <Circle
+              key={`zone-${item.id}`}
+              center={{ latitude: item.lat, longitude: item.lng }}
+              radius={item.service_radius_km * 1000}
+              strokeColor={Colors.primary}
+              strokeWidth={1.5}
+              fillColor={`${Colors.primary}22`}
+            />
+          ) : null
+        )}
         {mapped.map((item) => (
           <Marker
             key={item.id}
@@ -318,6 +343,12 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
   cardCity: { fontSize: 12, color: Colors.mutedForeground },
   cardRating: { fontSize: 12, fontWeight: "700", color: Colors.foreground },
+  privacyNotice: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "#F4F4F5", borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  privacyNoticeText: { fontSize: 11.5, color: Colors.mutedForeground, flex: 1, lineHeight: 15 },
   cardBtn: {
     borderRadius: 28,
     overflow: "hidden",

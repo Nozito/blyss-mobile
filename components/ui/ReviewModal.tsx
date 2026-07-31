@@ -67,7 +67,14 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
   const [comment, setComment] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () => reviewsApi.create(String(proId), { rating, comment }),
+    // apiCall() ne rejette jamais — sans ce throw, un refus serveur (avis déjà
+    // posté, réservation non éligible, etc.) fermait quand même la modale
+    // avec un haptique de succès, sans que l'avis n'ait été enregistré.
+    mutationFn: async () => {
+      const res = await reviewsApi.create(String(proId), { rating, comment });
+      if (!res.success) throw new Error(res.error ?? "Impossible d'envoyer l'avis.");
+      return res;
+    },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onSuccess?.();
@@ -100,6 +107,11 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
             value={comment}
             onChangeText={setComment}
           />
+          {mutation.isError && (
+            <Text style={{ fontSize: 12, color: Colors.destructive, marginTop: 4 }}>
+              {mutation.error instanceof Error ? mutation.error.message : "Impossible d'envoyer l'avis."}
+            </Text>
+          )}
           <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
             <AnimatedPressable style={s.cancelBtn} onPress={onClose}>
               <Text style={s.cancelText}>Annuler</Text>

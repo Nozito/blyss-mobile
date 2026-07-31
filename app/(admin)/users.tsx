@@ -799,7 +799,7 @@ export default function AdminUsersScreen() {
             data={listData}
             keyExtractor={(item) => item._type === "header" ? `h-${item.label}` : String(item.data.id)}
             renderItem={renderItem}
-            contentContainerStyle={{ backgroundColor: BG, paddingHorizontal: 16, paddingTop: 14, paddingBottom: insets.bottom + 100 }}
+            contentContainerStyle={{ backgroundColor: BG, paddingHorizontal: 16, paddingTop: 14, paddingBottom: insets.bottom + 24 }}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
             removeClippedSubviews

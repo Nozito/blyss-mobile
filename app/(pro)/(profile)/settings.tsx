@@ -8,6 +8,7 @@ import {
   Animated,
   ActivityIndicator,
   Linking,
+  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,7 +41,7 @@ function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ioni
 }
 
 export default function ProSettingsScreen() {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isPro } = usePro();
@@ -68,7 +69,14 @@ export default function ProSettingsScreen() {
   const [error, setError]   = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { control, handleSubmit } = useForm<Partial<User>>({
+  // Address privacy — OFF (masquée) is always the safe default, even if the
+  // account somehow has no geo_precision set yet.
+  const [addressPublic, setAddressPublic] = useState(user?.geo_precision === "address");
+  const [showAddressConfirm, setShowAddressConfirm] = useState(false);
+
+  type FormValues = Partial<Omit<User, "service_radius_km">> & { service_radius_km?: string };
+
+  const { control, handleSubmit } = useForm<FormValues>({
     defaultValues: {
       first_name:        user?.first_name ?? "",
       last_name:         user?.last_name ?? "",
@@ -77,13 +85,17 @@ export default function ProSettingsScreen() {
       city:              user?.city ?? "",
       bio:               user?.bio ?? "",
       instagram_account: user?.instagram_account ?? "",
+      address_line:      user?.address_line ?? "",
+      postal_code:       user?.postal_code ?? "",
+      service_radius_km: String(user?.service_radius_km ?? 5),
+      service_area_label: user?.service_area_label ?? "",
     },
   });
 
   const validatePassword = (pwd: string) =>
     pwd.length >= 8 && /[A-Z]/.test(pwd) && /\d/.test(pwd);
 
-  const onSubmit = async (data: Partial<User>) => {
+  const onSubmit = async (data: FormValues) => {
     setError(null);
 
     // Validate phone format if provided
@@ -99,6 +111,11 @@ export default function ProSettingsScreen() {
       if (bioErr) { setError(bioErr); return; }
     }
 
+    if (addressPublic && (!data.address_line || !data.postal_code || !data.city)) {
+      setError("Adresse, code postal et ville requis pour publier votre adresse exacte.");
+      return;
+    }
+
     const changingPassword = !!(currentPassword || newPassword || newPasswordConfirm);
     if (changingPassword) {
       if (!currentPassword) { setError("Renseigne ton ancien mot de passe pour le modifier."); return; }
@@ -109,7 +126,17 @@ export default function ProSettingsScreen() {
 
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { ...data };
+      const payload: Record<string, unknown> = {
+        ...data,
+        geo_precision: addressPublic ? "address" : "city",
+        service_radius_km: Math.min(30, Math.max(1, parseFloat(data.service_radius_km ?? "5") || 5)),
+      };
+      if (!addressPublic) {
+        // Don't submit stale address text while switched off — the pro may have typed
+        // something and changed her mind before saving; keep it out of the request.
+        delete payload.address_line;
+        delete payload.postal_code;
+      }
       if (changingPassword) {
         payload.currentPassword = currentPassword;
         payload.newPassword = newPassword;
@@ -167,7 +194,10 @@ export default function ProSettingsScreen() {
     try {
       const res = await authApi.deleteAccount();
       if (res.success) {
-        await authApi.logout();
+        // logout() du contexte (pas authApi.logout() brut) : remet aussi le
+        // `user` en mémoire à null, sinon un compte supprimé restait visible
+        // dans AuthContext tant que l'app n'était pas relancée.
+        await logout();
         router.replace("/(auth)/login");
       } else {
         setError("Impossible de supprimer le compte.");
@@ -322,6 +352,116 @@ export default function ProSettingsScreen() {
               <Input label="Instagram" value={value ?? ""} onChangeText={onChange} leftIcon="logo-instagram" placeholder="@moncompte" />
             )}
           />
+        </View>
+      </View>
+
+      {/* ── CONFIDENTIALITÉ DE L'ADRESSE ── */}
+      <View>
+        <SectionHeader icon="lock-closed-outline" label="Confidentialité de l'adresse" />
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>
+                Rendre mon adresse visible publiquement
+              </Text>
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
+                {addressPublic
+                  ? "Votre adresse complète sera visible sur votre profil et sur la carte."
+                  : "Par défaut, votre adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
+              </Text>
+            </View>
+            <Switch
+              value={addressPublic}
+              onValueChange={(next) => {
+                if (next) {
+                  setShowAddressConfirm(true);
+                } else {
+                  setAddressPublic(false);
+                }
+              }}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
+            />
+          </View>
+
+          {showAddressConfirm && (
+            <View style={{ padding: 14, borderRadius: 14, backgroundColor: Colors.warningLight, borderWidth: 1, borderColor: Colors.warningBorder, gap: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.warningTextDark }}>
+                Rendre votre adresse publique ?
+              </Text>
+              <Text style={{ fontSize: 12, color: Colors.warningText, lineHeight: 17 }}>
+                Votre adresse exacte sera visible par tous les visiteurs de votre profil, y compris sur la carte. Vous pourrez la masquer à nouveau à tout moment.
+              </Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <AnimatedPressable
+                  onPress={() => setShowAddressConfirm(false)}
+                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center" }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  onPress={() => { setAddressPublic(true); setShowAddressConfirm(false); }}
+                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: Colors.warning, alignItems: "center", justifyContent: "center" }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.warningForeground }}>Oui, rendre publique</Text>
+                </AnimatedPressable>
+              </View>
+            </View>
+          )}
+
+          {addressPublic ? (
+            <>
+              <Controller
+                control={control}
+                name="address_line"
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Adresse" value={value ?? ""} onChangeText={onChange} leftIcon="pin-outline" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="postal_code"
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Code postal" value={value ?? ""} onChangeText={onChange} keyboardType="number-pad" leftIcon="mail-outline" />
+                )}
+              />
+            </>
+          ) : (
+            <>
+              <View style={{ backgroundColor: Colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                <Ionicons name="information-circle-outline" size={16} color={Colors.mutedForeground} style={{ marginTop: 1 }} />
+                <Text style={{ fontSize: 12, color: Colors.mutedForeground, flex: 1, lineHeight: 17 }}>
+                  Adresse non affichée publiquement — vos clientes verront une zone d'intervention à la place.
+                </Text>
+              </View>
+              <Controller
+                control={control}
+                name="service_radius_km"
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    label="Rayon d'intervention (km)"
+                    value={value ?? "5"}
+                    onChangeText={onChange}
+                    keyboardType="number-pad"
+                    leftIcon="navigate-outline"
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="service_area_label"
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    label="Libellé de zone (optionnel)"
+                    value={value ?? ""}
+                    onChangeText={onChange}
+                    leftIcon="map-outline"
+                    placeholder="Ex : Nantes centre et périphérie"
+                  />
+                )}
+              />
+            </>
+          )}
         </View>
       </View>
 

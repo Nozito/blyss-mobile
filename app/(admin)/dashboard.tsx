@@ -108,7 +108,7 @@ function Card({ children, style }: { children: React.ReactNode; style?: object }
 const QUICK_ACTIONS = [
   { icon: "people-outline"   as const, symbol: "person.2"          as const, label: "Utilisateurs", route: "/(admin)/users",           color: Colors.pro },
   { icon: "calendar-outline" as const, symbol: "calendar"          as const, label: "Réservations", route: "/(admin)/bookings",         color: Colors.info },
-  { icon: "pricetag-outline" as const, symbol: "tag"               as const, label: "Coupons",      route: "/(admin-tools)/coupons",    color: Colors.warning },
+  { icon: "shield-checkmark-outline" as const, symbol: "checkmark.seal.fill" as const, label: "Validation pros", route: "/(admin)/pro-validation", color: Colors.warning },
   { icon: "pulse-outline"    as const, symbol: "waveform"          as const, label: "Logs",          route: "/(admin-tools)/logs",       color: Colors.success },
 ];
 
@@ -284,7 +284,7 @@ export default function AdminDashboard() {
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: BG }}
-      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 24, paddingHorizontal: 16, gap: 12 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
     >

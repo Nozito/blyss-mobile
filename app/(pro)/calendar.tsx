@@ -28,6 +28,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -253,28 +254,50 @@ function CalendarGrid({
           const hasA = hasApt(day);
           const isU = isUnavail(day);
 
+          // Absence = jour de repos, pas une erreur : on reprend le langage
+          // ambré déjà utilisé pour "Absences" ailleurs sur cet écran (bandeau,
+          // carte, semaine) plutôt que le rouge "destructive" réservé aux
+          // actions d'annulation/suppression. Un badge rond discret (pas un
+          // pavé plein sur toute la cellule) évite l'effet "gros rectangle".
+          const badgeSize = CELL_SIZE - 12;
           return (
             <AnimatedPressable
               key={day}
               onPress={() => onSelectDay(thisDate)}
-              style={{
-                width: CELL_SIZE,
-                height: CELL_SIZE,
+              style={{ width: CELL_SIZE, height: CELL_SIZE, alignItems: "center", justifyContent: "center" }}
+            >
+              <View style={{
+                width: badgeSize,
+                height: badgeSize,
+                borderRadius: badgeSize / 2,
                 alignItems: "center",
                 justifyContent: "center",
-                borderRadius: 12,
-                backgroundColor: isSel ? Colors.primary : isU ? Colors.destructiveLight : "transparent",
-              }}
-            >
-              <Text style={{
-                fontSize: 13,
-                fontWeight: isSel || isTod ? "800" : "500",
-                color: isSel ? Colors.white : isTod ? Colors.primary : isU ? Colors.destructive : Colors.foreground,
+                backgroundColor: isSel
+                  ? Colors.primary
+                  : isU
+                    ? withAlpha(Colors.warning, 0.14)
+                    : "transparent",
+                borderWidth: isU && !isSel ? 1 : 0,
+                borderColor: withAlpha(Colors.warning, 0.4),
               }}>
-                {day}
-              </Text>
+                <Text style={{
+                  fontSize: 13,
+                  fontWeight: isSel || isTod ? "800" : "500",
+                  color: isSel ? Colors.white : isTod ? Colors.primary : isU ? Colors.warningTextDark : Colors.foreground,
+                }}>
+                  {day}
+                </Text>
+                {isU && !isSel && (
+                  <Ionicons
+                    name="moon"
+                    size={9}
+                    color={Colors.warning}
+                    style={{ position: "absolute", bottom: -1, right: -1 }}
+                  />
+                )}
+              </View>
               {hasA && !isSel && (
-                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isTod ? Colors.primary : Colors.mutedForeground, marginTop: 1 }} />
+                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isTod ? Colors.primary : Colors.mutedForeground, marginTop: 2 }} />
               )}
             </AnimatedPressable>
           );
@@ -330,6 +353,7 @@ export default function ProCalendarScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const showActionSheet = useActionSheet();
+  const { showToast } = useToast();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -343,6 +367,7 @@ export default function ProCalendarScreen() {
   const [slotsLoading, setSlotsLoading] = useState(false);
 
   const [showAddSlot, setShowAddSlot] = useState(false);
+  const [addingSlot, setAddingSlot] = useState(false);
   const [showUnavailModal, setShowUnavailModal] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
@@ -527,12 +552,16 @@ export default function ProCalendarScreen() {
       setSlotError("Ce créneau chevauche un créneau existant");
       return;
     }
+    setAddingSlot(true);
     try {
-      await proApi.createSlot({ date, time: newSlotTime, duration: newSlotDuration });
+      const res = await proApi.createSlot({ date, time: newSlotTime, duration: newSlotDuration });
+      if (!res.success) throw new Error(res.error);
       await fetchSlots(selectedDateStr);
       setShowAddSlot(false);
-    } catch {
-      setSlotError("Impossible d'ajouter le créneau");
+    } catch (e) {
+      setSlotError(e instanceof Error && e.message ? e.message : "Impossible d'ajouter le créneau");
+    } finally {
+      setAddingSlot(false);
     }
   };
 
@@ -575,9 +604,14 @@ export default function ProCalendarScreen() {
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "completed" } : a));
     try {
-      await proApi.updateReservationStatus(apt.id, "completed");
+      // apiCall() ne rejette jamais — sans vérifier res.success, un échec métier
+      // laissait le statut "terminé" affiché sans jamais revenir en arrière,
+      // et sans qu'aucune erreur ne soit montrée à la pro.
+      const res = await proApi.updateReservationStatus(apt.id, "completed");
+      if (!res.success) throw new Error(res.error);
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
+      showToast("Impossible de marquer ce rendez-vous comme terminé", "error");
     }
   };
 
@@ -586,9 +620,11 @@ export default function ProCalendarScreen() {
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "cancelled" } : a));
     try {
-      await proApi.updateReservationStatus(apt.id, "cancelled");
+      const res = await proApi.updateReservationStatus(apt.id, "cancelled");
+      if (!res.success) throw new Error(res.error);
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
+      showToast("Impossible d'annuler ce rendez-vous", "error");
     }
   };
 
@@ -597,9 +633,11 @@ export default function ProCalendarScreen() {
     setSelectedApt(null);
     setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: "no_show" } : a));
     try {
-      await nailTechApi.markNoShow(apt.id);
+      const res = await nailTechApi.markNoShow(apt.id);
+      if (!res.success) throw new Error(res.error);
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
+      showToast("Impossible de marquer cette absence", "error");
     }
   };
 
@@ -709,9 +747,11 @@ export default function ProCalendarScreen() {
     const backup = [...unavailabilities];
     setUnavailabilities((prev) => prev.filter((u) => u.id !== id));
     try {
-      await proApi.deleteUnavailability(id);
+      const res = await proApi.deleteUnavailability(id);
+      if (!res.success) throw new Error(res.error);
     } catch {
       setUnavailabilities(backup);
+      showToast("Impossible de supprimer cette indisponibilité", "error");
     }
   };
 
@@ -799,7 +839,7 @@ export default function ProCalendarScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {/* ── CALENDAR GRID ── */}
@@ -1253,9 +1293,12 @@ export default function ProCalendarScreen() {
             {slotError && <View style={{ marginBottom: 4 }}><ErrorMessage message={slotError} /></View>}
             <AnimatedPressable
               onPress={addSlot}
-              style={{ height: 56, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
+              disabled={addingSlot}
+              style={{ height: 56, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: addingSlot ? 0.7 : 1 }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Créer ce créneau</Text>
+              {addingSlot
+                ? <ActivityIndicator color={Colors.white} />
+                : <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Créer ce créneau</Text>}
             </AnimatedPressable>
           </View>
         </View>

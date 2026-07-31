@@ -22,7 +22,6 @@ import { clientApi, reviewsApi, stripePaymentsApi } from "@/lib/api";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { Colors } from "@/constants/colors";
 import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
@@ -53,6 +52,10 @@ interface BookingDetailData {
   pro_city: string | null;
   city: string | null;
   pro_phone: string | null;
+  /** Only present when this booking's status is 'confirmed' or 'completed' —
+   * the pro's exact address stays private otherwise, even from this client. */
+  address_line?: string | null;
+  postal_code?: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -136,9 +139,13 @@ function ReviewModal({ visible, proId, onClose }: { visible: boolean; proId: num
   const [comment, setComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: () => reviewsApi.create(String(proId), { rating, comment }),
+    mutationFn: async () => {
+      const res = await reviewsApi.create(String(proId), { rating, comment });
+      if (!res.success) throw new Error(res.error ?? "Impossible d'envoyer l'avis");
+      return res;
+    },
     onSuccess: onClose,
-    onError: () => setReviewError("Impossible d'envoyer l'avis. Réessaie."),
+    onError: (e: unknown) => setReviewError(e instanceof Error ? e.message : "Impossible d'envoyer l'avis. Réessaie."),
   });
 
   const handleSubmit = () => {
@@ -204,12 +211,26 @@ export default function BookingDetailScreen() {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [bookingError, setBookingError]     = useState<string | null>(null);
+  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["booking-detail", id],
     queryFn: () => clientApi.getBookingDetail(Number(id)),
     staleTime: 30_000,
     enabled: Boolean(id),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (reservationId: number) => clientApi.cancelReservationWithPolicy(reservationId),
+    onSuccess: async (res) => {
+      if (!res.success) {
+        setBookingError(res.error ?? "Impossible d'annuler cette réservation.");
+        return;
+      }
+      setCancelConfirmVisible(false);
+      await refetch();
+    },
+    onError: () => setBookingError("Impossible d'annuler cette réservation. Réessaie plus tard."),
   });
 
   const handlePayBalance = async (reservationId: number) => {
@@ -279,6 +300,23 @@ export default function BookingDetailScreen() {
     return { label: "Paiement en attente", color: Colors.warning, bg: Colors.warningLight };
   })();
 
+  const statusBadge = (() => {
+    switch (booking.status) {
+      case "confirmed":
+        return { label: "✓ Confirmé", color: "#27AE60", bg: "#E8F8F0" };
+      case "pending":
+        return { label: "En attente de confirmation", color: Colors.warning, bg: Colors.warningLight };
+      case "cancelled":
+        return { label: "✕ Annulé", color: Colors.destructive, bg: Colors.destructiveLight };
+      case "completed":
+        return { label: "✓ Terminé", color: "#27AE60", bg: "#E8F8F0" };
+      case "no_show":
+        return { label: "Non honoré", color: Colors.destructive, bg: Colors.destructiveLight };
+      default:
+        return null;
+    }
+  })();
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -297,7 +335,7 @@ export default function BookingDetailScreen() {
       )}
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
 
@@ -313,14 +351,55 @@ export default function BookingDetailScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.proName} numberOfLines={1}>{proName}</Text>
+              {statusBadge && (
+                <View style={[styles.statusBadge, { backgroundColor: statusBadge.bg, alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 10, paddingVertical: 3 }]}>
+                  <Text style={[styles.statusBadgeText, { color: statusBadge.color, fontSize: 11 }]}>{statusBadge.label}</Text>
+                </View>
+              )}
               {Boolean(city) && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
                   <Ionicons name="location-outline" size={13} color={Colors.mutedForeground} />
                   <Text style={styles.proSub}>{city}</Text>
                 </View>
               )}
+              {Boolean(booking.address_line) && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
+                  <Ionicons name="pin-outline" size={13} color={Colors.mutedForeground} />
+                  <Text style={styles.proSub} numberOfLines={1}>
+                    {booking.address_line}{booking.postal_code ? `, ${booking.postal_code}` : ""}
+                  </Text>
+                </View>
+              )}
+              {!booking.address_line && booking.status === "pending" && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
+                  <Ionicons name="lock-closed-outline" size={12} color={Colors.mutedForeground} />
+                  <Text style={[styles.proSub, { fontSize: 11.5 }]}>
+                    L'adresse exacte sera communiquée une fois la réservation confirmée
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
+
+          {Boolean(booking.address_line) && (
+            <Pressable
+              style={[styles.contactBtn, { marginTop: 12, alignSelf: "flex-start" }]}
+              onPress={() => {
+                const query = encodeURIComponent(
+                  `${booking.address_line}, ${booking.postal_code ?? ""} ${city ?? ""}`.trim()
+                );
+                const url = Platform.select({
+                  ios: `maps:0,0?q=${query}`,
+                  android: `geo:0,0?q=${query}`,
+                  default: `https://maps.google.com/?q=${query}`,
+                });
+                Linking.openURL(url!).catch(() => {});
+              }}
+            >
+              <Ionicons name="navigate-outline" size={16} color={Colors.primary} />
+              <Text style={styles.contactBtnText}>Voir l'itinéraire</Text>
+            </Pressable>
+          )}
 
           {booking.pro_phone && (
             <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
@@ -425,8 +504,21 @@ export default function BookingDetailScreen() {
         {/* Bouton avis */}
         {booking.status === "completed" && (
           <FadeCard delay={300}>
-            <Pressable style={styles.reviewBtn} onPress={() => setReviewVisible(true)}>
-              <Text style={styles.reviewBtnText}>⭐ Laisser un avis</Text>
+            <Pressable style={[styles.reviewBtn, { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }]} onPress={() => setReviewVisible(true)}>
+              <Ionicons name="star" size={16} color={Colors.white} />
+              <Text style={styles.reviewBtnText}>Laisser un avis</Text>
+            </Pressable>
+          </FadeCard>
+        )}
+
+        {/* Annulation — uniquement pour une réservation à venir non encore honorée */}
+        {(booking.status === "confirmed" || booking.status === "pending") && (
+          <FadeCard delay={300}>
+            <Pressable
+              style={styles.cancelBookingBtn}
+              onPress={() => setCancelConfirmVisible(true)}
+            >
+              <Text style={styles.cancelBookingBtnText}>Annuler ma réservation</Text>
             </Pressable>
           </FadeCard>
         )}
@@ -454,6 +546,7 @@ export default function BookingDetailScreen() {
             <PaymentStep
               amount={balanceAmount}
               depositPercentage={0}
+              isBalancePayment
               prestationName={booking.prestation_name ?? undefined}
               clientSecret={balanceClientSecret}
               onSuccess={async () => {
@@ -467,6 +560,42 @@ export default function BookingDetailScreen() {
       </Modal>
 
       <ReviewModal visible={reviewVisible} proId={booking.pro_id} onClose={() => setReviewVisible(false)} />
+
+      {/* Confirmation d'annulation */}
+      <Modal
+        visible={cancelConfirmVisible}
+        animationType="slide"
+        transparent
+        presentationStyle="overFullScreen"
+        onRequestClose={() => setCancelConfirmVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}>
+          <View style={{ backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: insets.bottom + 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground, marginBottom: 8 }}>
+              Annuler cette réservation ?
+            </Text>
+            <Text style={{ fontSize: 14, color: Colors.mutedForeground, lineHeight: 20, marginBottom: 20 }}>
+              {proName} sera notifié·e de l'annulation. Selon les conditions d'annulation de la pro, un remboursement partiel ou total de l'acompte peut s'appliquer.
+            </Text>
+            <Pressable
+              style={{ height: 50, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", opacity: cancelMutation.isPending ? 0.7 : 1, marginBottom: 10 }}
+              onPress={() => cancelMutation.mutate(booking.id)}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending
+                ? <ActivityIndicator color={Colors.white} size="small" />
+                : <Text style={{ color: Colors.white, fontSize: 15, fontWeight: "700" }}>Confirmer l'annulation</Text>}
+            </Pressable>
+            <Pressable
+              style={{ height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center" }}
+              onPress={() => setCancelConfirmVisible(false)}
+              disabled={cancelMutation.isPending}
+            >
+              <Text style={{ color: Colors.foreground, fontSize: 15, fontWeight: "600" }}>Garder ma réservation</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -549,6 +678,12 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   reviewBtnText: { color: Colors.white, fontWeight: "700", fontSize: 16 },
+
+  cancelBookingBtn: {
+    backgroundColor: "transparent", borderRadius: 999, borderWidth: 1, borderColor: Colors.destructive,
+    paddingVertical: 14, alignItems: "center", marginBottom: 12,
+  },
+  cancelBookingBtnText: { color: Colors.destructive, fontWeight: "700", fontSize: 15 },
 
   modalSheet: { backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 },

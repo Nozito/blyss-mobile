@@ -20,7 +20,6 @@ import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { BlockedClient } from "@/lib/api";
 
@@ -153,7 +152,7 @@ export default function ProClientsScreen() {
   }), [clients]);
 
   const clientsContentStyle = useMemo(
-    () => ({ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }),
+    () => ({ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }),
     [insets.bottom]
   );
 

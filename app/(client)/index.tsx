@@ -13,14 +13,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
-import { specialistsApi, favoritesApi, clientApi } from "@/lib/api";
+import { specialistsApi, clientApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useFavorites } from "@/hooks/useFavorites";
 
 // ── Style constants (module-level → never recreated) ─────────────────────────
 const CATEGORY_LIST_STYLE  = { paddingHorizontal: 24, gap: 8, paddingBottom: 4 } as const;
@@ -391,7 +392,6 @@ export default function ClientHome() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const reduceMotion = useReducedMotion();
-  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const flatListRef = useRef(null);
@@ -445,12 +445,7 @@ export default function ClientHome() {
     staleTime: 30_000,
   });
 
-  const { data: favRes } = useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => favoritesApi.getAll(),
-    enabled: !!user,
-    staleTime: 60_000,
-  });
+  const { isFavorited, toggle: toggleFav } = useFavorites();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -462,36 +457,9 @@ export default function ClientHome() {
     setRefreshing(false);
   }, [refetchPros, queryClient]);
 
-  // Sync favoriteIds from query (replaces deprecated onSuccess)
-  useEffect(() => {
-    const ids = new Set<number>(
-      ((favRes?.data as Array<{ pro_id: number }>) ?? []).map((f) => f.pro_id)
-    );
-    setFavoriteIds(ids);
-  }, [favRes]);
-
-  // ── Favorite mutation ─────────────────────────────────────────────────────
-  const toggleFavMutation = useMutation({
-    mutationFn: async (proId: number) => {
-      if (favoriteIds.has(proId)) await favoritesApi.remove(proId);
-      else await favoritesApi.add(proId);
-    },
-    onMutate: (proId: number) => {
-      setFavoriteIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(proId)) next.delete(proId);
-        else next.add(proId);
-        return next;
-      });
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["favorites"] });
-    },
-  });
-
   // ── Derived data ──────────────────────────────────────────────────────────
-  const pros = ((proRes?.data as unknown[]) ?? []) as Pro[];
-  const bookings = ((bookingsRes?.data as unknown[]) ?? []) as Booking[];
+  const pros = (Array.isArray(proRes?.data) ? proRes.data : []) as Pro[];
+  const bookings = (Array.isArray(bookingsRes?.data) ? bookingsRes.data : []) as Booking[];
 
   const upcomingBookings = useMemo(
     () =>
@@ -517,7 +485,7 @@ export default function ClientHome() {
     (item: (typeof CATEGORIES)[number]) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       setSelectedCategory((prev) => (prev === item.query ? null : item.query));
-      router.push({ pathname: "/specialists", params: { search: item.query } });
+      router.push({ pathname: "/specialists", params: { service: item.query } });
     },
     [router]
   );
@@ -550,11 +518,11 @@ export default function ClientHome() {
       <SpecialistCard
         pro={item}
         index={index}
-        isFavorite={favoriteIds.has(item.id)}
-        onToggleFav={(id) => toggleFavMutation.mutate(id)}
+        isFavorite={isFavorited(item.id)}
+        onToggleFav={toggleFav}
       />
     ),
-    [favoriteIds, toggleFavMutation]
+    [isFavorited, toggleFav]
   );
 
   const handlePrimaryCta = (path: "/specialists") => {
@@ -593,7 +561,7 @@ export default function ClientHome() {
                 </Animated.Text>
               </Text>
               <Text className="text-sm text-muted-foreground mt-0.5">
-                👋 Tes nails parfaites, en quelques clics ✨
+                Trouve ta prochaine experte près de chez toi
               </Text>
             </View>
 
@@ -722,7 +690,6 @@ export default function ClientHome() {
                       className="mt-3 px-4 py-3 rounded-xl bg-primary self-start active:opacity-80"
                     >
                       <View className="flex-row gap-1.5 items-center">
-                        <Ionicons name="sparkles-outline" size={14} color={Colors.white} />
                         <Text className="text-white text-xs font-semibold">
                           Découvrir les expertes
                         </Text>

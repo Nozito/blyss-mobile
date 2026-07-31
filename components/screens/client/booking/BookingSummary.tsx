@@ -204,6 +204,14 @@ export function BookingSummary({
         </View>
       </View>
 
+      {/* Réassurance annulation — visible avant le choix du mode de paiement */}
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+        <Ionicons name="information-circle-outline" size={15} color={Colors.mutedForeground} style={{ marginTop: 1 }} />
+        <Text style={{ flex: 1, fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+          Tu pourras annuler ce rendez-vous depuis l'app. Les conditions d'annulation du professionnel s'appliquent.
+        </Text>
+      </View>
+
       {/* Payment method */}
       {canPayOnline ? (
         <View style={{ gap: 12 }}>

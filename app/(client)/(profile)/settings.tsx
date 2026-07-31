@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi, usersApi } from "@/lib/api";
+import { usersApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Colors } from "@/constants/colors";
@@ -30,7 +30,7 @@ function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ioni
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, refreshProfile, logout } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
@@ -43,9 +43,6 @@ export default function SettingsScreen() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -109,28 +106,6 @@ export default function SettingsScreen() {
       setError("Erreur lors de la sauvegarde");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleExportData = async () => {
-    setSuccess("L'export de données sera disponible prochainement.");
-  };
-
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      const res = await authApi.deleteAccount();
-      if (res.success) {
-        await logout();
-        router.replace("/(auth)/login");
-      } else {
-        setError("Impossible de supprimer le compte.");
-      }
-    } catch {
-      setError("Une erreur est survenue.");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
     }
   };
 
@@ -276,52 +251,15 @@ export default function SettingsScreen() {
           </Pressable>
 
           <Pressable
-            onPress={handleExportData}
-            disabled={isExporting}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border, opacity: isExporting ? 0.5 : 1 }}
+            onPress={() => router.push("/(client)/(profile)/rgpd")}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
           >
-            <Ionicons name="download-outline" size={16} color={Colors.primary} />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>
-              {isExporting ? "Export en cours..." : "Exporter mes données"}
+            <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>
+              Supprimer mon compte
             </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
           </Pressable>
-
-          {!showDeleteConfirm ? (
-            <Pressable
-              onPress={() => setShowDeleteConfirm(true)}
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
-            >
-              <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>
-                Supprimer mon compte
-              </Text>
-            </Pressable>
-          ) : (
-            <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.destructiveLight, gap: 12 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.destructiveText }}>
-                Supprimer le compte — action irréversible
-              </Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable
-                  onPress={() => setShowDeleteConfirm(false)}
-                  style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleDeleteAccount}
-                  disabled={isDeleting}
-                  style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", opacity: isDeleting ? 0.7 : 1 }}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Confirmer</Text>
-                  )}
-                </Pressable>
-              </View>
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>

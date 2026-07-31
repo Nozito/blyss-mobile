@@ -11,6 +11,8 @@ interface Props {
   amount: number;
   depositPercentage: number;
   prestationName?: string;
+  /** True when paying the remaining balance of an already-deposited booking (not a fresh deposit) */
+  isBalancePayment?: boolean;
   /** Null until backend createPaymentIntent is wired up */
   clientSecret: string | null;
   onSuccess: () => void;
@@ -21,6 +23,7 @@ export function PaymentStep({
   amount,
   depositPercentage,
   prestationName,
+  isBalancePayment,
   clientSecret,
   onSuccess,
   onError,
@@ -32,6 +35,10 @@ export function PaymentStep({
   const [initError, setInitError] = useState<string | null>(null);
 
   const initSheet = async (secret: string) => {
+    // Sans ce reset, un ré-essai avec un nouveau PaymentIntent (retour en
+    // arrière puis nouvelle tentative) pouvait laisser `ready=true` un instant
+    // avec la feuille de paiement encore configurée sur l'ancien intent.
+    setReady(false);
     setInitializing(true);
     setInitError(null);
     const { error } = await initPaymentSheet({
@@ -74,7 +81,7 @@ export function PaymentStep({
   }, [clientSecret]);
 
   const handlePay = async () => {
-    if (!ready) return;
+    if (!ready || paying) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setPaying(true);
     const { error } = await presentPaymentSheet();
@@ -98,7 +105,9 @@ export function PaymentStep({
           Paiement sécurisé
         </Text>
         <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
-          {depositPercentage < 100
+          {isBalancePayment
+            ? "Solde restant à régler"
+            : depositPercentage < 100
             ? `Acompte de ${depositPercentage}% à payer maintenant`
             : "Termine le paiement pour confirmer"}
         </Text>
@@ -193,6 +202,12 @@ export function PaymentStep({
         <Ionicons name="shield-checkmark-outline" size={14} color={Colors.mutedForeground} />
         <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Paiement sécurisé par Stripe</Text>
       </View>
+
+      {/* Réassurance annulation — la seule mention de ce type dans tout le funnel, */}
+      {/* à l'instant précis où l'engagement financier est pris. */}
+      <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16 }}>
+        Besoin d'annuler ? Tu peux le faire depuis "Mes réservations" — les conditions d'annulation du professionnel s'appliquent.
+      </Text>
     </View>
   );
 }

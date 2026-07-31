@@ -98,22 +98,33 @@ export default function ServiceFormScreen() {
   }, [existing, reset]);
 
   const createMutation = useMutation({
-    mutationFn: (d: Parameters<typeof proApi.createService>[0]) => proApi.createService(d),
+    // apiCall() ne rejette jamais sa promesse (voir lib/api.ts) — sans ce throw,
+    // un échec métier renvoyé par le serveur (res.success: false) déclenchait
+    // silencieusement onSuccess : le formulaire se fermait comme si la
+    // prestation avait été créée, alors que rien ne s'était passé côté serveur.
+    mutationFn: async (d: Parameters<typeof proApi.createService>[0]) => {
+      const res = await proApi.createService(d);
+      if (!res.success) throw new Error(res.error ?? "Impossible de créer la prestation.");
+      return res;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-services"] });
       safeBack(router);
     },
-    onError: () => setFormError("Impossible de créer la prestation."),
+    onError: (e: unknown) => setFormError(e instanceof Error ? e.message : "Impossible de créer la prestation."),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ pid, data }: { pid: number; data: Parameters<typeof proApi.updateService>[1] }) =>
-      proApi.updateService(pid, data),
+    mutationFn: async ({ pid, data }: { pid: number; data: Parameters<typeof proApi.updateService>[1] }) => {
+      const res = await proApi.updateService(pid, data);
+      if (!res.success) throw new Error(res.error ?? "Impossible de modifier la prestation.");
+      return res;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-services"] });
       safeBack(router);
     },
-    onError: () => setFormError("Impossible de modifier la prestation."),
+    onError: (e: unknown) => setFormError(e instanceof Error ? e.message : "Impossible de modifier la prestation."),
   });
 
   const onSubmit = (fd: FormData) => {

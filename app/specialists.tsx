@@ -2,10 +2,10 @@ import React, { useState, useMemo, useCallback, useRef, useEffect, Suspense } fr
 import { View, Text, Pressable, ScrollView, ActivityIndicator, FlatList, Animated, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { specialistsApi, favoritesApi } from "@/lib/api";
+import { specialistsApi } from "@/lib/api";
 import {
   SpecialistCard,
   type Specialist,
@@ -17,6 +17,7 @@ import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useFavorites } from "@/hooks/useFavorites";
 
 const SpecialistsMapView = React.lazy(
   () => import("@/components/screens/client/specialists/MapView") as Promise<{ default: React.ComponentType<{ specialists: Specialist[] }> }>
@@ -33,7 +34,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function SpecialistsScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ search?: string; service?: string }>();
   const reduceMotion = useReducedMotion();
   const fadeAnim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -68,7 +68,7 @@ export default function SpecialistsScreen() {
   }, []);
 
   const { data: specialists = [], isLoading, isFetching, refetch } = useQuery<Specialist[]>({
-    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter],
+    queryKey: ["specialists", debouncedSearch, cityFilter, serviceFilter, ratingFilter, userCoords],
     queryFn: async () => {
       const res = await specialistsApi.getPros({
         limit: 100,
@@ -76,6 +76,14 @@ export default function SpecialistsScreen() {
         ...(cityFilter ? { city: cityFilter } : {}),
         ...(serviceFilter ? { service: serviceFilter } : {}),
         ...(ratingFilter > 0 ? { min_rating: ratingFilter } : {}),
+        // lat/lng seuls (sans `nearby`) : le backend les utilise pour calculer/afficher
+        // la distance sans filtrer — `nearby: true` excluait purement et simplement
+        // tous les résultats dès que la position réelle de la cliente ne tombait pas
+        // dans un rayon par défaut (ex. hors zone de test), affichant "aucune experte
+        // disponible" alors que des pros existaient bel et bien.
+        ...(userCoords && !cityFilter
+          ? { lat: userCoords.lat, lng: userCoords.lng }
+          : {}),
       });
       if (!res.success || !res.data) return [];
       return (res.data as Array<Record<string, unknown>>).map((pro) => ({
@@ -96,48 +104,16 @@ export default function SpecialistsScreen() {
         lat: (pro.latitude as number | null) ?? null,
         lng: (pro.longitude as number | null) ?? null,
         min_price: (pro.min_price as number | null) ?? null,
+        address_visible: Boolean(pro.address_visible),
+        service_radius_km: (pro.service_radius_km as number | null) ?? null,
+        service_area_label: (pro.service_area_label as string | null) ?? null,
       }));
     },
     staleTime: 2 * 60_000,
     placeholderData: (prev) => prev,
   });
 
-  const { data: favoriteIds = new Set<number>() } = useQuery<Set<number>>({
-    queryKey: ["favorites-ids"],
-    queryFn: async () => {
-      const res = await favoritesApi.getAll();
-      if (!res.success || !res.data) return new Set<number>();
-      return new Set<number>(
-        (res.data as Array<{ pro_id: number }>).map((f) => f.pro_id)
-      );
-    },
-    staleTime: 60_000,
-  });
-
-  const toggleFav = useMutation({
-    mutationFn: async (proId: number) => {
-      if (favoriteIds.has(proId)) await favoritesApi.remove(proId);
-      else await favoritesApi.add(proId);
-    },
-    onMutate: async (proId: number) => {
-      await queryClient.cancelQueries({ queryKey: ["favorites-ids"] });
-      const prev = queryClient.getQueryData<Set<number>>(["favorites-ids"]);
-      queryClient.setQueryData<Set<number>>(["favorites-ids"], (old = new Set()) => {
-        const next = new Set(old);
-        if (next.has(proId)) next.delete(proId);
-        else next.add(proId);
-        return next;
-      });
-      return { prev };
-    },
-    onError: (_e: unknown, _id: number, ctx: { prev?: Set<number> } | undefined) => {
-      if (ctx?.prev) queryClient.setQueryData(["favorites-ids"], ctx.prev);
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["favorites-ids"] });
-      void queryClient.invalidateQueries({ queryKey: ["favorites"] });
-    },
-  });
+  const { isFavorited, toggle: toggleFav } = useFavorites();
 
   const uniqueCities = useMemo(
     () => [...new Set(specialists.map((s) => s.city).filter(Boolean))].sort(),
@@ -159,14 +135,14 @@ export default function SpecialistsScreen() {
     ({ item, index }: { item: Specialist; index: number }) => (
       <SpecialistCard
         item={item}
-        isFav={favoriteIds.has(item.id)}
+        isFav={isFavorited(item.id)}
         index={index}
         onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: item.id } })}
         onBook={() => router.push({ pathname: "/booking", params: { proId: item.id } })}
-        onToggleFav={() => toggleFav.mutate(item.id)}
+        onToggleFav={() => toggleFav(item.id)}
       />
     ),
-    [favoriteIds, router, toggleFav]
+    [isFavorited, router, toggleFav]
   );
 
   return (

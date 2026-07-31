@@ -15,6 +15,7 @@ interface FavoriteRaw {
   specialty: string | null;
   avg_rating: number;
   reviews_count: number;
+  min_price: number | null;
 }
 
 export function useFavorites() {
@@ -44,6 +45,7 @@ export function useFavorites() {
           cover_image_url: null,
           first_name: f.first_name,
           distance_km: null,
+          min_price: f.min_price ?? null,
         };
       });
     },
@@ -53,11 +55,47 @@ export function useFavorites() {
     retry: 2,
   });
 
+  // apiCall() ne rejette jamais — sans ces throws, un échec métier (ex. token
+  // expiré, pro introuvable) laissait le rollback ci-dessous ne jamais se
+  // déclencher : l'état optimiste finissait par se corriger au prochain
+  // `onSettled`/refetch, mais silencieusement, sans jamais prévenir l'utilisateur.
+  //
+  // add/remove sont deux mutations distinctes plutôt qu'un seul "toggle" qui
+  // relirait `favorites` dans son mutationFn : cette relecture tardive pouvait
+  // retomber sur l'état déjà retourné par onMutate (re-render entre les deux),
+  // et donc appeler l'action inverse de celle décidée par l'utilisateur. Ici
+  // l'action (add ou remove) est fixée une fois pour toutes au moment du clic,
+  // dans `toggle()`.
   const addMutation = useMutation({
-    mutationFn: (proId: number) => favoritesApi.add(proId),
-    onMutate: async () => {
+    mutationFn: async (proId: number) => {
+      const res = await favoritesApi.add(proId);
+      if (!res.success) throw new Error(res.error ?? "Impossible d'ajouter aux favoris");
+      return res;
+    },
+    onMutate: async (proId: number) => {
       await qc.cancelQueries({ queryKey: ["favorites"] });
-      return { prev: qc.getQueryData<Specialist[]>(["favorites"]) };
+      const prev = qc.getQueryData<Specialist[]>(["favorites"]);
+      qc.setQueryData<Specialist[]>(["favorites"], (old = []) =>
+        old.some((f) => f.id === proId)
+          ? old
+          : [
+              ...old,
+              {
+                id: proId,
+                business_name: "",
+                specialty: "",
+                city: "",
+                rating: 0,
+                reviews_count: 0,
+                profile_image_url: null,
+                cover_image_url: null,
+                first_name: "",
+                distance_km: null,
+                min_price: null,
+              },
+            ]
+      );
+      return { prev };
     },
     onError: (_err, _proId, ctx) => {
       if (ctx?.prev) qc.setQueryData(["favorites"], ctx.prev);
@@ -66,7 +104,11 @@ export function useFavorites() {
   });
 
   const removeMutation = useMutation({
-    mutationFn: (proId: number) => favoritesApi.remove(proId),
+    mutationFn: async (proId: number) => {
+      const res = await favoritesApi.remove(proId);
+      if (!res.success) throw new Error(res.error ?? "Impossible de retirer des favoris");
+      return res;
+    },
     onMutate: async (proId: number) => {
       await qc.cancelQueries({ queryKey: ["favorites"] });
       const prev = qc.getQueryData<Specialist[]>(["favorites"]);
@@ -86,6 +128,9 @@ export function useFavorites() {
 
   const toggle = useCallback(
     (proId: number) => {
+      // Un double-tap rapide déclenchait deux appels add/remove coup sur coup
+      // (rien n'avait encore changé visuellement entre les deux taps).
+      if (addMutation.isPending || removeMutation.isPending) return;
       const willFavorite = !isFavorited(proId);
       Haptics.impactAsync(
         willFavorite ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Rigid
@@ -99,24 +144,6 @@ export function useFavorites() {
     [isFavorited, addMutation, removeMutation]
   );
 
-  const removeFavorite = useCallback(
-    (proId: number) => {
-      qc.setQueryData<Specialist[]>(["favorites"], (prev = []) =>
-        prev.filter((f) => f.id !== proId)
-      );
-      qc.setQueryData<Set<number>>(["favorites-ids"], (prev = new Set()) => {
-        const next = new Set(prev);
-        next.delete(proId);
-        return next;
-      });
-      favoritesApi.remove(proId).catch(() => {
-        void qc.invalidateQueries({ queryKey: ["favorites"] });
-        void qc.invalidateQueries({ queryKey: ["favorites-ids"] });
-      });
-    },
-    [qc]
-  );
-
   return {
     favorites,
     // true uniquement tant qu'aucune donnée n'a jamais été reçue
@@ -126,7 +153,6 @@ export function useFavorites() {
     refetch,
     isFavorited,
     toggle,
-    removeFavorite,
     isToggling: addMutation.isPending || removeMutation.isPending,
   };
 }

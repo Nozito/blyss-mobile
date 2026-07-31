@@ -13,7 +13,6 @@ import { usersApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors, withAlpha } from "@/constants/colors";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 // Groupe compte
@@ -121,7 +120,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Page title */}
@@ -344,10 +343,6 @@ export default function ProfileScreen() {
             </Text>
           </AnimatedPressable>
         </View>
-
-        <Text style={{ textAlign: "center", fontSize: 11, color: Colors.mutedForeground, marginTop: 24 }}>
-          Blyss v1.0.0
-        </Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -18,6 +18,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import * as Haptics from "expo-haptics";
 import { proApi } from "@/lib/api";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
+import { useToast } from "@/components/ui/Toast";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -59,6 +60,25 @@ export default function ProSubscriptionSettingsScreen() {
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const { activePlan, packages, purchase, restorePurchases, refreshActivePlan } = useRevenueCat();
+  const { showToast } = useToast();
+  const [restoring, setRestoring] = useState(false);
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (!result.success) {
+        showToast("La restauration a échoué. Réessaie.", "error");
+      } else if (result.restored) {
+        showToast("Achats restaurés avec succès", "success");
+        await refreshActivePlan();
+      } else {
+        showToast("Aucun abonnement actif trouvé pour ce compte Apple", "error");
+      }
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-subscription"],
@@ -290,8 +310,12 @@ export default function ProSubscriptionSettingsScreen() {
       </View>
 
       <View style={{ alignItems: "center", marginBottom: 8 }}>
-        <Pressable onPress={() => void restorePurchases()}>
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
+        <Pressable onPress={() => void handleRestore()} disabled={restoring} hitSlop={8}>
+          {restoring ? (
+            <ActivityIndicator size="small" color={Colors.mutedForeground} />
+          ) : (
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
+          )}
         </Pressable>
       </View>
       <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16, marginBottom: 16 }}>

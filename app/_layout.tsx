@@ -1,8 +1,9 @@
 import "../global.css";
 
 import React, { useEffect, useRef, useState } from "react";
-import { View, Image, Animated, StyleSheet } from "react-native";
-import { Colors } from "@/constants/colors";
+import { StyleSheet } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming, runOnJS } from "react-native-reanimated";
+import { SplashOverlay } from "@/components/ui/SplashOverlay";
 import { Stack } from "expo-router";
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -18,66 +19,95 @@ import { queryClient } from "@/lib/queryClient";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ActionSheetProvider } from "@/components/ui/ActionSheet";
+import { TransitionProvider } from "@/contexts/TransitionContext";
 import { validateEnv, ENV } from "@/lib/env";
+import { markStartup, logStartupReport } from "@/lib/startupMetrics";
 
 validateEnv();
+markStartup("module_eval");
 
 const STRIPE_PK = ENV.STRIPE_PK;
 
-SplashScreen.preventAutoHideAsync();
+// Garde le splash natif affiché jusqu'à l'appel explicite de hideAsync() ci-dessous.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// ── Splash JS animé (fond rose + logo, fade-out 500ms) ───────────────────────
-function AnimatedSplash({ onDone }: { onDone: () => void }) {
-  const opacity = useRef(new Animated.Value(1)).current;
+// Filet de sécurité : si l'auth ou les polices restent bloquées anormalement
+// longtemps (réseau mort, police corrompue…), on ne verrouille jamais l'app
+// derrière un splash indéfini — on force l'affichage et on laisse l'écran
+// cible gérer son propre état de chargement dégradé.
+const READY_FAILSAFE_MS = 6000;
+
+// Durée de fondu du launch splash — alignée sur `animationDuration` du Stack
+// pour une sensation de mouvement cohérente à travers toute l'app.
+const SPLASH_FADE_MS = 280;
+
+// Plancher d'affichage du logo APRÈS que le splash natif ait réellement cédé
+// la place au rendu JS (pas avant : le splash natif, lui, n'a aucun plancher
+// artificiel — cf. `revealed` ci-dessous, pas `ready`). BlyssLogoLoader tourne
+// sur un cycle de 3200ms (trait 0-1536ms, remplissage 1536-1984ms, tenue
+// 1984-2816ms) : 2200ms laisse le dessin ET le remplissage se terminer
+// entièrement au moins une fois avant le fondu de sortie.
+const MIN_LOGO_VISIBLE_MS = 2200;
+
+// ── Launch splash — fondu piloté par un vrai état de readiness ──────────────
+// `revealed` ne devient vrai qu'une fois le splash natif effectivement masqué
+// (cf. AppContent) : c'est SEULEMENT à cet instant que le logo JS est visible
+// à l'écran, donc c'est le seul point de départ valable pour son plancher
+// d'affichage.
+function LaunchSplash({ revealed, onHidden }: { revealed: boolean; onHidden: () => void }) {
+  const opacity = useSharedValue(1);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(() => onDone());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!revealed) return;
+    const t = setTimeout(() => {
+      opacity.value = withTiming(0, { duration: SPLASH_FADE_MS }, (finished) => {
+        if (finished) runOnJS(onHidden)();
+      });
+    }, MIN_LOGO_VISIBLE_MS);
+    return () => clearTimeout(t);
+  }, [revealed, opacity, onHidden]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
-    <Animated.View style={[styles.splash, { opacity }]} pointerEvents="none">
-      <Image
-        source={require("../assets/logo.png")}
-        style={styles.splashLogo}
-        resizeMode="contain"
-      />
+    <Animated.View style={[styles.splash, animatedStyle]}>
+      <SplashOverlay logoSize={180} />
     </Animated.View>
   );
 }
 
-// ── App content — attend que l'auth + les fonts soient prêts ─────────────────
+// ── App content ────────────────────────────────────────────────────────────
+// Le Stack est monté dès le premier rendu (écran cible prêt sous le splash) ;
+// `ready` pilote le hide natif, `nativeHidden` confirme qu'il a réellement eu
+// lieu — c'est ce dernier (via `revealed`) qui pilote le fondu du logo JS,
+// puisque c'est le seul instant où ce logo devient visible à l'écran.
 function AppContent() {
   const { isLoading } = useAuth();
-  const [fontsLoaded] = useFonts({ PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic });
-  const [appReady, setAppReady] = useState(false);
-  const [splashDone, setSplashDone] = useState(false);
+  const [fontsLoaded, fontError] = useFonts({ PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic });
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [failsafeTriggered, setFailsafeTriggered] = useState(false);
+  const [nativeHidden, setNativeHidden] = useState(false);
+  const nativeHideRequested = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && fontsLoaded) {
-      setAppReady(true);
-      void SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [isLoading, fontsLoaded]);
+    const t = setTimeout(() => setFailsafeTriggered(true), READY_FAILSAFE_MS);
+    return () => clearTimeout(t);
+  }, []);
 
-  // Pendant la restauration de session : splash statique (zéro flash)
-  if (!appReady) {
-    return (
-      <View style={styles.splash}>
-        <Image
-          source={require("../assets/logo.png")}
-          style={styles.splashLogo}
-          resizeMode="contain"
-        />
-      </View>
-    );
-  }
+  // fontError : on ne bloque jamais l'app pour une police manquante — repli silencieux.
+  const ready = (!isLoading && (fontsLoaded || !!fontError)) || failsafeTriggered;
+
+  useEffect(() => {
+    if (!ready || nativeHideRequested.current) return;
+    nativeHideRequested.current = true;
+    markStartup("fonts_auth_ready");
+    SplashScreen.hideAsync()
+      .catch(() => {})
+      .finally(() => {
+        markStartup("native_splash_hidden");
+        setNativeHidden(true);
+      });
+  }, [ready]);
 
   return (
     <>
@@ -103,10 +133,6 @@ function AppContent() {
           options={{ animation: "slide_from_bottom" }}
         />
         <Stack.Screen
-          name="my-bookings"
-          options={{ animation: "slide_from_bottom" }}
-        />
-        <Stack.Screen
           name="specialist/[id]"
           options={{ presentation: "card", animation: "slide_from_bottom" }}
         />
@@ -115,8 +141,16 @@ function AppContent() {
           options={{ presentation: "card", animation: "slide_from_bottom" }}
         />
       </Stack>
-      {/* Fade-out du splash JS par-dessus l'app */}
-      {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
+      {splashVisible && (
+        <LaunchSplash
+          revealed={nativeHidden}
+          onHidden={() => {
+            markStartup("launch_splash_dismissed");
+            logStartupReport();
+            setSplashVisible(false);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -128,18 +162,20 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ToastProvider>
           <ActionSheetProvider>
-            <OfflineBanner />
-            <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
-              <QueryClientProvider client={queryClient}>
-                <AuthProvider>
-                  <RevenueCatProvider>
-                    <NotificationProvider>
-                      <AppContent />
-                    </NotificationProvider>
-                  </RevenueCatProvider>
-                </AuthProvider>
-              </QueryClientProvider>
-            </StripeProvider>
+            <TransitionProvider>
+              <OfflineBanner />
+              <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
+                <QueryClientProvider client={queryClient}>
+                  <AuthProvider>
+                    <RevenueCatProvider>
+                      <NotificationProvider>
+                        <AppContent />
+                      </NotificationProvider>
+                    </RevenueCatProvider>
+                  </AuthProvider>
+                </QueryClientProvider>
+              </StripeProvider>
+            </TransitionProvider>
           </ActionSheetProvider>
         </ToastProvider>
       </SafeAreaProvider>
@@ -150,13 +186,6 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
     zIndex: 999,
-  },
-  splashLogo: {
-    width: 180,
-    height: 180,
   },
 });

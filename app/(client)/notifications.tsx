@@ -9,6 +9,7 @@ import {
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -47,7 +48,7 @@ function formatRelTime(dateString: string): string {
   return new Date(dateString).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-function groupByDay(notifications: Array<{ id: number; type: string; message: string; is_read: boolean; created_at: string }>) {
+function groupByDay(notifications: Array<{ id: number; type: string; message: string; is_read: boolean; created_at: string; data?: Record<string, unknown> }>) {
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
   const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 7);
@@ -88,6 +89,7 @@ const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
 ];
 
 export default function ClientNotificationsScreen() {
+  const router = useRouter();
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const [tab, setTab] = useState<Tab>("activity");
   const listRef = useRef(null);
@@ -145,8 +147,19 @@ export default function ClientNotificationsScreen() {
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
         {/* Header */}
-        <View style={{ paddingTop: 0, paddingBottom: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 0, paddingBottom: 16 }}>
           <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
+          {tab === "activity" && unreadCount > 0 && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                markAllAsRead();
+              }}
+              hitSlop={8}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Tout marquer comme lu</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Segmented control */}
@@ -198,7 +211,24 @@ export default function ClientNotificationsScreen() {
                       return (
                         <AnimatedPressable
                           key={notif.id}
-                          onPress={() => { if (!notif.is_read) markAsRead(notif.id); }}
+                          onPress={() => {
+                            if (!notif.is_read) {
+                              // markAsRead(context) ne met à jour que le state local — sans
+                              // l'appel API ci-dessous (déjà fait par markAllAsRead, oublié
+                              // ici), la notification redevenait "non lue" au prochain
+                              // rechargement de la liste depuis le serveur.
+                              markAsRead(notif.id);
+                              notificationsApi.markAsRead(Number(notif.id)).catch(() => {});
+                            }
+                            // Sans cette navigation, taper une notif depuis la liste in-app
+                            // ne faisait rien d'autre que la marquer lue — la fonctionnalité
+                            // la plus attendue d'un centre de notifications (aller voir le
+                            // rendez-vous concerné) était absente.
+                            const reservationId = notif.data?.reservation_id;
+                            if (reservationId != null) {
+                              router.push(`/booking/${String(reservationId)}` as never);
+                            }
+                          }}
                           style={{
                             flexDirection: "row", alignItems: "flex-start", gap: 12,
                             padding: 14, borderRadius: 16,

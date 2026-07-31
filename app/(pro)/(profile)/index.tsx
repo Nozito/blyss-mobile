@@ -17,7 +17,6 @@ import { Card } from "@/components/ui/Card";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { proApi, usersApi, type User } from "@/lib/api";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -173,7 +172,7 @@ export default function ProProfileScreen() {
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
-        paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
+        paddingBottom: insets.bottom + 24,
         paddingHorizontal: 20,
       }}
       automaticallyAdjustContentInsets={false}
@@ -624,10 +623,6 @@ export default function ProProfileScreen() {
         </AnimatedPressable>
       </View>
 
-      {/* Footer */}
-      <View style={{ alignItems: "center", paddingBottom: 8 }}>
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Blyss Pro v1.0.0</Text>
-      </View>
     </ScrollView>
     </Animated.View>
 
@@ -698,7 +693,7 @@ export default function ProProfileScreen() {
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
               setShowLogoutConfirm(false);
-              logout();
+              void logout().then(() => router.replace("/(auth)/login"));
             }}
             style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center" }}
           >

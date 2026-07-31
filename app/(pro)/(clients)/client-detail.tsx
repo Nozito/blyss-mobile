@@ -18,7 +18,6 @@ import * as Haptics from "expo-haptics";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { Colors } from "@/constants/colors";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
@@ -82,13 +81,23 @@ export default function ClientDetailScreen() {
     enabled: !!clientId,
   });
 
+  const [blockError, setBlockError] = useState<string | null>(null);
+
   const blockMutation = useMutation({
-    mutationFn: () => nailTechApi.blockClient(Number(clientId)),
+    // apiCall() ne rejette jamais — sans ce throw, un échec métier du blocage
+    // ne déclenchait ni onError ni aucun retour visuel : le bouton semblait
+    // juste ne rien faire.
+    mutationFn: async () => {
+      const res = await nailTechApi.blockClient(Number(clientId));
+      if (!res.success) throw new Error(res.error ?? "Impossible de bloquer cette cliente.");
+      return res;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pro-clients"] });
       qc.invalidateQueries({ queryKey: ["blocked-clients"] });
       safeBack(router);
     },
+    onError: (e: unknown) => setBlockError(e instanceof Error ? e.message : "Impossible de bloquer cette cliente."),
   });
 
   const client = ((clientsData?.data as Client[] | undefined) ?? []).find(
@@ -186,7 +195,7 @@ export default function ClientDetailScreen() {
         contentContainerStyle={{
           paddingTop: insets.top,
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + TAB_BOTTOM_PADDING,
+          paddingBottom: insets.bottom + 24,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -404,15 +413,20 @@ export default function ClientDetailScreen() {
 
         {/* Bloquer */}
         <SectionTitle title="Zone critique" />
+        {blockError && <View style={{ marginBottom: 10 }}><ErrorMessage message={blockError} /></View>}
         <AnimatedPressable
           onPress={() => {
+            if (blockMutation.isPending) return;
+            setBlockError(null);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
             blockMutation.mutate();
           }}
+          disabled={blockMutation.isPending}
           style={{
             backgroundColor: "#FFF0F0", borderRadius: 16,
             borderWidth: 1, borderColor: `${Colors.destructive}30`,
             padding: 16, flexDirection: "row", alignItems: "center", gap: 12,
+            opacity: blockMutation.isPending ? 0.6 : 1,
           }}
         >
           <View style={{
@@ -420,7 +434,9 @@ export default function ClientDetailScreen() {
             backgroundColor: `${Colors.destructive}15`,
             alignItems: "center", justifyContent: "center",
           }}>
-            <Ionicons name="ban-outline" size={20} color={Colors.destructive} />
+            {blockMutation.isPending
+              ? <ActivityIndicator size="small" color={Colors.destructive} />
+              : <Ionicons name="ban-outline" size={20} color={Colors.destructive} />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Bloquer cette cliente</Text>

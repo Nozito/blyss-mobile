@@ -29,6 +29,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { emailSchema, getZodError } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
+import { useAppTransition } from "@/contexts/TransitionContext";
 
 function parseLoginError(raw: string): string {
   const r = raw.toLowerCase();
@@ -47,7 +48,8 @@ function parseLoginError(raw: string): string {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, refreshProfile } = useAuth();
+  const { showTransition, hideTransition } = useAppTransition();
 
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -134,13 +136,15 @@ export default function LoginScreen() {
         setShowRoleModal(true);
         return;
       }
+      showTransition();
       if (user.role === "pro") {
         router.replace("/(pro)/dashboard");
       } else {
         router.replace("/(client)");
       }
+      hideTransition();
     },
-    [router]
+    [router, showTransition, hideTransition]
   );
 
   // ── Email/password login ──────────────────────────────────────────────────
@@ -196,6 +200,11 @@ export default function LoginScreen() {
         setSubmitError(res.error ?? "Erreur Apple Sign In");
         shake();
       } else if (res.data?.user) {
+        // authApi.loginWithApple() stocke les tokens mais ne passe pas par
+        // AuthContext.login() — sans ce refresh, `user` restait `null` dans le
+        // contexte après une connexion Apple réussie (greeting figé, requêtes
+        // dépendant de `user` désactivées, risque de renvoi vers /welcome).
+        await refreshProfile();
         navigateAfterLogin(res.data.user);
       }
     } catch (e: unknown) {
@@ -207,7 +216,7 @@ export default function LoginScreen() {
     } finally {
       setIsAppleLoading(false);
     }
-  }, [navigateAfterLogin, shake]);
+  }, [navigateAfterLogin, shake, refreshProfile]);
 
   // ── Biometric login ───────────────────────────────────────────────────────
   const handleBiometric = useCallback(async () => {
@@ -229,6 +238,10 @@ export default function LoginScreen() {
       // Token already stored — call getProfile to restore session
       const profile = await authApi.getProfile();
       if (profile.success && profile.data) {
+        // Même trou que pour Apple Sign In : ce flow ne passe pas par
+        // AuthContext.login(), donc `user` restait `null` dans le contexte
+        // sans ce refresh explicite.
+        await refreshProfile();
         navigateAfterLogin(profile.data);
       } else {
         setSubmitError("Session expirée — connecte-toi avec ton mot de passe");
@@ -238,7 +251,7 @@ export default function LoginScreen() {
     } finally {
       setIsBioLoading(false);
     }
-  }, [navigateAfterLogin]);
+  }, [navigateAfterLogin, refreshProfile]);
 
   // ── Role modal (admin) ────────────────────────────────────────────────────
   const handleRoleSelection = useCallback((selectedRole: AdminRole) => {
@@ -248,8 +261,10 @@ export default function LoginScreen() {
       pro: "/(pro)/dashboard",
       admin: "/(admin)/dashboard",
     };
+    showTransition();
     router.replace(routes[selectedRole] as Parameters<typeof router.replace>[0]);
-  }, [router]);
+    hideTransition();
+  }, [router, showTransition, hideTransition]);
 
   const isSubmitDisabled = isSubmitting || !email.trim() || !password || !!emailError;
 
@@ -282,7 +297,7 @@ export default function LoginScreen() {
 
           {/* Title */}
           <View style={styles.titleBlock}>
-            <Text style={styles.title}>Bon retour 👋</Text>
+            <Text style={styles.title}>Bon retour</Text>
             <Text style={styles.subtitle}>Connecte-toi pour continuer sur Blyss</Text>
           </View>
 

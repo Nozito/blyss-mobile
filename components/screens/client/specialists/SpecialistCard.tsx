@@ -22,11 +22,17 @@ export interface Specialist {
   cover_image_url: string | null;
   first_name: string;
   distance_km: number | null;
-  /** GPS coordinates — present when API returns them (nearby/location queries) */
+  /** GPS coordinates — present when API returns them (nearby/location queries).
+   * When address_visible is false, these are an approximate public point, not the
+   * pro's real location — never precise enough to identify the exact address. */
   lat?: number | null;
   lng?: number | null;
   /** Minimum service price — shown as badge on map markers */
   min_price?: number | null;
+  /** False by default — the pro has not published her exact address publicly */
+  address_visible?: boolean;
+  service_radius_km?: number | null;
+  service_area_label?: string | null;
 }
 
 interface Props {
@@ -164,19 +170,26 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
               {item.specialty}
             </Text>
 
-            {item.rating > 0 && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 }}>
-                <Ionicons name="star" size={11} color="#FBBF24" />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
-                  {item.rating != null ? Number(item.rating).toFixed(1) : "–"}
-                </Text>
-                {item.reviews_count > 0 && (
-                  <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                    · {item.reviews_count} avis
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 }}>
+              {item.rating > 0 && (
+                <>
+                  <Ionicons name="star" size={11} color="#FBBF24" />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
+                    {item.rating != null ? Number(item.rating).toFixed(1) : "–"}
                   </Text>
-                )}
-              </View>
-            )}
+                  {item.reviews_count > 0 && (
+                    <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                      · {item.reviews_count} avis
+                    </Text>
+                  )}
+                </>
+              )}
+              {item.min_price != null && (
+                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground, marginLeft: item.rating > 0 ? 6 : 0 }}>
+                  {item.rating > 0 ? "· " : ""}Dès {Number(item.min_price).toFixed(0)}€
+                </Text>
+              )}
+            </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
               <Ionicons name="location-outline" size={11} color={Colors.mutedForeground} />

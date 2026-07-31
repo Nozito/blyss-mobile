@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { stripePaymentsApi, specialistsApi } from "@/lib/api";
@@ -27,6 +28,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useAppTransition } from "@/contexts/TransitionContext";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -149,8 +151,19 @@ export default function BookingScreen() {
   const router = useRouter();
   const { proId } = useLocalSearchParams<{ proId: string }>();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { showTransition, hideTransition } = useAppTransition();
 
   const [step, setStep] = useState(1);
+  const navigation = useNavigation();
+
+  // Désactive le swipe-back natif iOS pendant le paiement (étape 4) : une
+  // réservation existe déjà côté serveur à ce stade (non payée) — un swipe
+  // hors du bouton retour dédié laisserait la cliente quitter l'écran sans
+  // savoir qu'une réservation en attente traîne quelque part.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: step < 4 });
+  }, [step, navigation]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [pro, setPro] = useState<Pro | null>(null);
   const [prestations, setPrestations] = useState<Prestation[]>([]);
@@ -165,15 +178,36 @@ export default function BookingScreen() {
   const [depositAmount, setDepositAmount] = useState<number | null>(null);
   const [depositPercentage, setDepositPercentage] = useState(0);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  // Réservation déjà créée côté serveur mais dont le paiement a échoué —
+  // évite d'en recréer une seconde (et donc un doublon) si la cliente retape "Continuer".
+  const [pendingReservationId, setPendingReservationId] = useState<number | null>(null);
+
+  // Si la cliente change de prestation/date/heure après un échec de paiement,
+  // la réservation en attente ne correspond plus à sa sélection actuelle —
+  // sans ce reset, "Continuer" facturait/confirmait l'ancienne combinaison
+  // (prestation/date d'origine) tout en affichant la nouvelle à l'écran.
+  useEffect(() => {
+    if (pendingReservationId == null) return;
+    setPendingReservationId(null);
+    setClientSecret(null);
+  }, [selectedPrestation, selectedDate, selectedTime]);
 
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
+  const [isLoadingDates, setIsLoadingDates] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!proId || authLoading || !isAuthenticated) return;
+      if (authLoading || !isAuthenticated) return;
+      if (!proId) {
+        // Lien/deep link cassé (proId manquant) — sans ce guard, isLoading
+        // restait bloqué à `true` indéfiniment (spinner "Chargement..." sans
+        // issue, obligeant à force-quitter l'app).
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       try {
         const [proRes, prestRes] = await Promise.all([
@@ -228,6 +262,7 @@ export default function BookingScreen() {
   useEffect(() => {
     const fetchDates = async () => {
       if (!proId || step !== 2) return;
+      setIsLoadingDates(true);
       try {
         const year = currentMonth.getFullYear();
         const month = String(currentMonth.getMonth() + 1).padStart(2, "0");
@@ -240,6 +275,8 @@ export default function BookingScreen() {
         }
       } catch {
         setAvailableDates(new Set());
+      } finally {
+        setIsLoadingDates(false);
       }
     };
     void fetchDates();
@@ -318,45 +355,53 @@ export default function BookingScreen() {
     setBookingError(null);
     setIsSubmitting(true);
     try {
-      const selectedSlot = availableSlots.find((s) => s.time === selectedTime);
-      const [h, m] = selectedTime.split(":").map(Number);
-      const startDT = new Date(selectedDate);
-      startDT.setHours(h, m, 0, 0);
+      let reservationId = pendingReservationId;
+      let depositPct = depositPercentage;
 
-      const resaResult = await stripePaymentsApi.createReservation({
-        pro_id: Number(proId),
-        prestation_id: selectedPrestation,
-        start_datetime: startDT.toISOString(),
-        end_datetime: calculateEndDateTime(
-          selectedDate,
-          selectedTime,
-          selectedPrestationData.duration_minutes
-        ).toISOString(),
-        price: selectedPrestationData.price,
-        slot_id: selectedSlot?.id,
-        payment_method: paymentMethod ?? "on_site",
-      });
+      if (reservationId == null) {
+        const selectedSlot = availableSlots.find((s) => s.time === selectedTime);
+        const [h, m] = selectedTime.split(":").map(Number);
+        const startDT = new Date(selectedDate);
+        startDT.setHours(h, m, 0, 0);
 
-      if (!resaResult.success || !resaResult.data) {
-        throw new Error((resaResult as { message?: string }).message || "Erreur lors de la réservation");
+        const resaResult = await stripePaymentsApi.createReservation({
+          pro_id: Number(proId),
+          prestation_id: selectedPrestation,
+          start_datetime: startDT.toISOString(),
+          end_datetime: calculateEndDateTime(
+            selectedDate,
+            selectedTime,
+            selectedPrestationData.duration_minutes
+          ).toISOString(),
+          price: selectedPrestationData.price,
+          slot_id: selectedSlot?.id,
+          payment_method: paymentMethod ?? "on_site",
+        });
+
+        if (!resaResult.success || !resaResult.data) {
+          throw new Error((resaResult as { message?: string }).message || "Erreur lors de la réservation");
+        }
+
+        const resaData = resaResult.data as {
+          id: number;
+          deposit_percentage: number;
+          deposit_amount: number;
+        };
+        reservationId = resaData.id;
+        depositPct = resaData.deposit_percentage;
+        setPendingReservationId(resaData.id);
+        setDepositPercentage(resaData.deposit_percentage);
+        setDepositAmount(resaData.deposit_amount);
       }
-
-      const resaData = resaResult.data as {
-        id: number;
-        deposit_percentage: number;
-        deposit_amount: number;
-      };
-      setDepositPercentage(resaData.deposit_percentage);
-      setDepositAmount(resaData.deposit_amount);
 
       if (paymentMethod === "on_site") {
         setStep(5);
         return;
       }
 
-      const paymentType = resaData.deposit_percentage === 100 ? "full" : "deposit";
+      const paymentType = depositPct === 100 ? "full" : "deposit";
       const intentResult = await stripePaymentsApi.createPaymentIntent({
-        reservation_id: resaData.id,
+        reservation_id: reservationId,
         type: paymentType,
       });
 
@@ -450,6 +495,7 @@ export default function BookingScreen() {
               setTimeout(() => setStep(3), 120);
             }}
             availableDates={availableDates}
+            isLoadingDates={isLoadingDates}
             availableSlots={availableSlots}
             isLoadingSlots={isLoadingSlots}
             onMonthChange={setCurrentMonth}
@@ -481,6 +527,7 @@ export default function BookingScreen() {
               const formattedDate = selectedDate?.toLocaleDateString("fr-FR", {
                 weekday: "short", day: "numeric", month: "long",
               });
+              showTransition();
               router.replace({
                 pathname: "/booking/confirmation",
                 params: {
@@ -491,6 +538,7 @@ export default function BookingScreen() {
                   amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
                 },
               } as Parameters<typeof router.replace>[0]);
+              hideTransition();
             }}
             onError={(msg) => {
               const readable = msg.toLowerCase().includes("declined") || msg.toLowerCase().includes("refusé")
@@ -569,7 +617,7 @@ export default function BookingScreen() {
               </View>
 
               <Pressable
-                onPress={() => router.replace("/my-bookings")}
+                onPress={() => router.replace("/(client)/bookings")}
                 style={{ width: "100%" }}
               >
                 <LinearGradient
@@ -606,7 +654,7 @@ export default function BookingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
-        {step < 4 && (
+        {step < 5 && (
           <View style={{ paddingTop: 0, paddingBottom: 16 }}>
             <AnimatedIconButton
               onPress={handleBack}

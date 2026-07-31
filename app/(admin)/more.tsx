@@ -21,10 +21,11 @@ const A_BG     = ADMIN.bg;
 const A_BORDER = ADMIN.border;
 
 const TOOLS = [
+  { key: "validation", label: "Validation pros", sub: "Comptes en attente", symbol: "checkmark.seal.fill",              color: Colors.admin,   route: "/(admin)/pro-validation" },
+  { key: "reviews",   label: "Avis",      sub: "Modération",           symbol: "text.bubble.fill",                      color: Colors.destructive, route: "/(admin-tools)/reviews" },
   { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  symbol: "chart.bar.fill",                        color: Colors.pro,     route: "/(admin-tools)/analytics" },
   { key: "logs",      label: "Logs",      sub: "Événements système",   symbol: "waveform",                              color: Colors.info,    route: "/(admin-tools)/logs" },
   { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         symbol: "bell.fill",                             color: Colors.success, route: "/(admin-tools)/notifications" },
-  { key: "coupons",   label: "Coupons",   sub: "Codes promo",          symbol: "tag.fill",                              color: Colors.warning, route: "/(admin-tools)/coupons" },
 ];
 
 const INFO_ROWS = [
@@ -172,7 +173,7 @@ export default function AdminMoreScreen() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}
       >
@@ -393,7 +394,7 @@ export default function AdminMoreScreen() {
           <Pressable
             onPress={() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-              logout();
+              void logout().then(() => router.replace("/(auth)/login"));
             }}
             onPressIn={() =>
               Animated.spring(logoutScale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }).start()

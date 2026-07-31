@@ -44,7 +44,15 @@ export default function ResetPasswordScreen() {
     }
     setIsLoading(true);
     try {
-      await authApi.resetPassword({ token: token ?? "", password });
+      // apiCall() ne rejette jamais sa promesse — sans vérifier res.success,
+      // un lien invalide/expiré affichait quand même "mot de passe mis à
+      // jour", laissant croire à l'utilisateur que son mot de passe avait
+      // changé alors que rien ne s'était passé côté serveur.
+      const res = await authApi.resetPassword({ token: token ?? "", password });
+      if (!res.success) {
+        setError(res.error ?? "Lien invalide ou expiré. Demande un nouveau lien.");
+        return;
+      }
       setSuccess(true);
       setTimeout(() => router.replace("/(auth)/login"), 1500);
     } catch {

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { Colors } from "@/constants/colors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useAppTransition } from "@/contexts/TransitionContext";
 
 // ── Constants (mirrored from web) ──────────────────────────────────────────
 const VALIDATION = {
@@ -209,10 +210,16 @@ function RegisterSuccess({ onPress }: { onPress: () => void }) {
 export default function RegisterScreen() {
   const router = useRouter();
   const { signup, isLoading } = useAuth();
+  const { showTransition, hideTransition } = useAppTransition();
+  // app/(auth)/onboarding.tsx renvoie ici avec ?role=pro|client selon le choix
+  // fait sur l'écran précédent — sans le lire, ce choix était silencieusement
+  // ignoré et l'utilisateur devait resélectionner son rôle à l'étape 1.
+  const { role: roleParam } = useLocalSearchParams<{ role?: string }>();
+  const initialRole: "client" | "pro" = roleParam === "pro" ? "pro" : "client";
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
-    role: "client",
+    role: initialRole,
     firstName: "",
     lastName: "",
     phone: "",
@@ -364,8 +371,10 @@ export default function RegisterScreen() {
         <RegisterSuccess
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            showTransition();
             if (formData.role === "pro") router.replace("/(pro)/dashboard" as any);
             else router.replace("/(client)" as any);
+            hideTransition();
           }}
         />
       );

@@ -16,11 +16,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/icon-appstore.png",
   scheme: "blyss",
 
-  splash: {
-    image: "./assets/splash.png",
-    resizeMode: "contain",
-    backgroundColor: "#FFF0F5",
-  },
+  // La config splash "moderne" vit dans le plugin expo-splash-screen (plugins[]
+  // ci-dessous), pas ici — la clé top-level `splash` est dépréciée depuis le SDK
+  // Expo 51 et génère un splash "legacy" (cf. SplashScreenLegacy dans le projet
+  // iOS généré) qui n'utilise pas l'API SplashScreen moderne d'Android 12+.
 
   assetBundlePatterns: ["**/*"],
 
@@ -46,12 +45,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Blyss utilise Face ID pour vous connecter rapidement et en sécurité.",
       NSLocationWhenInUseUsageDescription:
         "Blyss utilise votre localisation pour trouver des spécialistes près de vous.",
-      NSContactsUsageDescription:
-        "Blyss peut accéder à vos contacts pour retrouver des praticiens que vous connaissez.",
       NSUserNotificationsUsageDescription:
         "Blyss vous envoie des rappels pour vos rendez-vous.",
-      NSUserTrackingUsageDescription:
-        "Blyss utilise cet identifiant pour personnaliser ton expérience et améliorer nos services.",
+      // NSContactsUsageDescription et NSUserTrackingUsageDescription retirées :
+      // aucune des deux API correspondantes (expo-contacts, ATT) n'est utilisée
+      // dans le code — une permission déclarée sans usage réel est un motif de
+      // rejet App Store (Guideline 5.1.1) et une confusion inutile pour l'utilisateur
+      // au moment de la demande d'accès.
       CFBundleURLTypes: [
         {
           CFBundleURLName: "blyss.app",
@@ -101,8 +101,35 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     "expo-router",
     "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        // Image statique du "B" affichée par l'OS avant que le JS ne démarre.
+        // Le logo animé (dessin → remplissage) ne peut vivre qu'en JS — c'est
+        // ce même B qui prend le relais dès que le bundle est prêt (voir
+        // app/_layout.tsx → LaunchSplash). La couleur DOIT matcher
+        // constants/splash.ts pour éviter un flash au hand-off.
+        image: "./assets/splash.png",
+        imageWidth: 180,
+        resizeMode: "contain",
+        backgroundColor: "#FFF0F5",
+      },
+    ],
     "expo-secure-store",
-    "expo-location",
+    [
+      "expo-location",
+      {
+        // Seul le "when in use" est réellement utilisé (recherche de pros à
+        // proximité) — désactiver explicitement le background empêche le plugin
+        // d'injecter les clés NSLocationAlways* avec un texte générique non
+        // traduit dans l'Info.plist, ce qui expose sinon une permission plus
+        // large que ce que l'app fait réellement.
+        locationWhenInUsePermission:
+          "Blyss utilise votre localisation pour trouver des spécialistes près de vous.",
+        isIosBackgroundLocationEnabled: false,
+        isAndroidBackgroundLocationEnabled: false,
+      },
+    ],
     "expo-apple-authentication",
     [
       "expo-local-authentication",
@@ -126,6 +153,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           "Blyss accède à votre galerie pour votre photo de profil.",
         cameraPermission:
           "Blyss utilise la caméra pour modifier votre photo de profil.",
+        // L'app ne capture jamais de vidéo — désactive l'injection de
+        // NSMicrophoneUsageDescription (sinon ajoutée avec un texte générique
+        // non utilisé, incohérence relevée à l'audit sécurité).
+        microphonePermission: false,
       },
     ],
     [

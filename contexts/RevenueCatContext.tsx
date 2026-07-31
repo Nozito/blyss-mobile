@@ -27,7 +27,7 @@ interface RevenueCatContextType {
   /** @deprecated Utiliser activePlan */
   activeEntitlement: string | null;
   purchase: (pkg: PurchasesPackage) => Promise<{ success: boolean; paymentId?: string; error?: string }>;
-  restorePurchases: () => Promise<void>;
+  restorePurchases: () => Promise<{ success: boolean; restored: boolean; error?: string }>;
   refreshCustomerInfo: () => Promise<void>;
   refreshActivePlan: () => Promise<void>;
 }
@@ -69,8 +69,14 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const apiKey = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
-    // Guard étendu : ignore les placeholders pour éviter de configurer RC avec une clé invalide
-    if (!apiKey || apiKey.includes("_KEY") || apiKey === "your_key_here") {
+    // Les clés RevenueCat réelles ont un préfixe connu suivi d'une chaîne alphanumérique
+    // longue, sans ponctuation. Se fier à une liste de mots-clés de placeholder
+    // (ex: "your_key_here") est fragile — un placeholder au format "goog_..." (points de
+    // suspension littéraux, cf. .env.example) passait à travers l'ancien guard et
+    // déclenchait Purchases.configure() avec une clé invalide, cassant silencieusement
+    // les achats sur Android.
+    const isValidRcKey = /^(appl|goog|amzn)_[A-Za-z0-9]{10,}$/.test(apiKey);
+    if (!isValidRcKey) {
       setRcReady(true);
       return;
     }
@@ -164,7 +170,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rcReady, isAuthenticated, customerInfo]);
 
-  const isReady = rcReady && backendPlanChecked;
+  // backendPlanChecked ne redevient jamais true tant que l'utilisateur est
+  // déconnecté (l'effet qui le fait dépend justement de isAuthenticated) — sans
+  // isAuthenticated dans cette condition, isReady restait bloqué à false après
+  // un logout, ce qui coinçait app/(pro)/_layout.tsx sur son écran de chargement
+  // au lieu de rediriger vers /welcome (aucune vérification de plan n'est
+  // pertinente pour un utilisateur déconnecté, donc rien à attendre ici).
+  const isReady = rcReady && (backendPlanChecked || !isAuthenticated);
 
   const rcActivePlan = getActivePlanFromRC(customerInfo);
   const activePlan: RCPlan | null = rcActivePlan ?? backendPlan;
@@ -187,7 +199,12 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     try {
       const info = await Purchases.restorePurchases();
       setCustomerInfo(info);
-    } catch {}
+      const restored = getActivePlanFromRC(info) !== null;
+      return { success: true, restored };
+    } catch (e: unknown) {
+      const err = e as { message?: string } | undefined;
+      return { success: false, restored: false, error: err?.message ?? "restore_failed" };
+    }
   }, []);
 
   const refreshCustomerInfo = useCallback(async () => {

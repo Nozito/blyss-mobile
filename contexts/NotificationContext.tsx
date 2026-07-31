@@ -187,6 +187,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const reservationId = data?.reservation_id;
       const notifType = data?.type as string | undefined;
 
+      // Marque la notif correspondante comme lue (local + serveur) — sans ça, une
+      // notification ouverte depuis le lock screen laissait le badge de non-lues
+      // bloqué, car seul le tap depuis la liste in-app appelait markAsRead.
+      setNotifications((prev) => {
+        // Filtre aussi par type : deux notifs non lues peuvent partager le même
+        // reservation_id ("confirmée" + "rappel 24h avant") — sans ce filtre,
+        // .find() marquait la mauvaise comme lue (la première du tableau).
+        const match = prev.find(
+          (n) =>
+            !n.is_read &&
+            reservationId != null &&
+            n.data?.reservation_id === reservationId &&
+            (notifType == null || n.type === notifType)
+        );
+        if (!match) return prev;
+        notificationsApi.markAsRead(match.id).catch(() => {});
+        return prev.map((n) => (n.id === match.id ? { ...n, is_read: true } : n));
+      });
+
       if (user?.role === "client") {
         if (reservationId) {
           router.push(`/booking/${String(reservationId)}` as never);

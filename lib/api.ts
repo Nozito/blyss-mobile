@@ -33,6 +33,11 @@ export interface User {
   bankaccountname?: string | null;
   IBAN?: string | null;
   accept_online_payment?: boolean;
+  geo_precision?: "city" | "address" | null;
+  address_line?: string | null;
+  postal_code?: string | null;
+  service_radius_km?: number | null;
+  service_area_label?: string | null;
 }
 
 export interface LoginCredentials {
@@ -473,9 +478,6 @@ export const favoritesApi = {
 
   remove: (proId: number): Promise<ApiResponse<{ isFavorite: boolean }>> =>
     apiCall(`/api/favorites/${proId}`, { method: "DELETE" }),
-
-  check: (proId: number): Promise<ApiResponse<{ isFavorite: boolean; favoriteId: number | null }>> =>
-    apiCall(`/api/favorites/check/${proId}`),
 };
 
 // ── Notifications API ─────────────────────────────────────────────────────────
@@ -830,15 +832,22 @@ export const paymentMethodsApi = {
     apiCall(`/api/client/payment-methods/${id}`, { method: "DELETE" }),
   setDefault: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/payment-methods/${id}/default`, { method: "PATCH" }),
+  // apiCall() ne rejette jamais sa promesse — ces deux fonctions lèvent
+  // explicitement en cas d'échec pour que le try/catch de payments.tsx
+  // (handleAddCard) réagisse réellement, au lieu de fermer la modale d'ajout
+  // de carte comme si l'enregistrement avait réussi alors qu'il avait échoué
+  // côté serveur.
   createSetupIntent: async (): Promise<{ clientSecret: string }> => {
     const res = await apiCall<{ clientSecret: string }>("/api/client/payment-methods/setup-intent", { method: "POST" });
-    return res.data as { clientSecret: string };
+    if (!res.success || !res.data) throw new Error(res.error ?? "Impossible d'initialiser l'ajout de carte");
+    return res.data;
   },
   confirmSetup: async (paymentMethodId: string): Promise<void> => {
-    await apiCall("/api/client/payment-methods/confirm", {
+    const res = await apiCall("/api/client/payment-methods/confirm", {
       method: "POST",
       body: JSON.stringify({ paymentMethodId }),
     });
+    if (!res.success) throw new Error(res.error ?? "Impossible d'enregistrer la carte");
   },
 };
 
@@ -1021,7 +1030,9 @@ export const adminApi = {
   refundPayment: (id: number): Promise<ApiResponse<{ id: number; status: string }>> =>
     apiCall(`/api/admin/payments/${id}/refund`, { method: "POST" }),
 
-  // Coupons
+  // Coupons — hors périmètre V1 (écran admin retiré, aucune consommation côté
+  // client). Bindings laissés inertes pour ne pas casser le backend si ces
+  // routes existent encore côté API ; non appelés nulle part dans l'app.
   getCoupons: (): Promise<ApiResponse<AdminCoupon[]>> => apiCall("/api/admin/coupons"),
   createCoupon: (data: { code: string; discount_type: "percent" | "fixed"; discount_value: number; applicable_plans: string[]; expires_at?: string; max_uses?: number }): Promise<ApiResponse<{ id: number }>> =>
     apiCall("/api/admin/coupons", { method: "POST", body: JSON.stringify(data) }),

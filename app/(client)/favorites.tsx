@@ -18,7 +18,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SpecialistCard, type Specialist } from "@/components/screens/client/specialists/SpecialistCard";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 
 // Module-level style constants — never recreated
 const CATEGORY_LIST_STYLE = { paddingBottom: 4, paddingHorizontal: 20, paddingTop: 8 } as const;
@@ -42,51 +41,58 @@ export default function FavoritesScreen() {
   }, []);
 
   // ── Empty state animations ────────────────────────────────────────────────
-  const emptyScaleAnim = useRef(new Animated.Value(0)).current;
-  const emptyFade1  = useRef(new Animated.Value(0)).current;
-  const emptySlide1 = useRef(new Animated.Value(16)).current;
-  const emptyFade2  = useRef(new Animated.Value(0)).current;
-  const emptySlide2 = useRef(new Animated.Value(16)).current;
-  const emptyFade3  = useRef(new Animated.Value(0)).current;
-  const emptySlide3 = useRef(new Animated.Value(16)).current;
+  // Valeurs finales par défaut (visibles) : sur cet écran persisté par la tab
+  // bar, l'effet ci-dessous peut se redéclencher plusieurs fois de suite (va-et-
+  // vient favorites.length 0→1→0 pendant des mutations rapprochées) et repartir
+  // d'un `setValue(0)` sans jamais terminer son animation — le contenu restait
+  // alors invisible en permanence. Partir déjà visible élimine ce risque ; le
+  // useEffect ne fait plus que rejouer un effet ponctuel, jamais bloquant.
+  const emptyScaleAnim = useRef(new Animated.Value(1)).current;
+  const emptyFade1  = useRef(new Animated.Value(1)).current;
+  const emptySlide1 = useRef(new Animated.Value(0)).current;
+  const emptyFade2  = useRef(new Animated.Value(1)).current;
+  const emptySlide2 = useRef(new Animated.Value(0)).current;
+  const emptyFade3  = useRef(new Animated.Value(1)).current;
+  const emptySlide3 = useRef(new Animated.Value(0)).current;
+  const hasPlayedEmptyAnim = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && favorites.length === 0) {
-      emptyScaleAnim.setValue(0);
-      emptyFade1.setValue(0);  emptySlide1.setValue(16);
-      emptyFade2.setValue(0);  emptySlide2.setValue(16);
-      emptyFade3.setValue(0);  emptySlide3.setValue(16);
-      Animated.sequence([
-        Animated.delay(100),
-        Animated.spring(emptyScaleAnim, { toValue: 1, useNativeDriver: true, tension: 60, friction: 7 }),
-      ]).start();
-      Animated.sequence([
-        Animated.delay(200),
-        Animated.parallel([
-          Animated.timing(emptyFade1,  { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(emptySlide1, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]),
-      ]).start();
-      Animated.sequence([
-        Animated.delay(280),
-        Animated.parallel([
-          Animated.timing(emptyFade2,  { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(emptySlide2, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]),
-      ]).start();
-      Animated.sequence([
-        Animated.delay(360),
-        Animated.parallel([
-          Animated.timing(emptyFade3,  { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(emptySlide3, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]),
-      ]).start();
-    }
+    if (isLoading || favorites.length !== 0 || hasPlayedEmptyAnim.current) return;
+    hasPlayedEmptyAnim.current = true;
+    emptyScaleAnim.setValue(0);
+    emptyFade1.setValue(0);  emptySlide1.setValue(16);
+    emptyFade2.setValue(0);  emptySlide2.setValue(16);
+    emptyFade3.setValue(0);  emptySlide3.setValue(16);
+    Animated.sequence([
+      Animated.delay(100),
+      Animated.spring(emptyScaleAnim, { toValue: 1, useNativeDriver: true, tension: 60, friction: 7 }),
+    ]).start();
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.parallel([
+        Animated.timing(emptyFade1,  { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(emptySlide1, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]),
+    ]).start();
+    Animated.sequence([
+      Animated.delay(280),
+      Animated.parallel([
+        Animated.timing(emptyFade2,  { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(emptySlide2, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]),
+    ]).start();
+    Animated.sequence([
+      Animated.delay(360),
+      Animated.parallel([
+        Animated.timing(emptyFade3,  { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(emptySlide3, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]),
+    ]).start();
   }, [isLoading, favorites.length]);
 
   // ── Stable content style (depends only on insets) ────────────────────────
   const contentStyle = useCallback(
-    () => ({ paddingBottom: insets.bottom + TAB_BOTTOM_PADDING, paddingHorizontal: 20, paddingTop: 8 }),
+    () => ({ paddingBottom: insets.bottom + 24, paddingHorizontal: 20, paddingTop: 8 }),
     [insets.bottom]
   );
 

@@ -8,6 +8,7 @@ import {
   Modal,
   StyleSheet,
   TextInput,
+  Alert,
 } from "react-native";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { safeBack } from "@/lib/navigation";
 
 const BRAND_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   visa:       "card-outline",
@@ -50,12 +52,19 @@ export default function PaymentsScreen() {
   const [addLoading, setAddLoading] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<SavedCard | null>(null);
 
   // ── Query ─────────────────────────────────────────────────────────────────
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError: listLoadError } = useQuery({
     queryKey: ["payment-methods"],
-    queryFn: () => paymentMethodsApi.getAll(),
+    queryFn: async () => {
+      const res = await paymentMethodsApi.getAll();
+      // apiCall() ne rejette jamais — sans ce throw, un échec réseau se
+      // confondait silencieusement avec "aucune carte enregistrée" (cards
+      // retombe sur [] dans les deux cas, react-query ne voyait jamais
+      // d'erreur pour distinguer les deux situations).
+      if (!res.success) throw new Error(res.error ?? "Impossible de charger tes cartes");
+      return res;
+    },
     staleTime: 30_000,
   });
 
@@ -63,7 +72,14 @@ export default function PaymentsScreen() {
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => paymentMethodsApi.delete(id),
+    // apiCall() ne rejette jamais — sans ce throw, un refus serveur (carte encore
+    // liée à un abonnement actif, etc.) était traité comme un succès : la carte
+    // disparaissait de l'écran jusqu'au refetch, sans jamais prévenir la cliente.
+    mutationFn: async (id: number) => {
+      const res = await paymentMethodsApi.delete(id);
+      if (!res.success) throw new Error(res.error ?? "Impossible de supprimer la carte");
+      return res;
+    },
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["payment-methods"] });
       const prev = qc.getQueryData(["payment-methods"]);
@@ -81,7 +97,11 @@ export default function PaymentsScreen() {
   });
 
   const setDefaultMutation = useMutation({
-    mutationFn: (id: number) => paymentMethodsApi.setDefault(id),
+    mutationFn: async (id: number) => {
+      const res = await paymentMethodsApi.setDefault(id);
+      if (!res.success) throw new Error(res.error ?? "Impossible de changer la carte par défaut");
+      return res;
+    },
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["payment-methods"] });
       const prev = qc.getQueryData(["payment-methods"]);
@@ -137,8 +157,17 @@ export default function PaymentsScreen() {
 
   const confirmDelete = useCallback((item: SavedCard) => {
     setListError(null);
-    setDeleteTarget(item);
-  }, []);
+    // Alert.alert natif plutôt qu'une modale custom — cohérence avec les
+    // autres confirmations destructives de l'app (pattern déjà utilisé ici).
+    Alert.alert(
+      "Supprimer la carte",
+      `Supprimer ${item.brand.toUpperCase()} •••• ${item.last4} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+      ]
+    );
+  }, [deleteMutation]);
 
   // ── Render carte ──────────────────────────────────────────────────────────
   const renderCard = useCallback(({ item }: { item: SavedCard }) => {
@@ -202,7 +231,7 @@ export default function PaymentsScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <AnimatedIconButton onPress={() => router.push("/(client)/(profile)")} style={styles.backBtn} accessibilityLabel="Retour">
+        <AnimatedIconButton onPress={() => safeBack(router)} style={styles.backBtn} accessibilityLabel="Retour">
           <Ionicons name="arrow-back" size={24} color={Colors.foreground} />
         </AnimatedIconButton>
         <Text style={styles.title}>Moyens de paiement</Text>
@@ -211,9 +240,9 @@ export default function PaymentsScreen() {
         </Pressable>
       </View>
 
-      {listError && (
+      {(listError || listLoadError) && (
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-          <ErrorMessage message={listError} />
+          <ErrorMessage message={listError ?? "Impossible de charger tes cartes. Tire vers le bas pour réessayer."} />
         </View>
       )}
 
@@ -250,39 +279,6 @@ export default function PaymentsScreen() {
         <Ionicons name="lock-closed" size={13} color={Colors.mutedForeground} />
         <Text style={styles.securityText}>Paiements sécurisés par Stripe · Données chiffrées TLS 1.3</Text>
       </View>
-
-      {/* Modal confirmation suppression */}
-      <Modal visible={!!deleteTarget} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: Colors.overlayDark, justifyContent: "flex-end", padding: 16 }}>
-          <View style={{ backgroundColor: Colors.white, borderRadius: 24, padding: 24, gap: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="trash-outline" size={20} color={Colors.destructiveText} />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Supprimer la carte</Text>
-            </View>
-            {deleteTarget && (
-              <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
-                {`Supprimer ${deleteTarget.brand.toUpperCase()} •••• ${deleteTarget.last4} ?`}
-              </Text>
-            )}
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Pressable
-                onPress={() => setDeleteTarget(null)}
-                style={{ flex: 1, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center", justifyContent: "center" }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => { if (deleteTarget) { deleteMutation.mutate(deleteTarget.id); setDeleteTarget(null); } }}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.destructiveText, alignItems: "center", justifyContent: "center" }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal ajout carte */}
       <Modal

@@ -11,8 +11,8 @@ import { proApi } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
-import { TAB_BOTTOM_PADDING } from "@/constants/layout";
 import { safeBack } from "@/lib/navigation";
+import { useToast } from "@/components/ui/Toast";
 
 type Service = {
   id: number;
@@ -158,6 +158,7 @@ export default function ServicesScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const showActionSheet = useActionSheet();
+  const { showToast } = useToast();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["pro-services"],
@@ -170,7 +171,14 @@ export default function ServicesScreen() {
     { id: number; active: boolean },
     { prev: unknown }
   >({
-    mutationFn: ({ id, active }) => proApi.updateService(id, { active }),
+    // apiCall() ne rejette jamais — sans ce throw, un échec métier ne
+    // déclenchait jamais le rollback ci-dessous et le switch restait affiché
+    // dans le mauvais état indéfiniment.
+    mutationFn: async ({ id, active }) => {
+      const res = await proApi.updateService(id, { active });
+      if (!res.success) throw new Error(res.error ?? "Action impossible");
+      return res;
+    },
     onMutate: async ({ id, active }) => {
       await qc.cancelQueries({ queryKey: ["pro-services"] });
       const prev = qc.getQueryData(["pro-services"]);
@@ -182,17 +190,28 @@ export default function ServicesScreen() {
     },
     onError: (_err, _vars, ctx) => {
       qc.setQueryData(["pro-services"], ctx?.prev);
+      showToast("Impossible de mettre à jour la prestation", "error");
     },
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (id: number) => proApi.duplicateService(id),
+    mutationFn: async (id: number) => {
+      const res = await proApi.duplicateService(id);
+      if (!res.success) throw new Error(res.error ?? "Duplication impossible");
+      return res;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pro-services"] }),
+    onError: () => showToast("Impossible de dupliquer la prestation", "error"),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => proApi.deleteService(id),
+    mutationFn: async (id: number) => {
+      const res = await proApi.deleteService(id);
+      if (!res.success) throw new Error(res.error ?? "Suppression impossible");
+      return res;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pro-services"] }),
+    onError: () => showToast("Impossible de supprimer la prestation", "error"),
   });
 
   const services = (data?.data as Service[] | undefined) ?? [];
@@ -291,7 +310,7 @@ export default function ServicesScreen() {
         <FlatList
           data={services}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BOTTOM_PADDING }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }}
           showsVerticalScrollIndicator={false}
           refreshing={false}
           onRefresh={refetch}

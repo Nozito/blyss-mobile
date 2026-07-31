@@ -31,9 +31,9 @@ const faqs: FAQItem[] = [
   { category: "reservations", question: "Comment laisser un avis après une prestation ?", answer: "Une fois le rendez-vous terminé, tu recevras une notification pour noter l'experte et laisser un commentaire visible sur son profil." },
   { category: "paiement", question: "Quels sont les moyens de paiement acceptés ?", answer: "Selon les expertes, tu peux payer via Blyss (carte bancaire, Apple Pay, etc.) ou sur place. Les options sont indiquées lors de la réservation." },
   { category: "paiement", question: "Quand suis-je débitée ?", answer: "Le débit peut être effectué à la confirmation ou à la fin de la prestation, en fonction des paramètres de l'experte." },
-  { category: "paiement", question: "Comment obtenir une facture ?", answer: "Tu peux télécharger ta facture depuis le détail de la réservation, une fois la prestation effectuée." },
+  { category: "paiement", question: "Comment obtenir une facture ?", answer: "Écris-nous à contact@blyssapp.fr avec la date de ta prestation, on te l'envoie par email." },
   { category: "divers", question: "Comment contacter une experte avant de réserver ?", answer: "Certaines expertes permettent l'échange de messages avant réservation. Un bouton « Contacter » apparaît sur leur profil." },
-  { category: "divers", question: "Que faire si la pro ne se présente pas ?", answer: "Signale le rendez-vous depuis l'écran de détail. L'équipe Blyss reviendra vers toi pour t'aider." },
+  { category: "divers", question: "Que faire si la pro ne se présente pas ?", answer: "Contacte l'équipe Blyss à contact@blyssapp.fr avec le nom de la pro et l'horaire du rendez-vous, on t'aide à résoudre ça rapidement." },
   { category: "divers", question: "Mes données sont-elles protégées ?", answer: "Tes données personnelles et tes informations de paiement sont chiffrées et traitées conformément à la réglementation." },
 ];
 

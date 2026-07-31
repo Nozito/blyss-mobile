@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { useAppTransition } from "@/contexts/TransitionContext";
 
 const STORAGE_KEY = "pro_onboarding_done";
 
@@ -50,6 +51,7 @@ export default function ProOnboardingScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [ready, setReady] = useState(false);
   const { refreshActivePlan } = useRevenueCat();
+  const { showTransition, hideTransition } = useAppTransition();
 
   // Si déjà vu → skip direct vers le dashboard
   useEffect(() => {
@@ -73,14 +75,18 @@ export default function ProOnboardingScreen() {
       await AsyncStorage.setItem(STORAGE_KEY, "true");
       // Ensure activePlan is up-to-date before entering the pro tabs
       await refreshActivePlan();
+      showTransition();
       router.replace("/(pro)/dashboard");
+      hideTransition();
     }
   };
 
   const handleSkip = async () => {
     await AsyncStorage.setItem(STORAGE_KEY, "true");
     await refreshActivePlan();
+    showTransition();
     router.replace("/(pro)/dashboard");
+    hideTransition();
   };
 
   if (!ready) return null;

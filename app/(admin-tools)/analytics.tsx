@@ -291,7 +291,7 @@ export default function AdminAnalyticsScreen() {
       style={{ flex: 1, backgroundColor: A_BG }}
       contentContainerStyle={{
         paddingTop: insets.top,
-        paddingBottom: insets.bottom + 100,
+        paddingBottom: insets.bottom + 24,
         paddingHorizontal: 16,
       }}
       showsVerticalScrollIndicator={false}

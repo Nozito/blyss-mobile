@@ -9,19 +9,18 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import {
   specialistsApi,
   reviewsApi,
-  favoritesApi,
   instagramApi,
   clientApi,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFavorites } from "@/hooks/useFavorites";
 import { ReviewModal } from "@/components/ui/ReviewModal";
 import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
@@ -107,27 +106,13 @@ export default function SpecialistProfileScreen() {
     enabled: Boolean(id),
   });
 
-  const { data: favData, refetch: refetchFav } = useQuery({
-    queryKey: ["fav-check", id],
-    queryFn: () => favoritesApi.check(Number(id)),
-    enabled: Boolean(id),
-  });
+  const { isFavorited: isFavoritedFn, toggle: toggleFavorite } = useFavorites();
 
   const { data: myBookingsData } = useQuery({
     queryKey: ["client-bookings"],
     queryFn: () => clientApi.getMyBookings(),
     enabled: Boolean(user),
     staleTime: 60_000,
-  });
-
-  const addFavMutation = useMutation({
-    mutationFn: () => favoritesApi.add(Number(id)),
-    onSuccess: () => refetchFav(),
-  });
-
-  const removeFavMutation = useMutation({
-    mutationFn: () => favoritesApi.remove(Number(id)),
-    onSuccess: () => refetchFav(),
   });
 
   const pro = data?.data as Record<string, unknown> | undefined;
@@ -145,7 +130,7 @@ export default function SpecialistProfileScreen() {
     (igData?.data as Record<string, unknown> | undefined)?.photos ??
     (igData as Record<string, unknown> | undefined)?.photos
   ) as Array<Record<string, unknown>> | undefined;
-  const isFavorited = favData?.data?.isFavorite ?? false;
+  const isFavorited = isFavoritedFn(Number(id));
 
   const myBookings = Array.isArray(myBookingsData?.data)
     ? (myBookingsData.data as Array<Record<string, unknown>>)
@@ -155,18 +140,11 @@ export default function SpecialistProfileScreen() {
   );
 
   const toggleFav = () => {
-    Haptics.impactAsync(
-      isFavorited ? Haptics.ImpactFeedbackStyle.Rigid : Haptics.ImpactFeedbackStyle.Light
-    ).catch(() => {});
     Animated.sequence([
       Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 80, bounciness: 10 }),
       Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 0 }),
     ]).start();
-    if (isFavorited) {
-      removeFavMutation.mutate();
-    } else {
-      addFavMutation.mutate();
-    }
+    toggleFavorite(Number(id));
   };
 
   if (isLoading) {
@@ -188,21 +166,27 @@ export default function SpecialistProfileScreen() {
     );
   }
 
-  // Real API shape: { business_name, specialty, city, rating, reviews_count,
-  //   profile_image_url, cover_image_url, bio, user: { first_name, last_name } }
-  const proUser = (pro?.user as Record<string, unknown> | null) ?? {};
-  const firstName = String(proUser?.first_name ?? "la pro");
-  const lastName = String(proUser?.last_name ?? "");
+  // Vrai format API (aligné avec specialists.tsx) : { activity_name, city,
+  // rating, reviews_count, profile_image_url, cover_image_url, bio,
+  // first_name, last_name } — les champs "business_name" et "user.first_name"
+  // n'existent pas dans la réponse réelle, d'où le fallback "Profil" qui
+  // s'affichait systématiquement à la place du nom de la pro.
+  const firstName = String((pro?.first_name as string | null) ?? "la pro");
+  const lastName = String((pro?.last_name as string | null) ?? "");
   const displayName = String(
-    (pro?.business_name as string | null) ??
+    (pro?.activity_name as string | null) ??
     (firstName !== "la pro" ? `${firstName} ${lastName}`.trim() : null) ??
     "Profil"
   );
-  const proAvgRating: number | null = (pro?.rating as number | null) ?? null;
+  const proAvgRating: number | null = pro?.avg_rating != null ? Number(pro.avg_rating) : null;
   const proCity = String((pro?.city as string | null) ?? "");
+  const addressVisible = Boolean(pro?.address_visible);
+  const proAddressLine = (pro?.address_line as string | null) ?? null;
+  const proServiceRadiusKm = (pro?.service_radius_km as number | null) ?? null;
+  const proServiceAreaLabel = (pro?.service_area_label as string | null) ?? null;
   const specialty = (pro?.specialty as string | null) ?? null;
-  const avatarUrl = photoUrl((pro?.profile_image_url as string | null));
-  const bannerUrl = photoUrl((pro?.cover_image_url as string | null));
+  const avatarUrl = photoUrl((pro?.profile_photo as string | null));
+  const bannerUrl = photoUrl((pro?.banner_photo as string | null));
   const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
   const services: unknown[] = Array.isArray(servicesData?.data)
     ? (servicesData.data as unknown[])
@@ -211,6 +195,12 @@ export default function SpecialistProfileScreen() {
   const reviewsCount =
     (reviewsMeta?.total as number | undefined) ??
     (reviews.length > 0 ? reviews.length : Number(pro?.reviews_count ?? 0));
+
+  const minPrice = services.reduce<number | null>((min, s) => {
+    const price = Number((s as Record<string, unknown>).price ?? (s as Record<string, unknown>).prixBase ?? NaN);
+    if (Number.isNaN(price)) return min;
+    return min == null ? price : Math.min(min, price);
+  }, null);
 
   return (
     <ScrollView
@@ -350,19 +340,53 @@ export default function SpecialistProfileScreen() {
           </View>
         )}
 
-        {/* Specialty chip */}
-        {specialty && (
-          <View style={{ marginTop: 10 }}>
-            <View
-              style={{
-                backgroundColor: withAlpha(Colors.primary, 0.08),
-                borderRadius: 999,
-                paddingHorizontal: 14,
-                paddingVertical: 5,
-              }}
-            >
-              <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.primary }}>{specialty}</Text>
-            </View>
+        {/* Address privacy notice — the exact address only appears once a booking
+            with this pro is confirmed (see app/booking/[id].tsx) */}
+        {addressVisible && proAddressLine ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+            <Ionicons name="pin-outline" size={13} color={Colors.mutedForeground} />
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{proAddressLine}</Text>
+          </View>
+        ) : !addressVisible ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+            <Ionicons name="lock-closed-outline" size={12} color={Colors.mutedForeground} />
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+              Adresse non affichée publiquement
+              {proServiceRadiusKm != null ? ` — rayon d'intervention ${proServiceRadiusKm} km` : ""}
+              {proServiceAreaLabel ? ` (${proServiceAreaLabel})` : ""}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Specialty chip + starting price */}
+        {(specialty || minPrice != null) && (
+          <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
+            {specialty && (
+              <View
+                style={{
+                  backgroundColor: withAlpha(Colors.primary, 0.08),
+                  borderRadius: 999,
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.primary }}>{specialty}</Text>
+              </View>
+            )}
+            {minPrice != null && (
+              <View
+                style={{
+                  backgroundColor: withAlpha(Colors.foreground, 0.06),
+                  borderRadius: 999,
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
+                  Dès {minPrice.toFixed(0)}€
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </View>

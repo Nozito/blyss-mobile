@@ -30,6 +30,7 @@ interface Props {
   selectedTime: string | null;
   onSelectTime: (time: string) => void;
   availableDates: Set<string>;
+  isLoadingDates: boolean;
   availableSlots: Slot[];
   isLoadingSlots: boolean;
   onMonthChange: (date: Date) => void;
@@ -246,6 +247,7 @@ export function DateTimeSelector({
   selectedTime,
   onSelectTime,
   availableDates,
+  isLoadingDates,
   availableSlots,
   isLoadingSlots,
   onMonthChange,
@@ -275,6 +277,20 @@ export function DateTimeSelector({
             availableDates={availableDates}
             onMonthChange={onMonthChange}
           />
+          {/* Sans ce message, un mois sans aucun créneau publié affichait un
+              calendrier entièrement grisé sans aucune explication — la
+              cliente ne pouvait rien sélectionner et ne savait pas pourquoi. */}
+          {!isLoadingDates && availableDates.size === 0 && (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 10,
+              backgroundColor: Colors.cream, borderRadius: 14, padding: 14,
+            }}>
+              <Ionicons name="calendar-clear-outline" size={18} color={Colors.mutedForeground} />
+              <Text style={{ flex: 1, fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+                Aucun créneau publié ce mois-ci pour cette pro. Essaie un autre mois ou reviens un peu plus tard.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Time slots */}
