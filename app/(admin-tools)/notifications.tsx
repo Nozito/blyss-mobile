@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, TextInput,
-  ActivityIndicator, Platform, Image,
+  ActivityIndicator, Image,
 } from "react-native";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { SymbolView } from "expo-symbols";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { adminApi, AdminUser } from "@/lib/api";
@@ -17,14 +16,15 @@ import { ADMIN } from "@/constants/adminTheme";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 const BG     = ADMIN.bg;
-const CARD   = "rgba(255,255,255,0.05)";
+const CARD   = ADMIN.surface;
 const BORDER = ADMIN.border;
-const TEXT1  = Colors.white;
-const TEXT2  = "rgba(255,255,255,0.5)";
-const TEXT3  = "rgba(255,255,255,0.28)";
-const MUTED  = "rgba(255,255,255,0.07)";
+const TEXT1  = ADMIN.text;
+const TEXT2  = ADMIN.textSub;
+const TEXT3  = ADMIN.textMuted;
+const MUTED  = ADMIN.surfaceHover;
 
 type Target = "all" | "pros" | "clients" | "user_id";
 
@@ -61,7 +61,7 @@ function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={{ width: 46, height: 46 }} resizeMode="cover" />
         ) : (
-          <Text style={{ fontSize: 15, fontWeight: "800", color: roleColor }}>{initials}</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: roleColor }}>{initials}</Text>
         )}
       </View>
 
@@ -208,6 +208,7 @@ export default function AdminNotificationsScreen() {
   const [body, setBody] = useState("");
   const [sentCount, setSentCount]   = useState<number | null>(null);
   const [sendError, setSendError]   = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const sendMut = useMutation({
     mutationFn: () =>
@@ -224,16 +225,24 @@ export default function AdminNotificationsScreen() {
       setSendError(null);
       setTitle("");
       setBody("");
+      setShowConfirm(false);
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
     },
     onError: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setShowConfirm(false);
       setSendError("Impossible d'envoyer la notification.");
     },
   });
 
   const canSend = title.trim().length > 0 && body.trim().length > 0 &&
     (target !== "user_id" || selectedUser !== null);
+
+  const targetLabel =
+    target === "all"     ? "tous les utilisateurs" :
+    target === "pros"    ? "tous les pros" :
+    target === "clients" ? "tous les clients" :
+    selectedUser         ? `${selectedUser.first_name} ${selectedUser.last_name}` : "cet utilisateur";
 
   return (
     <ScrollView
@@ -249,12 +258,10 @@ export default function AdminNotificationsScreen() {
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
-          {Platform.OS === "ios"
-            ? <SymbolView name="chevron.left" size={16} tintColor={ADMIN.accent} />
-            : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
+          <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
           <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
         </AnimatedPressable>
-        <Text style={{ fontSize: 32, fontWeight: "900", color: TEXT1, letterSpacing: -0.8 }}>Notifications</Text>
+        <Text style={{ fontSize: 32, fontWeight: "700", color: TEXT1, letterSpacing: -0.8 }}>Notifications</Text>
         <Text style={{ fontSize: 13, color: TEXT2, marginTop: 2 }}>Envoi push en temps réel</Text>
       </View>
 
@@ -263,15 +270,15 @@ export default function AdminNotificationsScreen() {
         <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
           <View style={{ flex: 1, backgroundColor: `${Colors.success}15`, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: `${Colors.success}28` }}>
             <Text style={{ fontSize: 11, color: Colors.success, fontWeight: "600" }}>Dernière push</Text>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: Colors.success, marginTop: 2 }}>{sentCount}</Text>
+            <Text style={{ fontSize: 28, fontWeight: "700", color: Colors.success, marginTop: 2 }}>{sentCount}</Text>
             <Text style={{ fontSize: 10, color: TEXT2 }}>destinataire(s)</Text>
           </View>
         </View>
       )}
 
       {/* ── 1. Cible ── */}
-      <View style={{ backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
-        <Text style={{ fontSize: 13, fontWeight: "800", color: TEXT1, marginBottom: 14 }}>1. Cible</Text>
+      <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, marginBottom: 14 }}>1. Cible</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {TARGET_OPTS.map((opt) => {
             const active = target === opt.value;
@@ -311,8 +318,8 @@ export default function AdminNotificationsScreen() {
       </View>
 
       {/* ── 2. Contenu ── */}
-      <View style={{ backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
-        <Text style={{ fontSize: 13, fontWeight: "800", color: TEXT1, marginBottom: 14 }}>2. Contenu</Text>
+      <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, marginBottom: 14 }}>2. Contenu</Text>
 
         <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Titre</Text>
         <TextInput
@@ -341,12 +348,12 @@ export default function AdminNotificationsScreen() {
 
       {/* ── Aperçu ── */}
       {(title || body) && (
-        <View style={{ backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
+        <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
           <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Aperçu push</Text>
           <View style={{ backgroundColor: MUTED, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: BORDER }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ fontSize: 14 }}>🌸</Text>
+                <Ionicons name="notifications" size={14} color={Colors.white} />
               </View>
               <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT2 }}>Blyss · maintenant</Text>
             </View>
@@ -363,9 +370,10 @@ export default function AdminNotificationsScreen() {
           if (!canSend) return;
           setSendError(null);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          sendMut.mutate();
+          setShowConfirm(true);
         }}
         disabled={sendMut.isPending || !canSend}
+        accessibilityLabel="Envoyer la notification push"
         style={{
           height: 56, borderRadius: 18, backgroundColor: ADMIN.accent,
           alignItems: "center", justifyContent: "center",
@@ -373,21 +381,36 @@ export default function AdminNotificationsScreen() {
           opacity: (sendMut.isPending || !canSend) ? 0.4 : 1,
         }}
       >
-        {sendMut.isPending
-          ? <ActivityIndicator size="small" color={Colors.white} />
-          : (
-            <>
-              <Ionicons name="send-outline" size={20} color={Colors.white} />
-              <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white }}>
-                {target === "all" ? "Envoyer à tous"
-                  : target === "pros" ? "Envoyer aux pros"
-                  : target === "clients" ? "Envoyer aux clients"
-                  : selectedUser ? `Envoyer à ${selectedUser.first_name}`
-                  : "Envoyer"}
-              </Text>
-            </>
-          )}
+        <Ionicons name="send-outline" size={20} color={Colors.white} />
+        <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.white }}>
+          {target === "all" ? "Envoyer à tous"
+            : target === "pros" ? "Envoyer aux pros"
+            : target === "clients" ? "Envoyer aux clients"
+            : selectedUser ? `Envoyer à ${selectedUser.first_name}`
+            : "Envoyer"}
+        </Text>
       </AnimatedPressable>
+
+      <ConfirmDialog
+        visible={showConfirm}
+        title="Confirmer l'envoi"
+        message={
+          <>
+            {"Cette notification sera envoyée immédiatement à "}
+            <Text style={{ fontWeight: "700", color: ADMIN.accent }}>{targetLabel}</Text>
+            {" et ne pourra pas être annulée."}
+            {"\n\n"}
+            <Text style={{ fontWeight: "700", color: Colors.white }}>{title || "(sans titre)"}</Text>
+            {"\n"}
+            {body || "(sans message)"}
+          </>
+        }
+        confirmLabel="Envoyer"
+        danger={target === "all" || target === "pros" || target === "clients"}
+        loading={sendMut.isPending}
+        onConfirm={() => sendMut.mutate()}
+        onClose={() => setShowConfirm(false)}
+      />
     </ScrollView>
   );
 }

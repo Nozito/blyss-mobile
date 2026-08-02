@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { ActionSheetIOS, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
+import { ADMIN } from "@/constants/adminTheme";
 
 interface ActionSheetOptions {
   title?: string;
@@ -9,6 +10,8 @@ interface ActionSheetOptions {
   options: string[];
   cancelButtonIndex: number;
   destructiveButtonIndex?: number | number[];
+  /** iOS only — forces the native sheet's appearance regardless of system setting. Use "dark" from screens with a fixed dark theme (e.g. admin). Android's custom sheet below doesn't read this yet. */
+  userInterfaceStyle?: "light" | "dark";
 }
 
 function isDestructive(index: number, destructiveButtonIndex?: number | number[]) {
@@ -55,6 +58,11 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
     cb?.(index);
   };
 
+  const dark = pending?.userInterfaceStyle === "dark";
+  const theme = dark
+    ? { sheetBg: ADMIN.surface, border: ADMIN.border, title: ADMIN.text, message: ADMIN.textSub, option: ADMIN.text, destructive: ADMIN.danger }
+    : { sheetBg: Colors.white,  border: Colors.border, title: Colors.foreground, message: Colors.mutedForeground, option: Colors.foreground, destructive: Colors.destructive };
+
   return (
     <ActionSheetContext.Provider value={show}>
       {children}
@@ -68,14 +76,14 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
           style={styles.backdrop}
           onPress={() => handleSelect(pending?.cancelButtonIndex ?? 0)}
         >
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
-            {pending?.title && <Text style={styles.title}>{pending.title}</Text>}
-            {pending?.message && <Text style={styles.message}>{pending.message}</Text>}
+          <View style={[styles.sheet, { backgroundColor: theme.sheetBg, paddingBottom: insets.bottom + 8 }]}>
+            {pending?.title && <Text style={[styles.title, { color: theme.title }]}>{pending.title}</Text>}
+            {pending?.message && <Text style={[styles.message, { color: theme.message }]}>{pending.message}</Text>}
             {pending?.options.map((label, index) =>
               index === pending.cancelButtonIndex ? null : (
                 <Pressable
                   key={index}
-                  style={styles.option}
+                  style={[styles.option, { borderTopColor: theme.border }]}
                   onPress={() => handleSelect(index)}
                   accessibilityRole="button"
                   accessibilityLabel={label}
@@ -83,7 +91,8 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
                   <Text
                     style={[
                       styles.optionText,
-                      isDestructive(index, pending.destructiveButtonIndex) && { color: Colors.destructive },
+                      { color: theme.option },
+                      isDestructive(index, pending.destructiveButtonIndex) && { color: theme.destructive },
                     ]}
                   >
                     {label}
@@ -92,12 +101,12 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
               )
             )}
             <Pressable
-              style={[styles.option, styles.cancel]}
+              style={[styles.option, styles.cancel, { borderTopColor: theme.border }]}
               onPress={() => handleSelect(pending?.cancelButtonIndex ?? 0)}
               accessibilityRole="button"
               accessibilityLabel="Annuler"
             >
-              <Text style={[styles.optionText, { fontWeight: "700" }]}>
+              <Text style={[styles.optionText, { color: theme.option, fontWeight: "700" }]}>
                 {pending?.options[pending.cancelButtonIndex] ?? "Annuler"}
               </Text>
             </Pressable>
@@ -115,7 +124,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: Colors.white,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 16,
@@ -125,24 +133,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.foreground,
     paddingTop: 8,
   },
   message: {
     textAlign: "center",
     fontSize: 12,
-    color: Colors.mutedForeground,
     paddingBottom: 8,
   },
   option: {
     paddingVertical: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
     alignItems: "center",
   },
   optionText: {
     fontSize: 16,
-    color: Colors.foreground,
   },
   cancel: {
     marginTop: 8,

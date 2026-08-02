@@ -1,30 +1,34 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
-  View, Text, ScrollView, Pressable, Animated, Platform,
+  View, Text, ScrollView, Pressable, Animated,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { SymbolView } from "expo-symbols";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { AdminIcon } from "@/components/admin/AdminIcon";
 
-const A_BG = ADMIN.bg;
+const BG     = ADMIN.bg;
+const TEXT1  = ADMIN.text;
+const TEXT2  = ADMIN.textSub;
+const TEXT3  = ADMIN.textMuted;
+const ACCENT = ADMIN.accent;
 
 const TOOLS = [
-  { key: "validation", label: "Validation pros", sub: "Comptes en attente", symbol: "checkmark.seal.fill",              color: Colors.admin,   route: "/(admin)/pro-validation" },
-  { key: "reviews",   label: "Avis",      sub: "Modération",           symbol: "text.bubble.fill",                      color: Colors.destructive, route: "/(admin-tools)/reviews" },
-  { key: "analytics", label: "Analytics", sub: "Métriques & revenus",  symbol: "chart.bar.fill",                        color: Colors.pro,     route: "/(admin-tools)/analytics" },
-  { key: "logs",      label: "Logs",      sub: "Événements système",   symbol: "waveform",                              color: Colors.info,    route: "/(admin-tools)/logs" },
-  { key: "notifs",    label: "Notifs",    sub: "Push ciblées",         symbol: "bell.fill",                             color: Colors.success, route: "/(admin-tools)/notifications" },
+  { key: "validation", label: "Validation pros", sub: "Comptes en attente", symbol: "checkmark.seal.fill", androidIcon: "checkmark-done-outline" as const, color: Colors.admin,      route: "/(admin)/pro-validation" },
+  { key: "coupons",    label: "Coupons",          sub: "Codes promo",       symbol: "tag.fill",             androidIcon: "pricetag-outline"        as const, color: Colors.warning,    route: "/(admin-tools)/coupons" },
+  { key: "reviews",    label: "Avis",             sub: "Modération",        symbol: "text.bubble.fill",     androidIcon: "chatbubble-outline"      as const, color: Colors.destructive, route: "/(admin-tools)/reviews" },
+  { key: "analytics",  label: "Analytics",        sub: "Métriques & revenus", symbol: "chart.bar.fill",     androidIcon: "bar-chart-outline"       as const, color: Colors.pro,        route: "/(admin-tools)/analytics" },
+  { key: "logs",       label: "Logs",             sub: "Événements système", symbol: "waveform",            androidIcon: "pulse-outline"           as const, color: Colors.info,       route: "/(admin-tools)/logs" },
+  { key: "notifs",     label: "Notifs",           sub: "Push ciblées",      symbol: "bell.fill",            androidIcon: "notifications-outline"   as const, color: Colors.success,    route: "/(admin-tools)/notifications" },
 ];
 
 const INFO_ROWS = [
@@ -56,33 +60,25 @@ function ToolRow({
       <Animated.View style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: 16,
-        paddingHorizontal: 18,
-        paddingVertical: 16,
+        gap: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
         borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: "rgba(255,255,255,0.07)",
+        borderBottomColor: ADMIN.border,
         transform: [{ scale }],
       }}>
         <View style={{
-          width: 46, height: 46, borderRadius: 14,
-          backgroundColor: `${tool.color}18`,
+          width: 40, height: 40, borderRadius: 12,
+          backgroundColor: withAlpha(tool.color, 0.14),
           alignItems: "center", justifyContent: "center",
         }}>
-          {Platform.OS === "ios" ? (
-            <SymbolView name={tool.symbol as any} size={22} tintColor={tool.color} />
-          ) : (
-            <Ionicons name="grid-outline" size={22} color={tool.color} />
-          )}
+          <AdminIcon ios={tool.symbol as any} android={tool.androidIcon} size={19} color={tool.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white }}>{tool.label}</Text>
-          <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{tool.sub}</Text>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: TEXT1 }}>{tool.label}</Text>
+          <Text style={{ fontSize: 12, color: TEXT3, marginTop: 1 }}>{tool.sub}</Text>
         </View>
-        {Platform.OS === "ios" ? (
-          <SymbolView name="chevron.right" size={14} tintColor="rgba(255,255,255,0.2)" />
-        ) : (
-          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.2)" />
-        )}
+        <Ionicons name="chevron-forward" size={16} color={TEXT3} />
       </Animated.View>
     </Pressable>
     </Link>
@@ -107,68 +103,19 @@ export default function AdminMoreScreen() {
 
   const d = (dashData?.data as any) ?? {};
 
-  // Entry animation — full screen
-  const screenOpacity    = useRef(new Animated.Value(0)).current;
-  const screenTranslateY = useRef(new Animated.Value(20)).current;
-
-  // Avatar entrance
-  const avatarScale   = useRef(new Animated.Value(0)).current;
-  const avatarOpacity = useRef(new Animated.Value(0)).current;
-
-  // Logout press
   const logoutScale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(screenOpacity,    { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.timing(screenTranslateY, { toValue: 0, duration: 350, useNativeDriver: true }),
-    ]).start();
-
-    Animated.parallel([
-      Animated.spring(avatarScale,   { toValue: 1, damping: 14, stiffness: 130, useNativeDriver: true }),
-      Animated.spring(avatarOpacity, { toValue: 1, damping: 14, stiffness: 130, useNativeDriver: true }),
-    ]).start();
-  }, []);
 
   const fullName = `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim();
   const initials = fullName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
   const stats = [
-    {
-      label: "Utilisateurs",
-      value: d?.stats?.totalUsers ?? "—",
-      symbol: "person.2.fill",
-      icon: "people-outline" as const,
-      color: Colors.pro,
-      route: "/(admin)/users",
-    },
-    {
-      label: "RDV du mois",
-      value: d?.stats?.totalBookings ?? "—",
-      symbol: "calendar.circle.fill",
-      icon: "calendar-outline" as const,
-      color: Colors.info,
-      route: "/(admin)/bookings",
-    },
-    {
-      label: "CA du mois",
-      value: d?.stats?.monthRevenue
-        ? `${Number(d.stats.monthRevenue).toFixed(0)}€`
-        : "—",
-      symbol: "banknote.fill",
-      icon: "wallet-outline" as const,
-      color: Colors.admin,
-      route: "/(admin-tools)/analytics",
-    },
+    { label: "Utilisateurs", value: d?.stats?.totalUsers ?? "—", symbol: "person.2.fill",   icon: "people-outline"   as const, route: "/(admin)/users" },
+    { label: "RDV du mois",  value: d?.stats?.totalBookings ?? "—", symbol: "calendar.circle.fill", icon: "calendar-outline" as const, route: "/(admin)/bookings" },
+    { label: "CA du mois",   value: d?.stats?.monthRevenue ? `${Number(d.stats.monthRevenue).toFixed(0)}€` : "—", symbol: "banknote.fill", icon: "wallet-outline" as const, route: "/(admin-tools)/analytics" },
   ];
 
   return (
-    <Animated.View style={{
-      flex: 1,
-      backgroundColor: A_BG,
-      opacity: screenOpacity,
-      transform: [{ translateY: screenTranslateY }],
-    }}>
+    <View style={{ flex: 1, backgroundColor: BG }}>
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -176,135 +123,62 @@ export default function AdminMoreScreen() {
         automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero Profile ── */}
-        <LinearGradient
-          colors={["#0F0800", "#1C0F00", "#120800"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: insets.top,
-            paddingBottom: 32,
-            paddingHorizontal: 24,
-            alignItems: "center",
-            overflow: "hidden",
-          }}
-        >
-          {/* Orb déco top-right */}
+        {/* ── Profile header ── */}
+        <View style={{ paddingTop: insets.top + 12, paddingBottom: 24, paddingHorizontal: 24, alignItems: "center" }}>
           <View style={{
-            position: "absolute", top: -20, right: -20,
-            width: 140, height: 140, borderRadius: 70,
-            backgroundColor: "rgba(249,115,22,0.06)",
-          }} />
-
-          {/* Shield watermark */}
-          {Platform.OS === "ios" && (
-            <SymbolView
-              name="shield.fill"
-              size={100}
-              tintColor="rgba(249,115,22,0.07)"
-              style={{ position: "absolute", bottom: 16, right: 20 }}
-            />
-          )}
-
-          {/* Avatar animé */}
-          <Animated.View style={{
-            opacity: avatarOpacity,
-            transform: [{ scale: avatarScale }],
+            width: 76, height: 76, borderRadius: 24,
+            backgroundColor: withAlpha(ACCENT, 0.16),
+            alignItems: "center", justifyContent: "center",
           }}>
-            <LinearGradient
-              colors={["rgba(255,255,255,0.25)", "rgba(255,255,255,0.08)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                width: 96, height: 96, borderRadius: 32,
-                alignItems: "center", justifyContent: "center",
-                borderWidth: 2.5, borderColor: "rgba(255,255,255,0.4)",
-              }}
-            >
-              <Text style={{ fontSize: 36, fontWeight: "900", color: Colors.white }}>
-                {initials || "A"}
-              </Text>
-            </LinearGradient>
-          </Animated.View>
+            <Text style={{ fontSize: 28, fontWeight: "700", color: ACCENT }}>
+              {initials || "A"}
+            </Text>
+          </View>
 
-          <Text style={{
-            fontSize: 24, fontWeight: "900", color: Colors.white,
-            letterSpacing: -0.5, marginTop: 16, marginBottom: 4,
-          }}>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: TEXT1, marginTop: 14, marginBottom: 3 }}>
             {fullName || "Admin"}
           </Text>
-          <Text style={{
-            fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 16,
-          }}>
+          <Text style={{ fontSize: 13, color: TEXT2, marginBottom: 14 }}>
             {user?.email}
           </Text>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{
-              paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20,
-              backgroundColor: "rgba(249,115,22,0.25)",
-              borderWidth: 1, borderColor: "rgba(249,115,22,0.45)",
-            }}>
-              <Text style={{ fontSize: 11, fontWeight: "900", color: Colors.admin, letterSpacing: 0.5 }}>
-                ⚡ ADMIN
-              </Text>
+            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: withAlpha(ACCENT, 0.16) }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT, letterSpacing: 0.3 }}>ADMIN</Text>
             </View>
-            <View style={{
-              paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20,
-              backgroundColor: "rgba(255,255,255,0.08)",
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
-            }}>
-              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Accès total</Text>
+            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: ADMIN.surfaceHover }}>
+              <Text style={{ fontSize: 11, color: TEXT2 }}>Accès total</Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
-        {/* ── Stats Strip flottante ── */}
+        {/* ── Stats strip ── */}
         <View style={{
-          marginHorizontal: 20, marginTop: -24,
-          backgroundColor: "rgba(15,8,0,0.95)",
-          borderRadius: 24,
-          borderWidth: 1, borderColor: "rgba(249,115,22,0.20)",
-          shadowColor: Colors.admin,
-          shadowOpacity: 0.15,
-          shadowRadius: 20,
-          shadowOffset: { width: 0, height: 8 },
-          padding: 18,
+          marginHorizontal: 20,
+          backgroundColor: ADMIN.surface,
+          borderRadius: ADMIN.cardRadius,
+          borderWidth: 1, borderColor: ADMIN.border,
+          padding: 16,
           flexDirection: "row",
         }}>
-          {stats.map(({ label, value, symbol, icon, color, route }, i) => (
+          {stats.map(({ label, value, symbol, icon, route }, i) => (
             <React.Fragment key={label}>
               <Link href={route as any} asChild>
               <AnimatedPressable
                 onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
                 style={{ flex: 1, alignItems: "center" }}
               >
-                <View style={{
-                  width: 42, height: 42, borderRadius: 14,
-                  backgroundColor: `${color}18`,
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  {Platform.OS === "ios" ? (
-                    <SymbolView name={symbol as any} size={18} tintColor={color} />
-                  ) : (
-                    <Ionicons name={icon} size={18} color={color} />
-                  )}
-                </View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.white, marginTop: 8 }}>
+                <AdminIcon ios={symbol as any} android={icon} size={17} color={TEXT2} />
+                <Text style={{ fontSize: 18, fontWeight: "700", color: TEXT1, marginTop: 8 }}>
                   {value}
                 </Text>
-                <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                <Text style={{ fontSize: 10, color: TEXT3, marginTop: 2 }}>
                   {label}
                 </Text>
               </AnimatedPressable>
               </Link>
               {i < stats.length - 1 && (
-                <View style={{
-                  width: 1,
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  alignSelf: "stretch",
-                  marginVertical: 4,
-                }} />
+                <View style={{ width: 1, backgroundColor: ADMIN.border, alignSelf: "stretch", marginVertical: 4 }} />
               )}
             </React.Fragment>
           ))}
@@ -317,67 +191,53 @@ export default function AdminMoreScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setShowSwitchModal(true);
             }}
-            style={{ marginTop: 28 }}
+            style={{
+              marginTop: 20,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+              padding: 16,
+              borderRadius: ADMIN.cardRadius,
+              backgroundColor: ADMIN.accentBg,
+              borderWidth: 1,
+              borderColor: ADMIN.accentBorder,
+            }}
           >
-            <LinearGradient
-              colors={["rgba(249,115,22,0.14)", "rgba(249,115,22,0.06)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 16,
-                padding: 18,
-                borderRadius: 22,
-                borderWidth: 1,
-                borderColor: "rgba(249,115,22,0.28)",
-                overflow: "hidden",
-              }}
-            >
-              <View style={{
-                width: 46, height: 46, borderRadius: 14,
-                backgroundColor: "rgba(249,115,22,0.18)",
-                alignItems: "center", justifyContent: "center",
-              }}>
-                {Platform.OS === "ios" ? (
-                  <SymbolView name="arrow.left.arrow.right" size={22} tintColor={Colors.admin} />
-                ) : (
-                  <Ionicons name="swap-horizontal-outline" size={22} color={Colors.admin} />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.white, marginBottom: 3 }}>
-                  Changer d'interface
-                </Text>
-                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>
-                  Basculer vers Client, Pro ou Admin
-                </Text>
-              </View>
-              {Platform.OS === "ios" ? (
-                <SymbolView name="chevron.right" size={13} tintColor="rgba(249,115,22,0.6)" />
-              ) : (
-                <Ionicons name="chevron-forward" size={14} color="rgba(249,115,22,0.6)" />
-              )}
-            </LinearGradient>
+            <View style={{
+              width: 40, height: 40, borderRadius: 12,
+              backgroundColor: withAlpha(ACCENT, 0.18),
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name="swap-horizontal-outline" size={19} color={ACCENT} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: TEXT1, marginBottom: 2 }}>
+                Changer d'interface
+              </Text>
+              <Text style={{ fontSize: 12, color: TEXT2 }}>
+                Basculer vers Client, Pro ou Admin
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={ACCENT} />
           </AnimatedPressable>
 
           {/* ── Outils Admin ── */}
           <Text style={{
-            fontSize: 11, fontWeight: "800",
-            color: "rgba(255,255,255,0.3)",
-            letterSpacing: 1.8,
+            fontSize: 11, fontWeight: "700",
+            color: TEXT3,
+            letterSpacing: 1,
             textTransform: "uppercase",
-            marginBottom: 14,
+            marginBottom: 10,
             marginTop: 28,
           }}>
             Outils Admin
           </Text>
 
           <View style={{
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderRadius: 22,
+            backgroundColor: ADMIN.surface,
+            borderRadius: ADMIN.cardRadius,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
+            borderColor: ADMIN.border,
             overflow: "hidden",
           }}>
             {TOOLS.map((tool, i) => (
@@ -404,33 +264,23 @@ export default function AdminMoreScreen() {
             style={{ marginTop: 16 }}
           >
             <Animated.View style={{
-              backgroundColor: "rgba(240,58,58,0.10)",
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: "rgba(240,58,58,0.22)",
-              paddingHorizontal: 18,
-              paddingVertical: 18,
+              backgroundColor: ADMIN.dangerBg,
+              borderRadius: ADMIN.cardRadius,
+              paddingHorizontal: 16,
+              paddingVertical: 16,
               flexDirection: "row",
               alignItems: "center",
-              gap: 16,
+              gap: 14,
               transform: [{ scale: logoutScale }],
             }}>
               <View style={{
-                width: 46, height: 46, borderRadius: 14,
-                backgroundColor: "rgba(240,58,58,0.15)",
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: withAlpha(ADMIN.danger, 0.18),
                 alignItems: "center", justifyContent: "center",
               }}>
-                {Platform.OS === "ios" ? (
-                  <SymbolView
-                    name="rectangle.portrait.and.arrow.right"
-                    size={22}
-                    tintColor="#F03A3A"
-                  />
-                ) : (
-                  <Ionicons name="log-out-outline" size={22} color="#F03A3A" />
-                )}
+                <Ionicons name="log-out-outline" size={19} color={ADMIN.danger} />
               </View>
-              <Text style={{ fontSize: 16, fontWeight: "800", color: "#F03A3A", flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: ADMIN.danger, flex: 1 }}>
                 Se déconnecter
               </Text>
             </Animated.View>
@@ -438,21 +288,21 @@ export default function AdminMoreScreen() {
 
           {/* ── À propos ── */}
           <Text style={{
-            fontSize: 11, fontWeight: "800",
-            color: "rgba(255,255,255,0.3)",
-            letterSpacing: 1.8,
+            fontSize: 11, fontWeight: "700",
+            color: TEXT3,
+            letterSpacing: 1,
             textTransform: "uppercase",
-            marginBottom: 14,
+            marginBottom: 10,
             marginTop: 28,
           }}>
             À propos
           </Text>
 
           <View style={{
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderRadius: 22,
+            backgroundColor: ADMIN.surface,
+            borderRadius: ADMIN.cardRadius,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
+            borderColor: ADMIN.border,
             overflow: "hidden",
           }}>
             {INFO_ROWS.map(({ label, value, icon }, i) => (
@@ -462,29 +312,23 @@ export default function AdminMoreScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  paddingHorizontal: 18,
-                  paddingVertical: 15,
+                  paddingHorizontal: 16,
+                  paddingVertical: 13,
                   borderBottomWidth: i < INFO_ROWS.length - 1 ? 1 : 0,
-                  borderBottomColor: "rgba(255,255,255,0.07)",
+                  borderBottomColor: ADMIN.border,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <View style={{
-                    width: 36, height: 36, borderRadius: 10,
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                    alignItems: "center", justifyContent: "center",
-                  }}>
-                    <Ionicons name={icon} size={18} color="rgba(255,255,255,0.35)" />
-                  </View>
-                  <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.45)" }}>{label}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name={icon} size={16} color={TEXT3} />
+                  <Text style={{ fontSize: 14, color: TEXT2 }}>{label}</Text>
                 </View>
                 <Text
                   numberOfLines={1}
                   style={{
                     maxWidth: 200,
                     fontSize: 13,
-                    fontWeight: "700",
-                    color: "rgba(255,255,255,0.8)",
+                    fontWeight: "600",
+                    color: TEXT1,
                     textAlign: "right",
                   }}
                 >
@@ -511,6 +355,6 @@ export default function AdminMoreScreen() {
         }}
         onClose={() => setShowSwitchModal(false)}
       />
-    </Animated.View>
+    </View>
   );
 }

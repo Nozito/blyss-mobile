@@ -1,288 +1,258 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
-  View, Text, SectionList, Pressable, ScrollView,
-  ActivityIndicator, RefreshControl, Animated, Platform,
+  View, Text, SectionList, Pressable, TextInput, Modal,
+  ActivityIndicator, RefreshControl, Platform, ScrollView, Share, Linking, StyleSheet,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { SymbolView } from "expo-symbols";
+import RNDateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { adminApi, AdminBooking } from "@/lib/api";
+import Swipeable from "react-native-gesture-handler/Swipeable";
+import { useActionSheet } from "@/components/ui/ActionSheet";
+import { adminApi, AdminBooking, AdminUser } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AdminIcon } from "@/components/admin/AdminIcon";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { SectionLabel } from "@/components/admin/SectionLabel";
+import { StatusBadge, type StatusTone } from "@/components/admin/StatusBadge";
+import { ActionGrid, type ActionTileData } from "@/components/admin/ActionGrid";
+import { Card } from "@/components/admin/Card";
+import { useDebounce } from "@/hooks/useDebounce";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
-const CARD    = ADMIN.surface;
 const BORDER  = ADMIN.border;
 const TEXT1   = ADMIN.text;
 const TEXT2   = ADMIN.textSub;
 const TEXT3   = ADMIN.textMuted;
+const ACCENT  = ADMIN.accent;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 type StatusFilter  = "all" | BookingStatus;
 
-const STATUS_CFG: Record<BookingStatus, {
-  label: string; color: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  iosIcon: string;
-  gradient: [string, string];
-}> = {
-  pending:   { label: "En attente", color: Colors.warning,     icon: "time-outline",             iosIcon: "clock",                  gradient: [Colors.warning,     `${Colors.warning}88`] },
-  confirmed: { label: "Confirmée",  color: Colors.info,        icon: "checkmark-circle-outline", iosIcon: "checkmark.seal.fill",    gradient: [Colors.info,        `${Colors.info}88`] },
-  completed: { label: "Terminée",   color: Colors.success,     icon: "checkmark-done-outline",   iosIcon: "checkmark.circle.fill",  gradient: [Colors.success,     `${Colors.success}88`] },
-  cancelled: { label: "Annulée",    color: Colors.destructive, icon: "close-circle-outline",     iosIcon: "xmark.circle.fill",      gradient: [Colors.destructive, `${Colors.destructive}88`] },
+const STATUS_CFG: Record<BookingStatus, { label: string }> = {
+  pending:   { label: "En attente" },
+  confirmed: { label: "Confirmée" },
+  completed: { label: "Terminée" },
+  cancelled: { label: "Annulée" },
 };
 
-const FILTERS: Array<{ key: StatusFilter; label: string; iosIcon: string; androidIcon: React.ComponentProps<typeof Ionicons>["name"] }> = [
-  { key: "all",       label: "Tous",       iosIcon: "list.bullet",           androidIcon: "list-outline" },
-  { key: "pending",   label: "En attente", iosIcon: "clock",                 androidIcon: "time-outline" },
-  { key: "confirmed", label: "Confirmée",  iosIcon: "checkmark.seal",        androidIcon: "checkmark-circle-outline" },
-  { key: "completed", label: "Terminée",   iosIcon: "checkmark.circle",      androidIcon: "checkmark-done-outline" },
-  { key: "cancelled", label: "Annulée",    iosIcon: "xmark.circle",          androidIcon: "close-circle-outline" },
+const STATUS_TONE: Record<BookingStatus, StatusTone> = {
+  pending: "warning", confirmed: "info", completed: "success", cancelled: "danger",
+};
+
+const FILTERS: Array<{ key: StatusFilter; label: string }> = [
+  { key: "all",       label: "Tous" },
+  { key: "pending",   label: "Attente" },
+  { key: "confirmed", label: "Confirmée" },
+  { key: "completed", label: "Terminée" },
+  { key: "cancelled", label: "Annulée" },
 ];
 
-// ── Initiales avatar ──────────────────────────────────────────────────────────
-function Avatar({ name, color }: { name: string; color: string }) {
-  const initials = name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+// ── Avatar — a plain initial circle, same shape as the Users screen ──────────
+function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+  const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
   return (
-    <LinearGradient
-      colors={[`${color}40`, `${color}18`]}
-      style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-    >
-      <Text style={{ fontSize: 15, fontWeight: "900", color }}>{initials || "?"}</Text>
-    </LinearGradient>
-  );
-}
-
-// ── Booking Card ──────────────────────────────────────────────────────────────
-function BookingCard({
-  booking,
-  onConfirm,
-  onCancel,
-  onEdit,
-}: {
-  booking: AdminBooking;
-  onConfirm: (b: AdminBooking) => void;
-  onCancel:  (b: AdminBooking) => void;
-  onEdit:    (b: AdminBooking) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const cfg         = STATUS_CFG[booking.status as BookingStatus];
-  const statusColor = cfg?.color ?? Colors.admin;
-  const price       = typeof booking.price === "number" ? booking.price : parseFloat(String(booking.price ?? "0"));
-  const dt          = new Date(booking.start_datetime);
-  const time        = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  const dateLabel   = dt.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-  const clientName  = booking.client_name ?? `#${booking.id}`;
-
-  const canConfirm = booking.status === "pending";
-  const canCancel  = booking.status === "pending" || booking.status === "confirmed";
-
-  const pressIn  = () => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, damping: 15, stiffness: 160 }).start();
-  const pressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, damping: 15, stiffness: 160 }).start();
-
-  return (
-    <Animated.View style={{ transform: [{ scale }], marginBottom: 8 }}>
-      <Pressable
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          setExpanded((v) => !v);
-        }}
-        style={{
-          borderRadius: 18,
-          backgroundColor: CARD,
-          borderWidth: 1,
-          borderColor: expanded ? `${statusColor}35` : BORDER,
-          overflow: "hidden",
-          shadowColor: statusColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: expanded ? 0.18 : 0.06,
-          shadowRadius: 14,
-          elevation: 3,
-        }}
-      >
-        {/* Accent bar gauche */}
-        <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, backgroundColor: statusColor, opacity: 0.7 }} />
-
-        {/* Main row */}
-        <View style={{ padding: 14, paddingLeft: 17 }}>
-          {/* Ligne 1 : avatar + nom + badge statut */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 11, marginBottom: 8 }}>
-            <Avatar name={clientName} color={statusColor} />
-
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "800", fontSize: 14, color: TEXT1, marginBottom: 3 }} numberOfLines={1}>
-                {clientName}
-              </Text>
-              <Text style={{ fontSize: 11, color: TEXT2 }} numberOfLines={1}>
-                {[booking.service_name, booking.pro_name].filter(Boolean).join(" · ")}
-              </Text>
-            </View>
-
-            {/* Badge statut — rectangle arrondi proéminent */}
-            {cfg && (
-              <LinearGradient
-                colors={[`${statusColor}28`, `${statusColor}14`]}
-                style={{
-                  flexDirection: "row", alignItems: "center", gap: 5,
-                  paddingHorizontal: 11, paddingVertical: 6,
-                  borderRadius: 10,
-                  borderWidth: 1, borderColor: `${statusColor}40`,
-                }}
-              >
-                {Platform.OS === "ios"
-                  ? <SymbolView name={cfg.iosIcon as any} size={11} tintColor={statusColor} />
-                  : <Ionicons name={cfg.icon} size={11} color={statusColor} />}
-                <Text style={{ fontSize: 11, fontWeight: "800", color: statusColor, letterSpacing: 0.1 }}>
-                  {cfg.label}
-                </Text>
-              </LinearGradient>
-            )}
-          </View>
-
-          {/* Ligne 2 : date + prix + chevron */}
-          <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: 55 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4,
-              backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8,
-              paddingHorizontal: 8, paddingVertical: 4 }}>
-              <Ionicons name="calendar-outline" size={10} color={TEXT3} />
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "600" }}>{dateLabel} · {time}</Text>
-            </View>
-
-            <View style={{ flex: 1 }} />
-
-            <Text style={{ fontSize: 15, fontWeight: "900", color: Colors.success, marginRight: (canConfirm || canCancel) ? 8 : 0 }}>
-              {price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"}
-            </Text>
-
-            {(canConfirm || canCancel) && (
-              <Ionicons
-                name={expanded ? "chevron-up" : "chevron-down"}
-                size={14}
-                color={TEXT3}
-              />
-            )}
-          </View>
-        </View>
-
-        {/* Expanded actions — une seule ligne */}
-        {expanded && (
-          <View style={{
-            flexDirection: "row", gap: 7,
-            paddingHorizontal: 14, paddingLeft: 17, paddingBottom: 13, paddingTop: 12,
-            borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)",
-          }}>
-            {/* Modifier — toujours visible */}
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setExpanded(false);
-                onEdit(booking);
-              }}
-              style={({ pressed }) => [{
-                flex: 1, height: 42, borderRadius: 12,
-                backgroundColor: "rgba(255,255,255,0.07)",
-                borderWidth: 1, borderColor: "rgba(255,255,255,0.14)",
-                alignItems: "center", justifyContent: "center",
-                flexDirection: "row", gap: 5,
-                opacity: pressed ? 0.75 : 1,
-              }]}
-            >
-              {Platform.OS === "ios"
-                ? <SymbolView name="pencil" size={13} tintColor="rgba(255,255,255,0.7)" />
-                : <Ionicons name="create-outline" size={13} color="rgba(255,255,255,0.7)" />}
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Modifier</Text>
-            </Pressable>
-
-            {/* Confirmer — pending uniquement */}
-            {canConfirm && (
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                  setExpanded(false);
-                  onConfirm(booking);
-                }}
-                style={({ pressed }) => [{
-                  flex: 1, height: 42, borderRadius: 12,
-                  backgroundColor: `${Colors.info}20`,
-                  borderWidth: 1, borderColor: `${Colors.info}45`,
-                  alignItems: "center", justifyContent: "center",
-                  flexDirection: "row", gap: 5,
-                  opacity: pressed ? 0.75 : 1,
-                }]}
-              >
-                {Platform.OS === "ios"
-                  ? <SymbolView name="checkmark.circle.fill" size={13} tintColor={Colors.info} />
-                  : <Ionicons name="checkmark-circle" size={13} color={Colors.info} />}
-                <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.info }}>Confirmer</Text>
-              </Pressable>
-            )}
-
-            {/* Annuler — pending ou confirmed */}
-            {canCancel && (
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setExpanded(false);
-                  onCancel(booking);
-                }}
-                style={({ pressed }) => [{
-                  flex: 1, height: 42, borderRadius: 12,
-                  backgroundColor: "rgba(240,58,58,0.10)",
-                  borderWidth: 1, borderColor: "rgba(240,58,58,0.25)",
-                  alignItems: "center", justifyContent: "center",
-                  flexDirection: "row", gap: 5,
-                  opacity: pressed ? 0.75 : 1,
-                }]}
-              >
-                {Platform.OS === "ios"
-                  ? <SymbolView name="xmark.circle.fill" size={13} tintColor="#F03A3A" />
-                  : <Ionicons name="close-circle-outline" size={13} color="#F03A3A" />}
-                <Text style={{ fontSize: 12, fontWeight: "800", color: "#F03A3A" }}>Annuler</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-// ── Section header ─────────────────────────────────────────────────────────────
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <View style={{
-      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-      paddingHorizontal: 4, paddingVertical: 10,
-      backgroundColor: BG,
-    }}>
-      <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT2,
-        textTransform: "uppercase", letterSpacing: 1.2 }}>
-        {title}
-      </Text>
-      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-        backgroundColor: "rgba(255,255,255,0.07)" }}>
-        <Text style={{ fontSize: 10, fontWeight: "800", color: TEXT3 }}>{count}</Text>
-      </View>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <Text style={{ color: ADMIN.textSub, fontWeight: "700", fontSize: Math.round(size * 0.36) }}>{initials || "?"}</Text>
     </View>
   );
 }
 
-// ── Stats bar (new) ────────────────────────────────────────────────────────────
+// ── Booking card — same shape as UserCard: avatar, title/subtitle, trailing
+// badge + meta, swipe actions in the same bg-tint tone language. ────────────
+function BookingCard({
+  booking,
+  onPress,
+  onConfirm,
+  onCancel,
+  onLongPress,
+}: {
+  booking: AdminBooking;
+  onPress: (b: AdminBooking) => void;
+  onConfirm: (b: AdminBooking) => void;
+  onCancel:  (b: AdminBooking) => void;
+  onLongPress: (b: AdminBooking) => void;
+}) {
+  const swipeRef = useRef<Swipeable>(null);
+
+  const cfg        = STATUS_CFG[booking.status as BookingStatus];
+  const tone       = STATUS_TONE[booking.status as BookingStatus];
+  const price      = typeof booking.price === "number" ? booking.price : parseFloat(String(booking.price ?? "0"));
+  const dt         = new Date(booking.start_datetime);
+  const time       = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel  = dt.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const clientName = booking.client_name ?? `#${booking.id}`;
+  const meta       = `${price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"} · ${dateLabel} ${time}`;
+
+  const canConfirm = booking.status === "pending";
+  const canCancel  = booking.status === "pending" || booking.status === "confirmed";
+
+  const renderRightActions = () => (
+    <View style={{ flexDirection: "row", marginBottom: ADMIN.space.md, borderTopRightRadius: ADMIN.cardRadius, borderBottomRightRadius: ADMIN.cardRadius, overflow: "hidden" }}>
+      {canConfirm && (
+        <Pressable onPress={() => { swipeRef.current?.close(); onConfirm(booking); }}
+          style={{ width: 84, backgroundColor: ADMIN.infoBg, alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <Ionicons name="checkmark-circle-outline" size={20} color={ADMIN.info} />
+          <Text style={{ color: ADMIN.info, fontSize: 11, fontWeight: "700" }}>Confirmer</Text>
+        </Pressable>
+      )}
+      {canCancel && (
+        <Pressable onPress={() => { swipeRef.current?.close(); onCancel(booking); }}
+          style={{ width: 84, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <Ionicons name="close-circle-outline" size={20} color={ADMIN.danger} />
+          <Text style={{ color: ADMIN.danger, fontSize: 11, fontWeight: "700" }}>Annuler</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+
+  return (
+    <Swipeable ref={swipeRef}
+      renderRightActions={(canConfirm || canCancel) ? renderRightActions : undefined}
+      overshootRight={false} friction={2}>
+      <AnimatedPressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress(booking); }}
+        onLongPress={() => onLongPress(booking)}
+        style={{ marginBottom: ADMIN.space.md }}
+      >
+        <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md }}>
+          <Avatar name={clientName} />
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={{ ...ADMIN.type.title, fontSize: 15, color: TEXT1 }} numberOfLines={1}>{clientName}</Text>
+            <Text style={{ ...ADMIN.type.caption, color: TEXT2 }} numberOfLines={1}>
+              {[booking.service_name, booking.pro_name].filter(Boolean).join(" · ")}
+            </Text>
+          </View>
+          <View style={{ alignItems: "flex-end", gap: 3 }}>
+            {cfg && <StatusBadge label={cfg.label} tone={tone} />}
+            <Text style={{ ...ADMIN.type.caption, color: TEXT3 }} numberOfLines={1}>{meta}</Text>
+          </View>
+        </Card>
+      </AnimatedPressable>
+    </Swipeable>
+  );
+}
+
+// ── Detail row — label/value pair for the détails card. `Row` (used for list
+// items elsewhere) stretches its title and trailing across the full width at
+// matching bold weight, which for short label→value pairs reads as two
+// disconnected headings with a canyon between them. This keeps the label
+// muted and the value emphasized, so the pairing stays legible at a glance.
+function DetailRow({ label, value, emphasize, showDivider = true }: {
+  label: string; value: string; emphasize?: boolean; showDivider?: boolean;
+}) {
+  return (
+    <View style={{
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ADMIN.space.md,
+      paddingHorizontal: ADMIN.space.lg, paddingVertical: ADMIN.space.md,
+      borderBottomWidth: showDivider ? 1 : 0, borderBottomColor: ADMIN.border,
+    }}>
+      <Text style={{ ...ADMIN.type.body, color: ADMIN.textSub }}>{label}</Text>
+      <Text
+        style={{ ...ADMIN.type.body, fontWeight: "700", color: emphasize ? ADMIN.success : ADMIN.text, fontSize: emphasize ? 16 : 14 }}
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+// ── Booking detail sheet — same shape as UserDetailSheet: identity header,
+// a details card, an action grid. ──────────────────────────────────────────
+function BookingDetailSheet({
+  booking, onClose, onConfirm, onCancel, confirmLoading, cancelLoading,
+}: {
+  booking: AdminBooking;
+  onClose: () => void;
+  onConfirm: (b: AdminBooking) => void;
+  onCancel:  (b: AdminBooking) => void;
+  confirmLoading: boolean;
+  cancelLoading: boolean;
+}) {
+  const cfg        = STATUS_CFG[booking.status as BookingStatus];
+  const tone       = STATUS_TONE[booking.status as BookingStatus];
+  const price      = typeof booking.price === "number" ? booking.price : parseFloat(String(booking.price ?? "0"));
+  const dt         = new Date(booking.start_datetime);
+  const dateLabel  = dt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const time       = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const clientName = booking.client_name ?? `#${booking.id}`;
+  const canConfirm = booking.status === "pending";
+  const canCancel  = booking.status === "pending" || booking.status === "confirmed";
+
+  const handleShareEmail = async () => {
+    if (!booking.client_email) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    await Share.share({ message: booking.client_email });
+  };
+  const handleCall = () => {
+    if (!booking.client_phone) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Linking.openURL(`tel:${booking.client_phone}`).catch(() => {});
+  };
+
+  const tiles: ActionTileData[] = [
+    ...(booking.client_email ? [{ key: "email", icon: "mail-outline" as const, tone: "neutral" as const, label: "Email", onPress: handleShareEmail }] : []),
+    ...(booking.client_phone ? [{ key: "call", icon: "call-outline" as const, tone: "neutral" as const, label: "Appeler", onPress: handleCall }] : []),
+    ...(canConfirm ? [{ key: "confirm", icon: "checkmark-circle-outline" as const, tone: "info" as const, label: "Confirmer", loading: confirmLoading, onPress: () => { onConfirm(booking); onClose(); } }] : []),
+    ...(canCancel ? [{ key: "cancel", icon: "close-circle-outline" as const, tone: "danger" as const, label: "Annuler", loading: cancelLoading, onPress: () => { onCancel(booking); onClose(); } }] : []),
+  ];
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Pressable style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }} onPress={onClose} />
+        <View style={{ backgroundColor: ADMIN.surface, borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius, maxHeight: "92%" }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ADMIN.sheetHandle, alignSelf: "center", marginTop: ADMIN.space.md }} />
+          <ScrollView contentContainerStyle={{ paddingBottom: ADMIN.space.xxl }} showsVerticalScrollIndicator={false}>
+            {/* Identity */}
+            <View style={{ paddingTop: ADMIN.space.sm, paddingBottom: ADMIN.space.xl, paddingHorizontal: ADMIN.space.xl, alignItems: "center", borderBottomWidth: 1, borderBottomColor: ADMIN.border }}>
+              <View style={{ marginBottom: ADMIN.space.md }}>
+                <Avatar name={clientName} size={56} />
+              </View>
+              <Text style={{ ...ADMIN.type.title, fontSize: 18, color: TEXT1, marginBottom: ADMIN.space.sm }} numberOfLines={1}>{clientName}</Text>
+              {cfg && <StatusBadge label={cfg.label} tone={tone} />}
+              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="close" size={18} color={TEXT2} />
+              </AnimatedIconButton>
+            </View>
+
+            {/* Détails */}
+            <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
+              <SectionLabel>Détails</SectionLabel>
+              <Card style={{ padding: 0 }}>
+                <DetailRow label="Prestation"    value={booking.service_name ?? "—"} />
+                <DetailRow label="Professionnel" value={booking.pro_name ?? "—"} />
+                <DetailRow label="Date"          value={dateLabel} />
+                <DetailRow label="Heure"         value={time} />
+                <DetailRow label="Prix"          value={price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"} emphasize showDivider={false} />
+              </Card>
+            </View>
+
+            {/* Actions */}
+            {tiles.length > 0 && (
+              <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
+                <SectionLabel>Actions</SectionLabel>
+                <Card>
+                  <ActionGrid tiles={tiles} />
+                </Card>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Stats — one card, four facts, dividers not colored boxes ───────────────────
 function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
   const counts = useMemo(() => {
     const c: Record<string, number> = { pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
@@ -297,40 +267,168 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
     [bookings]
   );
 
-  return (
-    <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
-      {/* Revenue card */}
-      <View style={{
-        flex: 1.4, borderRadius: 16, padding: 14,
-        backgroundColor: "rgba(34,197,94,0.08)",
-        borderWidth: 1, borderColor: "rgba(34,197,94,0.20)",
-      }}>
-        <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(34,197,94,0.7)", marginBottom: 4 }}>
-          CA TOTAL
-        </Text>
-        <Text style={{ fontSize: 20, fontWeight: "900", color: Colors.success, letterSpacing: -0.5 }}>
-          {revenue.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €
-        </Text>
-      </View>
+  // Single-word labels only — two words in a 4-column card wraps to a second line.
+  const metrics = [
+    { label: "CA",         value: `${revenue.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
+    { label: "Attente",    value: String(counts.pending) },
+    { label: "Confirmées", value: String(counts.confirmed) },
+    { label: "Terminées",  value: String(counts.completed) },
+  ];
 
-      {/* Status mini-cards */}
-      <View style={{ flex: 2, flexDirection: "row", gap: 6 }}>
-        {([
-          { key: "pending",   color: Colors.warning },
-          { key: "confirmed", color: Colors.info },
-          { key: "completed", color: Colors.success },
-        ] as const).map(({ key, color }) => (
-          <View key={key} style={{ flex: 1, borderRadius: 14, padding: 10,
-            backgroundColor: `${color}0D`, borderWidth: 1, borderColor: `${color}20`,
-            alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 17, fontWeight: "900", color }}>{counts[key]}</Text>
-            <Text style={{ fontSize: 9, color: `${color}AA`, fontWeight: "700", marginTop: 2, textAlign: "center" }}>
-              {STATUS_CFG[key].label}
-            </Text>
+  return (
+    <Card style={{ flexDirection: "row", marginBottom: 14 }}>
+      {metrics.map((m, i) => (
+        <React.Fragment key={m.label}>
+          {i > 0 && <View style={{ width: 1, backgroundColor: BORDER, marginHorizontal: ADMIN.space.sm }} />}
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text style={{ ...ADMIN.type.display, fontSize: 18, color: TEXT1 }} numberOfLines={1}>{m.value}</Text>
+            <Text style={{ ...ADMIN.type.caption, color: TEXT3, marginTop: 2, textAlign: "center" }} numberOfLines={1}>{m.label}</Text>
           </View>
-        ))}
+        </React.Fragment>
+      ))}
+    </Card>
+  );
+}
+
+// ── Advanced filters (date + client/pro) ──────────────────────────────────────
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function ClientPicker({ selected, onSelect }: { selected: AdminUser | null; onSelect: (u: AdminUser | null) => void }) {
+  const [search, setSearch] = useState("");
+  const debounced = useDebounce(search, 320);
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["admin-users-search-bookings", debounced],
+    queryFn:  () => adminApi.getUsers({ search: debounced, limit: 20 }),
+    enabled:  debounced.length >= 2,
+    staleTime: 30_000,
+  });
+  const results = (data?.data as AdminUser[] | undefined) ?? [];
+
+  if (selected) {
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 14, borderWidth: 1, borderColor: BORDER, padding: 12 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.accentBg, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ fontSize: 13, fontWeight: "800", color: ACCENT }}>
+            {selected.first_name?.[0]?.toUpperCase()}{selected.last_name?.[0]?.toUpperCase()}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1 }}>{selected.first_name} {selected.last_name}</Text>
+          <Text style={{ fontSize: 11, color: TEXT2 }} numberOfLines={1}>{selected.email}</Text>
+        </View>
+        <AnimatedIconButton onPress={() => onSelect(null)} accessibilityLabel="Retirer ce filtre">
+          <Ionicons name="close-circle" size={20} color={TEXT3} />
+        </AnimatedIconButton>
       </View>
+    );
+  }
+
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 14, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14, height: 46 }}>
+        <Ionicons name="search-outline" size={16} color={TEXT3} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Nom, prénom ou email…"
+          placeholderTextColor={TEXT3}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={{ flex: 1, fontSize: 14, color: TEXT1 }}
+        />
+        {isFetching && <ActivityIndicator size="small" color={TEXT3} />}
+      </View>
+      {search.length < 2 && (
+        <Text style={{ fontSize: 12, color: TEXT3, marginTop: 8 }}>Tape au moins 2 caractères pour chercher</Text>
+      )}
+      {results.length > 0 && (
+        <View style={{ marginTop: 10, borderRadius: 14, borderWidth: 1, borderColor: BORDER, overflow: "hidden" }}>
+          {results.map((u) => (
+            <Pressable
+              key={u.id}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onSelect(u); }}
+              style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, backgroundColor: ADMIN.surfaceHover, opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, flex: 1 }} numberOfLines={1}>{u.first_name} {u.last_name}</Text>
+              <Text style={{ fontSize: 11, color: TEXT3 }} numberOfLines={1}>{u.role}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
+  );
+}
+
+function BookingFiltersModal({
+  visible, date, client, onChangeDate, onChangeClient, onClose,
+}: {
+  visible: boolean;
+  date: Date | null;
+  client: AdminUser | null;
+  onChangeDate: (d: Date | null) => void;
+  onChangeClient: (u: AdminUser | null) => void;
+  onClose: () => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  const handleDateChange = (_e: DateTimePickerEvent, picked?: Date) => {
+    if (Platform.OS === "android") setShowPicker(false);
+    if (picked) onChangeDate(picked);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: ADMIN.overlay }} onPress={onClose} />
+        <View style={{ backgroundColor: ADMIN.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36 }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: ADMIN.borderStrong, alignSelf: "center", marginBottom: 20 }} />
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: TEXT1 }}>Filtres avancés</Text>
+            <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="close" size={18} color={TEXT2} />
+            </AnimatedIconButton>
+          </View>
+
+          <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Date</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
+            <AnimatedPressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onChangeDate(new Date()); }}
+              style={{ flex: 1, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1 }}>Aujourd'hui</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              onPress={() => setShowPicker(true)}
+              style={{ flex: 1, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, backgroundColor: date ? ADMIN.accentBg : ADMIN.surfaceHover, borderWidth: 1, borderColor: date ? ADMIN.accentBorder : BORDER }}
+            >
+              <Ionicons name="calendar-outline" size={14} color={date ? ACCENT : TEXT1} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: date ? ACCENT : TEXT1 }}>
+                {date ? date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "Choisir"}
+              </Text>
+            </AnimatedPressable>
+            {date && (
+              <AnimatedIconButton onPress={() => onChangeDate(null)} accessibilityLabel="Effacer le filtre de date" style={{ width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER }}>
+                <Ionicons name="close" size={16} color={TEXT2} />
+              </AnimatedIconButton>
+            )}
+          </View>
+
+          {showPicker && Platform.OS === "ios" && (
+            <RNDateTimePicker mode="date" display="spinner" value={date ?? new Date()} onChange={handleDateChange} locale="fr-FR" style={{ marginBottom: 12 }} />
+          )}
+          {showPicker && Platform.OS === "android" && (
+            <RNDateTimePicker mode="date" value={date ?? new Date()} onChange={handleDateChange} />
+          )}
+
+          <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Client ou pro</Text>
+          <ClientPicker selected={client} onSelect={onChangeClient} />
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -340,12 +438,25 @@ export default function AdminBookingsScreen() {
   const listRef     = useRef<SectionList>(null);
   useScrollToTop(listRef);
   const qc          = useQueryClient();
+  const showActionSheet = useActionSheet();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [search, setSearch]             = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [refreshing, setRefreshing]     = useState(false);
+  const [dateFilter, setDateFilter]     = useState<Date | null>(null);
+  const [clientFilter, setClientFilter] = useState<AdminUser | null>(null);
+  const [showFilters, setShowFilters]   = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
+  const activeAdvancedFilters = (dateFilter ? 1 : 0) + (clientFilter ? 1 : 0);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["admin-bookings", statusFilter],
-    queryFn:  () => adminApi.getBookings({ limit: 100, status: statusFilter !== "all" ? statusFilter : undefined }),
+    queryKey: ["admin-bookings", statusFilter, dateFilter ? toISODate(dateFilter) : null, clientFilter?.id ?? null],
+    queryFn:  () => adminApi.getBookings({
+      limit: 100,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      date: dateFilter ? toISODate(dateFilter) : undefined,
+      user_id: clientFilter?.id,
+    }),
     staleTime: 2 * 60_000,
   });
 
@@ -373,9 +484,18 @@ export default function AdminBookingsScreen() {
 
   const bookings = (data?.data as AdminBooking[] | undefined) ?? [];
 
+  // Search is client-side over the fetched page — the bookings endpoint has no text-search param.
+  const filteredBookings = useMemo(() => {
+    if (!debouncedSearch) return bookings;
+    const q = debouncedSearch.toLowerCase();
+    return bookings.filter((b) =>
+      [b.client_name, b.service_name, b.pro_name].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [bookings, debouncedSearch]);
+
   const sections = useMemo(() => {
     const grouped: Record<string, AdminBooking[]> = {};
-    for (const b of bookings) {
+    for (const b of filteredBookings) {
       const key = new Date(b.start_datetime).toLocaleDateString("fr-FR", {
         weekday: "long", day: "numeric", month: "long",
       });
@@ -383,7 +503,7 @@ export default function AdminBookingsScreen() {
       grouped[key].push(b);
     }
     return Object.entries(grouped).map(([title, data]) => ({ title, data }));
-  }, [bookings]);
+  }, [filteredBookings]);
 
   const handleConfirm = (b: AdminBooking) => {
     setBookingError(null);
@@ -397,84 +517,141 @@ export default function AdminBookingsScreen() {
     cancelMut.mutate(b.id);
   };
 
-  const handleEdit = () => { /* edition via écran dédié */ };
+  // Long-press alternative to swipe — mirrors the Users context menu, and stays
+  // reachable for VoiceOver/TalkBack users who can't perform the swipe gesture.
+  const handleLongPress = useCallback((b: AdminBooking) => {
+    const canConfirm = b.status === "pending";
+    const canCancel  = b.status === "pending" || b.status === "confirmed";
+    if (!canConfirm && !canCancel) return;
 
-  // ── Header ─────────────────────────────────────────────────────────────────
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid).catch(() => {});
+    const options = ["Fermer", ...(canConfirm ? ["Confirmer"] : []), ...(canCancel ? ["Annuler la réservation"] : [])];
+    showActionSheet(
+      {
+        title: b.client_name ?? `Réservation #${b.id}`,
+        options,
+        cancelButtonIndex: 0,
+        destructiveButtonIndex: canCancel ? options.length - 1 : undefined,
+        userInterfaceStyle: "dark",
+      },
+      (idx) => {
+        if (options[idx] === "Confirmer") handleConfirm(b);
+        else if (options[idx] === "Annuler la réservation") handleCancel(b);
+      }
+    );
+  }, [showActionSheet]);
+
+  // ── Search + filters + stats — rendered as the SectionList header, so it
+  // shares the list's own horizontal padding instead of adding its own.
   const ListHeader = useMemo(() => (
-    <View style={{ paddingTop: insets.top, paddingBottom: 4 }}>
-      {/* Title row */}
-      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 6 }}>
-        <View>
-          <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -0.8 }}>
-            Réservations
-          </Text>
-          {!isLoading && (
-            <Text style={{ fontSize: 12, color: TEXT2, marginTop: 2 }}>
-              {bookings.length} réservation{bookings.length > 1 ? "s" : ""}
-            </Text>
-          )}
-        </View>
-        {/* Refresh indicator */}
-        {(confirmMut.isPending || cancelMut.isPending) && (
-          <ActivityIndicator size="small" color={Colors.admin} />
+    <View style={{ paddingBottom: ADMIN.space.md }}>
+      {/* Search — client-side, mirrors the Users search bar */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, height: 44, paddingHorizontal: 14, marginBottom: ADMIN.space.md }}>
+        <Ionicons name="search-outline" size={16} color={TEXT3} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Client, pro ou prestation…"
+          placeholderTextColor={TEXT3}
+          style={{ flex: 1, fontSize: 14, color: TEXT1 }}
+          autoCorrect={false} spellCheck={false} returnKeyType="search"
+          clearButtonMode={Platform.OS === "ios" ? "while-editing" : "never"}
+        />
+        {Platform.OS !== "ios" && search.length > 0 && (
+          <AnimatedIconButton onPress={() => setSearch("")} accessibilityLabel="Effacer la recherche" hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color={TEXT3} />
+          </AnimatedIconButton>
         )}
       </View>
 
-      {/* Filters */}
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 7, paddingVertical: 12 }}
-      >
-        {FILTERS.map((f) => {
-          const cfg    = f.key !== "all" ? STATUS_CFG[f.key as BookingStatus] : null;
-          const active = statusFilter === f.key;
-          const color  = cfg?.color ?? Colors.admin;
+      {/* Segmented status tabs — same shape as the Users role tabs */}
+      <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
+        {FILTERS.map(({ key, label }) => {
+          const active = statusFilter === key;
           return (
             <Pressable
-              key={f.key}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setStatusFilter(f.key);
+              key={key}
+              onPress={() => { setStatusFilter(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
+              style={{
+                flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: "center",
+                backgroundColor: active ? ADMIN.accent : "transparent",
               }}
-              style={({ pressed }) => [{
-                flexDirection: "row", alignItems: "center", gap: 5,
-                paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                backgroundColor: active ? `${color}20` : "rgba(255,255,255,0.05)",
-                borderColor:     active ? `${color}45` : "rgba(255,255,255,0.09)",
-                opacity: pressed ? 0.8 : 1,
-              }]}
             >
-              {Platform.OS === "ios"
-                ? <SymbolView name={f.iosIcon as any} size={12} tintColor={active ? color : "rgba(255,255,255,0.35)"} />
-                : <Ionicons name={f.androidIcon} size={12} color={active ? color : "rgba(255,255,255,0.35)"} />}
-              <Text style={{
-                fontSize: 12, fontWeight: active ? "800" : "600",
-                color: active ? color : "rgba(255,255,255,0.4)",
-              }}>
-                {f.label}
-              </Text>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: active ? Colors.white : TEXT2 }} numberOfLines={1}>{label}</Text>
             </Pressable>
           );
         })}
-      </ScrollView>
+      </View>
+
+      {/* Active advanced filter chips */}
+      {(dateFilter || clientFilter) && (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+          {dateFilter && (
+            <Pressable
+              onPress={() => setDateFilter(null)}
+              accessibilityLabel="Retirer le filtre de date"
+              style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT }}>
+                {dateFilter.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+              </Text>
+              <Ionicons name="close" size={11} color={ACCENT} />
+            </Pressable>
+          )}
+          {clientFilter && (
+            <Pressable
+              onPress={() => setClientFilter(null)}
+              accessibilityLabel="Retirer le filtre de client ou pro"
+              style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT }}>
+                {clientFilter.first_name} {clientFilter.last_name}
+              </Text>
+              <Ionicons name="close" size={11} color={ACCENT} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* Stats bar — only for "all" filter */}
-      {statusFilter === "all" && !isLoading && bookings.length > 0 && (
-        <StatsBar bookings={bookings} />
+      {statusFilter === "all" && !isLoading && filteredBookings.length > 0 && (
+        <StatsBar bookings={filteredBookings} />
       )}
     </View>
-  ), [bookings, statusFilter, isLoading, confirmMut.isPending, cancelMut.isPending]);
+  ), [search, filteredBookings, statusFilter, isLoading, activeAdvancedFilters, dateFilter, clientFilter]);
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
+      <AdminHeader
+        title="Réservations"
+        subtitle={!isLoading ? `${filteredBookings.length} réservation${filteredBookings.length > 1 ? "s" : ""}` : undefined}
+        action={
+          (confirmMut.isPending || cancelMut.isPending) ? (
+            <ActivityIndicator size="small" color={ACCENT} />
+          ) : (
+            <AnimatedIconButton
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowFilters(true); }}
+              accessibilityLabel={`Filtres avancés${activeAdvancedFilters > 0 ? ` (${activeAdvancedFilters} actifs)` : ""}`}
+              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: activeAdvancedFilters > 0 ? ADMIN.accentBg : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+            >
+              <Ionicons name="options-outline" size={18} color={activeAdvancedFilters > 0 ? ACCENT : TEXT2} />
+              {activeAdvancedFilters > 0 && (
+                <View style={{ position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3, backgroundColor: ACCENT, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{activeAdvancedFilters}</Text>
+                </View>
+              )}
+            </AnimatedIconButton>
+          )
+        }
+      />
       {bookingError && (
-        <View style={{ paddingHorizontal: 16, paddingTop: insets.top + 12 }}>
+        <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.md }}>
           <ErrorMessage message={bookingError} />
         </View>
       )}
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
-          <ActivityIndicator size="large" color={Colors.admin} />
+          <ActivityIndicator size="large" color={ACCENT} />
           <Text style={{ fontSize: 13, color: TEXT2 }}>Chargement…</Text>
         </View>
       ) : (
@@ -483,36 +660,37 @@ export default function AdminBookingsScreen() {
           sections={sections}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{
-            paddingHorizontal: 16,
+            paddingHorizontal: ADMIN.space.xl,
             paddingBottom: insets.bottom + 24,
           }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
+          automaticallyAdjustContentInsets={false}
+          contentInsetAdjustmentBehavior="never"
           ListHeaderComponent={ListHeader}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={Colors.admin}
-              colors={[Colors.admin]}
+              tintColor={ACCENT}
+              colors={[ACCENT]}
             />
           }
           renderSectionHeader={({ section }) => (
-            <SectionHeader title={section.title} count={section.data.length} />
+            <View style={{ backgroundColor: BG, paddingTop: ADMIN.space.md }}>
+              <SectionLabel trailing={String(section.data.length)}>{section.title}</SectionLabel>
+            </View>
           )}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 80, gap: 16 }}>
-              <LinearGradient
-                colors={[`${Colors.admin}18`, `${Colors.admin}06`]}
-                style={{ width: 80, height: 80, borderRadius: 24,
-                  alignItems: "center", justifyContent: "center" }}
-              >
-                {Platform.OS === "ios"
-                  ? <SymbolView name="calendar.badge.exclamationmark" size={34} tintColor={Colors.admin} />
-                  : <Ionicons name="calendar-outline" size={34} color={Colors.admin} />}
-              </LinearGradient>
+              <View style={{
+                width: 72, height: 72, borderRadius: 20, backgroundColor: ADMIN.surfaceHover,
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <AdminIcon ios="calendar.badge.exclamationmark" android="calendar-outline" size={30} color={TEXT3} />
+              </View>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 16, fontWeight: "800", color: TEXT1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
                   Aucune réservation
                 </Text>
                 <Text style={{ fontSize: 13, color: TEXT2, textAlign: "center" }}>
@@ -522,10 +700,30 @@ export default function AdminBookingsScreen() {
             </View>
           }
           renderItem={({ item: b }) => (
-            <BookingCard booking={b} onConfirm={handleConfirm} onCancel={handleCancel} onEdit={handleEdit} />
+            <BookingCard booking={b} onPress={setSelectedBooking} onConfirm={handleConfirm} onCancel={handleCancel} onLongPress={handleLongPress} />
           )}
         />
       )}
+
+      {selectedBooking && (
+        <BookingDetailSheet
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+          confirmLoading={confirmMut.isPending}
+          cancelLoading={cancelMut.isPending}
+        />
+      )}
+
+      <BookingFiltersModal
+        visible={showFilters}
+        date={dateFilter}
+        client={clientFilter}
+        onChangeDate={setDateFilter}
+        onChangeClient={setClientFilter}
+        onClose={() => setShowFilters(false)}
+      />
     </View>
   );
 }

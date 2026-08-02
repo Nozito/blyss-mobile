@@ -1,20 +1,25 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, ScrollView, Pressable, FlatList,
-  ActivityIndicator, Linking, RefreshControl, TextInput, Modal,
+  ActivityIndicator, Linking, RefreshControl, TextInput, Modal, Image,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+
+function resolveImageUri(uri: string): string {
+  return uri.startsWith("http") ? uri : `${API_URL}${uri}`;
+}
 
 const BG     = ADMIN.bg;
 const CARD   = ADMIN.surface;
@@ -22,6 +27,7 @@ const BORDER = ADMIN.border;
 const TEXT1  = ADMIN.text;
 const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
+const ACCENT = ADMIN.accent;
 
 interface PendingPro {
   id: number;
@@ -74,6 +80,7 @@ function ProDetailModal({
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
   const [rejectError, setRejectError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleReject = () => {
     if (!rejectReason.trim()) {
@@ -90,22 +97,19 @@ function ProDetailModal({
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ backgroundColor: "#111118", borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: "92%" }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)", alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
+        <View style={{ backgroundColor: ADMIN.surface, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: "92%" }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: ADMIN.borderStrong, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
           <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <LinearGradient
-              colors={["#1a0a00", "#2c1400"]}
-              style={{ paddingHorizontal: 24, paddingVertical: 20 }}
-            >
+            <View style={{ paddingHorizontal: 24, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: BORDER }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: `${Colors.admin}25`, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.admin }}>
+                <View style={{ width: 60, height: 60, borderRadius: 18, backgroundColor: withAlpha(ACCENT, 0.16), alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22, fontWeight: "700", color: ACCENT }}>
                     {pro.first_name[0]?.toUpperCase()}{pro.last_name[0]?.toUpperCase()}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 20, fontWeight: "900", color: TEXT1, marginBottom: 4 }}>{name}</Text>
+                  <Text style={{ fontSize: 20, fontWeight: "700", color: TEXT1, marginBottom: 4 }}>{name}</Text>
                   {pro.activity_name && (
                     <Text style={{ fontSize: 13, color: TEXT2 }}>{pro.activity_name}</Text>
                   )}
@@ -116,25 +120,25 @@ function ProDetailModal({
                     </View>
                   )}
                 </View>
-                <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" }}>
+                <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="close" size={16} color={TEXT2} />
                 </AnimatedIconButton>
               </View>
-            </LinearGradient>
+            </View>
 
             <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 16 }}>
               {/* Contact */}
               <View style={{ gap: 10 }}>
                 <AnimatedPressable
                   onPress={() => pro.phone_number && void Linking.openURL(`tel:${pro.phone_number}`)}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: BORDER }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: BORDER }}
                 >
                   <Ionicons name="call-outline" size={18} color={Colors.info} />
                   <Text style={{ fontSize: 14, color: pro.phone_number ? TEXT1 : TEXT3 }}>
                     {pro.phone_number ?? "Non renseigné"}
                   </Text>
                 </AnimatedPressable>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: BORDER }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: BORDER }}>
                   <Ionicons name="mail-outline" size={18} color={Colors.info} />
                   <Text style={{ fontSize: 14, color: TEXT1 }}>{pro.email}</Text>
                 </View>
@@ -142,7 +146,7 @@ function ProDetailModal({
 
               {/* Bio */}
               {pro.bio && (
-                <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: BORDER }}>
+                <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: BORDER }}>
                   <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Bio</Text>
                   <Text style={{ fontSize: 13, color: TEXT2, lineHeight: 20 }}>{pro.bio}</Text>
                 </View>
@@ -154,7 +158,7 @@ function ProDetailModal({
                   <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Spécialités</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     {(pro.pro_specialties ?? []).map((s) => (
-                      <View key={s} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: `${Colors.pro}18`, borderWidth: 1, borderColor: `${Colors.pro}30` }}>
+                      <View key={s} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: withAlpha(Colors.pro, 0.14) }}>
                         <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.pro }}>{s}</Text>
                       </View>
                     ))}
@@ -168,11 +172,19 @@ function ProDetailModal({
                   <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Galerie ({gallery.length})</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                     {gallery.map((img) => (
-                      <View key={img.id} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: BORDER, overflow: "hidden" }}>
-                        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                          <Ionicons name="image-outline" size={24} color={TEXT3} />
-                        </View>
-                      </View>
+                      <Pressable
+                        key={img.id}
+                        onPress={() => setPreviewImage(resolveImageUri(img.url))}
+                        accessibilityLabel="Agrandir la photo"
+                        accessibilityRole="imagebutton"
+                        style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER, overflow: "hidden" }}
+                      >
+                        <Image
+                          source={{ uri: resolveImageUri(img.thumbnail) }}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode="cover"
+                        />
+                      </Pressable>
                     ))}
                   </View>
                 </View>
@@ -189,7 +201,7 @@ function ProDetailModal({
                     placeholderTextColor={TEXT3}
                     multiline
                     numberOfLines={3}
-                    style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, borderWidth: 1, borderColor: `${Colors.destructive}40`, padding: 14, fontSize: 13, color: TEXT1, minHeight: 80, textAlignVertical: "top" }}
+                    style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 14, borderWidth: 1, borderColor: withAlpha(Colors.destructive, 0.4), padding: 14, fontSize: 13, color: TEXT1, minHeight: 80, textAlignVertical: "top" }}
                   />
                   {rejectError && <ErrorMessage message={rejectError} />}
                 </View>
@@ -224,7 +236,7 @@ function ProDetailModal({
                   <>
                     <AnimatedPressable
                       onPress={() => { setShowReject(false); setRejectError(null); setRejectReason(""); }}
-                      style={{ flex: 1, height: 50, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}
+                      style={{ flex: 1, height: 50, borderRadius: 15, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
                     >
                       <Text style={{ fontSize: 14, fontWeight: "600", color: TEXT2 }}>Annuler</Text>
                     </AnimatedPressable>
@@ -245,6 +257,19 @@ function ProDetailModal({
           </ScrollView>
         </View>
       </View>
+
+      {/* Full-screen image preview */}
+      <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(null)}>
+        <Pressable
+          onPress={() => setPreviewImage(null)}
+          accessibilityLabel="Fermer l'aperçu"
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}
+        >
+          {previewImage && (
+            <Image source={{ uri: previewImage }} style={{ width: "100%", height: "70%" }} resizeMode="contain" />
+          )}
+        </Pressable>
+      </Modal>
     </Modal>
   );
 }
@@ -293,7 +318,7 @@ export default function ProValidationScreen() {
     <View style={{ flex: 1, backgroundColor: BG }}>
       {/* Header */}
       <View style={{ paddingTop: insets.top, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
-        <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -0.8, marginBottom: 4 }}>Validation Pros</Text>
+        <Text style={{ fontSize: 30, fontWeight: "700", color: TEXT1, letterSpacing: -0.8, marginBottom: 4 }}>Validation Pros</Text>
         {!isLoading && (
           <Text style={{ fontSize: 12, color: TEXT2 }}>
             {pros.length} profil{pros.length !== 1 ? "s" : ""} en attente
@@ -312,11 +337,11 @@ export default function ProValidationScreen() {
           removeClippedSubviews
           maxToRenderPerBatch={10}
           windowSize={7}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} />}
           ListEmptyComponent={
             <EmptyState
               icon="checkmark-circle-outline"
-              title="Aucune validation en attente ✓"
+              title="Aucune validation en attente"
               description="Tous les profils pros ont été traités."
             />
           }
@@ -326,13 +351,13 @@ export default function ProValidationScreen() {
               style={{ backgroundColor: CARD, borderRadius: 18, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: `${Colors.admin}20`, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.admin }}>
+                <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: withAlpha(ACCENT, 0.16), alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 18, fontWeight: "700", color: ACCENT }}>
                     {item.first_name[0]?.toUpperCase()}{item.last_name[0]?.toUpperCase()}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "800", color: TEXT1, marginBottom: 3 }}>{item.first_name} {item.last_name}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1, marginBottom: 3 }}>{item.first_name} {item.last_name}</Text>
                   <Text style={{ fontSize: 12, color: TEXT2 }}>{item.activity_name ?? item.email}</Text>
                   {item.city && (
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 }}>
@@ -341,8 +366,8 @@ export default function ProValidationScreen() {
                     </View>
                   )}
                 </View>
-                <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: `${Colors.warning}18`, borderWidth: 1, borderColor: `${Colors.warning}30` }}>
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.warning }}>EN ATTENTE</Text>
+                <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: withAlpha(Colors.warning, 0.14) }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.warning }}>EN ATTENTE</Text>
                 </View>
               </View>
 

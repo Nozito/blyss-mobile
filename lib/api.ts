@@ -1027,9 +1027,7 @@ export const adminApi = {
   refundPayment: (id: number): Promise<ApiResponse<{ id: number; status: string }>> =>
     apiCall(`/api/admin/payments/${id}/refund`, { method: "POST" }),
 
-  // Coupons — hors périmètre V1 (écran admin retiré, aucune consommation côté
-  // client). Bindings laissés inertes pour ne pas casser le backend si ces
-  // routes existent encore côté API ; non appelés nulle part dans l'app.
+  // Coupons
   getCoupons: (): Promise<ApiResponse<AdminCoupon[]>> => apiCall("/api/admin/coupons"),
   createCoupon: (data: { code: string; discount_type: "percent" | "fixed"; discount_value: number; applicable_plans: string[]; expires_at?: string; max_uses?: number }): Promise<ApiResponse<{ id: number }>> =>
     apiCall("/api/admin/coupons", { method: "POST", body: JSON.stringify(data) }),

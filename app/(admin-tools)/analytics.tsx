@@ -1,25 +1,29 @@
 import React, { useState, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable, useWindowDimensions,
-  Animated, Platform,
+  Animated,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Polyline, Rect, Defs, LinearGradient as SvgGrad, Stop, Polygon, Circle,
 } from "react-native-svg";
-import { SymbolView } from "expo-symbols";
+import type { SFSymbol } from "sf-symbols-typescript";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { adminApi, AdminAnalytics } from "@/lib/api";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ADMIN } from "@/constants/adminTheme";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { AdminIcon } from "@/components/admin/AdminIcon";
 
-const A_BG = ADMIN.bg;
+const BG     = ADMIN.bg;
+const TEXT1  = ADMIN.text;
+const TEXT2  = ADMIN.textSub;
+const TEXT3  = ADMIN.textMuted;
+const ACCENT = ADMIN.accent;
 const DAYS_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 
 type Period = "week" | "month" | "year";
@@ -110,7 +114,7 @@ function BarChart({
               key={i}
               style={{ width: barW, marginRight: i < data.length - 1 ? 4 : 0, alignItems: "center" }}
             >
-              <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", fontWeight: "600" }}>
+              <Text style={{ fontSize: 8, color: TEXT3, fontWeight: "600" }}>
                 {label}
               </Text>
             </View>
@@ -124,31 +128,31 @@ function BarChart({
 // ─── KPICard ──────────────────────────────────────────────────────────────────
 
 function KPICard({
-  label, value, sub, color, symbol,
+  label, value, sub, color, symbol, androidIcon,
 }: {
   label: string; value: string | number; sub?: string; color: string;
-  symbol: string;
+  symbol: SFSymbol; androidIcon: React.ComponentProps<typeof Ionicons>["name"];
 }) {
   return (
     <View style={{
       flex: 1,
-      backgroundColor: "rgba(255,255,255,0.05)",
-      borderRadius: 22,
+      backgroundColor: ADMIN.surface,
+      borderRadius: ADMIN.cardRadius,
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.08)",
-      padding: 18,
+      borderColor: ADMIN.border,
+      padding: 16,
     }}>
-      <View style={{ flexDirection: "row", justifyContent: "flex-end", marginBottom: 10 }}>
-        <SymbolView name={symbol as any} size={20} tintColor={`${color}85`} />
+      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: withAlpha(color, 0.14), alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+        <AdminIcon ios={symbol} android={androidIcon} size={16} color={color} />
       </View>
-      <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
+      <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
         {label}
       </Text>
-      <Text style={{ fontSize: 26, fontWeight: "900", color, marginBottom: 2 }}>
+      <Text style={{ fontSize: 22, fontWeight: "700", color: TEXT1, marginBottom: 2 }}>
         {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
       </Text>
       {sub && (
-        <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{sub}</Text>
+        <Text style={{ fontSize: 11, color: TEXT3 }}>{sub}</Text>
       )}
     </View>
   );
@@ -157,28 +161,22 @@ function KPICard({
 // ─── ChartHeader ──────────────────────────────────────────────────────────────
 
 function ChartHeader({
-  symbol, title, color, badge,
+  symbol, androidIcon, title, color, badge,
 }: {
-  symbol: string; title: string; color: string; badge: string;
+  symbol: SFSymbol; androidIcon: React.ComponentProps<typeof Ionicons>["name"];
+  title: string; color: string; badge: string;
 }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
       <View style={{
-        width: 36, height: 36, borderRadius: 10,
-        backgroundColor: `${color}18`,
+        width: 32, height: 32, borderRadius: 10,
+        backgroundColor: withAlpha(color, 0.14),
         alignItems: "center", justifyContent: "center",
       }}>
-        <SymbolView name={symbol as any} size={18} tintColor={color} />
+        <AdminIcon ios={symbol} android={androidIcon} size={16} color={color} />
       </View>
-      <Text style={{ flex: 1, fontSize: 15, fontWeight: "900", color: Colors.white }}>{title}</Text>
-      <View style={{
-        backgroundColor: `${color}15`,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-      }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color }}>{badge}</Text>
-      </View>
+      <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: TEXT1 }}>{title}</Text>
+      <Text style={{ fontSize: 12, fontWeight: "600", color: TEXT2 }}>{badge}</Text>
     </View>
   );
 }
@@ -207,16 +205,16 @@ function PeriodPill({
       style={{ flex: 1 }}
     >
       <Animated.View style={{
-        flex: 1, height: 40,
+        flex: 1, height: 36,
         alignItems: "center", justifyContent: "center",
-        borderRadius: 14,
-        backgroundColor: active ? "rgba(249,115,22,0.25)" : "transparent",
+        borderRadius: 10,
+        backgroundColor: active ? ADMIN.accentBg : "transparent",
         transform: [{ scale }],
       }}>
         <Text style={{
           fontSize: 13,
-          fontWeight: active ? "800" : "600",
-          color: active ? Colors.admin : "rgba(255,255,255,0.4)",
+          fontWeight: active ? "700" : "500",
+          color: active ? ACCENT : TEXT2,
         }}>
           {label}
         </Text>
@@ -277,17 +275,17 @@ export default function AdminAnalyticsScreen() {
   ];
 
   const CHART_STYLE = {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderRadius: 24,
+    backgroundColor: ADMIN.surface,
+    borderRadius: ADMIN.cardRadius,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    padding: 20,
-    marginBottom: 16,
+    borderColor: ADMIN.border,
+    padding: 18,
+    marginBottom: 14,
   } as const;
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: A_BG }}
+      style={{ flex: 1, backgroundColor: BG }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 24,
@@ -296,132 +294,102 @@ export default function AdminAnalyticsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* ── Header ── */}
-      <View style={{ marginBottom: 22 }}>
+      <View style={{ marginBottom: 20 }}>
         <AnimatedPressable
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
-          {Platform.OS === "ios"
-            ? <SymbolView name="chevron.left" size={16} tintColor={ADMIN.accent} />
-            : <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />}
-          <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+          <Ionicons name="chevron-back" size={18} color={ACCENT} />
+          <Text style={{ fontSize: 15, fontWeight: "600", color: ACCENT }}>Retour</Text>
         </AnimatedPressable>
-        <Text style={{ fontSize: 34, fontWeight: "900", color: Colors.white, letterSpacing: -1 }}>
+        <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.5 }}>
           Analytics
         </Text>
-        <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+        <Text style={{ fontSize: 13, color: TEXT2, marginTop: 2 }}>
           {today}
         </Text>
       </View>
 
       {/* ── Hero Revenue Card ── */}
       {a && (
-        <LinearGradient
-          colors={["#0F0800", "#1C0F00", "#0F0800"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ borderRadius: 28, padding: 24, marginBottom: 16, overflow: "hidden" }}
-        >
-          {/* Orbs décoratifs */}
-          <View style={{
-            position: "absolute", top: -40, right: -40,
-            width: 160, height: 160, borderRadius: 80,
-            backgroundColor: "rgba(249,115,22,0.06)",
-          }} />
-          <View style={{
-            position: "absolute", bottom: -20, left: -20,
-            width: 80, height: 80, borderRadius: 40,
-            backgroundColor: "rgba(249,115,22,0.04)",
-          }} />
-          <View style={{
-            position: "absolute", top: "40%", left: "30%",
-            width: 200, height: 200, borderRadius: 100,
-            backgroundColor: "rgba(249,115,22,0.03)",
-          }} />
-
-          {/* Label + badge croissance */}
+        <View style={{ borderRadius: ADMIN.cardRadius, padding: 22, marginBottom: 14, backgroundColor: ADMIN.surface, borderWidth: 1, borderColor: ADMIN.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <Text style={{
-              fontSize: 10, fontWeight: "700",
-              color: "rgba(249,115,22,0.6)",
-              textTransform: "uppercase", letterSpacing: 2,
+              fontSize: 11, fontWeight: "600",
+              color: TEXT2,
+              textTransform: "uppercase", letterSpacing: 1,
             }}>
-              CA TOTAL
+              CA total
             </Text>
             {growth != null && (
               <View style={{
-                paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-                backgroundColor: "rgba(249,115,22,0.15)",
+                paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+                backgroundColor: growth >= 0 ? ADMIN.successBg : ADMIN.dangerBg,
               }}>
-                <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.admin }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: growth >= 0 ? ADMIN.success : ADMIN.danger }}>
                   {growth >= 0 ? "↑" : "↓"} {Math.abs(growth).toFixed(1)}%
                 </Text>
               </View>
             )}
           </View>
 
-          {/* Valeur totale */}
           <Text style={{
-            fontSize: 52, fontWeight: "900", color: Colors.white, letterSpacing: -2, marginBottom: 16,
+            fontSize: 40, fontWeight: "700", color: TEXT1, letterSpacing: -1, marginBottom: 16,
           }}>
             {Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €
           </Text>
 
-          {/* Grille 3 colonnes */}
           <View style={{
             flexDirection: "row", marginBottom: 16,
-            borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.10)",
+            borderTopWidth: 1, borderTopColor: ADMIN.border,
             paddingTop: 14,
           }}>
             <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
+              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
                 CE MOIS
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
                 {Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €
               </Text>
             </View>
-            <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
+            <View style={{ width: 1, backgroundColor: ADMIN.border }} />
             <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
+              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
                 UTILISATEURS
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
                 {Number(a.users.total_users).toLocaleString("fr-FR")}
               </Text>
             </View>
-            <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
+            <View style={{ width: 1, backgroundColor: ADMIN.border }} />
             <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: "600", marginBottom: 4 }}>
+              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
                 RÉSERVATIONS
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.white }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
                 {Number(a.bookings.total).toLocaleString("fr-FR")}
               </Text>
             </View>
           </View>
 
-          {/* Mini sparkline */}
           {revenuePoints.length >= 2 && (
             <Sparkline
               data={revenuePoints.slice(-7)}
-              color="rgba(249,115,22,0.4)"
+              color={withAlpha(ACCENT, 0.5)}
               width={chartWidth}
               height={40}
               noFill
               strokeWidth={1.5}
             />
           )}
-        </LinearGradient>
+        </View>
       )}
 
       {/* ── Period Selector ── */}
       <View style={{
         flexDirection: "row",
-        backgroundColor: "rgba(255,255,255,0.06)",
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: ADMIN.surfaceHover,
+        borderRadius: 12,
         padding: 4,
         marginBottom: 20,
       }}>
@@ -440,18 +408,18 @@ export default function AdminAnalyticsScreen() {
         <View style={{ gap: 10, marginBottom: 20 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <SkeletonBox width="100%" height={100} borderRadius={22} style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <SkeletonBox width="100%" height={100} borderRadius={ADMIN.cardRadius} />
             </View>
             <View style={{ flex: 1 }}>
-              <SkeletonBox width="100%" height={100} borderRadius={22} style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <SkeletonBox width="100%" height={100} borderRadius={ADMIN.cardRadius} />
             </View>
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <SkeletonBox width="100%" height={100} borderRadius={22} style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <SkeletonBox width="100%" height={100} borderRadius={ADMIN.cardRadius} />
             </View>
             <View style={{ flex: 1 }}>
-              <SkeletonBox width="100%" height={100} borderRadius={22} style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <SkeletonBox width="100%" height={100} borderRadius={ADMIN.cardRadius} />
             </View>
           </View>
         </View>
@@ -461,14 +429,16 @@ export default function AdminAnalyticsScreen() {
             <KPICard
               label="CA total"
               value={`${Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €`}
-              color={Colors.admin}
+              color={ACCENT}
               symbol="banknote"
+              androidIcon="cash-outline"
             />
             <KPICard
               label="CA du mois"
               value={`${Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €`}
               color={Colors.success}
               symbol="checkmark.seal.fill"
+              androidIcon="checkmark-circle-outline"
             />
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -478,6 +448,7 @@ export default function AdminAnalyticsScreen() {
               sub={`${a.users.new_last_30d} nouveaux 30j`}
               color={Colors.pro}
               symbol="person.fill"
+              androidIcon="person-outline"
             />
             <KPICard
               label="Réservations"
@@ -485,6 +456,7 @@ export default function AdminAnalyticsScreen() {
               sub={`${a.bookings.completed} terminées`}
               color={Colors.info}
               symbol="calendar"
+              androidIcon="calendar-outline"
             />
           </View>
         </View>
@@ -494,15 +466,16 @@ export default function AdminAnalyticsScreen() {
       <View style={CHART_STYLE}>
         <ChartHeader
           symbol="chart.line.uptrend.xyaxis"
+          androidIcon="trending-up-outline"
           title="Revenus"
-          color={Colors.admin}
+          color={ACCENT}
           badge={`${revenuePoints.reduce((s, v) => s + v, 0).toLocaleString("fr-FR")} €`}
         />
         {revenuePoints.length > 1 ? (
-          <Sparkline data={revenuePoints} color={Colors.admin} width={chartWidth} height={72} />
+          <Sparkline data={revenuePoints} color={ACCENT} width={chartWidth} height={72} />
         ) : (
           <View style={{ height: 72, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+            <Text style={{ fontSize: 12, color: TEXT3 }}>
               Données en cours de chargement…
             </Text>
           </View>
@@ -513,6 +486,7 @@ export default function AdminAnalyticsScreen() {
       <View style={CHART_STYLE}>
         <ChartHeader
           symbol="person.2.fill"
+          androidIcon="people-outline"
           title="Nouveaux utilisateurs"
           color={Colors.pro}
           badge={`${usersPoints.reduce((s, v) => s + v, 0)} inscrits`}
@@ -527,7 +501,7 @@ export default function AdminAnalyticsScreen() {
           />
         ) : (
           <View style={{ height: 96, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+            <Text style={{ fontSize: 12, color: TEXT3 }}>
               Données en cours de chargement…
             </Text>
           </View>
@@ -538,6 +512,7 @@ export default function AdminAnalyticsScreen() {
       <View style={CHART_STYLE}>
         <ChartHeader
           symbol="calendar.badge.clock"
+          androidIcon="calendar-outline"
           title="Réservations"
           color={Colors.info}
           badge={`${bookingsPoints.reduce((s, v) => s + v, 0)} RDV`}
@@ -546,7 +521,7 @@ export default function AdminAnalyticsScreen() {
           <Sparkline data={bookingsPoints} color={Colors.info} width={chartWidth} height={72} />
         ) : (
           <View style={{ height: 72, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+            <Text style={{ fontSize: 12, color: TEXT3 }}>
               Données en cours de chargement…
             </Text>
           </View>
@@ -558,6 +533,7 @@ export default function AdminAnalyticsScreen() {
         <View style={CHART_STYLE}>
           <ChartHeader
             symbol="chart.pie.fill"
+            androidIcon="pie-chart-outline"
             title="Répartition des statuts"
             color={Colors.warning}
             badge={`${Number(a.bookings.total)} total`}
@@ -566,7 +542,7 @@ export default function AdminAnalyticsScreen() {
             { label: "Confirmées", value: a.bookings.confirmed, color: Colors.info },
             { label: "Terminées",  value: a.bookings.completed, color: Colors.success },
             { label: "En attente", value: a.bookings.pending,   color: Colors.warning },
-            { label: "Annulées",   value: a.bookings.cancelled, color: "#F03A3A" },
+            { label: "Annulées",   value: a.bookings.cancelled, color: ADMIN.danger },
           ].map(({ label, value, color }) => {
             const pct = a.bookings.total > 0
               ? (Number(value) / Number(a.bookings.total)) * 100
@@ -577,27 +553,22 @@ export default function AdminAnalyticsScreen() {
                   flexDirection: "row", justifyContent: "space-between",
                   alignItems: "center", marginBottom: 6,
                 }}>
-                  <Text style={{ fontSize: 13, color: Colors.white, fontWeight: "600" }}>{label}</Text>
+                  <Text style={{ fontSize: 13, color: TEXT1, fontWeight: "500" }}>{label}</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={{ fontSize: 13, color, fontWeight: "700" }}>
                       {Number(value).toLocaleString("fr-FR")}
                     </Text>
-                    <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                    <Text style={{ fontSize: 11, color: TEXT2 }}>
                       {pct.toFixed(0)}%
                     </Text>
                   </View>
                 </View>
                 <View style={{
-                  height: 10, borderRadius: 5,
-                  backgroundColor: "rgba(255,255,255,0.08)",
+                  height: 6, borderRadius: 3,
+                  backgroundColor: ADMIN.surfaceHover,
                   overflow: "hidden",
                 }}>
-                  <LinearGradient
-                    colors={[color, `${color}80`]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{ height: 10, borderRadius: 5, width: `${pct}%` }}
-                  />
+                  <View style={{ height: "100%", width: `${pct}%`, borderRadius: 3, backgroundColor: color }} />
                 </View>
               </View>
             );

@@ -15,6 +15,8 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 const BG     = ADMIN.bg;
 const CARD   = ADMIN.surface;
@@ -75,8 +77,10 @@ export default function ReviewsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FlaggedReview | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-reviews-flagged"],
@@ -88,16 +92,17 @@ export default function ReviewsScreen() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => adminApi.deleteReview(id),
     onSuccess: () => {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      showToast("Avis supprimé.", "success");
       void qc.invalidateQueries({ queryKey: ["admin-reviews-flagged"] });
+      setDeleteTarget(null);
     },
-    onError: () => setActionError("Impossible de supprimer cet avis."),
+    onError: () => { setDeleteTarget(null); setActionError("Impossible de supprimer cet avis."); },
   });
 
   const ignoreMut = useMutation({
     mutationFn: (id: number) => adminApi.ignoreReviewFlag(id),
     onSuccess: () => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      showToast("Signalement ignoré.", "success");
       void qc.invalidateQueries({ queryKey: ["admin-reviews-flagged"] });
     },
     onError: () => setActionError("Impossible d'ignorer ce signalement."),
@@ -117,14 +122,14 @@ export default function ReviewsScreen() {
           <AnimatedIconButton
             onPress={() => safeBack(router)}
             accessibilityLabel="Retour"
-            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="arrow-back" size={18} color={TEXT1} />
           </AnimatedIconButton>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: TEXT1, letterSpacing: -0.6 }}>Avis signalés</Text>
+          <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.6 }}>Avis signalés</Text>
           {!isLoading && reviews.length > 0 && (
-            <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: `${Colors.destructive}18`, borderWidth: 1, borderColor: `${Colors.destructive}30` }}>
-              <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.destructive }}>{reviews.length}</Text>
+            <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{reviews.length}</Text>
             </View>
           )}
         </View>
@@ -141,7 +146,7 @@ export default function ReviewsScreen() {
           removeClippedSubviews
           maxToRenderPerBatch={10}
           windowSize={7}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.admin} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
           ListEmptyComponent={
             <EmptyState
               icon="shield-checkmark-outline"
@@ -153,18 +158,18 @@ export default function ReviewsScreen() {
             <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
               {/* Author + rating */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.destructive}18`, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.destructive }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.destructive }}>
                     {item.author_name[0]?.toUpperCase() ?? "?"}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "800", color: TEXT1, marginBottom: 3 }}>{item.author_name}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT1, marginBottom: 3 }}>{item.author_name}</Text>
                   <StarRow rating={item.rating} />
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: `${Colors.destructive}15`, borderWidth: 1, borderColor: `${Colors.destructive}25` }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
                   <Ionicons name="flag-outline" size={11} color={Colors.destructive} />
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.destructive }}>{item.flags_count}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.destructive }}>{item.flags_count}</Text>
                 </View>
               </View>
 
@@ -176,7 +181,7 @@ export default function ReviewsScreen() {
 
               {/* Comment */}
               {item.comment && (
-                <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}>
+                <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: ADMIN.border }}>
                   <Text style={{ fontSize: 13, color: TEXT2, lineHeight: 19 }}>{item.comment}</Text>
                 </View>
               )}
@@ -191,29 +196,40 @@ export default function ReviewsScreen() {
                 <AnimatedPressable
                   onPress={() => { setActionError(null); ignoreMut.mutate(item.id); }}
                   disabled={ignoreMut.isPending}
-                  style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
+                  style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
                 >
                   {ignoreMut.isPending
                     ? <ActivityIndicator size="small" color={TEXT2} />
                     : <Text style={{ fontSize: 12, fontWeight: "600", color: TEXT2 }}>Ignorer le signalement</Text>}
                 </AnimatedPressable>
                 <AnimatedPressable
-                  onPress={() => { setActionError(null); void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); deleteMut.mutate(item.id); }}
-                  disabled={deleteMut.isPending}
-                  style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: `${Colors.destructive}18`, borderWidth: 1, borderColor: `${Colors.destructive}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
+                  onPress={() => { setActionError(null); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); setDeleteTarget(item); }}
+                  accessibilityLabel="Supprimer cet avis"
+                  style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
                 >
-                  {deleteMut.isPending
-                    ? <ActivityIndicator size="small" color={Colors.destructive} />
-                    : <>
-                        <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Supprimer l'avis</Text>
-                      </>}
+                  <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Supprimer l'avis</Text>
                 </AnimatedPressable>
               </View>
             </View>
           )}
         />
       )}
+
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Supprimer cet avis ?"
+        message={
+          deleteTarget ? (
+            <>{`L'avis de ${deleteTarget.author_name} sur ${deleteTarget.pro_name} sera supprimé définitivement.`}</>
+          ) : null
+        }
+        confirmLabel="Supprimer"
+        danger
+        loading={deleteMut.isPending}
+        onConfirm={() => { if (deleteTarget) deleteMut.mutate(deleteTarget.id); }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </View>
   );
 }
