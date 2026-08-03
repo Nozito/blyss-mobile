@@ -15,7 +15,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "19.99",
+          "displayPrice" : "29.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "2100000001",
@@ -36,7 +36,28 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "29.99",
+          "displayPrice" : "299.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "2100000006",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Abonnement Start annuel",
+              "displayName" : "Start Annuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "start_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Start Annual",
+          "subscriptionGroupID" : "21000000000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "49.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "2100000002",
@@ -57,7 +78,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "299.99",
+          "displayPrice" : "499.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "2100000003",

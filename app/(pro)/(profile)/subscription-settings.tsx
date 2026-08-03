@@ -184,9 +184,27 @@ export default function ProSubscriptionSettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Plan actuel</Text>
               <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>Formule {PLAN_META[activePlan].label}</Text>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: PLAN_META[activePlan].color }}>
-                {packages.find((p) => p.key === activePlan)?.priceString ?? "—"}/mois
-              </Text>
+              {(() => {
+                const activePkg = packages.find((p) => p.key === activePlan);
+                const isActiveAnnual = subscription?.billingType === "one_time";
+                if (isActiveAnnual && activePkg) {
+                  return (
+                    <>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: PLAN_META[activePlan].color }}>
+                        {activePkg.annualPriceString}/an
+                      </Text>
+                      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>
+                        soit {activePkg.annualMonthlyPrice.toFixed(2)} €/mois
+                      </Text>
+                    </>
+                  );
+                }
+                return (
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: PLAN_META[activePlan].color }}>
+                    {activePkg?.priceString ?? "—"}/mois
+                  </Text>
+                );
+              })()}
               {subscription?.billingType && (
                 <View style={{
                   alignSelf: "flex-start", marginTop: 6,
@@ -291,6 +309,11 @@ export default function ProSubscriptionSettingsScreen() {
                   <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground }}>{meta.label}</Text>
                   <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{meta.description} · {meta.featureCount} fonctionnalités</Text>
                   <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{priceStr}{isAnnual ? "/an" : "/mois"}</Text>
+                  {isAnnual && rcPkg && (
+                    <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                      soit {rcPkg.annualMonthlyPrice.toFixed(2)} €/mois
+                    </Text>
+                  )}
                 </View>
                 {isCurrent ? (
                   <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: `${meta.color}18` }}>

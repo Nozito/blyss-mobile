@@ -45,13 +45,15 @@ async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
 const PLAN_CONFIG: Record<RCPlan, {
   label: string;
   fallbackMonthly: number;
+  fallbackAnnualTotal: number;
   color: string;
   icon: "rocket-outline" | "shield-checkmark-outline" | "diamond-outline";
   features: { text: string; icon: string }[];
 }> = {
   start: {
     label: "Start",
-    fallbackMonthly: 29.9,
+    fallbackMonthly: 29.99,
+    fallbackAnnualTotal: 299.99,
     color: Colors.primary,
     icon: "rocket-outline",
     features: [
@@ -64,8 +66,9 @@ const PLAN_CONFIG: Record<RCPlan, {
   },
   serenite: {
     label: "Sérénité",
-    fallbackMonthly: 39.9,
-    color: Colors.pro ?? Colors.pro,
+    fallbackMonthly: 39.99,
+    fallbackAnnualTotal: 399.99,
+    color: Colors.pro,
     icon: "shield-checkmark-outline",
     features: [
       { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
@@ -77,7 +80,8 @@ const PLAN_CONFIG: Record<RCPlan, {
   },
   signature: {
     label: "Signature",
-    fallbackMonthly: 49.9,
+    fallbackMonthly: 49.99,
+    fallbackAnnualTotal: 499.99,
     color: Colors.secondary,
     icon: "diamond-outline",
     features: [
@@ -90,21 +94,9 @@ const PLAN_CONFIG: Record<RCPlan, {
   },
 };
 
-const ANNUAL_MONTHS_FREE = 2;
-
-function annualMonthlyFallback(monthly: number) {
-  return (monthly * (12 - ANNUAL_MONTHS_FREE)) / 12;
-}
-
 function savingsPercent(monthly: number, annualMonthly: number) {
   return Math.round((1 - annualMonthly / monthly) * 100);
 }
-
-const PLAN_LABEL_MAP: Record<RCPlan, string> = {
-  start: "Start",
-  serenite: "Sérénité",
-  signature: "Signature",
-};
 
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
@@ -189,11 +181,11 @@ export default function SubscriptionScreen() {
       setPurchasing(null);
       setPurchaseError("Ce plan n'est pas disponible pour l'instant. Réessaie plus tard.");
     }
-  }, [isAnnual, packages, purchase, qc, router, refreshProfile, refreshActivePlan, subscription]);
+  }, [isAnnual, packages, purchase, qc, router, refreshProfile, refreshActivePlan]);
 
   const screenTitle = activePlan ? "Modifier ta formule" : "Choisis ta formule";
   const screenSubtitle = activePlan
-    ? `Formule actuelle : ${PLAN_LABEL_MAP[activePlan]}`
+    ? `Formule actuelle : ${PLAN_CONFIG[activePlan].label}`
     : "Gère ton plan Blyss Pro";
 
   return (
@@ -379,37 +371,26 @@ export default function SubscriptionScreen() {
               </View>
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
-                // Start n'existe pas en annuel — on affiche juste un bandeau info, pas de carte cliquable
-                if (isAnnual && planKey === "start") return (
-                  <View key="start-annual-notice" style={{
-                    backgroundColor: `${Colors.mutedForeground}10`, borderRadius: 14,
-                    borderWidth: 1, borderColor: Colors.border,
-                    paddingVertical: 10, paddingHorizontal: 16, marginBottom: 12,
-                    flexDirection: "row", alignItems: "center", gap: 8,
-                  }}>
-                    <Ionicons name="information-circle-outline" size={16} color={Colors.mutedForeground} />
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, flex: 1 }}>
-                      Le plan Start n'est pas disponible en annuel
-                    </Text>
-                  </View>
-                );
-
                 const config = PLAN_CONFIG[planKey];
                 const isCurrent = subscription?.plan === planKey;
                 const rcPkg = packages.find((p) => p.key === planKey);
                 const isPurchasing = purchasing === planKey;
 
+                // Le total annuel est le prix de référence exact (facturé en une fois) ;
+                // le prix "/mois" n'en est qu'une division d'affichage, jamais recalculé
+                // à l'envers — pour éviter un écart de quelques centimes avec le prix
+                // réellement facturé (cf. obligations d'affichage du prix total en France).
+                const annualTotalValue = rcPkg?.annualTotal ?? config.fallbackAnnualTotal;
+
                 const displayStr = isAnnual
-                  ? `${(rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)).toFixed(2)} €`
+                  ? `${(annualTotalValue / 12).toFixed(2)} €`
                   : (rcPkg?.priceString ?? `${config.fallbackMonthly.toFixed(2)} €`);
 
-                const annualTotal = isAnnual
-                  ? ((rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)) * 12).toFixed(0)
-                  : null;
+                const annualTotal = isAnnual ? annualTotalValue.toFixed(2) : null;
 
                 const planSavings = savingsPercent(
                   rcPkg?.monthlyPrice ?? config.fallbackMonthly,
-                  rcPkg?.annualMonthlyPrice ?? annualMonthlyFallback(config.fallbackMonthly)
+                  annualTotalValue / 12
                 );
 
                 return (
@@ -445,11 +426,13 @@ export default function SubscriptionScreen() {
                             )}
                           </View>
                           <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
-                            <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>{displayStr}</Text>
-                            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>/mois</Text>
+                            <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>
+                              {isAnnual ? `${annualTotal} €` : displayStr}
+                            </Text>
+                            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{isAnnual ? "/an" : "/mois"}</Text>
                           </View>
-                          {isAnnual && annualTotal && (
-                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>soit {annualTotal} €/an</Text>
+                          {isAnnual && (
+                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>soit {displayStr}/mois</Text>
                           )}
                         </View>
                         <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${config.color}15`, alignItems: "center", justifyContent: "center" }}>

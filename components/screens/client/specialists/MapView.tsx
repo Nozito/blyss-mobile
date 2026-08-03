@@ -81,11 +81,13 @@ function ProBottomCard({
   slideAnim,
   onClose,
   onBook,
+  onViewProfile,
 }: {
   item: Specialist;
   slideAnim: Animated.Value;
   onClose: () => void;
   onBook: () => void;
+  onViewProfile: () => void;
 }) {
   const photo = item.profile_image_url
     ? item.profile_image_url.startsWith("http")
@@ -100,7 +102,12 @@ function ProBottomCard({
       </AnimatedIconButton>
 
       {/* Avatar + infos */}
-      <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+      <Pressable
+        onPress={onViewProfile}
+        style={{ flexDirection: "row", gap: 14, alignItems: "center" }}
+        accessibilityRole="button"
+        accessibilityLabel={`Voir le profil de ${item.business_name}`}
+      >
         <View style={styles.cardAvatar}>
           {photo ? (
             <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
@@ -125,7 +132,7 @@ function ProBottomCard({
             )}
           </View>
         </View>
-      </View>
+      </Pressable>
 
       {!item.address_visible && item.service_radius_km ? (
         <View style={styles.privacyNotice}>
@@ -263,6 +270,10 @@ export default function SpecialistsMapView({ specialists }: Props) {
           slideAnim={slideAnim}
           onClose={handleClose}
           onBook={() => router.push({ pathname: "/booking", params: { proId: selectedPro.id } })}
+          onViewProfile={() => router.push({
+            pathname: "/specialist/[id]",
+            params: { id: selectedPro.id, lat: String(selectedPro.lat), lng: String(selectedPro.lng) },
+          })}
         />
       )}
 

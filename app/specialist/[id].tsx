@@ -26,6 +26,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
+import { LocationSection } from "@/components/screens/client/specialist/LocationSection";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -74,7 +75,7 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 export default function SpecialistProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, lat: paramLat, lng: paramLng } = useLocalSearchParams<{ id: string; lat?: string; lng?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const heartScale = useRef(new Animated.Value(1)).current;
@@ -184,6 +185,18 @@ export default function SpecialistProfileScreen() {
   const proAddressLine = (pro?.address_line as string | null) ?? null;
   const proServiceRadiusKm = (pro?.service_radius_km as number | null) ?? null;
   const proServiceAreaLabel = (pro?.service_area_label as string | null) ?? null;
+  // L'endpoint de détail ne renvoie pas toujours latitude/longitude — on retombe
+  // sur les coordonnées déjà récupérées par l'écran de recherche/carte (passées
+  // en param de navigation) plutôt que d'afficher un placeholder par défaut.
+  const proLat =
+    pro?.latitude != null ? Number(pro.latitude) : paramLat != null ? Number(paramLat) : null;
+  const proLng =
+    pro?.longitude != null ? Number(pro.longitude) : paramLng != null ? Number(paramLng) : null;
+  // Ces champs n'existent pas encore côté backend — état "non renseigné" explicite
+  // tant que l'API ne les expose pas, plutôt que de supposer une valeur par défaut.
+  const depositRequired = typeof pro?.deposit_required === "boolean" ? (pro.deposit_required as boolean) : null;
+  const companionsAllowed = typeof pro?.companions_allowed === "boolean" ? (pro.companions_allowed as boolean) : null;
+  const handicapAccess = typeof pro?.handicap_access === "boolean" ? (pro.handicap_access as boolean) : null;
   const specialty = (pro?.specialty as string | null) ?? null;
   const avatarUrl = photoUrl((pro?.profile_photo as string | null));
   const bannerUrl = photoUrl((pro?.banner_photo as string | null));
@@ -340,24 +353,6 @@ export default function SpecialistProfileScreen() {
           </View>
         )}
 
-        {/* Address privacy notice — the exact address only appears once a booking
-            with this pro is confirmed (see app/booking/[id].tsx) */}
-        {addressVisible && proAddressLine ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
-            <Ionicons name="pin-outline" size={13} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{proAddressLine}</Text>
-          </View>
-        ) : !addressVisible ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
-            <Ionicons name="lock-closed-outline" size={12} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-              Adresse non affichée publiquement
-              {proServiceRadiusKm != null ? ` — rayon d'intervention ${proServiceRadiusKm} km` : ""}
-              {proServiceAreaLabel ? ` (${proServiceAreaLabel})` : ""}
-            </Text>
-          </View>
-        ) : null}
-
         {/* Specialty chip + starting price */}
         {(specialty || minPrice != null) && (
           <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
@@ -408,6 +403,22 @@ export default function SpecialistProfileScreen() {
             </Text>
           </View>
         )}
+
+        {/* Location */}
+        <LocationSection
+          city={proCity}
+          addressVisible={addressVisible}
+          addressLine={proAddressLine}
+          serviceAreaLabel={proServiceAreaLabel}
+          serviceRadiusKm={proServiceRadiusKm}
+          lat={proLat}
+          lng={proLng}
+          conditions={{
+            depositRequired,
+            companionsAllowed,
+            handicapAccess,
+          }}
+        />
 
         {/* BUG 2 fix — firstName fallback */}
         <Pressable

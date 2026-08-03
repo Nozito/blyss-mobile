@@ -136,7 +136,13 @@ export default function SpecialistsScreen() {
         item={item}
         isFav={isFavorited(item.id)}
         index={index}
-        onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: item.id } })}
+        onPress={() => router.push({
+          pathname: "/specialist/[id]",
+          params: {
+            id: item.id,
+            ...(item.lat != null && item.lng != null ? { lat: String(item.lat), lng: String(item.lng) } : {}),
+          },
+        })}
         onBook={() => router.push({ pathname: "/booking", params: { proId: item.id } })}
         onToggleFav={() => toggleFav(item.id)}
       />

@@ -15,6 +15,7 @@ export type RCPackage = {
   monthlyPrice: number;
   priceString: string;
   annualMonthlyPrice: number;
+  annualTotal: number;
   annualPriceString: string;
   annualRcPackage?: PurchasesPackage;
 };
@@ -34,9 +35,9 @@ interface RevenueCatContextType {
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
-// start_annual retiré — Start est mensuel uniquement, pas d'offre annuelle pour ce plan
 const PLAN_IDENTIFIER_MAP: Record<string, RCPlan> = {
   start_monthly:     "start",
+  start_annual:      "start",
   serenite_monthly:  "serenite",
   serenite_annual:   "serenite",
   signature_monthly: "signature",
@@ -119,6 +120,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
               monthlyPrice,
               priceString: mp.product.priceString,
               annualMonthlyPrice: annualTotal / 12,
+              annualTotal,
               annualPriceString: ap?.product.priceString ?? `${(annualTotal / 12).toFixed(2)} €`,
               annualRcPackage: ap,
             }];
