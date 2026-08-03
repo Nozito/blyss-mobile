@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import {
   View, Text, ScrollView, Pressable, Animated,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
@@ -15,6 +16,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { resolveMediaUrl } from "@/lib/media";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -107,6 +109,7 @@ export default function AdminMoreScreen() {
 
   const fullName = `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim();
   const initials = fullName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+  const photoUri = resolveMediaUrl(user?.profile_photo);
 
   const stats = [
     { label: "Utilisateurs", value: d?.stats?.totalUsers ?? "—", symbol: "person.2.fill",   icon: "people-outline"   as const, route: "/(admin)/users" },
@@ -129,10 +132,15 @@ export default function AdminMoreScreen() {
             width: 76, height: 76, borderRadius: 24,
             backgroundColor: withAlpha(ACCENT, 0.16),
             alignItems: "center", justifyContent: "center",
+            overflow: "hidden",
           }}>
-            <Text style={{ fontSize: 28, fontWeight: "700", color: ACCENT }}>
-              {initials || "A"}
-            </Text>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={{ width: 76, height: 76 }} contentFit="cover" />
+            ) : (
+              <Text style={{ fontSize: 28, fontWeight: "700", color: ACCENT }}>
+                {initials || "A"}
+              </Text>
+            )}
           </View>
 
           <Text style={{ fontSize: 20, fontWeight: "700", color: TEXT1, marginTop: 14, marginBottom: 3 }}>
