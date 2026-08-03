@@ -153,7 +153,6 @@ export default function AdminDashboard() {
       <AdminHeader
         title={`Bonjour, ${user?.first_name ?? ""}`}
         subtitle={`${today.charAt(0).toUpperCase()}${today.slice(1)}`}
-        safeTop={false}
       />
 
       {/* ── Hero — le verdict du jour, pas une liste de métriques ── */}

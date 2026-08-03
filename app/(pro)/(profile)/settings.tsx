@@ -238,58 +238,7 @@ export default function ProSettingsScreen() {
         </View>
       </View>
 
-      {/* ── ABONNEMENT ── */}
-      <View>
-        <SectionHeader icon="sparkles-outline" label="Abonnement" />
-        <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
-          {isPro ? (
-            <>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>Plan Pro actif</Text>
-                    <View style={{ backgroundColor: Colors.successLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.success }}>✦ Pro actif</Text>
-                    </View>
-                  </View>
-                  {renewalDate && (
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Renouvellement le {renewalDate}</Text>
-                  )}
-                </View>
-              </View>
-              <AnimatedPressable
-                onPress={() => {
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  void Linking.openURL("https://apps.apple.com/account/subscriptions");
-                }}
-                style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
-              >
-                <Ionicons name="settings-outline" size={16} color={Colors.primary} />
-                <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Gérer mon abonnement</Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-              </AnimatedPressable>
-            </>
-          ) : (
-            <AnimatedPressable
-              onPress={() => {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(pro)/(profile)/subscription" as Parameters<typeof router.push>[0]);
-              }}
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 16 }}
-            >
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.pro}18`, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="sparkles-outline" size={18} color={Colors.pro} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>Passer à Pro</Text>
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Débloquer toutes les fonctionnalités</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-            </AnimatedPressable>
-          )}
-        </View>
-      </View>
-
+    
       {/* ── INFOS ACTIVITÉ ── */}
       <View>
         <SectionHeader icon="storefront-outline" label="Activité" />
