@@ -290,7 +290,7 @@ export default function ProPublicProfileScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top,
-          paddingBottom: insets.bottom + 120,
+          paddingBottom: insets.bottom + 32,
           paddingHorizontal: 20,
         }}
         showsVerticalScrollIndicator={false}
@@ -771,17 +771,10 @@ export default function ProPublicProfileScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
-      </Animated.View>
 
-      {/* Sticky save button */}
-      <View
-        className="absolute bottom-0 left-0 right-0 px-5 pt-2"
-        style={{ paddingBottom: insets.bottom + 12, backgroundColor: "rgba(255,234,241,0.95)" }}
-      >
-        {saveError && <View style={{ marginBottom: 8 }}><ErrorMessage message={saveError} /></View>}
+        {saveError && <View style={{ marginBottom: 12 }}><ErrorMessage message={saveError} /></View>}
         {saveSuccess && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.successLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.successLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 }}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
             <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.successText }}>Profil public mis à jour !</Text>
           </View>
@@ -809,7 +802,8 @@ export default function ProPublicProfileScreen() {
             </>
           )}
         </AnimatedPressable>
-      </View>
+      </ScrollView>
+      </Animated.View>
 
       {/* Gallery image detail modal */}
       <Modal visible={selectedGalleryImage != null} transparent animationType="fade" onRequestClose={() => setSelectedGalleryImage(null)}>
