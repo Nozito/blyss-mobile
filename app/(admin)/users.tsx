@@ -459,7 +459,7 @@ function BannedUserCard({ item, onPress, onReactivate, reactivating }: {
   return (
     <AnimatedPressable onPress={onPress}>
       <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.md }}>
-        <Avatar name={name} size={44} />
+        <Avatar name={name} photo={item.profile_photo} size={44} />
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text }} numberOfLines={1}>{name}</Text>
           <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
