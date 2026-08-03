@@ -26,7 +26,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
-import { LocationSection } from "@/components/screens/client/specialist/LocationSection";
+import { LocationSection, type ConditionItem } from "@/components/screens/client/specialist/LocationSection";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -192,11 +192,12 @@ export default function SpecialistProfileScreen() {
     pro?.latitude != null ? Number(pro.latitude) : paramLat != null ? Number(paramLat) : null;
   const proLng =
     pro?.longitude != null ? Number(pro.longitude) : paramLng != null ? Number(paramLng) : null;
-  // Ces champs n'existent pas encore côté backend — état "non renseigné" explicite
-  // tant que l'API ne les expose pas, plutôt que de supposer une valeur par défaut.
-  const depositRequired = typeof pro?.deposit_required === "boolean" ? (pro.deposit_required as boolean) : null;
-  const companionsAllowed = typeof pro?.companions_allowed === "boolean" ? (pro.companions_allowed as boolean) : null;
-  const handicapAccess = typeof pro?.handicap_access === "boolean" ? (pro.handicap_access as boolean) : null;
+  const rawConditions = pro?.acceptance_conditions;
+  const proConditions: ConditionItem[] | null = Array.isArray(rawConditions)
+    ? (rawConditions as ConditionItem[])
+    : typeof rawConditions === "string"
+    ? (() => { try { return JSON.parse(rawConditions) as ConditionItem[]; } catch { return null; } })()
+    : null;
   const specialty = (pro?.specialty as string | null) ?? null;
   const avatarUrl = photoUrl((pro?.profile_photo as string | null));
   const bannerUrl = photoUrl((pro?.banner_photo as string | null));
@@ -413,11 +414,7 @@ export default function SpecialistProfileScreen() {
           serviceRadiusKm={proServiceRadiusKm}
           lat={proLat}
           lng={proLng}
-          conditions={{
-            depositRequired,
-            companionsAllowed,
-            handicapAccess,
-          }}
+          conditions={proConditions}
         />
 
         {/* BUG 2 fix — firstName fallback */}

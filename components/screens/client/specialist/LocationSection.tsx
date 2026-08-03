@@ -5,12 +5,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 
-export type ConditionStatus = boolean | null;
-
-export interface LocationConditions {
-  depositRequired: ConditionStatus;
-  companionsAllowed: ConditionStatus;
-  handicapAccess: ConditionStatus;
+export interface ConditionItem {
+  text: string;
+  accepted: boolean;
 }
 
 export interface LocationSectionProps {
@@ -21,7 +18,7 @@ export interface LocationSectionProps {
   serviceRadiusKm: number | null;
   lat?: number | null;
   lng?: number | null;
-  conditions: LocationConditions;
+  conditions: ConditionItem[] | null;
 }
 
 const PREVIEW_HEIGHT = 140;
@@ -101,34 +98,27 @@ function MapPlaceholder({ city }: { city: string }) {
 }
 
 function ConditionRow({
-  label,
-  status,
+  condition,
   isLast,
 }: {
-  label: string;
-  status: boolean;
+  condition: ConditionItem;
   isLast: boolean;
 }) {
-  const display = status
-    ? { text: "Oui", icon: "checkmark-circle" as const, color: Colors.success }
-    : { text: "Non", icon: "close-circle" as const, color: Colors.destructive };
+  const color = condition.accepted ? Colors.success : Colors.destructive;
 
   return (
     <View
       style={{
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        gap: 8,
         paddingVertical: 11,
         borderBottomWidth: isLast ? 0 : 1,
         borderBottomColor: Colors.border,
       }}
     >
-      <Text style={{ fontSize: 13, color: Colors.foreground }}>{label}</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: display.color }}>{display.text}</Text>
-        <Ionicons name={display.icon} size={15} color={display.color} />
-      </View>
+      <Ionicons name={condition.accepted ? "checkmark-circle" : "close-circle"} size={15} color={color} />
+      <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{condition.text}</Text>
     </View>
   );
 }
@@ -153,14 +143,7 @@ export function LocationSection({
     ? `L'adresse exacte est communiquée 24h avant le rendez-vous — zone d'intervention : ${serviceAreaLabel}.`
     : "L'adresse exacte est communiquée 24h avant le rendez-vous.";
 
-  const visibleConditions = (
-    [
-      { label: "Acompte à la réservation", status: conditions.depositRequired },
-      { label: "Accompagnant(e) autorisé(e)", status: conditions.companionsAllowed },
-      { label: "Accès PMR", status: conditions.handicapAccess },
-    ] as { label: string; status: ConditionStatus }[]
-  ).filter((c): c is { label: string; status: boolean } => c.status != null);
-
+  const visibleConditions = (conditions ?? []).filter((c) => c.text.trim());
   const hasConditions = visibleConditions.length > 0;
 
   return (
@@ -221,7 +204,7 @@ export function LocationSection({
                 Conditions
               </Text>
               {visibleConditions.map((c, i) => (
-                <ConditionRow key={c.label} label={c.label} status={c.status} isLast={i === visibleConditions.length - 1} />
+                <ConditionRow key={`${c.text}-${i}`} condition={c} isLast={i === visibleConditions.length - 1} />
               ))}
             </>
           )}

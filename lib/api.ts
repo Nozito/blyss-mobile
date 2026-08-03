@@ -35,9 +35,7 @@ export interface User {
   postal_code?: string | null;
   service_radius_km?: number | null;
   service_area_label?: string | null;
-  deposit_required?: boolean | null;
-  companions_allowed?: boolean | null;
-  handicap_access?: boolean | null;
+  acceptance_conditions?: { text: string; accepted: boolean }[] | null;
 }
 
 export interface LoginCredentials {
