@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Linking,
   Switch,
-  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -74,12 +73,6 @@ export default function ProSettingsScreen() {
   const [addressPublic, setAddressPublic] = useState(user?.geo_precision === "address");
   const [showAddressConfirm, setShowAddressConfirm] = useState(false);
 
-  const MAX_CONDITIONS = 8;
-  const [conditions, setConditions] = useState<{ text: string; accepted: boolean }[]>(
-    user?.acceptance_conditions ?? []
-  );
-  const [newConditionText, setNewConditionText] = useState("");
-
   type FormValues = Partial<Omit<User, "service_radius_km">> & { service_radius_km?: string };
 
   const { control, handleSubmit } = useForm<FormValues>({
@@ -136,7 +129,6 @@ export default function ProSettingsScreen() {
         ...data,
         geo_precision: addressPublic ? "address" : "city",
         service_radius_km: Math.min(30, Math.max(1, parseFloat(data.service_radius_km ?? "5") || 5)),
-        acceptance_conditions: conditions,
       };
       if (!addressPublic) {
         // Don't submit stale address text while switched off — the pro may have typed
@@ -468,101 +460,6 @@ export default function ProSettingsScreen() {
                 )}
               />
             </>
-          )}
-        </View>
-      </View>
-
-      {/* ── CONDITIONS DE RÉSERVATION ── */}
-      <View>
-        <SectionHeader icon="clipboard-outline" label="Conditions de réservation" />
-        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 14, ...Shadows.card }}>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 17, marginTop: -4 }}>
-            Tes propres règles (acompte, accompagnant, accès...), affichées aux clientes avant qu'elles réservent.
-          </Text>
-
-          {conditions.length === 0 ? (
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, fontStyle: "italic" }}>
-              Aucune condition ajoutée pour l'instant.
-            </Text>
-          ) : (
-            <View style={{ gap: 10 }}>
-              {conditions.map((cond, index) => (
-                <View
-                  key={index}
-                  style={{
-                    flexDirection: "row", alignItems: "center", gap: 10,
-                    backgroundColor: Colors.cream, borderRadius: 12, padding: 10,
-                  }}
-                >
-                  <Pressable
-                    onPress={() => {
-                      setConditions((prev) =>
-                        prev.map((c, i) => (i === index ? { ...c, accepted: !c.accepted } : c))
-                      );
-                    }}
-                    accessibilityLabel={cond.accepted ? "Marquer comme non autorisé" : "Marquer comme autorisé"}
-                    style={{
-                      width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
-                      backgroundColor: cond.accepted ? Colors.successLight : "#FFF1F2",
-                    }}
-                  >
-                    <Ionicons
-                      name={cond.accepted ? "checkmark" : "close"}
-                      size={16}
-                      color={cond.accepted ? Colors.success : "#FB7185"}
-                    />
-                  </Pressable>
-                  <TextInput
-                    value={cond.text}
-                    onChangeText={(text) => {
-                      setConditions((prev) => prev.map((c, i) => (i === index ? { ...c, text } : c)));
-                    }}
-                    style={{ flex: 1, fontSize: 13, color: Colors.foreground, paddingVertical: 4 }}
-                    multiline
-                  />
-                  <Pressable
-                    onPress={() => setConditions((prev) => prev.filter((_, i) => i !== index))}
-                    accessibilityLabel="Supprimer cette condition"
-                    hitSlop={8}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {conditions.length < MAX_CONDITIONS ? (
-            <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-              <View style={{ flex: 1 }}>
-                <Input
-                  placeholder="Ex : Retard de 15 min = annulation"
-                  value={newConditionText}
-                  onChangeText={setNewConditionText}
-                  leftIcon="add-circle-outline"
-                />
-              </View>
-              <AnimatedPressable
-                onPress={() => {
-                  const text = newConditionText.trim();
-                  if (!text) return;
-                  setConditions((prev) => [...prev, { text, accepted: true }]);
-                  setNewConditionText("");
-                }}
-                disabled={!newConditionText.trim()}
-                style={{
-                  height: 48, paddingHorizontal: 16, borderRadius: 12,
-                  backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center",
-                  opacity: newConditionText.trim() ? 1 : 0.5,
-                }}
-              >
-                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 13 }}>Ajouter</Text>
-              </AnimatedPressable>
-            </View>
-          ) : (
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
-              Maximum {MAX_CONDITIONS} conditions atteint.
-            </Text>
           )}
         </View>
       </View>

@@ -184,8 +184,13 @@ export default function ProPublicProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  const MAX_CONDITIONS = 8;
+  const [conditions, setConditions] = useState<{ text: string; accepted: boolean }[]>([]);
+  const [newConditionText, setNewConditionText] = useState("");
+
   const [initial, setInitial] = useState({
     activityName: "", city: "", bio: "", instagram: "", isPublic: true,
+    conditions: [] as { text: string; accepted: boolean }[],
   });
 
   const { data: servicesData } = useQuery({
@@ -211,12 +216,14 @@ export default function ProPublicProfileScreen() {
       bio: profileData.bio || "",
       instagram: profileData.instagram_account || "",
       isPublic: profileData.profile_visibility !== "private",
+      conditions: profileData.acceptance_conditions ?? [],
     };
     setActivityName(vals.activityName);
     setCity(vals.city);
     setBio(vals.bio);
     setInstagram(vals.instagram);
     setIsPublic(vals.isPublic);
+    setConditions(vals.conditions);
     setInitial(vals);
   }, [profileData]);
 
@@ -226,9 +233,10 @@ export default function ProPublicProfileScreen() {
       city !== initial.city ||
       bio !== initial.bio ||
       instagram !== initial.instagram ||
-      isPublic !== initial.isPublic;
+      isPublic !== initial.isPublic ||
+      JSON.stringify(conditions) !== JSON.stringify(initial.conditions);
     setHasChanges(changed);
-  }, [activityName, city, bio, instagram, isPublic, initial]);
+  }, [activityName, city, bio, instagram, isPublic, conditions, initial]);
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -252,9 +260,10 @@ export default function ProPublicProfileScreen() {
         bio,
         instagram_account: instagram,
         profile_visibility: isPublic ? "public" : "private",
+        acceptance_conditions: conditions,
       });
       qc.invalidateQueries({ queryKey: ["pro-public-profile"] });
-      setInitial({ activityName, city, bio, instagram, isPublic });
+      setInitial({ activityName, city, bio, instagram, isPublic, conditions });
       setHasChanges(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
@@ -632,6 +641,101 @@ export default function ProPublicProfileScreen() {
                 <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Partager</Text>
               </AnimatedPressable>
             </View>
+          </View>
+        </View>
+
+        {/* Section: Conditions de réservation */}
+        <View className="mb-6">
+          <SectionTitle title="Conditions de réservation" />
+          <View className="bg-card rounded-2xl p-5 border border-border" style={{ gap: 14 }}>
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+              Tes propres règles (acompte, accompagnant, accès...), affichées aux clientes avant qu'elles réservent.
+            </Text>
+
+            {conditions.length === 0 ? (
+              <Text style={{ fontSize: 13, color: Colors.mutedForeground, fontStyle: "italic" }}>
+                Aucune condition ajoutée pour l'instant.
+              </Text>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {conditions.map((cond, index) => (
+                  <View
+                    key={index}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      backgroundColor: Colors.cream, borderRadius: 12, padding: 10,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => {
+                        setConditions((prev) =>
+                          prev.map((c, i) => (i === index ? { ...c, accepted: !c.accepted } : c))
+                        );
+                      }}
+                      accessibilityLabel={cond.accepted ? "Marquer comme non autorisé" : "Marquer comme autorisé"}
+                      style={{
+                        width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
+                        backgroundColor: cond.accepted ? Colors.successLight : "#FFF1F2",
+                      }}
+                    >
+                      <Ionicons
+                        name={cond.accepted ? "checkmark" : "close"}
+                        size={16}
+                        color={cond.accepted ? Colors.success : "#FB7185"}
+                      />
+                    </Pressable>
+                    <TextInput
+                      value={cond.text}
+                      onChangeText={(text) => {
+                        setConditions((prev) => prev.map((c, i) => (i === index ? { ...c, text } : c)));
+                      }}
+                      style={{ flex: 1, fontSize: 13, color: Colors.foreground, paddingVertical: 4 }}
+                      multiline
+                    />
+                    <Pressable
+                      onPress={() => setConditions((prev) => prev.filter((_, i) => i !== index))}
+                      accessibilityLabel="Supprimer cette condition"
+                      hitSlop={8}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {conditions.length < MAX_CONDITIONS ? (
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    placeholder="Ex : Retard de 15 min = annulation"
+                    value={newConditionText}
+                    onChangeText={setNewConditionText}
+                    leftIcon="add-circle-outline"
+                  />
+                </View>
+                <AnimatedPressable
+                  onPress={() => {
+                    const text = newConditionText.trim();
+                    if (!text) return;
+                    setConditions((prev) => [...prev, { text, accepted: true }]);
+                    setNewConditionText("");
+                  }}
+                  disabled={!newConditionText.trim()}
+                  style={{
+                    height: 48, paddingHorizontal: 16, borderRadius: 12,
+                    backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center",
+                    opacity: newConditionText.trim() ? 1 : 0.5,
+                  }}
+                >
+                  <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 13 }}>Ajouter</Text>
+                </AnimatedPressable>
+              </View>
+            ) : (
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+                Maximum {MAX_CONDITIONS} conditions atteint.
+              </Text>
+            )}
           </View>
         </View>
 
