@@ -4,6 +4,7 @@ import {
   ActivityIndicator, ScrollView, RefreshControl, FlatList,
   Modal, Platform, Share,
 } from "react-native";
+import { Image } from "expo-image";
 import { useActionSheet } from "@/components/ui/ActionSheet";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ import { ActionGrid, type ActionTileData } from "@/components/admin/ActionGrid";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
+import { resolveMediaUrl } from "@/lib/media";
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
@@ -50,17 +52,23 @@ function joinedDate(user: AdminUser): string | null {
   return new Date(user.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
 }
 
-// ── Avatar — a plain initial circle, no palette gimmick ──────────────────────
-function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+// ── Avatar — real photo when available, plain initial circle otherwise ───────
+function Avatar({ name, photo, size = 36 }: { name: string; photo?: string | null; size?: number }) {
+  const uri = resolveMediaUrl(photo);
   return (
     <View style={{
       width: size, height: size, borderRadius: size / 2,
       backgroundColor: ADMIN.surfaceHover,
       alignItems: "center", justifyContent: "center",
+      overflow: "hidden",
     }}>
-      <Text style={{ color: ADMIN.textSub, fontWeight: "700", fontSize: Math.round(size * 0.36) }}>
-        {initials(name)}
-      </Text>
+      {uri ? (
+        <Image source={{ uri }} style={{ width: size, height: size }} contentFit="cover" />
+      ) : (
+        <Text style={{ color: ADMIN.textSub, fontWeight: "700", fontSize: Math.round(size * 0.36) }}>
+          {initials(name)}
+        </Text>
+      )}
     </View>
   );
 }
@@ -120,7 +128,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ADMIN.sheetHandle, alignSelf: "center", marginBottom: ADMIN.space.xl }} />
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.xl }}>
-            <Avatar name={`${user.first_name} ${user.last_name}`} size={40} />
+            <Avatar name={`${user.first_name} ${user.last_name}`} photo={user.profile_photo} size={40} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...ADMIN.type.title, color: ADMIN.text }}>Offrir un abonnement</Text>
               <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>pour {user.first_name} {user.last_name}</Text>
@@ -255,7 +263,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
             {/* Identity */}
             <View style={{ paddingTop: ADMIN.space.sm, paddingBottom: ADMIN.space.xl, paddingHorizontal: ADMIN.space.xl, alignItems: "center", borderBottomWidth: 1, borderBottomColor: ADMIN.border }}>
               <View style={{ marginBottom: ADMIN.space.md }}>
-                <Avatar name={`${full.first_name} ${full.last_name}`} size={56} />
+                <Avatar name={`${full.first_name} ${full.last_name}`} photo={full.profile_photo} size={56} />
               </View>
               <Text style={{ ...ADMIN.type.title, fontSize: 18, color: ADMIN.text, marginBottom: ADMIN.space.sm }}>{full.first_name} {full.last_name}</Text>
               <View style={{ flexDirection: "row", gap: ADMIN.space.sm, flexWrap: "wrap", justifyContent: "center", marginBottom: ADMIN.space.sm }}>
@@ -423,7 +431,7 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
       overshootRight={false} overshootLeft={false} friction={2}>
       <AnimatedPressable onPress={onPress} onLongPress={onLongPress}>
         <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.md, opacity: item.is_active ? 1 : 0.55 }}>
-          <Avatar name={name} size={44} />
+          <Avatar name={name} photo={item.profile_photo} size={44} />
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
