@@ -8,6 +8,7 @@ import { Shadows } from "@/constants/shadows";
 import { Colors, withAlpha } from "@/constants/colors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { resolveMediaUrl } from "@/lib/media";
 
 const STAGGER_CAP = 8; // avoid a multi-second cascade past the first screenful
 
@@ -45,7 +46,7 @@ interface Props {
 }
 
 export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBook }: Props) {
-  const photo = item.cover_image_url ?? item.profile_image_url;
+  const photo = resolveMediaUrl(item.cover_image_url ?? item.profile_image_url);
   const reduceMotion = useReducedMotion();
   const cardScale = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;

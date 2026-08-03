@@ -25,8 +25,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/colors";
 import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+import { resolveMediaUrl } from "@/lib/media";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BookingDetailData {
@@ -75,11 +74,6 @@ function formatDuration(minutes: number): string {
   if (h === 0) return `${m}min`;
   if (m === 0) return `${h}h`;
   return `${h}h${String(m).padStart(2, "0")}`;
-}
-
-function resolvePhoto(path: string | null | undefined): string | undefined {
-  if (!path) return undefined;
-  return path.startsWith("http") ? path : `${API_URL}${path}`;
 }
 
 // ─── Animated Card ────────────────────────────────────────────────────────────
@@ -285,7 +279,7 @@ export default function BookingDetailScreen() {
     ?? `${booking.pro_first_name ?? ""} ${booking.pro_last_name ?? ""}`.trim();
   const proName = rawProName || "Spécialiste";
   const initial = proName[0]?.toUpperCase() ?? "P";
-  const avatarUri = resolvePhoto(booking.pro_photo ?? booking.profile_photo);
+  const avatarUri = resolveMediaUrl(booking.pro_photo ?? booking.profile_photo);
   const city = booking.pro_city ?? booking.city;
   const remaining = Math.max(0, booking.price - (booking.total_paid ?? 0));
 

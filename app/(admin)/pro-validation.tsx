@@ -14,11 +14,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+import { resolveMediaUrl } from "@/lib/media";
 
 function resolveImageUri(uri: string): string {
-  return uri.startsWith("http") ? uri : `${API_URL}${uri}`;
+  return resolveMediaUrl(uri) ?? uri;
 }
 
 const BG     = ADMIN.bg;

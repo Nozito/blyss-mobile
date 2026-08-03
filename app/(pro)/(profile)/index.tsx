@@ -18,8 +18,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { proApi, usersApi, type User } from "@/lib/api";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+import { resolveMediaUrl } from "@/lib/media";
 
 function calculateProfileCompleteness(user: User | null | undefined): number {
   if (!user) return 0;
@@ -114,11 +113,7 @@ export default function ProProfileScreen() {
     setUploadSuccess(true);
   };
 
-  const photoUri = user?.profile_photo
-    ? user.profile_photo.startsWith("http")
-      ? user.profile_photo
-      : `${API_URL}${user.profile_photo}`
-    : undefined;
+  const photoUri = resolveMediaUrl(user?.profile_photo);
 
   const profileCompleteness = useMemo(() => calculateProfileCompleteness(user), [user]);
   const blyssAge = useMemo(() => calculateBlyssAge(user?.created_at), [user]);

@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import type { Specialist } from "./SpecialistCard";
 import { Colors } from "@/constants/colors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { resolveMediaUrl } from "@/lib/media";
 
 // react-native-map-clustering types renderCluster's argument as `any` upstream —
 // this describes the actual GeoJSON-like supercluster feature shape it passes.
@@ -34,20 +35,13 @@ const PARIS: Region = {
 };
 
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-
-
 interface Props {
   specialists: Specialist[];
 }
 
 
 function MarkerPin({ item }: { item: Specialist }) {
-  const photo = item.profile_image_url
-    ? item.profile_image_url.startsWith("http")
-      ? item.profile_image_url
-      : `${API_URL}${item.profile_image_url}`
-    : null;
+  const photo = resolveMediaUrl(item.profile_image_url) ?? null;
 
   return (
     <View style={styles.pinWrap}>
@@ -89,11 +83,7 @@ function ProBottomCard({
   onBook: () => void;
   onViewProfile: () => void;
 }) {
-  const photo = item.profile_image_url
-    ? item.profile_image_url.startsWith("http")
-      ? item.profile_image_url
-      : `${API_URL}${item.profile_image_url}`
-    : null;
+  const photo = resolveMediaUrl(item.profile_image_url) ?? null;
 
   return (
     <Animated.View style={[styles.bottomCard, { transform: [{ translateY: slideAnim }] }]}>

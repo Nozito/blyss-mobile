@@ -14,6 +14,7 @@ import { Shadows } from "@/constants/shadows";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors, withAlpha } from "@/constants/colors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { resolveMediaUrl } from "@/lib/media";
 
 // Groupe compte
 const ACCOUNT_ITEMS = [
@@ -26,8 +27,6 @@ const SUPPORT_ITEMS = [
   { icon: "help-circle-outline" as const, label: "Aide", route: "/(client)/(profile)/help" },
   { icon: "shield-outline" as const, label: "RGPD", route: "/(client)/(profile)/rgpd" },
 ] as const;
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -98,11 +97,7 @@ export default function ProfileScreen() {
   };
 
   const displayName = user ? `${user.first_name} ${user.last_name}` : "";
-  const photoUrl = user?.profile_photo
-    ? user.profile_photo.startsWith("http")
-      ? user.profile_photo
-      : `${API_URL}${user.profile_photo}`
-    : null;
+  const photoUrl = resolveMediaUrl(user?.profile_photo) ?? null;
 
   const profileCompleteness = (() => {
     let score = 60;

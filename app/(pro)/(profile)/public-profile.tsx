@@ -30,6 +30,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { proProfileSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { resolveMediaUrl } from "@/lib/media";
 
 const SCREEN_W = Dimensions.get("window").width;
 const GALLERY_CELL = (SCREEN_W - 40 - 8) / 3;
@@ -86,12 +87,7 @@ export default function ProPublicProfileScreen() {
     ? `https://blyssapp.fr/s/${user.id}`
     : "https://blyssapp.fr";
 
-  const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-  const bannerUri = user?.banner_photo
-    ? user.banner_photo.startsWith("http")
-      ? user.banner_photo
-      : `${API_URL}${user.banner_photo}`
-    : undefined;
+  const bannerUri = resolveMediaUrl(user?.banner_photo);
 
   const handlePickBanner = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();

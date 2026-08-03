@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { Badge } from "./ui/Badge";
 import { Avatar } from "./ui/Avatar";
 import { Colors } from "@/constants/colors";
+import { resolveMediaUrl } from "@/lib/media";
 
 type BookingStatus =
   | "pending"
@@ -42,8 +43,6 @@ const statusConfig: Record<BookingStatus, { label: string; badge: "default" | "s
   no_show: { label: "Absent", badge: "destructive" },
 };
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-
 export const BookingCard = memo(function BookingCard({ booking, onCancel, showCancelButton }: BookingCardProps) {
   const router = useRouter();
   const config = statusConfig[booking.status] ?? statusConfig.pending;
@@ -51,11 +50,7 @@ export const BookingCard = memo(function BookingCard({ booking, onCancel, showCa
   const proName = booking.pro_activity_name ??
     `${booking.pro_first_name ?? ""} ${booking.pro_last_name ?? ""}`.trim();
 
-  const photoUri = booking.pro_photo
-    ? booking.pro_photo.startsWith("http")
-      ? booking.pro_photo
-      : `${API_URL}${booking.pro_photo}`
-    : undefined;
+  const photoUri = resolveMediaUrl(booking.pro_photo);
 
   const date = new Date(booking.start_datetime);
   const dateStr = date.toLocaleDateString("fr-FR", {

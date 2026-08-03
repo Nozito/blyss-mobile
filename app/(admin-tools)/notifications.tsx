@@ -4,7 +4,6 @@ import {
   ActivityIndicator, Image,
 } from "react-native";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +16,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { resolveMediaUrl } from "@/lib/media";
 
 const BG     = ADMIN.bg;
 const CARD   = ADMIN.surface;
@@ -38,9 +38,7 @@ const TARGET_OPTS: { value: Target; label: string; icon: keyof typeof Ionicons.g
 // ─── SelectedUserCard ─────────────────────────────────────────────────────────
 
 function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
-  const photoUri = user.profile_photo
-    ? user.profile_photo.startsWith("http") ? user.profile_photo : `${API_URL}${user.profile_photo}`
-    : null;
+  const photoUri = resolveMediaUrl(user.profile_photo) ?? null;
   const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || "?";
   const roleColor = user.role === "pro" ? ADMIN.accent : Colors.info;
   const statusColor = user.is_active ? Colors.success : Colors.destructive;
