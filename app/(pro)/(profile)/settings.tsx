@@ -73,6 +73,10 @@ export default function ProSettingsScreen() {
   const [addressPublic, setAddressPublic] = useState(user?.geo_precision === "address");
   const [showAddressConfirm, setShowAddressConfirm] = useState(false);
 
+  const [depositRequired, setDepositRequired] = useState(user?.deposit_required ?? false);
+  const [companionsAllowed, setCompanionsAllowed] = useState(user?.companions_allowed ?? false);
+  const [handicapAccess, setHandicapAccess] = useState(user?.handicap_access ?? false);
+
   type FormValues = Partial<Omit<User, "service_radius_km">> & { service_radius_km?: string };
 
   const { control, handleSubmit } = useForm<FormValues>({
@@ -129,6 +133,9 @@ export default function ProSettingsScreen() {
         ...data,
         geo_precision: addressPublic ? "address" : "city",
         service_radius_km: Math.min(30, Math.max(1, parseFloat(data.service_radius_km ?? "5") || 5)),
+        deposit_required: depositRequired,
+        companions_allowed: companionsAllowed,
+        handicap_access: handicapAccess,
       };
       if (!addressPublic) {
         // Don't submit stale address text while switched off — the pro may have typed
@@ -461,6 +468,61 @@ export default function ProSettingsScreen() {
               />
             </>
           )}
+        </View>
+      </View>
+
+      {/* ── CONDITIONS DE RÉSERVATION ── */}
+      <View>
+        <SectionHeader icon="clipboard-outline" label="Conditions de réservation" />
+        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 18, ...Shadows.card }}>
+          <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 17, marginTop: -4 }}>
+            Ces informations sont affichées aux clientes sur ton profil public.
+          </Text>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Acompte à la réservation</Text>
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                Un acompte est demandé pour confirmer un rendez-vous
+              </Text>
+            </View>
+            <Switch
+              value={depositRequired}
+              onValueChange={setDepositRequired}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Accompagnant(e) autorisé(e)</Text>
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                Les clientes peuvent venir accompagnées
+              </Text>
+            </View>
+            <Switch
+              value={companionsAllowed}
+              onValueChange={setCompanionsAllowed}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Accès PMR</Text>
+              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                Le lieu est accessible aux personnes à mobilité réduite
+              </Text>
+            </View>
+            <Switch
+              value={handicapAccess}
+              onValueChange={setHandicapAccess}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
+            />
+          </View>
         </View>
       </View>
 
