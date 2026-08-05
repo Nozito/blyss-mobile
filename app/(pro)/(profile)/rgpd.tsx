@@ -11,10 +11,11 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
+import { Shadows } from "@/constants/shadows";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 
@@ -29,35 +30,29 @@ interface RGPDRowProps {
 function RGPDRow({ icon, label, description, onPress, variant = "default" }: RGPDRowProps) {
   const isDestructive = variant === "destructive";
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
-      className="flex-row items-center gap-3 p-4 rounded-2xl border"
       style={{
-        backgroundColor: isDestructive ? "#FFF0F0" : Colors.card,
-        borderColor: isDestructive ? "#FECACA" : Colors.border,
+        flexDirection: "row", alignItems: "center", gap: 12,
+        backgroundColor: Colors.white, borderRadius: 16, padding: 14,
+        ...Shadows.card,
       }}
     >
-      <View
-        className="w-10 h-10 rounded-xl items-center justify-center"
-        style={{ backgroundColor: isDestructive ? "#FEE2E2" : `${Colors.primary}18` }}
-      >
-        <Ionicons
-          name={icon}
-          size={18}
-          color={isDestructive ? Colors.destructiveText : Colors.primary}
-        />
+      <View style={{
+        width: 38, height: 38, borderRadius: 11,
+        backgroundColor: isDestructive ? withAlpha(Colors.destructive, 0.12) : `${Colors.primary}18`,
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <Ionicons name={icon} size={17} color={isDestructive ? Colors.destructive : Colors.primary} />
       </View>
-      <View className="flex-1">
-        <Text
-          className="text-sm font-semibold"
-          style={{ color: isDestructive ? "#B91C1C" : Colors.foreground }}
-        >
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: isDestructive ? Colors.destructive : Colors.foreground }}>
           {label}
         </Text>
-        <Text className="text-xs text-muted-foreground leading-relaxed mt-0.5">{description}</Text>
+        <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 15, marginTop: 2 }}>{description}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -85,55 +80,54 @@ export default function ProRGPDScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      {/* Sticky header */}
-      <View
-        className="bg-background border-b border-border"
-        style={{ paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20 }}
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom + 100,
+          paddingHorizontal: 20,
+        }}
+        showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center gap-3">
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
-            className="p-2 -ml-2 rounded-xl"
-            style={{ backgroundColor: Colors.muted }}
             accessibilityLabel="Retour"
+            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
           </AnimatedIconButton>
-          <View>
-            <Text className="font-semibold text-foreground text-base">Mes données personnelles</Text>
-            <Text className="text-xs text-muted-foreground">Confidentialité & compte</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Mes données personnelles</Text>
+            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Confidentialité & compte</Text>
           </View>
         </View>
-      </View>
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: insets.bottom + 40 }}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Intro */}
-        <View
-          className="flex-row items-center gap-3 p-4 rounded-2xl mb-6"
-          style={{ backgroundColor: `${Colors.primary}0D`, borderWidth: 1, borderColor: `${Colors.primary}26` }}
-        >
+        <View style={{
+          flexDirection: "row", alignItems: "center", gap: 12,
+          backgroundColor: `${Colors.primary}0D`, borderWidth: 1, borderColor: `${Colors.primary}26`,
+          borderRadius: 16, padding: 14, marginBottom: 20,
+        }}>
           <Ionicons name="shield-checkmark-outline" size={20} color={Colors.primary} />
-          <Text className="text-xs text-muted-foreground leading-relaxed flex-1">
+          <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 16, flex: 1 }}>
             Chez Blyss, tes données t'appartiennent. Tu peux les consulter, les modifier ou les supprimer à tout moment.
           </Text>
         </View>
 
         {/* Section: Mes données */}
-        <View className="mb-6">
-          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, paddingHorizontal: 2 }}>
             Mes données
           </Text>
-          <View className="gap-2">
+          <View style={{ gap: 8 }}>
             <RGPDRow
               icon="download-outline"
               label="Télécharger mes données"
               description="Récupère une copie de tes informations au format JSON"
-              onPress={() => router.push("/(pro)/(profile)/settings")} // BLYSS-NAV: was no-op; export lives in settings screen
+              onPress={() => router.push("/(pro)/(profile)/settings")}
             />
             <RGPDRow
               icon="pencil-outline"
@@ -151,8 +145,8 @@ export default function ProRGPDScreen() {
         </View>
 
         {/* Section: Aide */}
-        <View className="mb-6">
-          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, paddingHorizontal: 2 }}>
             Une question ?
           </Text>
           <RGPDRow
@@ -164,8 +158,8 @@ export default function ProRGPDScreen() {
         </View>
 
         {/* Section: Supprimer */}
-        <View className="mb-6">
-          <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, paddingHorizontal: 2 }}>
             Supprimer mon compte
           </Text>
           <RGPDRow
@@ -177,42 +171,41 @@ export default function ProRGPDScreen() {
           />
         </View>
 
-        <Text className="text-center text-xs text-muted-foreground/60 leading-relaxed">
+        <Text style={{ textAlign: "center", fontSize: 11, color: Colors.mutedForeground, lineHeight: 16 }}>
           Politique de confidentialité Blyss
         </Text>
       </ScrollView>
 
       {/* Delete confirmation modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade">
-        <View className="flex-1 bg-black/40 items-end justify-end p-4">
-          <View className="w-full bg-card rounded-3xl p-6" style={{ gap: 16 }}>
-            <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
-                <Ionicons name="warning-outline" size={20} color={Colors.destructiveText} />
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "flex-end", justifyContent: "flex-end", padding: 16 }}>
+          <View style={{ width: "100%", backgroundColor: Colors.white, borderRadius: 24, padding: 20, gap: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: withAlpha(Colors.destructive, 0.12), alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="warning-outline" size={20} color={Colors.destructive} />
               </View>
-              <Text className="font-bold text-foreground text-base">Supprimer mon compte</Text>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground }}>Supprimer mon compte</Text>
             </View>
-            <Text className="text-sm text-muted-foreground leading-relaxed">
+            <Text style={{ fontSize: 13, color: Colors.mutedForeground, lineHeight: 19 }}>
               Cette action est irréversible. Toutes tes données personnelles seront supprimées dans les 30 jours.
             </Text>
             {deleteError && <ErrorMessage message={deleteError} />}
-            <View className="flex-row gap-3">
+            <View style={{ flexDirection: "row", gap: 12 }}>
               <Pressable
                 onPress={() => setShowDeleteModal(false)}
-                className="flex-1 h-11 rounded-xl border border-border items-center justify-center"
+                style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
               >
-                <Text className="text-sm font-semibold text-foreground">Annuler</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>Annuler</Text>
               </Pressable>
               <Pressable
                 onPress={handleDelete}
                 disabled={isDeleting}
-                className="flex-1 h-11 rounded-xl items-center justify-center"
-                style={{ backgroundColor: Colors.destructiveText, opacity: isDeleting ? 0.7 : 1 }}
+                style={{ flex: 1, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.destructive, opacity: isDeleting ? 0.7 : 1 }}
               >
                 {isDeleting ? (
                   <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
-                  <Text className="text-sm font-bold text-white">Supprimer</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.white }}>Supprimer</Text>
                 )}
               </Pressable>
             </View>
