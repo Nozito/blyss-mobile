@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
   Switch,
   Animated,
   ActivityIndicator,
@@ -17,61 +16,10 @@ import * as Haptics from "expo-haptics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
 import { proApi, stripeApi } from "@/lib/api";
-import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-
-// ── IBAN validation ───────────────────────────────────────────────────────────
-const IBAN_LENGTHS: Record<string, number> = {
-  AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22,
-  BR: 29, BY: 28, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DK: 18, DO: 28,
-  EE: 20, EG: 29, ES: 24, FI: 18, FO: 18, FR: 27, GB: 22, GE: 22, GI: 23,
-  GL: 18, GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IQ: 23, IS: 26,
-  IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20,
-  LV: 21, LY: 25, MC: 27, MD: 24, ME: 22, MK: 19, MR: 27, MT: 31, MU: 30,
-  NL: 18, NO: 15, PK: 24, PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22,
-  SA: 24, SC: 31, SE: 24, SI: 19, SK: 24, SM: 27, ST: 25, SV: 28, TL: 23,
-  TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, XK: 20,
-};
-
-function validateIBAN(raw: string): { valid: boolean; error?: string } {
-  const iban = raw.replace(/\s/g, "").toUpperCase();
-  if (iban.length === 0) return { valid: true };
-  const country = iban.slice(0, 2);
-  const expectedLen = IBAN_LENGTHS[country];
-  if (!expectedLen) return { valid: false, error: `Pays "${country}" non reconnu.` };
-  if (iban.length !== expectedLen) {
-    return { valid: false, error: `IBAN ${country} : ${expectedLen} caractères attendus (${iban.length} saisis).` };
-  }
-  const rearranged = iban.slice(4) + iban.slice(0, 4);
-  const numeric = rearranged.split("").map((c) => {
-    const code = c.charCodeAt(0);
-    return code >= 65 && code <= 90 ? String(code - 55) : c;
-  }).join("");
-  let remainder = 0;
-  for (const chunk of numeric.match(/.{1,9}/g) ?? []) {
-    remainder = Number(String(remainder) + chunk) % 97;
-  }
-  if (remainder !== 1) return { valid: false, error: "IBAN invalide (checksum échoué)." };
-  return { valid: true };
-}
-
-function formatIBAN(raw: string): string {
-  return raw.replace(/\s/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
-}
-
-// BLYSS-FIX: 2.2 — masks IBAN: keep country code (2 chars) + 2 check digits + last 4, replace middle with ••••
-function maskIBAN(raw: string): string {
-  const clean = raw.replace(/\s/g, "").toUpperCase();
-  if (clean.length < 6) return formatIBAN(raw);
-  const prefix = clean.slice(0, 4);
-  const suffix = clean.slice(-4);
-  const middleGroups = Math.max(0, Math.floor((clean.length - 8) / 4));
-  const masked = `${prefix} ${"•••• ".repeat(middleGroups).trim()} ${suffix}`.replace(/\s+/g, " ").trim();
-  return masked;
-}
 
 // ── Deposit options ───────────────────────────────────────────────────────────
 const DEPOSIT_OPTIONS = [
@@ -90,9 +38,6 @@ export default function ProPaymentsScreen() {
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
-  const [iban, setIban] = useState("");
-  const [ibanEditing, setIbanEditing] = useState(false); // BLYSS-FIX: 2.2
-  const [ibanError, setIbanError] = useState<string | undefined>();
   const [acceptOnline, setAcceptOnline] = useState(false);
   const [depositPct, setDepositPct] = useState<DepositValue>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -131,7 +76,6 @@ export default function ProPaymentsScreen() {
   useEffect(() => {
     const d = (settingsData as any)?.data;
     if (d) {
-      setIban(d.iban ?? d.IBAN ?? "");
       setAcceptOnline(d.accept_online ?? Boolean(d.accept_online_payment));
     }
   }, [settingsData]);
@@ -145,13 +89,6 @@ export default function ProPaymentsScreen() {
       }
     }
   }, [stripeAccount]);
-
-  const handleIbanChange = (text: string) => {
-    const formatted = formatIBAN(text);
-    setIban(formatted);
-    const { valid, error } = validateIBAN(formatted);
-    setIbanError(valid ? undefined : error);
-  };
 
   const handleStripeOnboard = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -190,22 +127,16 @@ export default function ProPaymentsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setPayError(null);
     setPaySuccess(false);
-    const { valid, error } = validateIBAN(iban);
-    if (!valid) {
-      setPayError(error ?? "IBAN invalide. Vérifie ton IBAN et réessaie.");
-      return;
-    }
     if (acceptOnline && !isStripeConnected) {
       setPayError("Active d'abord Stripe Connect pour accepter les paiements en ligne.");
       return;
     }
     setIsSaving(true);
     try {
-      await proApi.updatePaymentSettings({ iban, accept_online: acceptOnline });
+      await proApi.updatePaymentSettings({ accept_online: acceptOnline });
       void qc.invalidateQueries({ queryKey: ["pro-profile"] }); // BLYSS-FIX: 3.3
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setPaySuccess(true);
-      setIbanEditing(false); // BLYSS-FIX: 2.2 — return to masked display after save
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setPayError("Impossible de mettre à jour les paramètres.");
@@ -235,7 +166,7 @@ export default function ProPaymentsScreen() {
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
-        paddingBottom: insets.bottom + 40,
+        paddingBottom: insets.bottom + 100,
         paddingHorizontal: 20,
       }}
       showsVerticalScrollIndicator={false}
@@ -259,7 +190,7 @@ export default function ProPaymentsScreen() {
           </Text>
         </View>
         <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginLeft: 52 }}>
-          Stripe Connect · IBAN · Paiements en ligne
+          Stripe Connect · Paiements en ligne
         </Text>
       </View>
 
@@ -391,51 +322,6 @@ export default function ProPaymentsScreen() {
           </View>
         </View>
       )}
-
-      {/* ── IBAN ── */}
-      <View style={{ marginBottom: 16 }}>
-        <Text style={{
-          fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
-          textTransform: "uppercase", letterSpacing: 1, marginBottom: 8,
-        }}>
-          Coordonnées bancaires
-        </Text>
-        <View style={{
-          backgroundColor: Colors.card, borderRadius: 20, padding: 18,
-          borderWidth: 1, borderColor: Colors.border,
-          shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
-        }}>
-          {/* BLYSS-FIX: 2.2 — masked display when IBAN is saved and not editing */}
-          {iban && !ibanEditing ? (
-            <Pressable
-              onPress={() => setIbanEditing(true)}
-              style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}
-            >
-              <Ionicons name="business-outline" size={18} color={Colors.mutedForeground} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.mutedForeground, marginBottom: 2 }}>IBAN</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground, letterSpacing: 0.5 }}>
-                  {maskIBAN(iban)}
-                </Text>
-              </View>
-              <Pressable onPress={() => setIbanEditing(true)} style={{ paddingHorizontal: 10, paddingVertical: 6 }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primary }}>Modifier</Text>
-              </Pressable>
-            </Pressable>
-          ) : (
-            <Input
-              label="IBAN"
-              value={iban}
-              onChangeText={handleIbanChange}
-              placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
-              leftIcon="business-outline"
-              autoCapitalize="characters"
-              hint="Virements automatiques sous 2 jours ouvrés après chaque paiement reçu."
-              error={ibanError}
-            />
-          )}
-        </View>
-      </View>
 
       {/* ── Paiements en ligne ── */}
       <View style={{ marginBottom: 24 }}>

@@ -92,6 +92,9 @@ export default function ProSubscriptionSettingsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setUpgradeError(null);
     setIsChanging(true);
+    // Capturé avant l'achat — sert à l'onboarding pour ne montrer que les
+    // écrans des fonctionnalités nouvellement débloquées lors d'un changement de formule.
+    const previousPlan = activePlan;
     try {
       const rcPkg = packages.find((p) => p.key === planId);
       if (!rcPkg) {
@@ -107,7 +110,10 @@ export default function ProSubscriptionSettingsScreen() {
         }
         await refreshActivePlan();
         qc.invalidateQueries({ queryKey: ["pro-subscription"] });
-        router.push({ pathname: "/(pro)/(profile)/subscription-success" as any, params: { plan: planId } });
+        router.push({
+          pathname: "/pro-subscription-success" as any,
+          params: { plan: planId, previousPlan: previousPlan ?? "" },
+        });
       } else if (result.error && result.error !== "cancelled") {
         setUpgradeError("L'achat n'a pas pu être complété. Réessaie.");
       }
