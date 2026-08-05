@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { ActionSheetIOS, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { ADMIN } from "@/constants/adminTheme";
 
 interface ActionSheetOptions {
@@ -46,6 +46,7 @@ interface PendingSheet extends ActionSheetOptions {
 
 export function ActionSheetProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const [pending, setPending] = useState<PendingSheet | null>(null);
 
   const show = useCallback<ShowActionSheet>((options, callback) => {
@@ -61,7 +62,7 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
   const dark = pending?.userInterfaceStyle === "dark";
   const theme = dark
     ? { sheetBg: ADMIN.surface, border: ADMIN.border, title: ADMIN.text, message: ADMIN.textSub, option: ADMIN.text, destructive: ADMIN.danger }
-    : { sheetBg: Colors.white,  border: Colors.border, title: Colors.foreground, message: Colors.mutedForeground, option: Colors.foreground, destructive: Colors.destructive };
+    : { sheetBg: colors.card,  border: colors.border, title: colors.foreground, message: colors.mutedForeground, option: colors.foreground, destructive: colors.destructive };
 
   return (
     <ActionSheetContext.Provider value={show}>
@@ -73,7 +74,7 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
         onRequestClose={() => handleSelect(pending?.cancelButtonIndex ?? 0)}
       >
         <Pressable
-          style={styles.backdrop}
+          style={[styles.backdrop, { backgroundColor: colors.overlayDark }]}
           onPress={() => handleSelect(pending?.cancelButtonIndex ?? 0)}
         >
           <View style={[styles.sheet, { backgroundColor: theme.sheetBg, paddingBottom: insets.bottom + 8 }]}>
@@ -120,7 +121,6 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: Colors.overlayDark,
     justifyContent: "flex-end",
   },
   sheet: {

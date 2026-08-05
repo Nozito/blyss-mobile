@@ -9,7 +9,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
@@ -47,6 +47,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
 export default function ClientHelpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const [activeCategory, setActiveCategory] = useState<Category>("reservations");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -54,7 +55,7 @@ export default function ClientHelpScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 40,
@@ -63,53 +64,55 @@ export default function ClientHelpScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View className="mb-6">
-        <View className="flex-row items-center mb-2">
+      <View style={{ marginBottom: 24 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
-            className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
+            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center", marginRight: 12 }}
             accessibilityLabel="Retour"
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
-          <Text className="text-2xl font-bold text-foreground">Aide & support</Text>
+          <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground }}>Aide & support</Text>
         </View>
-        <Text className="text-sm text-muted-foreground ml-1">
+        <Text style={{ fontSize: 13, color: colors.mutedForeground, marginLeft: 4 }}>
           Toutes les réponses pour profiter de Blyss sereinement
         </Text>
       </View>
 
       {/* Intro card */}
       <View
-        className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border border-border"
-        style={{ shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        style={{
+          backgroundColor: colors.white, borderRadius: 20, padding: 16, marginBottom: 16,
+          flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: colors.border,
+          shadowColor: colors.black, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+        }}
       >
-        <View className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center">
-          <Ionicons name="help-circle-outline" size={16} color={Colors.primary} />
+        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: `${colors.primary}1A`, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name="help-circle-outline" size={16} color={colors.primary} />
         </View>
-        <View className="flex-1">
-          <Text className="text-sm font-semibold text-foreground">Une question sur Blyss ?</Text>
-          <Text className="text-xs text-muted-foreground mt-0.5 leading-snug">
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>Une question sur Blyss ?</Text>
+          <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2, lineHeight: 15 }}>
             Parcours les questions fréquentes ou contacte le support si tu ne trouves pas ta réponse.
           </Text>
         </View>
       </View>
 
       {/* Category pills */}
-      <View className="mb-4">
+      <View style={{ marginBottom: 16 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {CATEGORIES.map((cat) => (
             <Pressable
               key={cat.id}
               onPress={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
-              className="px-4 py-2 rounded-full"
               style={{
-                backgroundColor: activeCategory === cat.id ? Colors.primary : Colors.muted,
+                paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+                backgroundColor: activeCategory === cat.id ? colors.primary : colors.muted,
               }}
             >
               <Text
-                className="text-xs font-semibold"
-                style={{ color: activeCategory === cat.id ? Colors.white : Colors.mutedForeground }}
+                style={{ fontSize: 12, fontWeight: "600", color: activeCategory === cat.id ? colors.onColor : colors.mutedForeground }}
               >
                 {cat.label}
               </Text>
@@ -119,29 +122,30 @@ export default function ClientHelpScreen() {
       </View>
 
       {/* FAQ items */}
-      <View className="gap-3 mb-4">
+      <View style={{ gap: 12, marginBottom: 16 }}>
         {filteredFaqs.map((faq) => {
           const globalIdx = faqs.indexOf(faq);
           const isOpen = openIndex === globalIdx;
           return (
-            <View
-              key={globalIdx}
-            >
+            <View key={globalIdx}>
               <Pressable
                 onPress={() => setOpenIndex(isOpen ? null : globalIdx)}
-                className="bg-card rounded-2xl p-4 border border-border"
-                style={{ shadowColor: Colors.black, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
+                style={{
+                  backgroundColor: colors.white, borderRadius: 20, padding: 16,
+                  borderWidth: 1, borderColor: colors.border,
+                  shadowColor: colors.black, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1,
+                }}
               >
-                <View className="flex-row items-center justify-between gap-3">
-                  <Text className="text-sm font-semibold text-foreground flex-1">{faq.question}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground, flex: 1 }}>{faq.question}</Text>
                   <Ionicons
                     name={isOpen ? "chevron-up" : "chevron-down"}
                     size={18}
-                    color={Colors.mutedForeground}
+                    color={colors.mutedForeground}
                   />
                 </View>
                 {isOpen && (
-                  <Text className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 12, lineHeight: 18 }}>
                     {faq.answer}
                   </Text>
                 )}
@@ -152,34 +156,33 @@ export default function ClientHelpScreen() {
       </View>
 
       {/* Contact */}
-      <View className="gap-3">
+      <View style={{ gap: 12 }}>
         <Pressable
           onPress={() => Linking.openURL("mailto:contact@blyssapp.fr")}
-          className="rounded-2xl p-4 flex-row items-center justify-between"
-          style={{ backgroundColor: Colors.primary }}
+          style={{ borderRadius: 20, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.primary }}
         >
-          <View className="flex-row items-center gap-3">
-            <Ionicons name="mail-outline" size={18} color={Colors.white} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Ionicons name="mail-outline" size={18} color={colors.onColor} />
             <View>
-              <Text className="text-sm font-semibold text-white">Écrire au support Blyss</Text>
-              <Text className="text-xs text-white/80">Réponse sous 24h ouvrées.</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: colors.onColor }}>Écrire au support Blyss</Text>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)" }}>Réponse sous 24h ouvrées.</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={Colors.white} />
+          <Ionicons name="chevron-forward" size={16} color={colors.onColor} />
         </Pressable>
 
-        <View className="flex-row gap-2">
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <View
-            className="flex-1 bg-card rounded-xl p-3 flex-row items-center gap-2 border border-border"
+            style={{ flex: 1, backgroundColor: colors.white, borderRadius: 14, padding: 12, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border }}
           >
-            <Ionicons name="chatbubble-outline" size={15} color={Colors.primary} />
-            <Text className="text-xs text-muted-foreground">Chat in-app (bientôt)</Text>
+            <Ionicons name="chatbubble-outline" size={15} color={colors.primary} />
+            <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Chat in-app (bientôt)</Text>
           </View>
           <View
-            className="flex-1 bg-card rounded-xl p-3 flex-row items-center gap-2 border border-border"
+            style={{ flex: 1, backgroundColor: colors.white, borderRadius: 14, padding: 12, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border }}
           >
-            <Ionicons name="shield-outline" size={15} color={Colors.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">Centre de confiance</Text>
+            <Ionicons name="shield-outline" size={15} color={colors.mutedForeground} />
+            <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Centre de confiance</Text>
           </View>
         </View>
       </View>

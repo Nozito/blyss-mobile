@@ -1,7 +1,10 @@
 import type { Ionicons } from "@expo/vector-icons";
 import type { ImageSourcePropType } from "react-native";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import type { useThemeColors } from "@/hooks/useThemeColors";
 import type { RCPlan } from "@/contexts/RevenueCatContext";
+
+type ThemeColors = ReturnType<typeof useThemeColors>;
 
 export type OnboardingSlide = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -20,90 +23,94 @@ export type OnboardingSlide = {
 
 const TIER_ORDER: RCPlan[] = ["start", "serenite", "signature"];
 
-const BASE_SLIDES: OnboardingSlide[] = [
-  {
-    icon: "calendar-outline",
-    title: "Ton agenda pro",
-    description:
-      "Crée tes créneaux, accepte les réservations en ligne. Fini les allers-retours par messages.",
-    color: Colors.primary,
-    bg: Colors.primaryLight,
-  },
-  {
-    icon: "people-outline",
-    title: "Tes clientes",
-    description:
-      "Retrouve l'historique de chaque cliente, ses préférences et tes notes en un seul endroit.",
-    color: Colors.primary,
-    bg: Colors.primaryLight,
-  },
-  {
-    icon: "card-outline",
-    title: "Paiement en ligne sécurisé",
-    description:
-      "Tes clientes payent directement dans l'app. Plus d'espèces à gérer, plus d'oublis à relancer.",
-    color: Colors.primary,
-    bg: Colors.primaryLight,
-  },
-];
+function getBaseSlides(colors: ThemeColors): OnboardingSlide[] {
+  return [
+    {
+      icon: "calendar-outline",
+      title: "Ton agenda pro",
+      description:
+        "Crée tes créneaux, accepte les réservations en ligne. Fini les allers-retours par messages.",
+      color: colors.primary,
+      bg: colors.primaryLight,
+    },
+    {
+      icon: "people-outline",
+      title: "Tes clientes",
+      description:
+        "Retrouve l'historique de chaque cliente, ses préférences et tes notes en un seul endroit.",
+      color: colors.primary,
+      bg: colors.primaryLight,
+    },
+    {
+      icon: "card-outline",
+      title: "Paiement en ligne sécurisé",
+      description:
+        "Tes clientes payent directement dans l'app. Plus d'espèces à gérer, plus d'oublis à relancer.",
+      color: colors.primary,
+      bg: colors.primaryLight,
+    },
+  ];
+}
 
 // Un ou plusieurs slides par palier — affichés uniquement quand ce palier
 // vient d'être débloqué (première souscription qui l'atteint, ou upgrade qui
 // le franchit). "start" n'a pas de slide dédié : ses fonctionnalités sont
 // couvertes par les slides de base.
-const TIER_SLIDES: Partial<Record<RCPlan, OnboardingSlide[]>> = {
-  serenite: [
-    {
-      icon: "heart-outline",
-      title: "Attire et fidélise tes clientes",
-      description:
-        "Un portfolio photo pour attirer de nouvelles clientes et des rappels post-prestation pour les fidéliser.",
-      color: Colors.pro,
-      bg: withAlpha(Colors.pro, 0.12),
-    },
-    {
-      icon: "stats-chart-outline",
-      title: "Statistiques détaillées",
-      description: "Suis la performance de ton activité, semaine après semaine.",
-      color: Colors.pro,
-      bg: withAlpha(Colors.pro, 0.12),
-    },
-  ],
-  signature: [
-    {
-      icon: "trending-up-outline",
-      title: "Anticipe ton activité",
-      description:
-        "Prévision de ton chiffre d'affaires, rapports automatiques chaque semaine et synchronisation avec ton Apple Calendar.",
-      color: Colors.secondary,
-      bg: Colors.secondaryLight,
-    },
-    {
-      icon: "pulse-outline",
-      title: "Analyses de performance",
-      description: "Comprends ce qui marche dans ton activité pour progresser plus vite.",
-      color: Colors.secondary,
-      bg: Colors.secondaryLight,
-    },
-  ],
-};
+function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSlide[]>> {
+  return {
+    serenite: [
+      {
+        icon: "heart-outline",
+        title: "Attire et fidélise tes clientes",
+        description:
+          "Un portfolio photo pour attirer de nouvelles clientes et des rappels post-prestation pour les fidéliser.",
+        color: colors.pro,
+        bg: withAlpha(colors.pro, 0.12),
+      },
+      {
+        icon: "stats-chart-outline",
+        title: "Statistiques détaillées",
+        description: "Suis la performance de ton activité, semaine après semaine.",
+        color: colors.pro,
+        bg: withAlpha(colors.pro, 0.12),
+      },
+    ],
+    signature: [
+      {
+        icon: "trending-up-outline",
+        title: "Anticipe ton activité",
+        description:
+          "Prévision de ton chiffre d'affaires, rapports automatiques chaque semaine et synchronisation avec ton Apple Calendar.",
+        color: colors.secondary,
+        bg: colors.secondaryLight,
+      },
+      {
+        icon: "pulse-outline",
+        title: "Analyses de performance",
+        description: "Comprends ce qui marche dans ton activité pour progresser plus vite.",
+        color: colors.secondary,
+        bg: colors.secondaryLight,
+      },
+    ],
+  };
+}
 
-function closingSlide(isUpgrade: boolean): OnboardingSlide {
+function closingSlide(isUpgrade: boolean, colors: ThemeColors): OnboardingSlide {
   return isUpgrade
     ? {
         icon: "rocket-outline",
         title: "Fonctionnalités activées",
         description: "Elles sont disponibles dès maintenant dans ton espace pro.",
-        color: Colors.primary,
-        bg: Colors.primaryLight,
+        color: colors.primary,
+        bg: colors.primaryLight,
       }
     : {
         icon: "rocket-outline",
         title: "Ton compte Pro est prêt",
         description:
           "Commence à recevoir des réservations dès aujourd'hui. 1 rendez-vous rembourse ton abonnement.",
-        color: Colors.primary,
-        bg: Colors.primaryLight,
+        color: colors.primary,
+        bg: colors.primaryLight,
       };
 }
 
@@ -115,22 +122,24 @@ function closingSlide(isUpgrade: boolean): OnboardingSlide {
  */
 export function buildOnboardingSlides(
   plan: RCPlan,
-  previousPlan: RCPlan | null
+  previousPlan: RCPlan | null,
+  colors: ThemeColors
 ): OnboardingSlide[] {
   const isFirstSubscription = previousPlan === null;
   const slides: OnboardingSlide[] = [];
 
-  if (isFirstSubscription) slides.push(...BASE_SLIDES);
+  if (isFirstSubscription) slides.push(...getBaseSlides(colors));
 
   const fromIndex = isFirstSubscription ? -1 : TIER_ORDER.indexOf(previousPlan);
   const toIndex = TIER_ORDER.indexOf(plan);
+  const tierSlidesByPlan = getTierSlides(colors);
 
   for (let i = Math.max(fromIndex + 1, 1); i <= toIndex; i++) {
-    const tierSlides = TIER_SLIDES[TIER_ORDER[i]];
+    const tierSlides = tierSlidesByPlan[TIER_ORDER[i]];
     if (tierSlides) slides.push(...tierSlides);
   }
 
-  slides.push(closingSlide(!isFirstSubscription));
+  slides.push(closingSlide(!isFirstSubscription, colors));
   return slides;
 }
 

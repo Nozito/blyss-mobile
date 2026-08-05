@@ -10,7 +10,7 @@ import { useRouter } from "expo-router";
 import { proApi } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { safeBack } from "@/lib/navigation";
 import { useToast } from "@/components/ui/Toast";
 
@@ -44,48 +44,49 @@ const ServiceRow = memo(function ServiceRow({
   onEdit: (id: number) => void;
   onDelete: (id: number, name: string) => void;
 }) {
+  const colors = useThemeColors();
   const inactive = item.active === false;
   return (
     <View style={{
-      backgroundColor: Colors.card, borderRadius: 20, marginBottom: 12,
+      backgroundColor: colors.card, borderRadius: 20, marginBottom: 12,
       borderWidth: 1,
-      borderColor: inactive ? Colors.border : `${Colors.primary}25`,
+      borderColor: inactive ? colors.border : `${colors.primary}25`,
       overflow: "hidden",
     }}>
       {/* Ligne principale */}
       <View style={{ padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
         <View style={{
           width: 48, height: 48, borderRadius: 14,
-          backgroundColor: inactive ? Colors.muted : `${Colors.primary}15`,
+          backgroundColor: inactive ? colors.muted : `${colors.primary}15`,
           alignItems: "center", justifyContent: "center",
         }}>
           <Ionicons
             name="sparkles-outline"
             size={22}
-            color={inactive ? Colors.mutedForeground : Colors.primary}
+            color={inactive ? colors.mutedForeground : colors.primary}
           />
         </View>
 
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground, flex: 1 }} numberOfLines={1}>
               {item.name}
             </Text>
             {inactive && <Badge variant="secondary" size="sm">Inactif</Badge>}
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.primary }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primary }}>
               {(typeof item.price === "number" ? item.price : parseFloat(String(item.price ?? "0"))).toFixed(2)} €
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Ionicons name="time-outline" size={13} color={Colors.mutedForeground} />
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+              <Ionicons name="time-outline" size={13} color={colors.mutedForeground} />
+              <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                 {formatDuration(item.duration_minutes)}
               </Text>
             </View>
           </View>
           {item.description ? (
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 4 }} numberOfLines={1}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4 }} numberOfLines={1}>
               {item.description}
             </Text>
           ) : null}
@@ -93,15 +94,15 @@ const ServiceRow = memo(function ServiceRow({
       </View>
 
       {/* Barre d'actions */}
-      <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: Colors.border, alignItems: "center" }}>
+      <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: colors.border, alignItems: "center" }}>
         {/* Toggle actif */}
         <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, gap: 6 }}>
           <Ionicons
             name={inactive ? "pause-circle-outline" : "checkmark-circle-outline"}
             size={15}
-            color={inactive ? Colors.mutedForeground : Colors.success}
+            color={inactive ? colors.mutedForeground : colors.success}
           />
-          <Text style={{ fontSize: 12, fontWeight: "600", color: inactive ? Colors.mutedForeground : Colors.success }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: inactive ? colors.mutedForeground : colors.success }}>
             {inactive ? "Inactive" : "Active"}
           </Text>
           <Switch
@@ -110,8 +111,8 @@ const ServiceRow = memo(function ServiceRow({
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               onToggleActive(item.id, val);
             }}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.white}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.onColor}
             style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
           />
         </View>
@@ -124,9 +125,9 @@ const ServiceRow = memo(function ServiceRow({
           }}
           accessibilityLabel="Dupliquer la prestation"
           accessibilityRole="button"
-          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
+          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: colors.border }}
         >
-          <Ionicons name="copy-outline" size={18} color={Colors.mutedForeground} />
+          <Ionicons name="copy-outline" size={18} color={colors.mutedForeground} />
         </AnimatedPressable>
 
         {/* Modifier */}
@@ -134,9 +135,9 @@ const ServiceRow = memo(function ServiceRow({
           onPress={() => onEdit(item.id)}
           accessibilityLabel="Modifier la prestation"
           accessibilityRole="button"
-          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
+          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: colors.border }}
         >
-          <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
+          <Ionicons name="pencil-outline" size={18} color={colors.primary} />
         </AnimatedPressable>
 
         {/* Supprimer */}
@@ -144,9 +145,9 @@ const ServiceRow = memo(function ServiceRow({
           onPress={() => onDelete(item.id, item.name)}
           accessibilityLabel="Supprimer la prestation"
           accessibilityRole="button"
-          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: Colors.border }}
+          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: colors.border }}
         >
-          <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
+          <Ionicons name="trash-outline" size={18} color={colors.destructive} />
         </AnimatedPressable>
       </View>
     </View>
@@ -156,6 +157,7 @@ const ServiceRow = memo(function ServiceRow({
 export default function ServicesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useThemeColors();
   const qc = useQueryClient();
   const showActionSheet = useActionSheet();
   const { showToast } = useToast();
@@ -263,7 +265,7 @@ export default function ServicesScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
       {/* Header */}
       <View style={{
         flexDirection: "row", alignItems: "center", gap: 12,
@@ -274,17 +276,17 @@ export default function ServicesScreen() {
           accessibilityLabel="Retour"
           style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+            backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
             alignItems: "center", justifyContent: "center",
           }}
         >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={20} color={colors.foreground} />
         </AnimatedIconButton>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
             Prestations
           </Text>
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+          <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
             {activeCount} active{activeCount !== 1 ? "s" : ""} sur {services.length}
           </Text>
         </View>
@@ -294,13 +296,13 @@ export default function ServicesScreen() {
           accessibilityRole="button"
           style={{
             width: 40, height: 40, borderRadius: 14,
-            backgroundColor: Colors.primary,
+            backgroundColor: colors.primary,
             alignItems: "center", justifyContent: "center",
-            shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
+            shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
           }}
         >
-          <Ionicons name="add" size={22} color={Colors.white} />
+          <Ionicons name="add" size={22} color={colors.onColor} />
         </Pressable>
       </View>
 
@@ -318,27 +320,27 @@ export default function ServicesScreen() {
             <View style={{ alignItems: "center", paddingVertical: 64, gap: 12 }}>
               <View style={{
                 width: 64, height: 64, borderRadius: 20,
-                backgroundColor: `${Colors.primary}15`,
+                backgroundColor: `${colors.primary}15`,
                 alignItems: "center", justifyContent: "center",
               }}>
-                <Ionicons name="sparkles-outline" size={28} color={Colors.primary} />
+                <Ionicons name="sparkles-outline" size={28} color={colors.primary} />
               </View>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: Colors.foreground }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: colors.foreground }}>
                 Aucune prestation
               </Text>
-              <Text style={{ fontSize: 14, color: Colors.mutedForeground, textAlign: "center" }}>
+              <Text style={{ fontSize: 14, color: colors.mutedForeground, textAlign: "center" }}>
                 Crée ta première prestation{"\n"}pour qu'elles apparaissent ici
               </Text>
               <Pressable
                 onPress={() => router.push("/(pro)/(profile)/service-form")}
                 style={{
                   marginTop: 8, paddingHorizontal: 24, paddingVertical: 12,
-                  backgroundColor: Colors.primary, borderRadius: 16,
+                  backgroundColor: colors.primary, borderRadius: 16,
                   flexDirection: "row", alignItems: "center", gap: 8,
                 }}
               >
-                <Ionicons name="add-circle-outline" size={18} color={Colors.white} />
-                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Créer une prestation</Text>
+                <Ionicons name="add-circle-outline" size={18} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Créer une prestation</Text>
               </Pressable>
             </View>
           }

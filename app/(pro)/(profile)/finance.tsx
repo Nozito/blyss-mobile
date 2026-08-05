@@ -19,7 +19,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as Print from "expo-print";
 import { proApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -44,6 +45,7 @@ function n(v: unknown): number {
 export default function ProFinanceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useThemeColors();
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -265,15 +267,15 @@ export default function ProFinanceScreen() {
 
   const statCards = stats
     ? [
-        { label: "Aujourd'hui",  value: stats.today,    icon: "sunny-outline" as const,      color: Colors.secondary },
-        { label: "Cette semaine", value: stats.week,    icon: "calendar-outline" as const,    color: Colors.primary },
-        { label: "Ce mois",       value: stats.month,   icon: "bar-chart-outline" as const,   color: Colors.primary },
-        { label: "Mois dernier",  value: stats.lastMonth, icon: "time-outline" as const,     color: Colors.mutedForeground },
+        { label: "Aujourd'hui",  value: stats.today,    icon: "sunny-outline" as const,      color: colors.secondary },
+        { label: "Cette semaine", value: stats.week,    icon: "calendar-outline" as const,    color: colors.primary },
+        { label: "Ce mois",       value: stats.month,   icon: "bar-chart-outline" as const,   color: colors.primary },
+        { label: "Mois dernier",  value: stats.lastMonth, icon: "time-outline" as const,     color: colors.mutedForeground },
       ]
     : [];
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
@@ -289,31 +291,31 @@ export default function ProFinanceScreen() {
           <AnimatedIconButton
             onPress={() => safeBack(router)}
             accessibilityLabel="Retour"
-            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
+            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Finances</Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{monthLabel}</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Finances</Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{monthLabel}</Text>
           </View>
           <Pressable
             onPress={handleExport}
             disabled={exporting || !stats}
             accessibilityRole="button"
             accessibilityLabel="Exporter les données"
-            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center", opacity: exporting || !stats ? 0.5 : 1, ...Shadows.card }}
+            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", opacity: exporting || !stats ? 0.5 : 1, ...Shadows.card }}
           >
             {exporting ? (
-              <ActivityIndicator size="small" color={Colors.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Ionicons name="download-outline" size={18} color={Colors.primary} />
+              <Ionicons name="download-outline" size={18} color={colors.primary} />
             )}
           </Pressable>
         </View>
 
         {/* Period selector */}
-        <View style={{ flexDirection: "row", backgroundColor: Colors.white, borderRadius: 16, padding: 4, gap: 4, ...Shadows.card }}>
+        <View style={{ flexDirection: "row", backgroundColor: colors.white, borderRadius: 16, padding: 4, gap: 4, ...Shadows.card }}>
           {(["week", "month", "year"] as Period[]).map((p) => (
             <Pressable
               key={p}
@@ -326,10 +328,10 @@ export default function ProFinanceScreen() {
                 paddingVertical: 8,
                 borderRadius: 12,
                 alignItems: "center",
-                backgroundColor: selectedPeriod === p ? Colors.primary : "transparent",
+                backgroundColor: selectedPeriod === p ? colors.primary : "transparent",
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: "700", color: selectedPeriod === p ? Colors.white : Colors.mutedForeground }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: selectedPeriod === p ? colors.onColor : colors.mutedForeground }}>
                 {PERIOD_LABELS[p]}
               </Text>
             </Pressable>
@@ -338,13 +340,13 @@ export default function ProFinanceScreen() {
 
         {isLoading ? (
           <View style={{ paddingVertical: 60, alignItems: "center" }}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : stats ? (
           <>
             {/* Hero card */}
             <View
-              style={{ borderRadius: 20, padding: 20, overflow: "hidden", backgroundColor: Colors.primary }}
+              style={{ borderRadius: 20, padding: 20, overflow: "hidden", backgroundColor: colors.primary }}
             >
               {/* Glow */}
               <View style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.12)" }} />
@@ -358,16 +360,16 @@ export default function ProFinanceScreen() {
                     <Ionicons
                       name={variation >= 0 ? "trending-up-outline" : "trending-down-outline"}
                       size={12}
-                      color={Colors.white}
+                      color={colors.onColor}
                     />
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.white }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.onColor }}>
                       {variation >= 0 ? "+" : ""}{variation}% vs mois préc.
                     </Text>
                   </View>
                 )}
               </View>
 
-              <Text style={{ fontSize: 42, fontWeight: "900", color: Colors.white, letterSpacing: -1, marginBottom: 4 }}>
+              <Text style={{ fontSize: 42, fontWeight: "900", color: colors.onColor, letterSpacing: -1, marginBottom: 4 }}>
                 {periodValue.toFixed(2).replace(".", ",")} €
               </Text>
               <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
@@ -382,50 +384,50 @@ export default function ProFinanceScreen() {
                 setObjectiveInput(String(stats.objective || ""));
                 setShowObjectiveModal(true);
               }}
-              style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}
+              style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}
             >
               {objectiveSaved && ( // BLYSS-FIX: 2.1 — floating badge, doesn't reflow sibling content
                 <View
                   pointerEvents="none"
                   style={{
                     position: "absolute", top: -10, right: 12,
-                    backgroundColor: Colors.success, borderRadius: 20,
+                    backgroundColor: colors.success, borderRadius: 20,
                     paddingHorizontal: 10, paddingVertical: 4,
-                    shadowColor: Colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
+                    shadowColor: colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
                   }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.white }}>Sauvegardé ✓</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: colors.onColor }}>Sauvegardé ✓</Text>
                 </View>
               )}
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="flag-outline" size={16} color={Colors.primary} />
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="flag-outline" size={16} color={colors.primary} />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>Objectif mensuel</Text>
-                    <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>Objectif mensuel</Text>
+                    <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
                       {stats.objective > 0 ? `${stats.objective.toFixed(0)} €` : "Non défini"}
                     </Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.primary }}>{progress}%</Text>
-                  <Ionicons name="pencil-outline" size={14} color={Colors.mutedForeground} />
+                  <Text style={{ fontSize: 18, fontWeight: "900", color: colors.primary }}>{progress}%</Text>
+                  <Ionicons name="pencil-outline" size={14} color={colors.mutedForeground} />
                 </View>
               </View>
 
               {stats.objective > 0 && (
                 <>
-                  <View style={{ height: 8, backgroundColor: Colors.cream, borderRadius: 4, overflow: "hidden" }}>
+                  <View style={{ height: 8, backgroundColor: colors.cream, borderRadius: 4, overflow: "hidden" }}>
                     <LinearGradient
-                      colors={[Colors.primary, `${Colors.primary}CC`]}
+                      colors={[colors.primary, `${colors.primary}CC`]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={{ height: "100%", width: `${progress}%`, borderRadius: 4 }}
                     />
                   </View>
-                  <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 6 }}>
+                  <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 6 }}>
                     {stats.month.toFixed(0)} € sur {stats.objective.toFixed(0)} €
                   </Text>
                 </>
@@ -439,26 +441,26 @@ export default function ProFinanceScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push("/(pro)/(profile)/finance-performance" as any);
                 }}
-                style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
+                style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
               >
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="analytics-outline" size={16} color={Colors.primary} />
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="analytics-outline" size={16} color={colors.primary} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>Analyses de performance</Text>
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 15 }}>Meilleur jour, panier moyen, remplissage</Text>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: colors.foreground }}>Analyses de performance</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>Meilleur jour, panier moyen, remplissage</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push("/(pro)/(profile)/finance-reports" as any);
                 }}
-                style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
+                style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
               >
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="document-text-outline" size={16} color="#34C759" />
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(colors.success, 0.15), alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="document-text-outline" size={16} color={colors.success} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>Rapports automatiques</Text>
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 15 }}>Résumés hebdo & mensuels</Text>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: colors.foreground }}>Rapports automatiques</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>Résumés hebdo & mensuels</Text>
               </Pressable>
             </View>
 
@@ -471,7 +473,7 @@ export default function ProFinanceScreen() {
                       key={label}
                       style={{
                         flex: 1,
-                        backgroundColor: Colors.white,
+                        backgroundColor: colors.white,
                         borderRadius: 16,
                         padding: 16,
                         ...Shadows.card,
@@ -480,10 +482,10 @@ export default function ProFinanceScreen() {
                       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${color}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
                         <Ionicons name={icon} size={16} color={color} />
                       </View>
-                      <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>
+                      <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
                         {value.toFixed(0)} €
                       </Text>
-                      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>{label}</Text>
+                      <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>{label}</Text>
                     </View>
                   ))}
                 </View>
@@ -492,9 +494,9 @@ export default function ProFinanceScreen() {
 
             {/* Top services */}
             {stats.topServices.length > 0 && (
-              <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Top prestations</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground }}>Top prestations</Text>
                 </View>
 
                 <View style={{ gap: 14 }}>
@@ -505,21 +507,21 @@ export default function ProFinanceScreen() {
                       <View key={svc.name}>
                         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, marginRight: 8 }}>
-                            <View style={{ width: 20, height: 20, borderRadius: 6, backgroundColor: `${Colors.primary}18`, alignItems: "center", justifyContent: "center" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "900", color: Colors.primary }}>{i + 1}</Text>
+                            <View style={{ width: 20, height: 20, borderRadius: 6, backgroundColor: `${colors.primary}18`, alignItems: "center", justifyContent: "center" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "900", color: colors.primary }}>{i + 1}</Text>
                             </View>
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground, flex: 1 }} numberOfLines={1}>
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground, flex: 1 }} numberOfLines={1}>
                               {svc.name}
                             </Text>
                           </View>
                           <View style={{ alignItems: "flex-end" }}>
-                            <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.primary }}>{rev.toFixed(0)} €</Text>
-                            <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>{svc.count} rdv</Text>
+                            <Text style={{ fontSize: 13, fontWeight: "800", color: colors.primary }}>{rev.toFixed(0)} €</Text>
+                            <Text style={{ fontSize: 10, color: colors.mutedForeground }}>{svc.count} rdv</Text>
                           </View>
                         </View>
-                        <View style={{ height: 6, backgroundColor: Colors.cream, borderRadius: 3, overflow: "hidden" }}>
+                        <View style={{ height: 6, backgroundColor: colors.cream, borderRadius: 3, overflow: "hidden" }}>
                           <LinearGradient
-                            colors={[Colors.primary, `${Colors.primary}CC`]}
+                            colors={[colors.primary, `${colors.primary}CC`]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={{ height: "100%", width: `${Math.min(pct, 100)}%`, borderRadius: 3 }}
@@ -534,9 +536,9 @@ export default function ProFinanceScreen() {
           </>
         ) : (
           <View style={{ paddingVertical: 60, alignItems: "center", gap: 12 }}>
-            <Ionicons name="bar-chart-outline" size={48} color={Colors.border} />
-            <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Aucune donnée</Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center" }}>
+            <Ionicons name="bar-chart-outline" size={48} color={colors.border} />
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>Aucune donnée</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center" }}>
               Les statistiques apparaîtront une fois tes premières réservations effectuées
             </Text>
           </View>
@@ -546,9 +548,9 @@ export default function ProFinanceScreen() {
 
       {/* Objective modal */}
       <Modal visible={showObjectiveModal} transparent animationType="slide" onRequestClose={() => setShowObjectiveModal(false)}>
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlayDark }}>
           <View style={{
-            backgroundColor: Colors.white,
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
@@ -556,18 +558,18 @@ export default function ProFinanceScreen() {
             gap: 16,
           }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground }}>Objectif mensuel</Text>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.foreground }}>Objectif mensuel</Text>
               <Pressable
                 onPress={() => setShowObjectiveModal(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Fermer"
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.cream, alignItems: "center", justifyContent: "center" }}
               >
-                <Ionicons name="close" size={18} color={Colors.foreground} />
+                <Ionicons name="close" size={18} color={colors.foreground} />
               </Pressable>
             </View>
 
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, lineHeight: 18 }}>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, lineHeight: 18 }}>
               Définis ton objectif de revenu mensuel pour suivre ta progression.
             </Text>
 
@@ -575,23 +577,23 @@ export default function ProFinanceScreen() {
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
-              backgroundColor: Colors.cream,
+              backgroundColor: colors.cream,
               borderRadius: 14,
               paddingHorizontal: 14,
               height: 44,
               borderWidth: 1.5,
-              borderColor: Colors.border,
+              borderColor: colors.border,
             }}>
-              <Ionicons name="flag-outline" size={18} color={Colors.primary} />
+              <Ionicons name="flag-outline" size={18} color={colors.primary} />
               <TextInput
                 value={objectiveInput}
                 onChangeText={setObjectiveInput}
                 placeholder="ex. 2000"
-                placeholderTextColor={Colors.inputPlaceholder}
+                placeholderTextColor={colors.inputPlaceholder}
                 keyboardType="decimal-pad"
-                style={{ flex: 1, fontSize: 17, fontWeight: "700", color: Colors.foreground, padding: 0 }}
+                style={{ flex: 1, fontSize: 17, fontWeight: "700", color: colors.foreground, padding: 0 }}
               />
-              <Text style={{ fontSize: 17, fontWeight: "700", color: Colors.primary }}>€</Text>
+              <Text style={{ fontSize: 17, fontWeight: "700", color: colors.primary }}>€</Text>
             </View>
 
             <AnimatedPressable
@@ -602,12 +604,12 @@ export default function ProFinanceScreen() {
                 objectiveMutation.mutate(val);
               }}
               disabled={objectiveMutation.isPending}
-              style={{ height: 56, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: objectiveMutation.isPending ? 0.7 : 1 }}
+              style={{ height: 56, borderRadius: 16, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", opacity: objectiveMutation.isPending ? 0.7 : 1 }}
             >
               {objectiveMutation.isPending ? (
-                <ActivityIndicator color={Colors.white} />
+                <ActivityIndicator color={colors.onColor} />
               ) : (
-                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Enregistrer</Text>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: colors.onColor }}>Enregistrer</Text>
               )}
             </AnimatedPressable>
           </View>
@@ -616,27 +618,27 @@ export default function ProFinanceScreen() {
 
       {/* Export format picker modal */}
       <Modal visible={showExportModal} transparent animationType="fade" onRequestClose={() => setShowExportModal(false)}>
-        <View style={{ flex: 1, backgroundColor: Colors.overlayDark, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
-          <View style={{ backgroundColor: Colors.card, borderRadius: 20, padding: 24, width: "100%", borderWidth: 1, borderColor: Colors.border }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 6 }}>Exporter les données</Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 20 }}>Choisir le format :</Text>
+        <View style={{ flex: 1, backgroundColor: colors.overlayDark, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 20, padding: 24, width: "100%", borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground, marginBottom: 6 }}>Exporter les données</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 20 }}>Choisir le format :</Text>
             <View style={{ gap: 10 }}>
               <AnimatedPressable
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); exportCSV(); }}
-                style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
+                style={{ height: 48, borderRadius: 14, backgroundColor: `${colors.primary}15`, borderWidth: 1, borderColor: `${colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
               >
-                <Ionicons name="document-text-outline" size={18} color={Colors.primary} />
-                <Text style={{ fontWeight: "700", color: Colors.primary }}>CSV</Text>
+                <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+                <Text style={{ fontWeight: "700", color: colors.primary }}>CSV</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); exportPDF(); }}
-                style={{ height: 48, borderRadius: 14, backgroundColor: `${Colors.primary}15`, borderWidth: 1, borderColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
+                style={{ height: 48, borderRadius: 14, backgroundColor: `${colors.primary}15`, borderWidth: 1, borderColor: `${colors.primary}30`, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
               >
-                <Ionicons name="document-outline" size={18} color={Colors.primary} />
-                <Text style={{ fontWeight: "700", color: Colors.primary }}>PDF</Text>
+                <Ionicons name="document-outline" size={18} color={colors.primary} />
+                <Text style={{ fontWeight: "700", color: colors.primary }}>PDF</Text>
               </AnimatedPressable>
-              <Pressable onPress={() => setShowExportModal(false)} style={{ height: 48, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ fontWeight: "600", color: Colors.mutedForeground }}>Annuler</Text>
+              <Pressable onPress={() => setShowExportModal(false)} style={{ height: 48, borderRadius: 14, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontWeight: "600", color: colors.mutedForeground }}>Annuler</Text>
               </Pressable>
             </View>
           </View>

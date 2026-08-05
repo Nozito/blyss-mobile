@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi, ProNotificationSettings } from "@/lib/api";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const DEFAULT_PREFS: ProNotificationSettings = {
@@ -34,61 +35,65 @@ interface NotifItem {
   iconColor: string;
 }
 
-const SECTIONS: Array<{ title: string; items: NotifItem[] }> = [
-  {
-    title: "Rendez-vous & Clientes",
-    items: [
-      {
-        key: "new_reservation",
-        label: "Nouvelles réservations",
-        subtitle: "Dès qu'une cliente réserve un créneau",
-        icon: "notifications-outline",
-        iconBg: withAlpha(Colors.primary, 0.13),
-        iconColor: Colors.primary,
-      },
-      {
-        key: "cancel_change",
-        label: "Changements & annulations",
-        subtitle: "Modification d'horaire ou annulation par la cliente",
-        icon: "calendar-outline",
-        iconBg: withAlpha(Colors.warning, 0.13),
-        iconColor: Colors.warning,
-      },
-      {
-        key: "daily_reminder",
-        label: "Rappels du jour",
-        subtitle: "Récap' de tes rendez-vous du jour le matin",
-        icon: "star-outline",
-        iconBg: withAlpha("#06B6D4", 0.13),
-        iconColor: "#06B6D4",
-      },
-    ],
-  },
-  {
-    title: "Paiement & Activité",
-    items: [
-      {
-        key: "payment_alert",
-        label: "Acomptes & garanties",
-        subtitle: "Quand un paiement ou acompte est encaissé",
-        icon: "card-outline",
-        iconBg: withAlpha(Colors.pro, 0.13),
-        iconColor: Colors.pro,
-      },
-      {
-        key: "activity_summary",
-        label: "Résumé d'activité",
-        subtitle: "Aperçu de ton CA et rendez-vous en fin de journée",
-        icon: "trending-up-outline",
-        iconBg: withAlpha(Colors.primary, 0.13),
-        iconColor: Colors.primary,
-      },
-    ],
-  },
-];
+function getSections(colors: ReturnType<typeof useThemeColors>): Array<{ title: string; items: NotifItem[] }> {
+  return [
+    {
+      title: "Rendez-vous & Clientes",
+      items: [
+        {
+          key: "new_reservation",
+          label: "Nouvelles réservations",
+          subtitle: "Dès qu'une cliente réserve un créneau",
+          icon: "notifications-outline",
+          iconBg: withAlpha(colors.primary, 0.13),
+          iconColor: colors.primary,
+        },
+        {
+          key: "cancel_change",
+          label: "Changements & annulations",
+          subtitle: "Modification d'horaire ou annulation par la cliente",
+          icon: "calendar-outline",
+          iconBg: withAlpha(colors.warning, 0.13),
+          iconColor: colors.warning,
+        },
+        {
+          key: "daily_reminder",
+          label: "Rappels du jour",
+          subtitle: "Récap' de tes rendez-vous du jour le matin",
+          icon: "star-outline",
+          iconBg: withAlpha("#06B6D4", 0.13),
+          iconColor: "#06B6D4",
+        },
+      ],
+    },
+    {
+      title: "Paiement & Activité",
+      items: [
+        {
+          key: "payment_alert",
+          label: "Acomptes & garanties",
+          subtitle: "Quand un paiement ou acompte est encaissé",
+          icon: "card-outline",
+          iconBg: withAlpha(colors.pro, 0.13),
+          iconColor: colors.pro,
+        },
+        {
+          key: "activity_summary",
+          label: "Résumé d'activité",
+          subtitle: "Aperçu de ton CA et rendez-vous en fin de journée",
+          icon: "trending-up-outline",
+          iconBg: withAlpha(colors.primary, 0.13),
+          iconColor: colors.primary,
+        },
+      ],
+    },
+  ];
+}
 
 export default function ProNotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const SECTIONS = useMemo(() => getSections(colors), [colors]);
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
   const [prefs, setPrefs] = useState<ProNotificationSettings>(DEFAULT_PREFS);
@@ -120,8 +125,8 @@ export default function ProNotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.background }}>
-        <ActivityIndicator color={Colors.primary} />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -129,7 +134,7 @@ export default function ProNotificationsScreen() {
   return (
     <ScrollView
       ref={scrollRef}
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingHorizontal: 20,
@@ -140,10 +145,10 @@ export default function ProNotificationsScreen() {
     >
       {/* Header */}
       <View style={{ marginBottom: 24 }}>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>
           Notifications
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+        <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
           Préférences de réception
         </Text>
       </View>
@@ -153,7 +158,7 @@ export default function ProNotificationsScreen() {
         <View key={section.title} style={{ marginBottom: 24 }}>
           <Text style={{
             fontSize: 11, fontWeight: "700",
-            color: Colors.mutedForeground,
+            color: colors.mutedForeground,
             textTransform: "uppercase",
             letterSpacing: 1,
             marginBottom: 8,
@@ -161,11 +166,11 @@ export default function ProNotificationsScreen() {
             {section.title}
           </Text>
           <View style={{
-            backgroundColor: Colors.white,
+            backgroundColor: colors.white,
             borderRadius: 16,
             overflow: "hidden",
             borderWidth: 1,
-            borderColor: Colors.border,
+            borderColor: colors.border,
           }}>
             {section.items.map((item, idx) => (
               <View
@@ -174,7 +179,7 @@ export default function ProNotificationsScreen() {
                   flexDirection: "row", alignItems: "center",
                   padding: 16, gap: 14,
                   borderBottomWidth: idx < section.items.length - 1 ? 1 : 0,
-                  borderBottomColor: "#F3F4F6",
+                  borderBottomColor: colors.muted,
                 }}
               >
                 <View style={{
@@ -185,18 +190,18 @@ export default function ProNotificationsScreen() {
                   <Ionicons name={item.icon} size={20} color={item.iconColor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
                     {item.label}
                   </Text>
-                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                     {item.subtitle}
                   </Text>
                 </View>
                 <Switch
                   value={prefs[item.key]}
                   onValueChange={(val) => updatePref(item.key, val)}
-                  trackColor={{ false: Colors.border, true: Colors.primary }}
-                  thumbColor={Colors.white}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.onColor}
                 />
               </View>
             ))}
@@ -208,7 +213,7 @@ export default function ProNotificationsScreen() {
       <View style={{ marginBottom: 24 }}>
         <Text style={{
           fontSize: 11, fontWeight: "700",
-          color: Colors.mutedForeground,
+          color: colors.mutedForeground,
           textTransform: "uppercase",
           letterSpacing: 1,
           marginBottom: 8,
@@ -216,11 +221,11 @@ export default function ProNotificationsScreen() {
           Système
         </Text>
         <View style={{
-          backgroundColor: Colors.white,
+          backgroundColor: colors.white,
           borderRadius: 16,
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: Colors.border,
+          borderColor: colors.border,
         }}>
           <AnimatedPressable
             onPress={() => Linking.openSettings()}
@@ -231,20 +236,20 @@ export default function ProNotificationsScreen() {
           >
             <View style={{
               width: 44, height: 44, borderRadius: 12,
-              backgroundColor: "#F3F4F6",
+              backgroundColor: colors.muted,
               alignItems: "center", justifyContent: "center",
             }}>
-              <Ionicons name="settings-outline" size={20} color={Colors.mutedForeground} />
+              <Ionicons name="settings-outline" size={20} color={colors.mutedForeground} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
                 Réglages système
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                 Activer les notifications pour Blyss
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
+            <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
           </AnimatedPressable>
         </View>
       </View>
@@ -252,15 +257,15 @@ export default function ProNotificationsScreen() {
       {/* Footer */}
       {saveSuccess && (
         <View style={{ alignItems: "center", paddingVertical: 8 }}>
-          <Text style={{ fontSize: 14, color: Colors.success }}>
+          <Text style={{ fontSize: 14, color: colors.success }}>
             Préférences à jour ✓
           </Text>
         </View>
       )}
       {saveError && (
         <View style={{ alignItems: "center", paddingVertical: 8, flexDirection: "row", justifyContent: "center", gap: 6 }}>
-          <Ionicons name="alert-circle-outline" size={15} color={Colors.destructive} />
-          <Text style={{ fontSize: 14, color: Colors.destructive }}>
+          <Ionicons name="alert-circle-outline" size={15} color={colors.destructive} />
+          <Text style={{ fontSize: 14, color: colors.destructive }}>
             Impossible de sauvegarder — réessaie
           </Text>
         </View>

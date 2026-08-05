@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text } from "react-native";
 import MapView, { Circle, Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 
 export interface ConditionItem {
@@ -39,6 +40,7 @@ function MapPreview({
   addressVisible: boolean;
   serviceRadiusKm: number | null;
 }) {
+  const colors = useThemeColors();
   const radiusMeters = (serviceRadiusKm ?? 1.2) * 1000;
   const delta = metersToLatitudeDelta(addressVisible ? DEFAULT_RADIUS_METERS : radiusMeters);
 
@@ -62,14 +64,14 @@ function MapPreview({
         showsCompass={false}
       >
         {addressVisible ? (
-          <Marker coordinate={{ latitude: lat, longitude: lng }} pinColor={Colors.primary} />
+          <Marker coordinate={{ latitude: lat, longitude: lng }} pinColor={colors.primary} />
         ) : (
           <Circle
             center={{ latitude: lat, longitude: lng }}
             radius={radiusMeters}
-            strokeColor={withAlpha(Colors.primary, 0.4)}
+            strokeColor={withAlpha(colors.primary, 0.4)}
             strokeWidth={1.5}
-            fillColor={withAlpha(Colors.primary, 0.12)}
+            fillColor={withAlpha(colors.primary, 0.12)}
           />
         )}
       </MapView>
@@ -78,20 +80,21 @@ function MapPreview({
 }
 
 function MapPlaceholder({ city }: { city: string }) {
+  const colors = useThemeColors();
   return (
     <View
       style={{
         height: PREVIEW_HEIGHT,
         width: "100%",
-        backgroundColor: withAlpha(Colors.primary, 0.05),
+        backgroundColor: withAlpha(colors.primary, 0.05),
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
       }}
     >
-      <Ionicons name="map-outline" size={26} color={withAlpha(Colors.foreground, 0.35)} />
+      <Ionicons name="map-outline" size={26} color={withAlpha(colors.foreground, 0.35)} />
       {Boolean(city) && (
-        <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.mutedForeground }}>{city}</Text>
+        <Text style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>{city}</Text>
       )}
     </View>
   );
@@ -104,7 +107,8 @@ function ConditionRow({
   condition: ConditionItem;
   isLast: boolean;
 }) {
-  const color = condition.accepted ? Colors.success : Colors.destructive;
+  const colors = useThemeColors();
+  const color = condition.accepted ? colors.success : colors.destructive;
 
   return (
     <View
@@ -114,11 +118,11 @@ function ConditionRow({
         gap: 8,
         paddingVertical: 11,
         borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: Colors.border,
+        borderBottomColor: colors.border,
       }}
     >
       <Ionicons name={condition.accepted ? "checkmark-circle" : "close-circle"} size={15} color={color} />
-      <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{condition.text}</Text>
+      <Text style={{ fontSize: 13, color: colors.foreground, flex: 1 }}>{condition.text}</Text>
     </View>
   );
 }
@@ -133,6 +137,7 @@ export function LocationSection({
   lng,
   conditions,
 }: LocationSectionProps) {
+  const colors = useThemeColors();
   const hasCoordinates = lat != null && lng != null;
 
   // Cette phrase n'a de sens que si le pro a choisi de ne pas afficher son
@@ -152,7 +157,7 @@ export function LocationSection({
         style={{
           fontSize: 17,
           fontWeight: "800",
-          color: Colors.foreground,
+          color: colors.foreground,
           marginBottom: 12,
           letterSpacing: -0.3,
         }}
@@ -162,7 +167,7 @@ export function LocationSection({
 
       <View
         style={{
-          backgroundColor: Colors.white,
+          backgroundColor: colors.white,
           borderRadius: 16,
           overflow: "hidden",
           ...Shadows.card,
@@ -176,26 +181,26 @@ export function LocationSection({
 
         <View style={{ padding: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <Ionicons name="location-outline" size={15} color={Colors.foreground} />
-            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+            <Ionicons name="location-outline" size={15} color={colors.foreground} />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
               {city || "Zone non renseignée"}
             </Text>
           </View>
           {Boolean(explanation) && (
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, lineHeight: 19 }}>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, lineHeight: 19 }}>
               {explanation}
             </Text>
           )}
 
           {hasConditions && (
             <>
-              <View style={{ height: 1, backgroundColor: Colors.border, marginVertical: 14 }} />
+              <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 14 }} />
 
               <Text
                 style={{
                   fontSize: 11,
                   fontWeight: "800",
-                  color: Colors.mutedForeground,
+                  color: colors.mutedForeground,
                   textTransform: "uppercase",
                   letterSpacing: 0.6,
                   marginBottom: 4,

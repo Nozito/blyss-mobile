@@ -13,7 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -22,6 +22,7 @@ import { SpecialistCard, type Specialist } from "@/components/screens/client/spe
 export default function FavoritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const { favorites, isLoading, isFetching, refetch, toggle, isToggling } = useFavorites();
   const listRef = useRef<FlatList>(null);
   useScrollToTop(listRef);
@@ -123,12 +124,12 @@ export default function FavoritesScreen() {
           transform: [{ scale: emptyScaleAnim }],
         }}
       >
-        <Ionicons name="heart" size={64} color={Colors.primary} />
+        <Ionicons name="heart" size={64} color={colors.primary} />
       </Animated.View>
 
       <Animated.Text
         style={{
-          fontSize: 22, fontWeight: "800", color: Colors.foreground,
+          fontSize: 22, fontWeight: "800", color: colors.foreground,
           marginBottom: 8, textAlign: "center",
           opacity: emptyFade1, transform: [{ translateY: emptySlide1 }],
         }}
@@ -138,7 +139,7 @@ export default function FavoritesScreen() {
 
       <Animated.Text
         style={{
-          fontSize: 14, color: Colors.mutedForeground, textAlign: "center",
+          fontSize: 14, color: colors.mutedForeground, textAlign: "center",
           maxWidth: 280, lineHeight: 20, marginBottom: 32,
           opacity: emptyFade2, transform: [{ translateY: emptySlide2 }],
         }}
@@ -156,15 +157,15 @@ export default function FavoritesScreen() {
         >
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 8,
-            backgroundColor: Colors.primary,
+            backgroundColor: colors.primary,
             paddingHorizontal: 32, paddingVertical: 16,
             borderRadius: 32,
-            shadowColor: Colors.primary,
+            shadowColor: colors.primary,
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
           }}>
-            <Ionicons name="sparkles" size={20} color={Colors.white} />
-            <Text style={{ color: Colors.white, fontSize: 16, fontWeight: "700" }}>
+            <Ionicons name="sparkles" size={20} color={colors.onColor} />
+            <Text style={{ color: colors.onColor, fontSize: 16, fontWeight: "700" }}>
               Découvrir des pros
             </Text>
           </View>
@@ -175,30 +176,30 @@ export default function FavoritesScreen() {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View>
-            <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.foreground }}>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: colors.foreground }}>
               Mes favoris
             </Text>
-            <Text style={{ fontSize: 14, color: Colors.mutedForeground, marginTop: 4 }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 4 }}>
               {favorites.length > 0
                 ? `${favorites.length} experte${favorites.length > 1 ? "s" : ""} sauvegardée${favorites.length > 1 ? "s" : ""}`
                 : "Retrouve ici tes expertes préférées"}
             </Text>
           </View>
           {isToggling && (
-            <ActivityIndicator size="small" color={Colors.primary} style={{ marginRight: 4 }} />
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 4 }} />
           )}
         </View>
 
         {/* Body */}
         {isLoading && favorites.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : favorites.length > 0 ? (
           <FlatList
@@ -209,7 +210,7 @@ export default function FavoritesScreen() {
             contentContainerStyle={contentStyle()}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={Colors.primary} />
+              <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
             }
             removeClippedSubviews
           />

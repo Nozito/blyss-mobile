@@ -7,62 +7,65 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { safeBack } from "@/lib/navigation"; // BLYSS-NAV: back button needs safeBack
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
-const PLAN_META: Record<RCPlan, {
+function getPlanMeta(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   features: string[];
-}> = {
-  start: {
-    label: "Start",
-    icon: "flash-outline",
-    color: Colors.primary,
-    features: ["Dashboard activité", "Agenda intelligent", "Gestion clientes", "Profil public"],
-  },
-  serenite: {
-    label: "Sérénité",
-    icon: "heart-outline",
-    color: Colors.pro,
-    features: ["Tout Start inclus", "Module finance & statistiques", "Portfolio photos", "Rappels automatiques"],
-  },
-  signature: {
-    label: "Signature",
-    icon: "sparkles-outline",
-    color: Colors.secondary,
-    features: ["Tout Sérénité inclus", "Paiements en ligne", "Visibilité premium", "Rappels post-prestation"],
-  },
-};
+}> {
+  return {
+    start: {
+      label: "Start",
+      icon: "flash-outline",
+      color: colors.primary,
+      features: ["Dashboard activité", "Agenda intelligent", "Gestion clientes", "Profil public"],
+    },
+    serenite: {
+      label: "Sérénité",
+      icon: "heart-outline",
+      color: colors.pro,
+      features: ["Tout Start inclus", "Module finance & statistiques", "Portfolio photos", "Rappels automatiques"],
+    },
+    signature: {
+      label: "Signature",
+      icon: "sparkles-outline",
+      color: colors.secondary,
+      features: ["Tout Sérénité inclus", "Paiements en ligne", "Visibilité premium", "Rappels post-prestation"],
+    },
+  };
+}
 
 export default function ProUpgradeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const { packages } = useRevenueCat();
 
   const requiredPlan: RCPlan = "serenite";
-  const meta = PLAN_META[requiredPlan];
+  const meta = getPlanMeta(colors)[requiredPlan];
   const rcPkg = packages.find((p) => p.key === requiredPlan);
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={{
         paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 12,
-        backgroundColor: Colors.background, borderBottomWidth: 1, borderBottomColor: Colors.border,
+        backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border,
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <AnimatedIconButton
           onPress={() => safeBack(router)} // BLYSS-NAV: was router.push("/(pro)/dashboard") — pushes onto stack instead of going back
           accessibilityLabel="Retour"
-          style={{ padding: 8, marginLeft: -8, borderRadius: 12, backgroundColor: Colors.muted }}
+          style={{ padding: 8, marginLeft: -8, borderRadius: 12, backgroundColor: colors.muted }}
         >
-          <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={22} color={colors.foreground} />
         </AnimatedIconButton>
-        <Text style={{ fontSize: 17, fontWeight: "700", color: Colors.foreground }}>
+        <Text style={{ fontSize: 17, fontWeight: "700", color: colors.foreground }}>
           Upgrade requis
         </Text>
       </View>
@@ -83,23 +86,23 @@ export default function ProUpgradeScreen() {
             backgroundColor: "rgba(255,255,255,0.2)",
             alignItems: "center", justifyContent: "center",
           }}>
-            <Ionicons name="lock-closed-outline" size={28} color={Colors.white} />
+            <Ionicons name="lock-closed-outline" size={28} color={colors.onColor} />
           </View>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.white, marginBottom: 8, textAlign: "center" }}>
+          <Text style={{ fontSize: 20, fontWeight: "800", color: colors.onColor, marginBottom: 8, textAlign: "center" }}>
             Fonctionnalité non incluse
           </Text>
           <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", textAlign: "center", lineHeight: 20 }}>
             Cette page nécessite le plan{" "}
-            <Text style={{ fontWeight: "800", color: Colors.white }}>{meta.label}</Text>.{"\n"}
+            <Text style={{ fontWeight: "800", color: colors.onColor }}>{meta.label}</Text>.{"\n"}
             Ton abonnement actuel ne comprend pas cet accès.
           </Text>
         </View>
 
         {/* Target plan card */}
         <View style={{
-          backgroundColor: Colors.card, borderRadius: 20, padding: 20,
-          borderWidth: 1, borderColor: Colors.border, marginBottom: 16,
-          shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 },
+          backgroundColor: colors.card, borderRadius: 20, padding: 20,
+          borderWidth: 1, borderColor: colors.border, marginBottom: 16,
+          shadowColor: colors.black, shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -108,13 +111,13 @@ export default function ProUpgradeScreen() {
               backgroundColor: meta.color,
               alignItems: "center", justifyContent: "center",
             }}>
-              <Ionicons name={meta.icon} size={18} color={Colors.white} />
+              <Ionicons name={meta.icon} size={18} color={colors.onColor} />
             </View>
             <View>
-              <Text style={{ fontWeight: "700", fontSize: 15, color: Colors.foreground }}>
+              <Text style={{ fontWeight: "700", fontSize: 15, color: colors.foreground }}>
                 Formule {meta.label}
               </Text>
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                 {rcPkg ? `${rcPkg.priceString}/mois` : "—"}
               </Text>
             </View>
@@ -130,7 +133,7 @@ export default function ProUpgradeScreen() {
                 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: meta.color }} />
                 </View>
-                <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{feature}</Text>
+                <Text style={{ fontSize: 13, color: colors.foreground, flex: 1 }}>{feature}</Text>
               </View>
             ))}
           </View>
@@ -147,7 +150,7 @@ export default function ProUpgradeScreen() {
               shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
             }}
           >
-            <Text style={{ color: Colors.white, fontWeight: "800", fontSize: 15 }}>
+            <Text style={{ color: colors.onColor, fontWeight: "800", fontSize: 15 }}>
               Passer au plan {meta.label}
             </Text>
           </AnimatedPressable>
@@ -156,10 +159,10 @@ export default function ProUpgradeScreen() {
             onPress={() => router.push("/(pro)/dashboard")}
             style={{
               height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center",
-              backgroundColor: Colors.muted,
+              backgroundColor: colors.muted,
             }}
           >
-            <Text style={{ color: Colors.foreground, fontWeight: "600", fontSize: 14 }}>
+            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 14 }}>
               Retour au tableau de bord
             </Text>
           </AnimatedPressable>

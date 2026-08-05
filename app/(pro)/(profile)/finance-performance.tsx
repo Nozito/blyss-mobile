@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
@@ -18,6 +18,7 @@ function n(v: unknown): number {
 export default function ProFinancePerformanceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
@@ -38,7 +39,7 @@ export default function ProFinancePerformanceScreen() {
   const maxRevenue = Math.max(1, ...(perf?.monthlyEvolution.map((m) => n(m.revenue)) ?? [1]));
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top,
@@ -53,25 +54,25 @@ export default function ProFinancePerformanceScreen() {
           <AnimatedIconButton
             onPress={() => safeBack(router)}
             accessibilityLabel="Retour"
-            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
+            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Analyses de performance</Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>90 derniers jours</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Analyses de performance</Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>90 derniers jours</Text>
           </View>
         </View>
 
         {isLoading ? (
           <View style={{ paddingVertical: 60, alignItems: "center" }}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : !perf ? (
           <View style={{ paddingVertical: 60, alignItems: "center", gap: 12 }}>
-            <Ionicons name="analytics-outline" size={48} color={Colors.border} />
-            <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Aucune donnée</Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center" }}>
+            <Ionicons name="analytics-outline" size={48} color={colors.border} />
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>Aucune donnée</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center" }}>
               Les analyses apparaîtront une fois tes premières réservations effectuées
             </Text>
           </View>
@@ -79,82 +80,82 @@ export default function ProFinancePerformanceScreen() {
           <Animated.View style={{ opacity: contentOpacity, gap: 16 }}>
             {/* Meilleur jour / meilleure heure */}
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                  <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.foreground }}>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: colors.foreground }}>
                   {perf.bestDay ?? "—"}
                 </Text>
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>Meilleur jour</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Meilleur jour</Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                  <Ionicons name="time-outline" size={16} color={Colors.primary} />
+              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                  <Ionicons name="time-outline" size={16} color={colors.primary} />
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: "900", color: Colors.foreground }}>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: colors.foreground }}>
                   {perf.bestHour ?? "—"}
                 </Text>
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>Créneau le plus demandé</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Créneau le plus demandé</Text>
               </View>
             </View>
 
             {/* Panier moyen / remplissage */}
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
                 <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
                   <Ionicons name="cash-outline" size={16} color="#34C759" />
                 </View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
                   {perf.avgBasket.toFixed(0)} €
                 </Text>
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>Panier moyen</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Panier moyen</Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
                 <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
                   <Ionicons name="pie-chart-outline" size={16} color="#34C759" />
                 </View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
                   {perf.fillRate}%
                 </Text>
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>Taux de remplissage</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Taux de remplissage</Text>
               </View>
             </View>
 
             {/* Nouvelles vs fidèles */}
-            <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, marginBottom: 14 }}>
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground, marginBottom: 14 }}>
                 Clientes — nouvelles vs fidèles
               </Text>
               {totalClients > 0 ? (
                 <>
-                  <View style={{ height: 10, borderRadius: 5, overflow: "hidden", flexDirection: "row", backgroundColor: Colors.muted }}>
-                    <View style={{ width: `${returningPct}%`, backgroundColor: Colors.primary }} />
+                  <View style={{ height: 10, borderRadius: 5, overflow: "hidden", flexDirection: "row", backgroundColor: colors.muted }}>
+                    <View style={{ width: `${returningPct}%`, backgroundColor: colors.primary }} />
                     <View style={{ flex: 1, backgroundColor: "#34C759" }} />
                   </View>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary }} />
-                      <Text style={{ fontSize: 12, color: Colors.foreground, fontWeight: "600" }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary }} />
+                      <Text style={{ fontSize: 12, color: colors.foreground, fontWeight: "600" }}>
                         {perf.returningClients} fidèles ({returningPct}%)
                       </Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#34C759" }} />
-                      <Text style={{ fontSize: 12, color: Colors.foreground, fontWeight: "600" }}>
+                      <Text style={{ fontSize: 12, color: colors.foreground, fontWeight: "600" }}>
                         {perf.newClients} nouvelles ({100 - returningPct}%)
                       </Text>
                     </View>
                   </View>
                 </>
               ) : (
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Pas assez de données sur la période</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Pas assez de données sur la période</Text>
               )}
             </View>
 
             {/* Évolution du CA */}
-            <View style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground, marginBottom: 16 }}>
                 Évolution du CA — 6 derniers mois
               </Text>
               <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10, height: 110, paddingTop: 8 }}>
@@ -166,9 +167,9 @@ export default function ProFinancePerformanceScreen() {
                     <View key={i} style={{ flex: 1, alignItems: "center", gap: 6 }}>
                       <View style={{
                         width: "100%", height: barH, borderRadius: 6,
-                        backgroundColor: isLast ? Colors.primary : Colors.muted,
+                        backgroundColor: isLast ? colors.primary : colors.muted,
                       }} />
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: isLast ? Colors.primary : Colors.mutedForeground }}>
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: isLast ? colors.primary : colors.mutedForeground }}>
                         {m.month}
                       </Text>
                     </View>

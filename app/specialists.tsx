@@ -11,7 +11,7 @@ import {
 } from "@/components/screens/client/specialists/SpecialistCard";
 import { FilterBar } from "@/components/screens/client/specialists/FilterBar";
 import { SearchHeader, type ViewMode } from "@/components/screens/client/specialists/SearchHeader";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { safeBack } from "@/lib/navigation";
@@ -33,6 +33,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function SpecialistsScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const params = useLocalSearchParams<{ search?: string; service?: string }>();
   const reduceMotion = useReducedMotion();
   const fadeAnim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -151,7 +152,7 @@ export default function SpecialistsScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
       <SearchHeader
         searchInput={searchInput}
@@ -186,7 +187,7 @@ export default function SpecialistsScreen() {
 
       {/* ── MAP VIEW ── */}
       {viewMode === "map" && (
-        <Suspense fallback={<ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />}>
+        <Suspense fallback={<ActivityIndicator color={colors.primary} style={{ flex: 1 }} />}>
           <SpecialistsMapView specialists={specialists} />
         </Suspense>
       )}
@@ -230,7 +231,7 @@ export default function SpecialistsScreen() {
               <RefreshControl
                 refreshing={isFetching && !isLoading}
                 onRefresh={refetch}
-                tintColor={Colors.primary}
+                tintColor={colors.primary}
                 progressViewOffset={10}
               />
             }

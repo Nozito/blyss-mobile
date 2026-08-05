@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Button } from "./Button";
 
 interface EmptyStateProps {
@@ -19,6 +19,7 @@ export function EmptyState({
   ctaLabel,
   onCta,
 }: EmptyStateProps) {
+  const colors = useThemeColors();
   return (
     <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
       <View
@@ -26,18 +27,18 @@ export function EmptyState({
           width: 72,
           height: 72,
           borderRadius: 36,
-          backgroundColor: Colors.muted,
+          backgroundColor: colors.muted,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Ionicons name={icon} size={32} color={Colors.mutedForeground} />
+        <Ionicons name={icon} size={32} color={colors.mutedForeground} />
       </View>
       <Text
         style={{
           fontSize: 16,
           fontWeight: "700",
-          color: Colors.foreground,
+          color: colors.foreground,
           textAlign: "center",
         }}
       >
@@ -47,7 +48,7 @@ export function EmptyState({
         <Text
           style={{
             fontSize: 13,
-            color: Colors.mutedForeground,
+            color: colors.mutedForeground,
             textAlign: "center",
             maxWidth: 260,
             lineHeight: 19,

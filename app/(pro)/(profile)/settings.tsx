@@ -21,7 +21,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, usersApi, proApi } from "@/lib/api";
 import { phoneSchema, bioSchema, getZodError } from "@/lib/validation";
 import { Input } from "@/components/ui/Input";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -31,10 +32,11 @@ import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
+  const colors = useThemeColors();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, paddingLeft: 2 }}>
-      <Ionicons name={icon} size={15} color={Colors.primary} />
-      <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>{label}</Text>
+      <Ionicons name={icon} size={15} color={colors.primary} />
+      <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>{label}</Text>
     </View>
   );
 }
@@ -43,6 +45,7 @@ export default function ProSettingsScreen() {
   const { user, refreshProfile, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const { isPro } = usePro();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -213,7 +216,7 @@ export default function ProSettingsScreen() {
   return (
     <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 32,
@@ -228,13 +231,13 @@ export default function ProSettingsScreen() {
         <AnimatedIconButton
           onPress={() => safeBack(router)}
           accessibilityLabel="Retour"
-          style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
+          style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}
         >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={20} color={colors.foreground} />
         </AnimatedIconButton>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Paramètres</Text>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Profil et sécurité</Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Paramètres</Text>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Profil et sécurité</Text>
         </View>
       </View>
 
@@ -242,7 +245,7 @@ export default function ProSettingsScreen() {
       {/* ── INFOS ACTIVITÉ ── */}
       <View>
         <SectionHeader icon="storefront-outline" label="Activité" />
-        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+        <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Controller
@@ -306,13 +309,13 @@ export default function ProSettingsScreen() {
       {/* ── CONFIDENTIALITÉ DE L'ADRESSE ── */}
       <View>
         <SectionHeader icon="lock-closed-outline" label="Confidentialité de l'adresse" />
-        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+        <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>
                 Rendre mon adresse visible publiquement
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
                 {addressPublic
                   ? "Votre adresse complète sera visible sur votre profil et sur la carte."
                   : "Par défaut, votre adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
@@ -327,31 +330,31 @@ export default function ProSettingsScreen() {
                   setAddressPublic(false);
                 }
               }}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor={Colors.white}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.onColor}
             />
           </View>
 
           {showAddressConfirm && (
-            <View style={{ padding: 14, borderRadius: 14, backgroundColor: Colors.warningLight, borderWidth: 1, borderColor: Colors.warningBorder, gap: 10 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.warningTextDark }}>
+            <View style={{ padding: 14, borderRadius: 14, backgroundColor: colors.warningLight, borderWidth: 1, borderColor: colors.warningBorder, gap: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningTextDark }}>
                 Rendre votre adresse publique ?
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.warningText, lineHeight: 17 }}>
+              <Text style={{ fontSize: 12, color: colors.warningText, lineHeight: 17 }}>
                 Votre adresse exacte sera visible par tous les visiteurs de votre profil, y compris sur la carte. Vous pourrez la masquer à nouveau à tout moment.
               </Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <AnimatedPressable
                   onPress={() => setShowAddressConfirm(false)}
-                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: Colors.white, alignItems: "center", justifyContent: "center" }}
+                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
                 </AnimatedPressable>
                 <AnimatedPressable
                   onPress={() => { setAddressPublic(true); setShowAddressConfirm(false); }}
-                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: Colors.warning, alignItems: "center", justifyContent: "center" }}
+                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: colors.warning, alignItems: "center", justifyContent: "center" }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.warningForeground }}>Oui, rendre publique</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningForeground }}>Oui, rendre publique</Text>
                 </AnimatedPressable>
               </View>
             </View>
@@ -376,9 +379,9 @@ export default function ProSettingsScreen() {
             </>
           ) : (
             <>
-              <View style={{ backgroundColor: Colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-                <Ionicons name="information-circle-outline" size={16} color={Colors.mutedForeground} style={{ marginTop: 1 }} />
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground, flex: 1, lineHeight: 17 }}>
+              <View style={{ backgroundColor: colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} style={{ marginTop: 1 }} />
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, flex: 1, lineHeight: 17 }}>
                   Adresse non affichée publiquement — vos clientes verront une zone d'intervention à la place.
                 </Text>
               </View>
@@ -416,7 +419,7 @@ export default function ProSettingsScreen() {
       {/* ── SÉCURITÉ ── */}
       <View>
         <SectionHeader icon="lock-closed-outline" label="Sécurité" />
-        <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+        <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
           <Input
             label="Ancien mot de passe"
             value={currentPassword}
@@ -445,11 +448,11 @@ export default function ProSettingsScreen() {
             secure
           />
           <View style={{ gap: 6 }}>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 16 }}>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 16 }}>
               Au moins 8 caractères, une majuscule et un chiffre.
             </Text>
             <AnimatedPressable onPress={() => router.push("/(auth)/forgot-password")}>
-              <Text style={{ fontSize: 12, color: Colors.primary, fontWeight: "500" }}>
+              <Text style={{ fontSize: 12, color: colors.primary, fontWeight: "500" }}>
                 Mot de passe oublié ?
               </Text>
             </AnimatedPressable>
@@ -459,8 +462,8 @@ export default function ProSettingsScreen() {
 
       {error && <ErrorMessage message={error} />}
       {success && (
-        <View style={{ backgroundColor: `${Colors.success}12`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${Colors.success}30` }}>
-          <Text style={{ fontSize: 13, color: Colors.success, fontWeight: "600" }}>{success}</Text>
+        <View style={{ backgroundColor: `${colors.success}12`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${colors.success}30` }}>
+          <Text style={{ fontSize: 13, color: colors.success, fontWeight: "600" }}>{success}</Text>
         </View>
       )}
 
@@ -472,32 +475,32 @@ export default function ProSettingsScreen() {
         }}
         disabled={saving}
         style={{
-          height: 56, borderRadius: 16, backgroundColor: Colors.primary,
+          height: 56, borderRadius: 16, backgroundColor: colors.primary,
           alignItems: "center", justifyContent: "center",
-          shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+          shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
           opacity: saving ? 0.7 : 1,
         }}
       >
         {saving ? (
-          <ActivityIndicator color={Colors.white} />
+          <ActivityIndicator color={colors.onColor} />
         ) : (
-          <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>Enregistrer les modifications</Text>
+          <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 15 }}>Enregistrer les modifications</Text>
         )}
       </AnimatedPressable>
 
       {/* ── DONNÉES & CONFIDENTIALITÉ ── */}
-      <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
-        <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+      <View style={{ backgroundColor: colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card }}>
+        <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
           Données & confidentialité
         </Text>
 
         <AnimatedPressable
           onPress={() => router.push("/(pro)/(profile)/rgpd")}
-          style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border }}
         >
-          <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Mes droits RGPD</Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+          <Ionicons name="shield-outline" size={16} color={colors.primary} />
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: colors.foreground }}>Mes droits RGPD</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
         </AnimatedPressable>
 
         <AnimatedPressable
@@ -506,10 +509,10 @@ export default function ProSettingsScreen() {
             handleExport();
           }}
           disabled={isExporting}
-          style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border, opacity: isExporting ? 0.5 : 1 }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border, opacity: isExporting ? 0.5 : 1 }}
         >
-          <Ionicons name="download-outline" size={16} color={Colors.primary} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>
+          <Ionicons name="download-outline" size={16} color={colors.primary} />
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: colors.foreground }}>
             {isExporting ? "Export en cours…" : "Exporter mes données"}
           </Text>
         </AnimatedPressable>
@@ -520,17 +523,17 @@ export default function ProSettingsScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setShowDeleteConfirm(true);
             }}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border }}
           >
-            <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>Supprimer mon compte</Text>
+            <Ionicons name="trash-outline" size={16} color={colors.destructive} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: colors.destructive }}>Supprimer mon compte</Text>
           </AnimatedPressable>
         ) : (
-          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.destructiveLight, gap: 12 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.destructiveText }}>
+          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.destructiveLight, gap: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.destructiveText }}>
               Suppression définitive du compte
             </Text>
-            <Text style={{ fontSize: 12, color: "#7F1D1D", lineHeight: 18 }}>
+            <Text style={{ fontSize: 12, color: colors.destructiveText, lineHeight: 18 }}>
               Cette action est irréversible. Toutes tes données seront effacées.{"\n"}
               Tape <Text style={{ fontWeight: "800" }}>SUPPRIMER</Text> pour confirmer.
             </Text>
@@ -538,37 +541,37 @@ export default function ProSettingsScreen() {
               value={deleteConfirmText}
               onChangeText={setDeleteConfirmText}
               placeholder="SUPPRIMER"
-              placeholderTextColor="#FCA5A5"
+              placeholderTextColor={withAlpha(colors.destructive, 0.5)}
               autoCapitalize="characters"
               autoCorrect={false}
               style={{
                 height: 44, borderRadius: 10, borderWidth: 1.5,
-                borderColor: deleteConfirmText === "SUPPRIMER" ? Colors.destructive : "#FECACA",
-                backgroundColor: Colors.white, paddingHorizontal: 14,
-                fontSize: 14, fontWeight: "700", color: Colors.destructiveText,
+                borderColor: deleteConfirmText === "SUPPRIMER" ? colors.destructive : withAlpha(colors.destructive, 0.3),
+                backgroundColor: colors.white, paddingHorizontal: 14,
+                fontSize: 14, fontWeight: "700", color: colors.destructiveText,
                 letterSpacing: 1,
               }}
             />
             <View style={{ flexDirection: "row", gap: 10 }}>
               <AnimatedPressable
                 onPress={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.cream, alignItems: "center", justifyContent: "center" }}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.cream, alignItems: "center", justifyContent: "center" }}
               >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 onPress={handleDeleteAccount}
                 disabled={isDeleting || deleteConfirmText !== "SUPPRIMER"}
                 style={{
-                  flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.destructive,
+                  flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.destructive,
                   alignItems: "center", justifyContent: "center",
                   opacity: isDeleting || deleteConfirmText !== "SUPPRIMER" ? 0.4 : 1,
                 }}
               >
                 {isDeleting ? (
-                  <ActivityIndicator size="small" color={Colors.white} />
+                  <ActivityIndicator size="small" color={colors.onColor} />
                 ) : (
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Supprimer</Text>
                 )}
               </AnimatedPressable>
             </View>

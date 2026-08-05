@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Fonts } from "@/constants/fonts";
 import * as Haptics from "expo-haptics";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
@@ -39,9 +40,11 @@ function pillVariant(index: number): "accent" | "outline" | "default" {
 const PillRow = React.memo(function PillRow({
   items,
   translateX,
+  styles,
 }: {
   items: string[];
   translateX: Animated.Value;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.pillRowClip}>
@@ -79,6 +82,8 @@ const PillRow = React.memo(function PillRow({
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const reduceMotion = useReducedMotion();
 
   // — Entrée —
@@ -195,9 +200,9 @@ export default function WelcomeScreen() {
 
       {/* ── Pills scrollantes ────────────────────────────────────────────────── */}
       <Animated.View style={[styles.pillsZone, { opacity: pillsOpacity }]}>
-        <PillRow items={ROW1} translateX={scroll1} />
-        <PillRow items={ROW2} translateX={scroll2} />
-        <PillRow items={ROW3} translateX={scroll3} />
+        <PillRow items={ROW1} translateX={scroll1} styles={styles} />
+        <PillRow items={ROW2} translateX={scroll2} styles={styles} />
+        <PillRow items={ROW3} translateX={scroll3} styles={styles} />
 
       </Animated.View>
 
@@ -239,141 +244,143 @@ export default function WelcomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Logo
-  logoBlock: {
-    alignItems: "center",
-    paddingBottom: 0,
-  },
-  logoImg: {
-    width: 88,
-    height: 88,
-  },
+    // Logo
+    logoBlock: {
+      alignItems: "center",
+      paddingBottom: 0,
+    },
+    logoImg: {
+      width: 88,
+      height: 88,
+    },
 
-  // Hero
-  heroWrapper: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 28,
-  },
-  heroLine1: {
-    fontSize: 46,
-    fontWeight: "800",
-    color: "#1A0010",
-    letterSpacing: -1.4,
-    lineHeight: 52,
-  },
-  heroLine2: {
-    fontSize: 46,
-    fontWeight: "700",
-    color: Colors.primary,
-    letterSpacing: -1.4,
-    lineHeight: 54,
-    fontFamily: Fonts.serifItalic,
-  },
-  subtitle: {
-    marginTop: 14,
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#A06070",
-    lineHeight: 22,
-  },
+    // Hero
+    heroWrapper: {
+      flex: 1,
+      justifyContent: "center",
+      paddingHorizontal: 28,
+    },
+    heroLine1: {
+      fontSize: 46,
+      fontWeight: "800",
+      color: colors.foreground,
+      letterSpacing: -1.4,
+      lineHeight: 52,
+    },
+    heroLine2: {
+      fontSize: 46,
+      fontWeight: "700",
+      color: colors.primary,
+      letterSpacing: -1.4,
+      lineHeight: 54,
+      fontFamily: Fonts.serifItalic,
+    },
+    subtitle: {
+      marginTop: 14,
+      fontSize: 15,
+      fontWeight: "500",
+      color: colors.mutedForeground,
+      lineHeight: 22,
+    },
 
-  // Pills
-  pillsZone: {
-    gap: 10,
-    paddingBottom: 8,
-  },
-  pillRowClip: {
-    overflow: "hidden",
-  },
-  pillRowInner: {
-    flexDirection: "row",
-    paddingVertical: 2,
-    paddingLeft: 16,
-  },
-  pill: {
-    backgroundColor: Colors.white,
-    borderRadius: 99,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,94,160,0.18)",
-  },
-  pillAccent: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  pillOutline: {
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,94,160,0.35)",
-  },
-  pillText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1A0010",
-    letterSpacing: -0.1,
-  },
-  pillTextAccent: {
-    color: Colors.white,
-  },
-  pillTextOutline: {
-    color: Colors.primary,
-  },
-  // Boutons
-  bottomZone: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  ctaWrap: {
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.40,
-    shadowRadius: 18,
-    elevation: 10,
-  },
-  ctaText: {
-    color: Colors.white,
-    fontWeight: "800",
-    fontSize: 16,
-    letterSpacing: -0.2,
-  },
-  secondaryBtn: {
-    marginTop: 12,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.60)",
-    borderWidth: 1,
-    borderColor: "rgba(255,94,160,0.20)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryBtnText: {
-    color: Colors.primary,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  legal: {
-    fontSize: 11,
-    color: "rgba(0,0,0,0.28)",
-    textAlign: "center",
-    marginTop: 12,
-    lineHeight: 18,
-  },
-  legalLink: {
-    color: Colors.primary,
-    fontWeight: "600",
-  },
-});
+    // Pills
+    pillsZone: {
+      gap: 10,
+      paddingBottom: 8,
+    },
+    pillRowClip: {
+      overflow: "hidden",
+    },
+    pillRowInner: {
+      flexDirection: "row",
+      paddingVertical: 2,
+      paddingLeft: 16,
+    },
+    pill: {
+      backgroundColor: colors.white,
+      borderRadius: 99,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: withAlpha(colors.primary, 0.18),
+    },
+    pillAccent: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    pillOutline: {
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: withAlpha(colors.primary, 0.35),
+    },
+    pillText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.foreground,
+      letterSpacing: -0.1,
+    },
+    pillTextAccent: {
+      color: colors.onColor,
+    },
+    pillTextOutline: {
+      color: colors.primary,
+    },
+    // Boutons
+    bottomZone: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+    },
+    ctaWrap: {
+      height: 60,
+      borderRadius: 20,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.40,
+      shadowRadius: 18,
+      elevation: 10,
+    },
+    ctaText: {
+      color: colors.onColor,
+      fontWeight: "800",
+      fontSize: 16,
+      letterSpacing: -0.2,
+    },
+    secondaryBtn: {
+      marginTop: 12,
+      height: 56,
+      borderRadius: 20,
+      backgroundColor: withAlpha(colors.white, 0.6),
+      borderWidth: 1,
+      borderColor: withAlpha(colors.primary, 0.20),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    secondaryBtnText: {
+      color: colors.primary,
+      fontWeight: "700",
+      fontSize: 15,
+    },
+    legal: {
+      fontSize: 11,
+      color: withAlpha(colors.foreground, 0.28),
+      textAlign: "center",
+      marginTop: 12,
+      lineHeight: 18,
+    },
+    legalLink: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+  });
+}

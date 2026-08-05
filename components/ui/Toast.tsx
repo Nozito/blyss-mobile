@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useRef, useState } from 
 import { Animated, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type ToastType = "success" | "error";
 
@@ -27,6 +27,8 @@ const DURATION_MS = 3000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [toast, setToast] = useState<ToastState | null>(null);
   const translateY = useRef(new Animated.Value(-100)).current;
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,14 +60,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             {
               top: insets.top + 8,
               transform: [{ translateY }],
-              backgroundColor: toast.type === "success" ? Colors.success : Colors.destructive,
+              backgroundColor: toast.type === "success" ? colors.success : colors.destructive,
             },
           ]}
         >
           <Ionicons
             name={toast.type === "success" ? "checkmark-circle" : "alert-circle"}
             size={20}
-            color={Colors.white}
+            color="#FFFFFF"
           />
           <Text style={styles.message} numberOfLines={2}>
             {toast.message}
@@ -76,28 +78,30 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    shadowColor: Colors.black,
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-    zIndex: 1000,
-  },
-  message: {
-    flex: 1,
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      position: "absolute",
+      left: 16,
+      right: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      shadowColor: colors.black,
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+      zIndex: 1000,
+    },
+    message: {
+      flex: 1,
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+  });
+}

@@ -21,7 +21,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { ReviewModal } from "@/components/ui/ReviewModal";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
@@ -52,6 +53,7 @@ function getRelativeDate(dateStr: string): string {
 }
 
 function StarRow({ rating }: { rating: number }) {
+  const colors = useThemeColors();
   return (
     <View style={{ flexDirection: "row", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => (
@@ -59,7 +61,7 @@ function StarRow({ rating }: { rating: number }) {
           key={i}
           name={i <= rating ? "star" : "star-outline"}
           size={13}
-          color={i <= rating ? Colors.primary : Colors.disabled}
+          color={i <= rating ? colors.primary : colors.disabled}
         />
       ))}
     </View>
@@ -70,6 +72,7 @@ export default function SpecialistProfileScreen() {
   const { id, lat: paramLat, lng: paramLng } = useLocalSearchParams<{ id: string; lat?: string; lng?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const heartScale = useRef(new Animated.Value(1)).current;
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -139,18 +142,18 @@ export default function SpecialistProfileScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (!pro) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 12 }}>
-        <Text style={{ fontSize: 15, color: Colors.mutedForeground }}>Spécialiste introuvable</Text>
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <Text style={{ fontSize: 15, color: colors.mutedForeground }}>Spécialiste introuvable</Text>
         <Pressable onPress={() => safeBack(router)}>
-          <Text style={{ color: Colors.primary, fontWeight: "700" }}>Retour</Text>
+          <Text style={{ color: colors.primary, fontWeight: "700" }}>Retour</Text>
         </Pressable>
       </View>
     );
@@ -208,12 +211,12 @@ export default function SpecialistProfileScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
     >
       {/* Hero banner */}
-      <View style={{ height: 200, backgroundColor: withAlpha(Colors.primary, 0.13) }}>
+      <View style={{ height: 200, backgroundColor: withAlpha(colors.primary, 0.13) }}>
         {bannerUrl ? (
           <Image
             source={{ uri: bannerUrl }}
@@ -222,7 +225,7 @@ export default function SpecialistProfileScreen() {
           />
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="sparkles" size={48} color={withAlpha(Colors.primary, 0.25)} />
+            <Ionicons name="sparkles" size={48} color={withAlpha(colors.primary, 0.25)} />
           </View>
         )}
 
@@ -244,13 +247,13 @@ export default function SpecialistProfileScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: "rgba(255,255,255,0.9)",
+              backgroundColor: withAlpha(colors.white, 0.9),
               alignItems: "center",
               justifyContent: "center",
               ...Shadows.card,
             }}
           >
-            <Ionicons name="arrow-back" size={20} color={Colors.foreground} />
+            <Ionicons name="arrow-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
 
           <Animated.View style={{ transform: [{ scale: heartScale }] }}>
@@ -263,7 +266,7 @@ export default function SpecialistProfileScreen() {
                 width: 40,
                 height: 40,
                 borderRadius: 20,
-                backgroundColor: "rgba(255,255,255,0.9)",
+                backgroundColor: withAlpha(colors.white, 0.9),
                 alignItems: "center",
                 justifyContent: "center",
                 ...Shadows.card,
@@ -272,7 +275,7 @@ export default function SpecialistProfileScreen() {
               <Ionicons
                 name={isFavorited ? "heart" : "heart-outline"}
                 size={20}
-                color={isFavorited ? Colors.primary : Colors.foreground}
+                color={isFavorited ? colors.primary : colors.foreground}
               />
             </Pressable>
           </Animated.View>
@@ -286,9 +289,9 @@ export default function SpecialistProfileScreen() {
             width: 88,
             height: 88,
             borderRadius: 24,
-            backgroundColor: withAlpha(Colors.primary, 0.13),
+            backgroundColor: withAlpha(colors.primary, 0.13),
             borderWidth: 3,
-            borderColor: Colors.white,
+            borderColor: colors.white,
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
@@ -302,7 +305,7 @@ export default function SpecialistProfileScreen() {
               contentFit="cover"
             />
           ) : (
-            <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.primary }}>
+            <Text style={{ fontSize: 26, fontWeight: "800", color: colors.primary }}>
               {initials}
             </Text>
           )}
@@ -313,7 +316,7 @@ export default function SpecialistProfileScreen() {
           style={{
             fontSize: 22,
             fontWeight: "800",
-            color: Colors.foreground,
+            color: colors.foreground,
             marginTop: 12,
             textAlign: "center",
             paddingHorizontal: 24,
@@ -327,10 +330,10 @@ export default function SpecialistProfileScreen() {
         {proAvgRating != null && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
             <StarRow rating={Math.round(proAvgRating)} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
               {proAvgRating.toFixed(1)}
             </Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
               ({reviewsCount})
             </Text>
           </View>
@@ -339,8 +342,8 @@ export default function SpecialistProfileScreen() {
         {/* City */}
         {Boolean(proCity) && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-            <Ionicons name="location-outline" size={13} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{proCity}</Text>
+            <Ionicons name="location-outline" size={13} color={colors.mutedForeground} />
+            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{proCity}</Text>
           </View>
         )}
 
@@ -350,25 +353,25 @@ export default function SpecialistProfileScreen() {
             {specialty && (
               <View
                 style={{
-                  backgroundColor: withAlpha(Colors.primary, 0.08),
+                  backgroundColor: withAlpha(colors.primary, 0.08),
                   borderRadius: 999,
                   paddingHorizontal: 14,
                   paddingVertical: 5,
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.primary }}>{specialty}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>{specialty}</Text>
               </View>
             )}
             {minPrice != null && (
               <View
                 style={{
-                  backgroundColor: withAlpha(Colors.foreground, 0.06),
+                  backgroundColor: withAlpha(colors.foreground, 0.06),
                   borderRadius: 999,
                   paddingHorizontal: 14,
                   paddingVertical: 5,
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>
                   Dès {minPrice.toFixed(0)}€
                 </Text>
               </View>
@@ -383,13 +386,13 @@ export default function SpecialistProfileScreen() {
         {Boolean(pro?.bio) && (
           <View
             style={{
-              backgroundColor: Colors.white,
+              backgroundColor: colors.white,
               borderRadius: 16,
               padding: 16,
               ...Shadows.card,
             }}
           >
-            <Text style={{ fontSize: 13, color: Colors.foreground, lineHeight: 20 }}>
+            <Text style={{ fontSize: 13, color: colors.foreground, lineHeight: 20 }}>
               {pro.bio as string}
             </Text>
           </View>
@@ -417,19 +420,19 @@ export default function SpecialistProfileScreen() {
             router.push({ pathname: "/booking", params: { proId: id } });
           }}
           style={{
-            backgroundColor: Colors.primary,
+            backgroundColor: colors.primary,
             borderRadius: 999,
             paddingVertical: 16,
             alignItems: "center",
             justifyContent: "center",
-            shadowColor: Colors.primary,
+            shadowColor: colors.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
             shadowRadius: 8,
             elevation: 4,
           }}
         >
-          <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>
+          <Text style={{ color: colors.white, fontWeight: "700", fontSize: 16 }}>
             Réserver avec {firstName}
           </Text>
         </Pressable>
@@ -441,7 +444,7 @@ export default function SpecialistProfileScreen() {
               style={{
                 fontSize: 17,
                 fontWeight: "800",
-                color: Colors.foreground,
+                color: colors.foreground,
                 marginBottom: 12,
                 letterSpacing: -0.3,
               }}
@@ -453,7 +456,7 @@ export default function SpecialistProfileScreen() {
                 <Pressable
                   key={img.id}
                   onPress={() => setLightboxImage(resolveMediaUrl(img.url) ?? img.url)}
-                  style={{ width: 110, height: 110, borderRadius: 14, overflow: "hidden", backgroundColor: Colors.cream }}
+                  style={{ width: 110, height: 110, borderRadius: 14, overflow: "hidden", backgroundColor: colors.cream }}
                 >
                   <Image
                     source={{ uri: resolveMediaUrl(img.thumbnail) ?? img.thumbnail }}
@@ -472,7 +475,7 @@ export default function SpecialistProfileScreen() {
             style={{
               fontSize: 17,
               fontWeight: "800",
-              color: Colors.foreground,
+              color: colors.foreground,
               marginBottom: 12,
               letterSpacing: -0.3,
             }}
@@ -480,7 +483,7 @@ export default function SpecialistProfileScreen() {
             Prestations
           </Text>
           {services.length === 0 ? (
-            <Text style={{ color: Colors.mutedForeground, fontSize: 14 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
               Aucune prestation renseignée
             </Text>
           ) : (
@@ -491,11 +494,11 @@ export default function SpecialistProfileScreen() {
                   <View
                     key={String(svc.id)}
                     style={{
-                      backgroundColor: Colors.white,
+                      backgroundColor: colors.white,
                       borderRadius: 14,
                       padding: 16,
                       marginBottom: 10,
-                      shadowColor: Colors.black,
+                      shadowColor: colors.black,
                       shadowOpacity: 0.04,
                       shadowRadius: 6,
                       elevation: 1,
@@ -503,22 +506,22 @@ export default function SpecialistProfileScreen() {
                   >
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
                           {String(svc.name ?? svc.nom ?? "")}
                         </Text>
                         {svc.description != null && (
-                          <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 3, lineHeight: 18 }}>
+                          <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 3, lineHeight: 18 }}>
                             {String(svc.description)}
                           </Text>
                         )}
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
-                          <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
-                          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+                          <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
+                          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                             {formatDuration(Number(svc.duration_minutes ?? svc.tempsBloque ?? 60))}
                           </Text>
                         </View>
                       </View>
-                      <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.foreground }}>
+                      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.foreground }}>
                         {Number(svc.price ?? svc.prixBase ?? 0).toFixed(2)}€
                       </Text>
                     </View>
@@ -535,7 +538,7 @@ export default function SpecialistProfileScreen() {
             style={{
               fontSize: 17,
               fontWeight: "800",
-              color: Colors.foreground,
+              color: colors.foreground,
               marginBottom: 12,
               letterSpacing: -0.3,
             }}
@@ -543,7 +546,7 @@ export default function SpecialistProfileScreen() {
             Avis ({reviewsCount})
           </Text>
           {reviews.length === 0 ? (
-            <Text style={{ color: Colors.mutedForeground, fontSize: 14 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
               Aucun avis pour le moment
             </Text>
           ) : (
@@ -555,7 +558,7 @@ export default function SpecialistProfileScreen() {
                   <View
                     key={String(r.id)}
                     style={{
-                      backgroundColor: Colors.white,
+                      backgroundColor: colors.white,
                       borderRadius: 16,
                       padding: 16,
                       ...Shadows.card,
@@ -569,28 +572,28 @@ export default function SpecialistProfileScreen() {
                             width: 32,
                             height: 32,
                             borderRadius: 16,
-                            backgroundColor: "#FFD6D6",
+                            backgroundColor: withAlpha(colors.destructive, 0.15),
                             alignItems: "center",
                             justifyContent: "center",
                           }}
                         >
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#C0392B" }}>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.destructiveText }}>
                             {initial}
                           </Text>
                         </View>
                         <View>
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
                             {clientName}
                           </Text>
                           <StarRow rating={Number(r.rating)} />
                         </View>
                       </View>
-                      <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                      <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
                         {getRelativeDate(String(r.created_at))}
                       </Text>
                     </View>
                     {r.comment != null && (
-                      <Text style={{ fontSize: 13, color: Colors.foreground, lineHeight: 20 }}>
+                      <Text style={{ fontSize: 13, color: colors.foreground, lineHeight: 20 }}>
                         {String(r.comment)}
                       </Text>
                     )}
@@ -606,14 +609,14 @@ export default function SpecialistProfileScreen() {
               style={{
                 marginTop: 12,
                 borderWidth: 1,
-                borderColor: withAlpha(Colors.primary, 0.25),
+                borderColor: withAlpha(colors.primary, 0.25),
                 borderRadius: 999,
                 paddingVertical: 14,
                 alignItems: "center",
-                backgroundColor: Colors.white,
+                backgroundColor: colors.white,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primary }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primary }}>
                 Laisser un avis
               </Text>
             </Pressable>
@@ -638,7 +641,7 @@ export default function SpecialistProfileScreen() {
             onPress={() => setLightboxImage(null)}
             style={{ position: "absolute", top: 60, right: 20, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
           >
-            <Ionicons name="close" size={20} color={Colors.white} />
+            <Ionicons name="close" size={20} color={colors.white} />
           </Pressable>
         </Pressable>
       </Modal>

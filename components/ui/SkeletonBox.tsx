@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, ViewStyle } from "react-native";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   width?: number | string; // BLYSS-FIX: 2.3 — optional, defaults to "100%"
@@ -10,6 +10,7 @@ type Props = {
 };
 
 export function SkeletonBox({ width = "100%", height, borderRadius = 8, style }: Props) {
+  const colors = useThemeColors();
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export function SkeletonBox({ width = "100%", height, borderRadius = 8, style }:
           width,
           height,
           borderRadius,
-          backgroundColor: Colors.muted,
+          backgroundColor: colors.muted,
           opacity,
         },
         style as any,

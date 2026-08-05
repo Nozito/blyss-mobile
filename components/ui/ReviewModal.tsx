@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import {
   Modal,
   View,
@@ -15,10 +15,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { reviewsApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const colors = useThemeColors();
   const s0 = useRef(new Animated.Value(1)).current;
   const s1 = useRef(new Animated.Value(1)).current;
   const s2 = useRef(new Animated.Value(1)).current;
@@ -46,7 +47,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
             <Ionicons
               name={i < value ? "star" : "star-outline"}
               size={36}
-              color={i < value ? Colors.primary : Colors.disabled}
+              color={i < value ? colors.primary : colors.disabled}
             />
           </Pressable>
         </Animated.View>
@@ -63,6 +64,8 @@ interface ReviewModalProps {
 }
 
 export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalProps) {
+  const colors = useThemeColors();
+  const s = useMemo(() => createStyles(colors), [colors]);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
 
@@ -91,7 +94,7 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlayDark }}
       >
         <View style={s.sheet}>
           <View style={s.handle} />
@@ -101,14 +104,14 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
           <TextInput
             style={s.input}
             placeholder="Ton commentaire (optionnel)"
-            placeholderTextColor={Colors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             multiline
             numberOfLines={4}
             value={comment}
             onChangeText={setComment}
           />
           {mutation.isError && (
-            <Text style={{ fontSize: 12, color: Colors.destructive, marginTop: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.destructive, marginTop: 4 }}>
               {mutation.error instanceof Error ? mutation.error.message : "Impossible d'envoyer l'avis."}
             </Text>
           )}
@@ -126,7 +129,7 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
               accessibilityLabel="Envoyer l'avis"
             >
               {mutation.isPending
-                ? <ActivityIndicator color={Colors.white} size="small" />
+                ? <ActivityIndicator color="#FFFFFF" size="small" />
                 : <Text style={s.submitText}>Envoyer</Text>}
             </AnimatedPressable>
           </View>
@@ -136,14 +139,16 @@ export function ReviewModal({ visible, proId, onClose, onSuccess }: ReviewModalP
   );
 }
 
-const s = StyleSheet.create({
-  sheet:      { backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  handle:     { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginBottom: 20 },
-  title:      { fontSize: 20, fontWeight: "800", color: Colors.foreground, textAlign: "center", marginBottom: 4 },
-  subtitle:   { fontSize: 13, color: Colors.mutedForeground, textAlign: "center", marginBottom: 20 },
-  input:      { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, marginTop: 20, fontSize: 14, color: Colors.foreground, minHeight: 90, textAlignVertical: "top" },
-  cancelBtn:  { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
-  cancelText: { fontSize: 15, fontWeight: "600", color: Colors.mutedForeground },
-  submitBtn:  { flex: 1, backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
-  submitText: { fontSize: 15, fontWeight: "700", color: Colors.white },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    sheet:      { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+    handle:     { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 },
+    title:      { fontSize: 20, fontWeight: "800", color: colors.foreground, textAlign: "center", marginBottom: 4 },
+    subtitle:   { fontSize: 13, color: colors.mutedForeground, textAlign: "center", marginBottom: 20 },
+    input:      { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginTop: 20, fontSize: 14, color: colors.foreground, minHeight: 90, textAlignVertical: "top" },
+    cancelBtn:  { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
+    cancelText: { fontSize: 15, fontWeight: "600", color: colors.mutedForeground },
+    submitBtn:  { flex: 1, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
+    submitText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  });
+}

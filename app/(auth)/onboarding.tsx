@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -45,6 +45,8 @@ const SLIDES = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const flatRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -156,106 +158,108 @@ export default function OnboardingScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 24,
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  skipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.mutedForeground,
-  },
-  slide: {
-    width: SCREEN_WIDTH,
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-    paddingBottom: 32,
-  },
-  emoji: {
-    fontSize: Platform.OS === "ios" ? 96 : 80,
-    marginBottom: 32,
-    textAlign: "center",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: Colors.foreground,
-    textAlign: "center",
-    letterSpacing: -0.8,
-    lineHeight: 38,
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.mutedForeground,
-    textAlign: "center",
-    lineHeight: 24,
-    fontWeight: "400",
-  },
-  bottom: {
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-    gap: 20,
-  },
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  dot: {
-    height: 8,
-    borderRadius: 4,
-  },
-  dotActive: {
-    width: 24,
-    backgroundColor: Colors.primary,
-  },
-  dotInactive: {
-    width: 8,
-    backgroundColor: Colors.border,
-  },
-  ctaGroup: {
-    gap: 12,
-  },
-  ctaPrimary: {
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  ctaPrimaryText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.white,
-  },
-  ctaOutline: {
-    height: 56,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-  },
-  ctaOutlineText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      paddingHorizontal: 24,
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    skipText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.mutedForeground,
+    },
+    slide: {
+      width: SCREEN_WIDTH,
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 40,
+      paddingBottom: 32,
+    },
+    emoji: {
+      fontSize: Platform.OS === "ios" ? 96 : 80,
+      marginBottom: 32,
+      textAlign: "center",
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "800",
+      color: colors.foreground,
+      textAlign: "center",
+      letterSpacing: -0.8,
+      lineHeight: 38,
+      marginBottom: 16,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.mutedForeground,
+      textAlign: "center",
+      lineHeight: 24,
+      fontWeight: "400",
+    },
+    bottom: {
+      paddingHorizontal: 24,
+      paddingBottom: 8,
+      gap: 20,
+    },
+    dots: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 8,
+    },
+    dot: {
+      height: 8,
+      borderRadius: 4,
+    },
+    dotActive: {
+      width: 24,
+      backgroundColor: colors.primary,
+    },
+    dotInactive: {
+      width: 8,
+      backgroundColor: colors.border,
+    },
+    ctaGroup: {
+      gap: 12,
+    },
+    ctaPrimary: {
+      height: 56,
+      borderRadius: 18,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 14,
+      elevation: 6,
+    },
+    ctaPrimaryText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.onColor,
+    },
+    ctaOutline: {
+      height: 56,
+      borderRadius: 18,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+    },
+    ctaOutlineText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+  });
+}

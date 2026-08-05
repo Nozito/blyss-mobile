@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import { paymentMethodsApi, type SavedCard } from "@/lib/api";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
@@ -44,6 +44,8 @@ export default function PaymentsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { confirmSetupIntent } = useStripe();
 
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -171,7 +173,7 @@ export default function PaymentsScreen() {
 
   // ── Render carte ──────────────────────────────────────────────────────────
   const renderCard = useCallback(({ item }: { item: SavedCard }) => {
-    const brandColor = BRAND_COLORS[item.brand] ?? Colors.primary;
+    const brandColor = BRAND_COLORS[item.brand] ?? colors.primary;
     const isDeleting = deleteMutation.isPending && deleteMutation.variables === item.id;
     const isSettingDefault = setDefaultMutation.isPending && setDefaultMutation.variables === item.id;
 
@@ -204,8 +206,8 @@ export default function PaymentsScreen() {
                 accessibilityLabel="Définir comme carte par défaut"
               >
                 {isSettingDefault
-                  ? <ActivityIndicator size="small" color={Colors.primary} />
-                  : <Ionicons name="checkmark-circle-outline" size={22} color={Colors.primary} />}
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />}
               </Pressable>
             )}
             <Pressable
@@ -216,8 +218,8 @@ export default function PaymentsScreen() {
               accessibilityLabel="Supprimer la carte"
             >
               {isDeleting
-                ? <ActivityIndicator size="small" color={Colors.destructive} />
-                : <Ionicons name="trash-outline" size={22} color={Colors.destructive} />}
+                ? <ActivityIndicator size="small" color={colors.destructive} />
+                : <Ionicons name="trash-outline" size={22} color={colors.destructive} />}
             </Pressable>
           </View>
         </View>
@@ -232,11 +234,11 @@ export default function PaymentsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <AnimatedIconButton onPress={() => safeBack(router)} style={styles.backBtn} accessibilityLabel="Retour">
-          <Ionicons name="arrow-back" size={24} color={Colors.foreground} />
+          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </AnimatedIconButton>
         <Text style={styles.title}>Moyens de paiement</Text>
         <Pressable onPress={() => setAddModalOpen(true)} style={styles.addBtn} accessibilityLabel="Ajouter une carte">
-          <Ionicons name="add-circle" size={28} color={Colors.primary} />
+          <Ionicons name="add-circle" size={28} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -257,14 +259,14 @@ export default function PaymentsScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="card-outline" size={56} color={Colors.border} />
+              <Ionicons name="card-outline" size={56} color={colors.border} />
               <Text style={styles.emptyTitle}>Aucune carte enregistrée</Text>
               <Text style={styles.emptySubtitle}>
                 Ajoute une carte pour payer tes réservations en un tap
               </Text>
               <Pressable onPress={() => setAddModalOpen(true)} style={styles.emptyBtn}>
                 <View style={styles.emptyBtnInner}>
-                  <Ionicons name="add" size={18} color={Colors.white} />
+                  <Ionicons name="add" size={18} color={colors.onColor} />
                   <Text style={styles.emptyBtnText}>Ajouter une carte</Text>
                 </View>
               </Pressable>
@@ -276,7 +278,7 @@ export default function PaymentsScreen() {
 
       {/* Badge sécurité */}
       <View style={[styles.securityBadge, { marginBottom: insets.bottom + 8 }]}>
-        <Ionicons name="lock-closed" size={13} color={Colors.mutedForeground} />
+        <Ionicons name="lock-closed" size={13} color={colors.mutedForeground} />
         <Text style={styles.securityText}>Paiements sécurisés par Stripe · Données chiffrées TLS 1.3</Text>
       </View>
 
@@ -291,12 +293,12 @@ export default function PaymentsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Ajouter une carte</Text>
             <Pressable onPress={() => setAddModalOpen(false)} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Fermer">
-              <Ionicons name="close" size={24} color={Colors.foreground} />
+              <Ionicons name="close" size={24} color={colors.foreground} />
             </Pressable>
           </View>
 
           <View style={styles.securityNotice}>
-            <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
+            <Ionicons name="shield-checkmark" size={16} color={colors.success} />
             <Text style={styles.securityNoticeText}>
               Ton numéro de carte n'est jamais stocké sur nos serveurs. Il est chiffré et envoyé directement à Stripe.
             </Text>
@@ -307,7 +309,7 @@ export default function PaymentsScreen() {
             value={cardholderName}
             onChangeText={setCardholderName}
             placeholder="Jean Dupont"
-            placeholderTextColor={Colors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             autoCapitalize="words"
             style={styles.nameInput}
           />
@@ -317,9 +319,10 @@ export default function PaymentsScreen() {
             postalCodeEnabled={false}
             placeholders={{ number: "1234 5678 9012 3456" }}
             cardStyle={{
-              backgroundColor: "#f9f8f5",
-              textColor: Colors.foreground,
-              borderColor: "#e5e7eb",
+              backgroundColor: colors.inputBackground,
+              textColor: colors.foreground,
+              placeholderColor: colors.inputPlaceholder,
+              borderColor: colors.border,
               borderWidth: 1,
               borderRadius: 12,
               fontSize: 16,
@@ -341,16 +344,16 @@ export default function PaymentsScreen() {
           >
             <View style={[styles.confirmBtn, { opacity: !cardDetails?.complete ? 0.5 : 1 }]}>
               {addLoading
-                ? <ActivityIndicator color={Colors.white} />
+                ? <ActivityIndicator color={colors.onColor} />
                 : <>
-                    <Ionicons name="lock-closed" size={16} color={Colors.white} />
+                    <Ionicons name="lock-closed" size={16} color={colors.onColor} />
                     <Text style={styles.confirmBtnText}>Ajouter la carte</Text>
                   </>}
             </View>
           </Pressable>
 
           <View style={styles.stripeBadge}>
-            <Ionicons name="lock-closed" size={12} color={Colors.mutedForeground} />
+            <Ionicons name="lock-closed" size={12} color={colors.mutedForeground} />
             <Text style={styles.stripeBadgeText}>Propulsé par Stripe · PCI-DSS Level 1</Text>
           </View>
         </View>
@@ -359,40 +362,40 @@ export default function PaymentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:                { flex: 1, backgroundColor: "#FFF5F8" },
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  root:                { flex: 1, backgroundColor: colors.background },
   header:              { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 },
   backBtn:             { padding: 4, marginRight: 8 },
-  title:               { flex: 1, fontSize: 22, fontWeight: "700", color: Colors.foreground },
+  title:               { flex: 1, fontSize: 22, fontWeight: "700", color: colors.foreground },
   addBtn:              { padding: 4 },
   cardRow:             { marginBottom: 12, overflow: "hidden", flexDirection: "row" },
   brandBar:            { width: 4, borderRadius: 2 },
   cardContent:         { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
   cardInfo:            { flexDirection: "row", alignItems: "center", flex: 1 },
   cardTitle:           { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
-  cardNumber:          { fontSize: 15, fontWeight: "600", color: Colors.foreground },
-  cardMeta:            { fontSize: 13, color: Colors.mutedForeground },
+  cardNumber:          { fontSize: 15, fontWeight: "600", color: colors.foreground },
+  cardMeta:            { fontSize: 13, color: colors.mutedForeground },
   cardActions:         { flexDirection: "row", gap: 4 },
   actionBtn:           { padding: 8, borderRadius: 8 },
   empty:               { alignItems: "center", paddingVertical: 60, paddingHorizontal: 32 },
-  emptyTitle:          { fontSize: 18, fontWeight: "700", color: Colors.foreground, marginTop: 16, marginBottom: 8 },
-  emptySubtitle:       { fontSize: 14, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20 },
+  emptyTitle:          { fontSize: 18, fontWeight: "700", color: colors.foreground, marginTop: 16, marginBottom: 8 },
+  emptySubtitle:       { fontSize: 14, color: colors.mutedForeground, textAlign: "center", lineHeight: 20 },
   emptyBtn:            { marginTop: 24 },
-  emptyBtnInner:       { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 32 },
-  emptyBtnText:        { color: Colors.white, fontSize: 15, fontWeight: "700" },
+  emptyBtnInner:       { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 32 },
+  emptyBtnText:        { color: colors.onColor, fontSize: 15, fontWeight: "700" },
   securityBadge:       { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingBottom: 4 },
-  securityText:        { fontSize: 11, color: Colors.mutedForeground },
-  modal:               { flex: 1, backgroundColor: Colors.white, paddingHorizontal: 24 },
+  securityText:        { fontSize: 11, color: colors.mutedForeground },
+  modal:               { flex: 1, backgroundColor: colors.white, paddingHorizontal: 24 },
   modalHeader:         { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
-  modalTitle:          { fontSize: 20, fontWeight: "700", color: Colors.foreground },
+  modalTitle:          { fontSize: 20, fontWeight: "700", color: colors.foreground },
   closeBtn:            { padding: 4 },
-  securityNotice:      { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: Colors.successLight, borderRadius: 10, padding: 12, marginBottom: 24 },
-  securityNoticeText:  { flex: 1, fontSize: 13, color: "#166534", lineHeight: 18 },
-  fieldLabel:          { fontSize: 14, fontWeight: "600", color: Colors.foreground, marginBottom: 8 },
-  nameInput:           { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: "#f9f8f5", fontSize: 16, color: Colors.foreground, marginBottom: 16 },
+  securityNotice:      { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: colors.successLight, borderRadius: 10, padding: 12, marginBottom: 24 },
+  securityNoticeText:  { flex: 1, fontSize: 13, color: colors.successTextDark, lineHeight: 18 },
+  fieldLabel:          { fontSize: 14, fontWeight: "600", color: colors.foreground, marginBottom: 8 },
+  nameInput:           { borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.inputBackground, fontSize: 16, color: colors.foreground, marginBottom: 16 },
   cardField:           { height: 52, marginBottom: 28 },
-  confirmBtn:          { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 32, paddingVertical: 16, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 },
-  confirmBtnText:      { color: Colors.white, fontSize: 16, fontWeight: "700" },
+  confirmBtn:          { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.primary, borderRadius: 32, paddingVertical: 16, shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 },
+  confirmBtnText:      { color: colors.onColor, fontSize: 16, fontWeight: "700" },
   stripeBadge:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 16 },
-  stripeBadgeText:     { fontSize: 11, color: Colors.mutedForeground },
+  stripeBadgeText:     { fontSize: 11, color: colors.mutedForeground },
 });

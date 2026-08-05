@@ -11,7 +11,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -20,6 +20,7 @@ import { safeBack } from "@/lib/navigation";
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const { token } = useLocalSearchParams<{ token?: string }>();
 
   const [password, setPassword] = useState("");
@@ -64,7 +65,8 @@ export default function ResetPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-background"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -77,33 +79,35 @@ export default function ResetPasswordScreen() {
           <AnimatedIconButton
             onPress={() => safeBack(router)}
             accessibilityLabel="Retour"
-            className="w-10 h-10 rounded-xl bg-muted items-center justify-center mb-8"
+            className="w-10 h-10 rounded-xl items-center justify-center mb-8"
+            style={{ backgroundColor: colors.muted }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
 
-          <View className="w-16 h-16 rounded-2xl bg-primary/10 items-center justify-center mb-6">
-            <Ionicons name="lock-closed-outline" size={28} color={Colors.primary} />
+          <View className="w-16 h-16 rounded-2xl items-center justify-center mb-6" style={{ backgroundColor: `${colors.primary}1A` }}>
+            <Ionicons name="lock-closed-outline" size={28} color={colors.primary} />
           </View>
 
-          <Text className="text-3xl font-bold text-foreground mb-2">
+          <Text className="text-3xl font-bold mb-2" style={{ color: colors.foreground }}>
             Nouveau mot de passe
           </Text>
-          <Text className="text-sm text-muted-foreground mb-8 leading-relaxed">
+          <Text className="text-sm mb-8 leading-relaxed" style={{ color: colors.mutedForeground }}>
             Choisis un mot de passe sécurisé d'au moins 8 caractères.
           </Text>
 
           {/* Password field */}
           <View className="mb-4">
-            <Text className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+            <Text className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: colors.mutedForeground }}>
               Nouveau mot de passe
             </Text>
-            <View className="flex-row items-center bg-card border border-border rounded-2xl px-4 h-14">
-              <Ionicons name="lock-closed-outline" size={18} color={Colors.mutedForeground} />
+            <View className="flex-row items-center border rounded-2xl px-4 h-14" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+              <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
               <TextInput
-                className="flex-1 ml-3 text-foreground text-sm"
+                className="flex-1 ml-3 text-sm"
+                style={{ color: colors.foreground }}
                 placeholder="Min. 8 caractères"
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor={colors.mutedForeground}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPwd}
@@ -118,7 +122,7 @@ export default function ResetPasswordScreen() {
                 <Ionicons
                   name={showPwd ? "eye-off-outline" : "eye-outline"}
                   size={18}
-                  color={Colors.mutedForeground}
+                  color={colors.mutedForeground}
                 />
               </Pressable>
             </View>
@@ -126,15 +130,16 @@ export default function ResetPasswordScreen() {
 
           {/* Confirm field */}
           <View className="mb-8">
-            <Text className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+            <Text className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: colors.mutedForeground }}>
               Confirmer le mot de passe
             </Text>
-            <View className="flex-row items-center bg-card border border-border rounded-2xl px-4 h-14">
-              <Ionicons name="lock-closed-outline" size={18} color={Colors.mutedForeground} />
+            <View className="flex-row items-center border rounded-2xl px-4 h-14" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+              <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
               <TextInput
-                className="flex-1 ml-3 text-foreground text-sm"
+                className="flex-1 ml-3 text-sm"
+                style={{ color: colors.foreground }}
                 placeholder="Répète ton mot de passe"
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor={colors.mutedForeground}
                 value={confirm}
                 onChangeText={setConfirm}
                 secureTextEntry={!showConfirm}
@@ -149,7 +154,7 @@ export default function ResetPasswordScreen() {
                 <Ionicons
                   name={showConfirm ? "eye-off-outline" : "eye-outline"}
                   size={18}
-                  color={Colors.mutedForeground}
+                  color={colors.mutedForeground}
                 />
               </Pressable>
             </View>
@@ -157,18 +162,18 @@ export default function ResetPasswordScreen() {
 
           {error && <View className="mb-4"><ErrorMessage message={error} /></View>}
           {success && (
-            <View className="mb-4 p-4 rounded-2xl bg-success/10 border border-success/30">
-              <Text className="text-success font-semibold text-center">Mot de passe mis à jour ! Redirection…</Text>
+            <View className="mb-4 p-4 rounded-2xl border" style={{ backgroundColor: `${colors.success}1A`, borderColor: `${colors.success}4D` }}>
+              <Text className="font-semibold text-center" style={{ color: colors.success }}>Mot de passe mis à jour ! Redirection…</Text>
             </View>
           )}
 
           <Pressable
             onPress={handleReset}
             disabled={isLoading || success}
-            className="bg-primary rounded-2xl h-14 items-center justify-center active:opacity-80"
-            style={{ opacity: isLoading ? 0.7 : 1 }}
+            className="rounded-2xl h-14 items-center justify-center"
+            style={{ backgroundColor: colors.primary, opacity: isLoading ? 0.7 : 1 }}
           >
-            <Text className="text-white font-bold text-base">
+            <Text className="font-bold text-base" style={{ color: colors.onColor }}>
               {isLoading ? "Enregistrement..." : "Enregistrer le mot de passe"}
             </Text>
           </Pressable>

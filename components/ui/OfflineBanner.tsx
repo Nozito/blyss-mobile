@@ -3,9 +3,10 @@ import { Animated, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export function OfflineBanner() {
+  const colors = useThemeColors();
   const { isConnected } = useNetworkStatus();
   const translateY = useRef(new Animated.Value(-60)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -40,9 +41,9 @@ export function OfflineBanner() {
     >
       <View
         style={{
-          backgroundColor: Colors.warningLight,
+          backgroundColor: colors.warningLight,
           borderBottomWidth: 1,
-          borderBottomColor: Colors.warningBorder,
+          borderBottomColor: colors.warningBorder,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
@@ -51,8 +52,8 @@ export function OfflineBanner() {
           paddingHorizontal: 16,
         }}
       >
-        <Ionicons name="wifi-outline" size={16} color={Colors.warningText} />
-        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.warningText }}>
+        <Ionicons name="wifi-outline" size={16} color={colors.warningText} />
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningText }}>
           Pas de connexion internet
         </Text>
       </View>

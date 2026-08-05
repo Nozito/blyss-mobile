@@ -15,7 +15,7 @@ import {
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -41,6 +41,7 @@ export function Modal({
   ...props
 }: ModalProps) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -137,7 +138,7 @@ export function Modal({
                 bottom: 0,
                 left: 0,
                 right: 0,
-                backgroundColor: "white",
+                backgroundColor: colors.card,
                 borderTopLeftRadius: 28,
                 borderTopRightRadius: 28,
                 paddingBottom: insets.bottom + 16,
@@ -150,14 +151,14 @@ export function Modal({
                 <>
                   {/* Handle */}
                   <View className="items-center pt-3 pb-2">
-                    <View className="w-10 h-1 rounded-full bg-border" />
+                    <View className="w-10 h-1 rounded-full" style={{ backgroundColor: colors.border }} />
                   </View>
 
                   {title && (
-                    <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
-                      <Text className="text-lg font-semibold text-foreground">{title}</Text>
+                    <View className="flex-row items-center justify-between px-5 py-4 border-b" style={{ borderBottomColor: colors.border }}>
+                      <Text className="text-lg font-semibold" style={{ color: colors.foreground }}>{title}</Text>
                       <AnimatedIconButton onPress={onClose} className="p-1" accessibilityLabel="Fermer">
-                        <Ionicons name="close" size={22} color={Colors.mutedForeground} />
+                        <Ionicons name="close" size={22} color={colors.mutedForeground} />
                       </AnimatedIconButton>
                     </View>
                   )}
@@ -174,7 +175,7 @@ export function Modal({
               style={[
                 { transform: [{ scale }], opacity },
                 {
-                  backgroundColor: "white",
+                  backgroundColor: colors.card,
                   borderRadius: 24,
                   overflow: "hidden",
                   maxWidth: 500,
@@ -185,10 +186,10 @@ export function Modal({
             >
               <Pressable onPress={(e) => e.stopPropagation()}>
                 {title && (
-                  <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
-                    <Text className="text-lg font-semibold text-foreground">{title}</Text>
+                  <View className="flex-row items-center justify-between px-5 py-4 border-b" style={{ borderBottomColor: colors.border }}>
+                    <Text className="text-lg font-semibold" style={{ color: colors.foreground }}>{title}</Text>
                     <AnimatedIconButton onPress={onClose} className="p-1" accessibilityLabel="Fermer">
-                      <Ionicons name="close" size={22} color={Colors.mutedForeground} />
+                      <Ionicons name="close" size={22} color={colors.mutedForeground} />
                     </AnimatedIconButton>
                   </View>
                 )}

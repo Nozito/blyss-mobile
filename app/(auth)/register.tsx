@@ -18,7 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useAppTransition } from "@/contexts/TransitionContext";
 
@@ -91,11 +92,12 @@ function PasswordStep({
   formData: FormData;
   update: (u: Partial<FormData>) => void;
 }) {
+  const colors = useThemeColors();
   return (
     <View className="gap-6">
       <View>
-        <Text className="text-3xl font-black text-foreground">Dernière étape</Text>
-        <Text className="text-muted-foreground mt-2">Choisis ton mot de passe</Text>
+        <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Dernière étape</Text>
+        <Text className="mt-2" style={{ color: colors.mutedForeground }}>Choisis ton mot de passe</Text>
       </View>
 
       <View className="gap-4">
@@ -125,16 +127,17 @@ function PasswordStep({
           className="flex-row items-start gap-3"
         >
           <View
-            className={[
-              "w-5 h-5 rounded border-2 items-center justify-center mt-0.5 flex-shrink-0",
-              formData.acceptedTerms ? "bg-primary border-primary" : "border-border bg-card",
-            ].join(" ")}
+            className="w-5 h-5 rounded border-2 items-center justify-center mt-0.5 flex-shrink-0"
+            style={{
+              backgroundColor: formData.acceptedTerms ? colors.primary : colors.card,
+              borderColor: formData.acceptedTerms ? colors.primary : colors.border,
+            }}
           >
             {formData.acceptedTerms && (
-              <Ionicons name="checkmark" size={12} color="#fff" />
+              <Ionicons name="checkmark" size={12} color={colors.onColor} />
             )}
           </View>
-          <Text className="text-sm text-muted-foreground flex-1 leading-5">
+          <Text className="text-sm flex-1 leading-5" style={{ color: colors.mutedForeground }}>
             J'accepte les{" "}
             <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>Conditions générales</Text>
             {" "}et la{" "}
@@ -148,6 +151,7 @@ function PasswordStep({
 
 // ── Success step ─────────────────────────────────────────────────────────────
 function RegisterSuccess({ onPress }: { onPress: () => void }) {
+  const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   const scale = useRef(new Animated.Value(reduceMotion ? 1 : 0.5)).current;
   const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -168,11 +172,11 @@ function RegisterSuccess({ onPress }: { onPress: () => void }) {
           width: 88,
           height: 88,
           borderRadius: 44,
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 24,
-          shadowColor: Colors.primary,
+          shadowColor: colors.primary,
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.35,
           shadowRadius: 18,
@@ -181,12 +185,12 @@ function RegisterSuccess({ onPress }: { onPress: () => void }) {
           opacity,
         }}
       >
-        <Ionicons name="checkmark" size={40} color={Colors.white} />
+        <Ionicons name="checkmark" size={40} color={colors.onColor} />
       </Animated.View>
-      <Text style={{ fontSize: 28, fontWeight: "900", color: Colors.foreground, textAlign: "center", marginBottom: 8 }}>
+      <Text style={{ fontSize: 28, fontWeight: "900", color: colors.foreground, textAlign: "center", marginBottom: 8 }}>
         Bienvenue sur Blyss !
       </Text>
-      <Text style={{ fontSize: 15, color: Colors.mutedForeground, textAlign: "center", lineHeight: 22, marginBottom: 40, paddingHorizontal: 16 }}>
+      <Text style={{ fontSize: 15, color: colors.mutedForeground, textAlign: "center", lineHeight: 22, marginBottom: 40, paddingHorizontal: 16 }}>
         Ton compte a été créé avec succès.{"\n"}On est ravis de t'accueillir !
       </Text>
       <AnimatedPressable
@@ -195,12 +199,12 @@ function RegisterSuccess({ onPress }: { onPress: () => void }) {
           width: "100%",
           height: 56,
           borderRadius: 16,
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>Commencer</Text>
+        <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>Commencer</Text>
       </AnimatedPressable>
     </View>
   );
@@ -209,6 +213,7 @@ function RegisterSuccess({ onPress }: { onPress: () => void }) {
 // ── Main screen ────────────────────────────────────────────────────────────
 export default function RegisterScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const { signup, isLoading } = useAuth();
   const { showTransition, hideTransition } = useAppTransition();
   // app/(auth)/onboarding.tsx renvoie ici avec ?role=pro|client selon le choix
@@ -384,10 +389,10 @@ export default function RegisterScreen() {
       return (
         <View className="gap-8">
           <View className="items-center">
-            <Text className="text-3xl font-black text-foreground text-center">
+            <Text className="text-3xl font-black text-center" style={{ color: colors.foreground }}>
               Bienvenue sur Blyss
             </Text>
-            <Text className="text-muted-foreground text-center mt-2">
+            <Text className="text-center mt-2" style={{ color: colors.mutedForeground }}>
               Choisis comment tu utilises Blyss
             </Text>
           </View>
@@ -398,18 +403,17 @@ export default function RegisterScreen() {
                 key={r}
                 onPress={() => update({ role: r })}
                 disabled={isLoading}
-                className={[
-                  "flex-row items-center gap-4 rounded-2xl px-5 py-5 border-2",
-                  formData.role === r
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-card",
-                ].join(" ")}
+                className="flex-row items-center gap-4 rounded-2xl px-5 py-5 border-2"
+                style={{
+                  borderColor: formData.role === r ? colors.primary : colors.border,
+                  backgroundColor: formData.role === r ? withAlpha(colors.primary, 0.05) : colors.card,
+                }}
               >
                 <View className="flex-1">
-                  <Text className="text-base font-semibold text-foreground">
+                  <Text className="text-base font-semibold" style={{ color: colors.foreground }}>
                     {r === "client" ? "Cliente" : "Prothésiste"}
                   </Text>
-                  <Text className="text-sm text-muted-foreground mt-0.5">
+                  <Text className="text-sm mt-0.5" style={{ color: colors.mutedForeground }}>
                     {r === "client"
                       ? "Je réserve des prestations manucure"
                       : "Agenda, réservations, paiements — tout en un"}
@@ -417,25 +421,24 @@ export default function RegisterScreen() {
                   {r === "pro" && (
                     <View style={{
                       marginTop: 6, alignSelf: "flex-start",
-                      backgroundColor: "rgba(255,94,160,0.12)", borderRadius: 8,
+                      backgroundColor: withAlpha(colors.primary, 0.12), borderRadius: 8,
                       paddingHorizontal: 8, paddingVertical: 3,
                     }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#FF5EA0" }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.primary }}>
                         Pour les pros du nail art
                       </Text>
                     </View>
                   )}
                 </View>
                 <View
-                  className={[
-                    "w-6 h-6 rounded-full border-2 items-center justify-center flex-shrink-0",
-                    formData.role === r
-                      ? "border-primary bg-primary"
-                      : "border-muted-foreground/40",
-                  ].join(" ")}
+                  className="w-6 h-6 rounded-full border-2 items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: formData.role === r ? colors.primary : withAlpha(colors.mutedForeground, 0.4),
+                    backgroundColor: formData.role === r ? colors.primary : "transparent",
+                  }}
                 >
                   {formData.role === r && (
-                    <View className="w-2.5 h-2.5 rounded-full bg-white" />
+                    <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors.onColor }} />
                   )}
                 </View>
               </Pressable>
@@ -449,8 +452,8 @@ export default function RegisterScreen() {
       return (
         <View className="gap-6">
           <View>
-            <Text className="text-3xl font-black text-foreground">Enchanté</Text>
-            <Text className="text-muted-foreground mt-2">Et toi, c'est ?</Text>
+            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Enchanté</Text>
+            <Text className="mt-2" style={{ color: colors.mutedForeground }}>Et toi, c'est ?</Text>
           </View>
           <View className="gap-4">
             <Input
@@ -478,10 +481,10 @@ export default function RegisterScreen() {
       return (
         <View className="gap-6">
           <View>
-            <Text className="text-3xl font-black text-foreground">
+            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>
               Enchanté {formData.firstName}
             </Text>
-            <Text className="text-muted-foreground mt-2">Un 06 ?</Text>
+            <Text className="mt-2" style={{ color: colors.mutedForeground }}>Un 06 ?</Text>
           </View>
           <Input
             label="Téléphone"
@@ -500,8 +503,8 @@ export default function RegisterScreen() {
       return (
         <View className="gap-6">
           <View>
-            <Text className="text-3xl font-black text-foreground">Super !</Text>
-            <Text className="text-muted-foreground mt-2">Ton email ?</Text>
+            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Super !</Text>
+            <Text className="mt-2" style={{ color: colors.mutedForeground }}>Ton email ?</Text>
           </View>
           <Input
             label="Email"
@@ -523,10 +526,10 @@ export default function RegisterScreen() {
       return (
         <View className="gap-6">
           <View>
-            <Text className="text-3xl font-black text-foreground">
+            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>
               Ta date de naissance
             </Text>
-            <Text className="text-muted-foreground mt-2">
+            <Text className="mt-2" style={{ color: colors.mutedForeground }}>
               Tu dois avoir au moins 16 ans
             </Text>
           </View>
@@ -550,8 +553,8 @@ export default function RegisterScreen() {
         return (
           <View className="gap-6">
             <View>
-              <Text className="text-3xl font-black text-foreground">Ton activité</Text>
-              <Text className="text-muted-foreground mt-2">
+              <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Ton activité</Text>
+              <Text className="mt-2" style={{ color: colors.mutedForeground }}>
                 Nom de ton activité (modifiable plus tard)
               </Text>
             </View>
@@ -570,8 +573,8 @@ export default function RegisterScreen() {
         return (
           <View className="gap-6">
             <View>
-              <Text className="text-3xl font-black text-foreground">Où exerces-tu ?</Text>
-              <Text className="text-muted-foreground mt-2">Ville ou quartier</Text>
+              <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Où exerces-tu ?</Text>
+              <Text className="mt-2" style={{ color: colors.mutedForeground }}>Ville ou quartier</Text>
             </View>
             <Input
               label="Ville"
@@ -588,8 +591,8 @@ export default function RegisterScreen() {
         return (
           <View className="gap-6">
             <View>
-              <Text className="text-3xl font-black text-foreground">Ton Instagram</Text>
-              <Text className="text-muted-foreground mt-2">
+              <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Ton Instagram</Text>
+              <Text className="mt-2" style={{ color: colors.mutedForeground }}>
                 Tes clientes pourront voir ton travail avant de réserver
               </Text>
             </View>
@@ -614,7 +617,7 @@ export default function RegisterScreen() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={["top"]}>
       {/* Progress header */}
       {step !== 99 && (
         <View className="flex-row items-center gap-4 px-6 py-4">
@@ -622,17 +625,17 @@ export default function RegisterScreen() {
             onPress={handleBack}
             disabled={isLoading}
             accessibilityLabel="Retour"
-            className="p-2 -ml-2 rounded-xl active:bg-muted"
+            className="p-2 -ml-2 rounded-xl"
           >
-            <Ionicons name="chevron-back" size={24} color="#09090B" />
+            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
           </AnimatedIconButton>
-          <View className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+          <View className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.muted }}>
             <View
-              className="h-full bg-primary rounded-full"
-              style={{ width: `${(step / totalSteps) * 100}%` }}
+              className="h-full rounded-full"
+              style={{ width: `${(step / totalSteps) * 100}%`, backgroundColor: colors.primary }}
             />
           </View>
-          <Text className="text-sm font-medium text-muted-foreground w-10 text-right">
+          <Text className="text-sm font-medium w-10 text-right" style={{ color: colors.mutedForeground }}>
             {step}/{totalSteps}
           </Text>
         </View>
@@ -656,10 +659,10 @@ export default function RegisterScreen() {
               style={{
                 transform: [{ translateX: shakeAnim }],
                 marginTop: 16,
-                backgroundColor: "#FFF0F3",
+                backgroundColor: colors.destructiveLight,
                 borderRadius: 14,
                 borderLeftWidth: 3,
-                borderLeftColor: "#EF4444",
+                borderLeftColor: colors.destructive,
                 paddingVertical: 12,
                 paddingHorizontal: 14,
                 flexDirection: "row",
@@ -667,8 +670,8 @@ export default function RegisterScreen() {
                 gap: 10,
               }}
             >
-              <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
-              <Text style={{ flex: 1, fontSize: 13, color: "#EF4444", fontWeight: "500", lineHeight: 18 }}>
+              <Ionicons name="alert-circle-outline" size={18} color={colors.destructive} />
+              <Text style={{ flex: 1, fontSize: 13, color: colors.destructiveText, fontWeight: "500", lineHeight: 18 }}>
                 {stepError}
               </Text>
             </Animated.View>
@@ -678,7 +681,7 @@ export default function RegisterScreen() {
         {/* Fixed bottom CTA */}
         {step !== 99 && <View
           className="px-6 pb-8 pt-4"
-          style={{ backgroundColor: "rgba(255,234,241,0.97)" }}
+          style={{ backgroundColor: withAlpha(colors.background, 0.97) }}
         >
           <AnimatedPressable
             onPress={handleNext}
@@ -686,22 +689,22 @@ export default function RegisterScreen() {
             style={{
               height: 56,
               borderRadius: 16,
-              backgroundColor: !isStepValid() || isLoading ? Colors.disabled : Colors.primary,
+              backgroundColor: !isStepValid() || isLoading ? colors.disabled : colors.primary,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             {isLoading ? (
-              <ActivityIndicator color={Colors.white} />
+              <ActivityIndicator color={colors.onColor} />
             ) : (
-              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>
                 {ctaLabel}
               </Text>
             )}
           </AnimatedPressable>
 
           {/* Login redirect */}
-          <Text className="text-xs text-muted-foreground text-center mt-4">
+          <Text className="text-xs text-center mt-4" style={{ color: colors.mutedForeground }}>
             Déjà un compte ?{" "}
             <Text
               className="text-primary font-semibold"

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, type ViewProps } from 'react-native';
 import { Image } from 'expo-image';
-import { Colors } from '@/constants/colors';
+import { withAlpha } from '@/constants/colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 
 interface AvatarProps extends ViewProps {
   size?: number;
@@ -41,6 +42,7 @@ interface AvatarFallbackProps extends ViewProps {
 }
 
 export function AvatarFallback({ name, size = 40, className = '', style, ...props }: AvatarFallbackProps) {
+  const colors = useThemeColors();
   const initials = name
     ? name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
     : '?';
@@ -48,11 +50,11 @@ export function AvatarFallback({ name, size = 40, className = '', style, ...prop
   return (
     <View
       {...props}
-      className={['flex-1 w-full items-center justify-center bg-accent', className].join(' ')}
-      style={style}
+      className={['flex-1 w-full items-center justify-center', className].join(' ')}
+      style={[{ backgroundColor: withAlpha(colors.primary, 0.15) }, style]}
     >
       <Text
-        style={{ fontSize: size * 0.38, fontWeight: '600', color: Colors.primary }}
+        style={{ fontSize: size * 0.38, fontWeight: '600', color: colors.primary }}
       >
         {initials}
       </Text>

@@ -14,22 +14,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usersApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
+  const colors = useThemeColors();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, paddingLeft: 2 }}>
-      <Ionicons name={icon} size={15} color={Colors.primary} />
-      <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>{label}</Text>
+      <Ionicons name={icon} size={15} color={colors.primary} />
+      <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>{label}</Text>
     </View>
   );
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const { user, refreshProfile } = useAuth();
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
@@ -110,7 +112,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -120,21 +122,21 @@ export default function SettingsScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <AnimatedIconButton
             onPress={() => safeBack(router)}
-            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
+            style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}
             accessibilityLabel="Retour"
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Paramètres</Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Gère ton compte et ta sécurité</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Paramètres</Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Gère ton compte et ta sécurité</Text>
           </View>
         </View>
 
         {/* Infos personnelles */}
         <View style={{ marginBottom: 20 }}>
           <SectionHeader icon="person-outline" label="Infos personnelles" />
-          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+          <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
             <Input
               label="Nom"
               value={lastName}
@@ -164,7 +166,7 @@ export default function SettingsScreen() {
         {/* Sécurité */}
         <View style={{ marginBottom: 20 }}>
           <SectionHeader icon="lock-closed-outline" label="Sécurité" />
-          <View style={{ backgroundColor: Colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+          <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
             <Input
               label="Ancien mot de passe"
               value={currentPassword}
@@ -193,11 +195,11 @@ export default function SettingsScreen() {
               secure
             />
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 16 }}>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 16 }}>
                 Ton mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.
               </Text>
               <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-                <Text style={{ fontSize: 12, color: Colors.primary, fontWeight: "500" }}>
+                <Text style={{ fontSize: 12, color: colors.primary, fontWeight: "500" }}>
                   Mot de passe oublié ?
                 </Text>
               </Pressable>
@@ -207,28 +209,28 @@ export default function SettingsScreen() {
 
         {/* Error banner */}
         {error && (
-          <View style={{ backgroundColor: Colors.destructiveLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#FECACA" }}>
-            <Text style={{ fontSize: 13, color: Colors.destructiveText, fontWeight: "500" }}>{error}</Text>
+          <View style={{ backgroundColor: colors.destructiveLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.destructive }}>
+            <Text style={{ fontSize: 13, color: colors.destructiveText, fontWeight: "500" }}>{error}</Text>
           </View>
         )}
         {success && (
-          <View style={{ backgroundColor: Colors.successLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.successBorder }}>
-            <Text style={{ fontSize: 13, color: Colors.successText, fontWeight: "600" }}>{success}</Text>
+          <View style={{ backgroundColor: colors.successLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.successBorder }}>
+            <Text style={{ fontSize: 13, color: colors.successText, fontWeight: "600" }}>{success}</Text>
           </View>
         )}
 
         {/* Save CTA */}
         <Pressable onPress={handleSave} disabled={isSaving} style={{ marginBottom: 24, opacity: isSaving ? 0.7 : 1 }}>
           <LinearGradient
-            colors={[Colors.primary, "rgba(254,93,157,0.9)"]}
+            colors={[colors.primary, "rgba(254,93,157,0.9)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={{ height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
+            style={{ height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}
           >
             {isSaving ? (
-              <ActivityIndicator color={Colors.white} />
+              <ActivityIndicator color={colors.onColor} />
             ) : (
-              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 15 }}>
                 Enregistrer les modifications
               </Text>
             )}
@@ -236,29 +238,29 @@ export default function SettingsScreen() {
         </Pressable>
 
         {/* Données & confidentialité */}
-        <View style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card, marginBottom: 8 }}>
-          <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+        <View style={{ backgroundColor: colors.white, borderRadius: 20, overflow: "hidden", ...Shadows.card, marginBottom: 8 }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1.2, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
             Données & confidentialité
           </Text>
 
           <Pressable
             onPress={() => router.push("/(client)/(profile)/rgpd")}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border }}
           >
-            <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.foreground }}>Mes droits RGPD</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+            <Ionicons name="shield-outline" size={16} color={colors.primary} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: colors.foreground }}>Mes droits RGPD</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
 
           <Pressable
             onPress={() => router.push("/(client)/(profile)/rgpd")}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: Colors.border }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border }}
           >
-            <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: Colors.destructive }}>
+            <Ionicons name="trash-outline" size={16} color={colors.destructive} />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: colors.destructive }}>
               Supprimer mon compte
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
         </View>
       </ScrollView>

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { proApi, stripeApi } from "@/lib/api";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -34,6 +34,7 @@ type DepositValue = 0 | 25 | 50 | 100;
 export default function ProPaymentsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -154,8 +155,8 @@ export default function ProPaymentsScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -163,7 +164,7 @@ export default function ProPaymentsScreen() {
   return (
     <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 100,
@@ -179,17 +180,17 @@ export default function ProPaymentsScreen() {
             accessibilityLabel="Retour"
             style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+              backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
             Encaissements
           </Text>
         </View>
-        <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginLeft: 52 }}>
+        <Text style={{ fontSize: 13, color: colors.mutedForeground, marginLeft: 52 }}>
           Stripe Connect · Paiements en ligne
         </Text>
       </View>
@@ -197,34 +198,34 @@ export default function ProPaymentsScreen() {
       {/* ── Stripe Connect status ── */}
       <View style={{ marginBottom: 16 }}>
         <Text style={{
-          fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
+          fontSize: 11, fontWeight: "700", color: colors.mutedForeground,
           textTransform: "uppercase", letterSpacing: 1, marginBottom: 8,
         }}>
           Compte Stripe Connect
         </Text>
         <View style={{
-          backgroundColor: Colors.card, borderRadius: 20, padding: 18,
+          backgroundColor: colors.card, borderRadius: 20, padding: 18,
           borderWidth: 1,
-          borderColor: isStripeConnected ? `${Colors.success}40` : `${Colors.warning}40`,
-          shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+          borderColor: isStripeConnected ? `${colors.success}40` : `${colors.warning}40`,
+          shadowColor: colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{
               width: 52, height: 52, borderRadius: 16,
-              backgroundColor: isStripeConnected ? `${Colors.success}15` : `${Colors.warning}15`,
+              backgroundColor: isStripeConnected ? `${colors.success}15` : `${colors.warning}15`,
               alignItems: "center", justifyContent: "center",
             }}>
               <Ionicons
                 name={isStripeConnected ? "checkmark-circle" : "alert-circle-outline"}
                 size={26}
-                color={isStripeConnected ? Colors.success : Colors.warning}
+                color={isStripeConnected ? colors.success : colors.warning}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.foreground, marginBottom: 3 }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.foreground, marginBottom: 3 }}>
                 {isStripeConnected ? "Compte activé" : "Activation requise"}
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
                 {isStripeConnected
                   ? `Virements activés${stripeAccount?.charges_enabled ? " · Paiements OK" : ""}`
                   : "Complète l'onboarding Stripe pour encaisser en ligne"}
@@ -232,13 +233,13 @@ export default function ProPaymentsScreen() {
             </View>
             <View style={{
               paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-              backgroundColor: isStripeConnected ? Colors.successLight : "#FFFBEB",
+              backgroundColor: isStripeConnected ? colors.successLight : colors.warningLight,
               borderWidth: 1,
-              borderColor: isStripeConnected ? Colors.successBorder : "#FDE68A",
+              borderColor: isStripeConnected ? colors.successBorder : colors.warningBorder,
             }}>
               <Text style={{
                 fontSize: 11, fontWeight: "700",
-                color: isStripeConnected ? Colors.successTextDark : "#92400E",
+                color: isStripeConnected ? colors.successTextDark : colors.warningTextDark,
               }}>
                 {isStripeConnected ? "Actif" : "Inactif"}
               </Text>
@@ -251,17 +252,17 @@ export default function ProPaymentsScreen() {
               disabled={isOnboarding}
               style={{
                 marginTop: 16, height: 48, borderRadius: 14,
-                backgroundColor: Colors.primary,
+                backgroundColor: colors.primary,
                 flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
                 opacity: isOnboarding ? 0.7 : 1,
               }}
             >
               {isOnboarding ? (
-                <ActivityIndicator size="small" color={Colors.white} />
+                <ActivityIndicator size="small" color={colors.onColor} />
               ) : (
                 <>
-                  <Ionicons name="open-outline" size={16} color={Colors.white} />
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>
+                  <Ionicons name="open-outline" size={16} color={colors.onColor} />
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>
                     Activer Stripe Connect
                   </Text>
                 </>
@@ -275,17 +276,17 @@ export default function ProPaymentsScreen() {
       {isStripeConnected && (
         <View style={{ marginBottom: 16 }}>
           <Text style={{
-            fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
+            fontSize: 11, fontWeight: "700", color: colors.mutedForeground,
             textTransform: "uppercase", letterSpacing: 1, marginBottom: 8,
           }}>
             Acompte à la réservation
           </Text>
           <View style={{
-            backgroundColor: Colors.card, borderRadius: 20, padding: 18,
-            borderWidth: 1, borderColor: Colors.border,
-            shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+            backgroundColor: colors.card, borderRadius: 20, padding: 18,
+            borderWidth: 1, borderColor: colors.border,
+            shadowColor: colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
           }}>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 14, lineHeight: 18 }}>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 14, lineHeight: 18 }}>
               Pourcentage du prix encaissé à la réservation. Le solde est réglé le jour du rendez-vous.
             </Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
@@ -298,14 +299,14 @@ export default function ProPaymentsScreen() {
                     disabled={isUpdatingDeposit}
                     style={{
                       flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: "center",
-                      backgroundColor: selected ? Colors.primary : Colors.muted,
-                      borderWidth: selected ? 0 : 1, borderColor: Colors.border,
+                      backgroundColor: selected ? colors.primary : colors.muted,
+                      borderWidth: selected ? 0 : 1, borderColor: colors.border,
                       opacity: isUpdatingDeposit ? 0.6 : 1,
                     }}
                   >
                     <Text style={{
                       fontSize: 15, fontWeight: "800",
-                      color: selected ? Colors.white : Colors.foreground,
+                      color: selected ? colors.onColor : colors.foreground,
                     }}>
                       {label}
                     </Text>
@@ -315,8 +316,8 @@ export default function ProPaymentsScreen() {
             </View>
             {isUpdatingDeposit && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Mise à jour…</Text>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Mise à jour…</Text>
               </View>
             )}
           </View>
@@ -326,23 +327,23 @@ export default function ProPaymentsScreen() {
       {/* ── Paiements en ligne ── */}
       <View style={{ marginBottom: 24 }}>
         <Text style={{
-          fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
+          fontSize: 11, fontWeight: "700", color: colors.mutedForeground,
           textTransform: "uppercase", letterSpacing: 1, marginBottom: 8,
         }}>
           Paiements en ligne
         </Text>
         <View style={{
-          backgroundColor: Colors.card, borderRadius: 20, padding: 18,
-          borderWidth: 1, borderColor: Colors.border,
-          shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+          backgroundColor: colors.card, borderRadius: 20, padding: 18,
+          borderWidth: 1, borderColor: colors.border,
+          shadowColor: colors.black, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
           opacity: isStripeConnected ? 1 : 0.6,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View style={{ flex: 1, marginRight: 16 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 4 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground, marginBottom: 4 }}>
                 Accepter les paiements en ligne
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
                 {isStripeConnected
                   ? "Tes clientes paient à la réservation. Zéro impayé."
                   : "Active Stripe Connect d'abord pour activer cette option."}
@@ -357,8 +358,8 @@ export default function ProPaymentsScreen() {
                 }
                 setAcceptOnline(v);
               }}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor={Colors.white}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.onColor}
               disabled={!isStripeConnected}
             />
           </View>
@@ -366,12 +367,12 @@ export default function ProPaymentsScreen() {
           {acceptOnline && isStripeConnected && (
             <View style={{
               marginTop: 14, padding: 12, borderRadius: 12,
-              backgroundColor: `${Colors.success}10`,
-              borderWidth: 1, borderColor: `${Colors.success}25`,
+              backgroundColor: `${colors.success}10`,
+              borderWidth: 1, borderColor: `${colors.success}25`,
               flexDirection: "row", alignItems: "center", gap: 8,
             }}>
-              <Ionicons name="checkmark-circle-outline" size={15} color={Colors.success} />
-              <Text style={{ fontSize: 12, color: Colors.success, flex: 1, fontWeight: "600" }}>
+              <Ionicons name="checkmark-circle-outline" size={15} color={colors.success} />
+              <Text style={{ fontSize: 12, color: colors.success, flex: 1, fontWeight: "600" }}>
                 Activé · Frais Stripe : 1,5% + 0,25€ par transaction
               </Text>
             </View>
@@ -382,25 +383,25 @@ export default function ProPaymentsScreen() {
       {/* ── Info cards ── */}
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
         {[
-          { icon: "shield-checkmark-outline" as const, label: "Stripe", sub: "Sécurisé PCI", color: Colors.primary },
-          { icon: "time-outline" as const,             label: "Virement", sub: "J+2 ouvré",   color: Colors.success },
-          { icon: "close-circle-outline" as const,     label: "0 impayé", sub: "Garanti",     color: Colors.success },
+          { icon: "shield-checkmark-outline" as const, label: "Stripe", sub: "Sécurisé PCI", color: colors.primary },
+          { icon: "time-outline" as const,             label: "Virement", sub: "J+2 ouvré",   color: colors.success },
+          { icon: "close-circle-outline" as const,     label: "0 impayé", sub: "Garanti",     color: colors.success },
         ].map(({ icon, label, sub, color }) => (
           <View key={label} style={{
-            flex: 1, backgroundColor: Colors.card, borderRadius: 14, padding: 12,
-            borderWidth: 1, borderColor: Colors.border, alignItems: "center", gap: 4,
+            flex: 1, backgroundColor: colors.card, borderRadius: 14, padding: 12,
+            borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 4,
           }}>
             <Ionicons name={icon} size={18} color={color} />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>{label}</Text>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center" }}>{sub}</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>{label}</Text>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, textAlign: "center" }}>{sub}</Text>
           </View>
         ))}
       </View>
 
       {payError && <View style={{ marginBottom: 12 }}><ErrorMessage message={payError} /></View>}
       {paySuccess && (
-        <View style={{ marginBottom: 12, padding: 14, borderRadius: 14, backgroundColor: `${Colors.success}12`, borderWidth: 1, borderColor: `${Colors.success}30` }}>
-          <Text style={{ fontSize: 13, color: Colors.success, fontWeight: "600", textAlign: "center" }}>Paramètres de paiement mis à jour ✓</Text>
+        <View style={{ marginBottom: 12, padding: 14, borderRadius: 14, backgroundColor: `${colors.success}12`, borderWidth: 1, borderColor: `${colors.success}30` }}>
+          <Text style={{ fontSize: 13, color: colors.success, fontWeight: "600", textAlign: "center" }}>Paramètres de paiement mis à jour ✓</Text>
         </View>
       )}
 
@@ -410,13 +411,13 @@ export default function ProPaymentsScreen() {
         disabled={isSaving}
         style={{
           height: 54, borderRadius: 18, alignItems: "center", justifyContent: "center",
-          backgroundColor: Colors.primary, opacity: isSaving ? 0.7 : 1,
+          backgroundColor: colors.primary, opacity: isSaving ? 0.7 : 1,
         }}
       >
         {isSaving ? (
-          <ActivityIndicator size="small" color={Colors.white} />
+          <ActivityIndicator size="small" color={colors.onColor} />
         ) : (
-          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Enregistrer</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.onColor }}>Enregistrer</Text>
         )}
       </AnimatedPressable>
     </ScrollView>

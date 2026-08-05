@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import { authApi } from "@/lib/api";
 import { storage } from "@/lib/storage";
 import { Input } from "@/components/ui/Input";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors } from "@/constants/colors";
+import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
@@ -48,6 +48,9 @@ function parseLoginError(raw: string): string {
 
 export default function LoginScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
+  const isDark = useIsDarkMode();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { login, refreshProfile } = useAuth();
   const { showTransition, hideTransition } = useAppTransition();
 
@@ -282,7 +285,7 @@ export default function LoginScreen() {
         >
           {/* Back */}
           <AnimatedIconButton onPress={() => safeBack(router)} accessibilityLabel="Retour" style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={22} color={colors.foreground} />
           </AnimatedIconButton>
 
           <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}>
@@ -347,7 +350,7 @@ export default function LoginScreen() {
             style={[styles.ctaBtn, isSubmitDisabled && styles.ctaBtnDisabled]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={Colors.white} />
+              <ActivityIndicator color={colors.onColor} />
             ) : (
               <Text style={styles.ctaBtnText}>Se connecter</Text>
             )}
@@ -361,13 +364,13 @@ export default function LoginScreen() {
               style={styles.bioBtn}
             >
               {isBioLoading ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
                 <>
                   <Ionicons
                     name={bioType === "face" ? "scan-outline" : "finger-print-outline"}
                     size={20}
-                    color={Colors.primary}
+                    color={colors.primary}
                   />
                   <Text style={styles.bioBtnText}>
                     {bioType === "face" ? "Se connecter avec Face ID" : "Se connecter avec Touch ID"}
@@ -388,7 +391,7 @@ export default function LoginScreen() {
           {appleAvailable && (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              buttonStyle={isDark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
               cornerRadius={16}
               style={styles.appleBtn}
               onPress={handleAppleLogin}
@@ -397,7 +400,7 @@ export default function LoginScreen() {
 
           {isAppleLoading && (
             <View style={styles.appleLoading}>
-              <ActivityIndicator size="small" color={Colors.mutedForeground} />
+              <ActivityIndicator size="small" color={colors.mutedForeground} />
             </View>
           )}
 
@@ -440,89 +443,91 @@ export default function LoginScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
 
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
+    scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
 
-  backBtn: { paddingTop: 8, paddingBottom: 0, marginLeft: -8 },
+    backBtn: { paddingTop: 8, paddingBottom: 0, marginLeft: -8 },
 
-  logoBlock: { alignItems: "center", marginTop: 16, marginBottom: 8 },
-  logo: { width: 90, height: 90 },
+    logoBlock: { alignItems: "center", marginTop: 16, marginBottom: 8 },
+    logo: { width: 90, height: 90 },
 
-  titleBlock: { marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, color: Colors.mutedForeground, marginTop: 6, lineHeight: 20 },
+    titleBlock: { marginBottom: 24 },
+    title: { fontSize: 28, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 },
+    subtitle: { fontSize: 14, color: colors.mutedForeground, marginTop: 6, lineHeight: 20 },
 
-  form: { gap: 12, marginBottom: 24 },
+    form: { gap: 12, marginBottom: 24 },
 
-  passwordHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: Colors.foreground },
-  forgotLink: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+    passwordHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground },
+    forgotLink: { fontSize: 12, fontWeight: "600", color: colors.primary },
 
-  ctaBtn: {
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
-    marginBottom: 12,
-  },
-  ctaBtnDisabled: { backgroundColor: Colors.disabled, shadowOpacity: 0, elevation: 0 },
-  ctaBtnText: { fontSize: 16, fontWeight: "700", color: Colors.white },
+    ctaBtn: {
+      height: 56,
+      borderRadius: 18,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 14,
+      elevation: 6,
+      marginBottom: 12,
+    },
+    ctaBtnDisabled: { backgroundColor: colors.disabled, shadowOpacity: 0, elevation: 0 },
+    ctaBtnText: { fontSize: 16, fontWeight: "700", color: colors.onColor },
 
-  bioBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-    marginBottom: 4,
-  },
-  bioBtnText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+    bioBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      height: 48,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.white,
+      marginBottom: 4,
+    },
+    bioBtnText: { fontSize: 14, fontWeight: "600", color: colors.primary },
 
-  separator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginVertical: 20,
-  },
-  separatorLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  separatorText: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "500" },
+    separator: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginVertical: 20,
+    },
+    separatorLine: { flex: 1, height: 1, backgroundColor: colors.border },
+    separatorText: { fontSize: 12, color: colors.mutedForeground, fontWeight: "500" },
 
-  appleBtn: { height: 52, borderRadius: 16, marginBottom: 8 },
-  appleLoading: { alignItems: "center", paddingVertical: 8 },
+    appleBtn: { height: 52, borderRadius: 16, marginBottom: 8 },
+    appleLoading: { alignItems: "center", paddingVertical: 8 },
 
-  registerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  registerText: { fontSize: 13, color: Colors.mutedForeground },
-  registerLink: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+    registerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 24,
+      marginBottom: 16,
+    },
+    registerText: { fontSize: 13, color: colors.mutedForeground },
+    registerLink: { fontSize: 13, fontWeight: "700", color: colors.primary },
 
-  legal: {
-    fontSize: 11,
-    color: Colors.mutedForeground,
-    textAlign: "center",
-    lineHeight: 18,
-    paddingHorizontal: 8,
-  },
-  legalLink: { color: Colors.primary, fontWeight: "600" },
-});
+    legal: {
+      fontSize: 11,
+      color: colors.mutedForeground,
+      textAlign: "center",
+      lineHeight: 18,
+      paddingHorizontal: 8,
+    },
+    legalLink: { color: colors.primary, fontWeight: "600" },
+  });
+}

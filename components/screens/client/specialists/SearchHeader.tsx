@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, TextInput, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 
 export type ViewMode = "list" | "map";
@@ -25,6 +26,7 @@ export function SearchHeader({
   viewMode,
   onToggleView,
 }: Props) {
+  const colors = useThemeColors();
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 0 }}>
       {/* Back + title + toggle */}
@@ -36,20 +38,20 @@ export function SearchHeader({
             width: 40,
             height: 40,
             borderRadius: 16,
-            backgroundColor: Colors.cream,
+            backgroundColor: colors.cream,
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
           }}
         >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={20} color={colors.foreground} />
         </AnimatedIconButton>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: Colors.foreground, lineHeight: 22 }}>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: colors.foreground, lineHeight: 22 }}>
             Expertes ongulaires
           </Text>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
             {isFetching
               ? "Recherche en cours…"
               : `${count} experte${count > 1 ? "s" : ""} trouvée${count > 1 ? "s" : ""}`}
@@ -63,7 +65,7 @@ export function SearchHeader({
             flexDirection: "row",
             alignItems: "center",
             gap: 6,
-            backgroundColor: viewMode === "map" ? Colors.primary : Colors.cream,
+            backgroundColor: viewMode === "map" ? colors.primary : colors.cream,
             borderRadius: 14,
             paddingHorizontal: 12,
             paddingVertical: 8,
@@ -74,13 +76,13 @@ export function SearchHeader({
           <Ionicons
             name={viewMode === "list" ? "map-outline" : "list-outline"}
             size={16}
-            color={viewMode === "map" ? Colors.white : Colors.foreground}
+            color={viewMode === "map" ? "#FFFFFF" : colors.foreground}
           />
           <Text
             style={{
               fontSize: 12,
               fontWeight: "700",
-              color: viewMode === "map" ? Colors.white : Colors.foreground,
+              color: viewMode === "map" ? "#FFFFFF" : colors.foreground,
             }}
           >
             {viewMode === "list" ? "Carte" : "Liste"}
@@ -96,23 +98,23 @@ export function SearchHeader({
             alignItems: "center",
             height: 48,
             borderRadius: 16,
-            backgroundColor: Colors.cream,
+            backgroundColor: colors.cream,
             paddingHorizontal: 16,
             gap: 10,
             marginBottom: 16,
           }}
         >
           {isFetching ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Ionicons name="search-outline" size={16} color={Colors.mutedForeground} />
+            <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
           )}
           <TextInput
             value={searchInput}
             onChangeText={onChangeText}
             placeholder="Nom, spécialité, ville…"
-            placeholderTextColor={Colors.mutedForeground}
-            style={{ flex: 1, fontSize: 14, color: Colors.foreground }}
+            placeholderTextColor={colors.mutedForeground}
+            style={{ flex: 1, fontSize: 14, color: colors.foreground }}
             autoCorrect={false}
           />
           {searchInput.length > 0 && (
@@ -123,12 +125,12 @@ export function SearchHeader({
                 width: 24,
                 height: 24,
                 borderRadius: 12,
-                backgroundColor: withAlpha(Colors.foreground, 0.10),
+                backgroundColor: withAlpha(colors.foreground, 0.10),
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="close" size={12} color={Colors.foreground} />
+              <Ionicons name="close" size={12} color={colors.foreground} />
             </AnimatedIconButton>
           )}
         </View>

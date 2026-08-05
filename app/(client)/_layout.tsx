@@ -17,7 +17,7 @@ export default function ClientLayout() {
 
   return (
     <NativeTabs
-      blurEffect="systemUltraThinMaterialLight"
+      blurEffect="systemUltraThinMaterial"
       tintColor={Colors.primary}
       minimizeBehavior="never"
       labelVisibilityMode="unlabeled"

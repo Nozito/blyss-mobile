@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useAppTransition } from "@/contexts/TransitionContext";
@@ -25,6 +25,8 @@ function isRCPlan(value: string | undefined): value is RCPlan {
 export default function ProOnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ plan?: string; previousPlan?: string; preview?: string }>();
   const { activePlan, refreshActivePlan } = useRevenueCat();
   const { showTransition, hideTransition } = useAppTransition();
@@ -55,16 +57,16 @@ export default function ProOnboardingScreen() {
     if (isPurchaseFlow) {
       const plan = params.plan as RCPlan;
       const previousPlan = isRCPlan(params.previousPlan) ? params.previousPlan : null;
-      return buildOnboardingSlides(plan, previousPlan);
+      return buildOnboardingSlides(plan, previousPlan, colors);
     }
     if (isPreview) {
       const plan = isRCPlan(params.plan) ? params.plan : "signature";
-      return buildOnboardingSlides(plan, null);
+      return buildOnboardingSlides(plan, null, colors);
     }
     // Entrée à froid : on ne connaît pas le contexte d'achat, on part du
     // plan actif (ou "start" par défaut) comme si c'était la 1re fois.
-    return buildOnboardingSlides(activePlan ?? "start", null);
-  }, [isPurchaseFlow, isPreview, params.plan, params.previousPlan, activePlan]);
+    return buildOnboardingSlides(activePlan ?? "start", null, colors);
+  }, [isPurchaseFlow, isPreview, params.plan, params.previousPlan, activePlan, colors]);
 
   const isLast = currentSlide === slides.length - 1;
   const slide = slides[currentSlide] ?? slides[0];
@@ -129,8 +131,8 @@ export default function ProOnboardingScreen() {
         </View>
 
         <View style={styles.caption}>
-          <Text style={[styles.title, { color: Colors.foreground }]}>{slide.title}</Text>
-          <Text style={[styles.description, { color: Colors.mutedForeground }]}>
+          <Text style={[styles.title, { color: colors.foreground }]}>{slide.title}</Text>
+          <Text style={[styles.description, { color: colors.mutedForeground }]}>
             {slide.description}
           </Text>
         </View>
@@ -178,7 +180,7 @@ export default function ProOnboardingScreen() {
           <Ionicons
             name={isLast ? "rocket-outline" : "arrow-forward"}
             size={20}
-            color={Colors.white}
+            color="#FFFFFF"
           />
         </AnimatedPressable>
       </View>
@@ -186,121 +188,123 @@ export default function ProOnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  previewBadge: {
-    position: "absolute",
-    left: 24,
-    zIndex: 1,
-    backgroundColor: "#0A0A0F",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  previewBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.white,
-    letterSpacing: 0.3,
-  },
-  header: {
-    alignItems: "flex-end",
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-  },
-  skipBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  skipText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  slideContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28,
-    gap: 28,
-  },
-  mockupFrame: {
-    width: "82%",
-    aspectRatio: 0.82,
-    borderRadius: 32,
-    overflow: "hidden",
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: "rgba(9,9,11,0.06)",
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 6,
-  },
-  mockupImage: {
-    width: "100%",
-    height: "100%",
-  },
-  mockupPlaceholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mockupIconWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  caption: {
-    alignItems: "center",
-    paddingHorizontal: 8,
-    gap: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "center",
-    letterSpacing: -0.4,
-  },
-  description: {
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    gap: 20,
-  },
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-  },
-  dot: {
-    height: 7,
-    borderRadius: 4,
-  },
-  cta: {
-    height: 58,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 10,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 5,
-  },
-  ctaText: {
-    color: Colors.white,
-    fontWeight: "800",
-    fontSize: 17,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    previewBadge: {
+      position: "absolute",
+      left: 24,
+      zIndex: 1,
+      backgroundColor: "#0A0A0F",
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    previewBadgeText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#FFFFFF",
+      letterSpacing: 0.3,
+    },
+    header: {
+      alignItems: "flex-end",
+      paddingHorizontal: 24,
+      paddingBottom: 8,
+    },
+    skipBtn: {
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+    },
+    skipText: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    slideContent: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 28,
+      gap: 28,
+    },
+    mockupFrame: {
+      width: "82%",
+      aspectRatio: 0.82,
+      borderRadius: 32,
+      overflow: "hidden",
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.1,
+      shadowRadius: 24,
+      elevation: 6,
+    },
+    mockupImage: {
+      width: "100%",
+      height: "100%",
+    },
+    mockupPlaceholder: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    mockupIconWrap: {
+      width: 84,
+      height: 84,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    caption: {
+      alignItems: "center",
+      paddingHorizontal: 8,
+      gap: 8,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: "900",
+      textAlign: "center",
+      letterSpacing: -0.4,
+    },
+    description: {
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    footer: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      gap: 20,
+    },
+    dots: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 8,
+    },
+    dot: {
+      height: 7,
+      borderRadius: 4,
+    },
+    cta: {
+      height: 58,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 10,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.28,
+      shadowRadius: 14,
+      elevation: 5,
+    },
+    ctaText: {
+      color: "#FFFFFF",
+      fontWeight: "800",
+      fontSize: 17,
+    },
+  });
+}

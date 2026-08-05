@@ -19,7 +19,7 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { specialistsApi, clientApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useFavorites } from "@/hooks/useFavorites";
 import { resolveMediaUrl } from "@/lib/media";
@@ -67,6 +67,7 @@ interface Booking {
 
 // ── ShimmerBlock ──────────────────────────────────────────────────────────────
 function ShimmerBlock({ style }: { style: object }) {
+  const colors = useThemeColors();
   const translateX = useRef(new Animated.Value(-1)).current;
   const reduceMotion = useReducedMotion();
 
@@ -84,7 +85,7 @@ function ShimmerBlock({ style }: { style: object }) {
   }, [translateX, reduceMotion]);
 
   return (
-    <View style={[{ backgroundColor: Colors.muted, overflow: "hidden" }, style]}>
+    <View style={[{ backgroundColor: colors.muted, overflow: "hidden" }, style]}>
       {!reduceMotion && (
         <Animated.View
           style={[
@@ -122,10 +123,10 @@ const StyleSheetAbsoluteFillWide = {
 
 // ── SpecialistCardSkeleton ────────────────────────────────────────────────────
 function SpecialistCardSkeleton() {
+  const colors = useThemeColors();
   return (
     <View
-      style={[{ width: CARD_WIDTH, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
-      className="border-2 border-border bg-card"
+      style={[{ width: CARD_WIDTH, borderRadius: 24, overflow: "hidden", borderWidth: 2, borderColor: colors.border, backgroundColor: colors.card }, Shadows.card]}
     >
       <ShimmerBlock style={{ width: "100%", height: 192 }} />
       <View className="px-4 py-3 flex-row items-center justify-between">
@@ -149,6 +150,7 @@ function SpecialistCard({
   onToggleFav: (id: number) => void;
 }) {
   const router = useRouter();
+  const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   const heartScale = useRef(new Animated.Value(1)).current;
   const cardScale = useRef(new Animated.Value(1)).current;
@@ -203,11 +205,10 @@ function SpecialistCard({
       onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: pro.id } })}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[{ width: CARD_WIDTH, borderRadius: 24, overflow: "hidden" }, Shadows.card]}
-      className="border-2 border-border bg-card"
+      style={[{ width: CARD_WIDTH, borderRadius: 24, overflow: "hidden", borderWidth: 2, borderColor: colors.border, backgroundColor: colors.card }, Shadows.card]}
     >
       {/* Cover image */}
-      <View className="bg-muted" style={{ height: 192 }}>
+      <View style={{ height: 192, backgroundColor: colors.muted }}>
         {bannerUrl ? (
           <Image
             source={{ uri: bannerUrl }}
@@ -216,7 +217,7 @@ function SpecialistCard({
           />
         ) : (
           <LinearGradient
-            colors={["#FFE6F0", Colors.primary]}
+            colors={[colors.primaryLight, colors.primary]}
             style={{ width: "100%", height: "100%" }}
           />
         )}
@@ -244,7 +245,7 @@ function SpecialistCard({
             <Ionicons
               name={isFavorite ? "heart" : "heart-outline"}
               size={18}
-              color={isFavorite ? Colors.destructive : Colors.mutedForeground}
+              color={isFavorite ? colors.destructive : colors.mutedForeground}
             />
           </Animated.View>
         </Pressable>
@@ -281,25 +282,24 @@ function SpecialistCard({
       </View>
 
       {/* Footer */}
-      <View className="px-4 py-3 flex-row items-center justify-between">
-        <View className="flex-row gap-1 items-center">
-          <Ionicons name="location-outline" size={13} color={Colors.mutedForeground} />
-          <Text className="text-xs text-muted-foreground">{pro.city ?? "France"}</Text>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+          <Ionicons name="location-outline" size={13} color={colors.mutedForeground} />
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{pro.city ?? "France"}</Text>
         </View>
-        <View className="flex-row gap-3 items-center">
+        <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
           {pro.avg_rating != null && (
             <View
-              className="flex-row items-center gap-1 px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: Colors.warningLight }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.warningLight }}
             >
               <Ionicons name="star" size={12} color="#FACC15" />
-              <Text className="text-xs font-bold text-foreground">
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>
                 {pro.avg_rating != null ? Number(pro.avg_rating).toFixed(1) : "–"}
               </Text>
             </View>
           )}
-          <View className="w-7 h-7 rounded-lg bg-primary/10 items-center justify-center">
-            <Ionicons name="chevron-forward" size={15} color={Colors.primary} />
+          <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: `${colors.primary}1A`, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="chevron-forward" size={15} color={colors.primary} />
           </View>
         </View>
       </View>
@@ -311,6 +311,7 @@ function SpecialistCard({
 // ── BookingItem ───────────────────────────────────────────────────────────────
 function BookingItem({ booking }: { booking: Booking }) {
   const router = useRouter();
+  const colors = useThemeColors();
   const scale = useRef(new Animated.Value(1)).current;
   const proName =
     booking.pro_activity_name ??
@@ -330,31 +331,33 @@ function BookingItem({ booking }: { booking: Booking }) {
         onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })} // BLYSS-FIX: 1.3
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        className="bg-card rounded-2xl border-2 mb-3 p-4 flex-row gap-4 items-center"
-        style={[{ borderColor: "rgba(254,93,157,0.2)" }, Shadows.soft]}
+        style={[
+          { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: "rgba(254,93,157,0.2)", marginBottom: 12, padding: 16, flexDirection: "row", gap: 16, alignItems: "center" },
+          Shadows.soft,
+        ]}
       >
-        <View className="w-14 h-14 rounded-xl bg-primary items-center justify-center flex-shrink-0">
-          <Text className="text-white font-bold text-lg">
+        <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 18 }}>
             {(proName[0] ?? "?").toUpperCase()}
           </Text>
         </View>
-        <View className="flex-1">
-          <Text className="font-bold text-base text-foreground">{proName}</Text>
-          <Text className="text-sm text-muted-foreground mt-0.5">
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontWeight: "700", fontSize: 15, color: colors.foreground }}>{proName}</Text>
+          <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 2 }}>
             {booking.prestation_name ?? "Prestation"}
           </Text>
-          <View className="flex-row gap-3 mt-2 items-center">
-            <View className="flex-row gap-1 items-center">
-              <Ionicons name="calendar-outline" size={12} color={Colors.mutedForeground} />
-              <Text className="text-xs text-muted-foreground">{dateStr}</Text>
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 8, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+              <Ionicons name="calendar-outline" size={12} color={colors.mutedForeground} />
+              <Text style={{ fontSize: 11, color: colors.mutedForeground }}>{dateStr}</Text>
             </View>
-            <View className="flex-row gap-1 items-center">
-              <Ionicons name="time-outline" size={12} color={Colors.primary} />
-              <Text className="text-xs text-primary font-semibold">{timeStr}</Text>
+            <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+              <Ionicons name="time-outline" size={12} color={colors.primary} />
+              <Text style={{ fontSize: 11, color: colors.primary, fontWeight: "600" }}>{timeStr}</Text>
             </View>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.mutedForeground} />
+        <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
       </Pressable>
     </Animated.View>
   );
@@ -362,6 +365,7 @@ function BookingItem({ booking }: { booking: Booking }) {
 
 // ── EmptyBookingsPulse ────────────────────────────────────────────────────────
 function EmptyBookingsIcon() {
+  const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -382,7 +386,7 @@ function EmptyBookingsIcon() {
       style={{ transform: [{ scale: pulse }] }}
       className="w-12 h-12 rounded-2xl bg-primary items-center justify-center flex-shrink-0"
     >
-      <Ionicons name="calendar-outline" size={22} color={Colors.white} />
+      <Ionicons name="calendar-outline" size={22} color={colors.onColor} />
     </Animated.View>
   );
 }
@@ -390,6 +394,7 @@ function EmptyBookingsIcon() {
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function ClientHome() {
   const { user } = useAuth();
+  const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const reduceMotion = useReducedMotion();
@@ -427,7 +432,7 @@ export default function ClientHome() {
   };
   const searchBorderColor = searchBorderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [Colors.border, Colors.primary],
+    outputRange: [colors.border, colors.primary],
   });
 
   // ── Data queries ─────────────────────────────────────────────────────────
@@ -497,21 +502,21 @@ export default function ClientHome() {
       return (
         <Pressable
           onPress={() => handleCategoryPress(item)}
-          className={`px-3.5 py-2 rounded-xl border-2 active:opacity-80 ${
-            isSelected ? "bg-primary/10 border-primary" : "bg-card border-border"
-          }`}
+          style={{
+            paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 2,
+            backgroundColor: isSelected ? `${colors.primary}1A` : colors.card,
+            borderColor: isSelected ? colors.primary : colors.border,
+          }}
         >
           <Text
-            className={`text-xs font-semibold ${
-              isSelected ? "text-primary" : "text-foreground"
-            }`}
+            style={{ fontSize: 12, fontWeight: "600", color: isSelected ? colors.primary : colors.foreground }}
           >
             {item.label}
           </Text>
         </Pressable>
       );
     },
-    [selectedCategory, handleCategoryPress]
+    [selectedCategory, handleCategoryPress, colors]
   );
 
   const renderSpecialist = useCallback<ListRenderItem<Pro>>(
@@ -533,7 +538,7 @@ export default function ClientHome() {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <Animated.View
         style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
@@ -547,21 +552,21 @@ export default function ClientHome() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}
+            tintColor={colors.primary}
             progressViewOffset={10}
           />
         }
         ListHeaderComponent={
           <>
             {/* ── Header ─────────────────────────────────────────────────── */}
-            <View className="px-6 pt-4 pb-2">
-              <Text className="text-2xl font-black text-foreground tracking-tight">
+            <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
+              <Text style={{ fontSize: 24, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
                 {greetingPrefix}{" "}
                 <Animated.Text style={{ transform: [{ translateX: nameSlide }] }}>
                   {greetingName}
                 </Animated.Text>
               </Text>
-              <Text className="text-sm text-muted-foreground mt-0.5">
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 2 }}>
                 Trouve ta prochaine experte près de chez toi
               </Text>
             </View>
@@ -586,7 +591,7 @@ export default function ClientHome() {
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 12,
-                      backgroundColor: Colors.card,
+                      backgroundColor: colors.card,
                       borderWidth: 2,
                       borderColor: searchBorderColor,
                       borderRadius: 16,
@@ -595,8 +600,8 @@ export default function ClientHome() {
                     Shadows.card,
                   ]}
                 >
-                  <Ionicons name="search-outline" size={20} color={Colors.mutedForeground} />
-                  <Text className="text-muted-foreground text-sm flex-1">
+                  <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
+                  <Text style={{ flex: 1, fontSize: 13, color: colors.mutedForeground }}>
                     Experte, ville, prestation...
                   </Text>
                 </Animated.View>
@@ -615,12 +620,12 @@ export default function ClientHome() {
             />
 
             {/* ── Sélection Blyss header ─────────────────────────────────── */}
-            <View className="flex-row items-center justify-between px-6 mb-3">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, marginBottom: 12 }}>
               <View>
-                <View className="flex-row items-center gap-1.5">
-                  <Text className="text-xl font-bold text-foreground">Sélection Blyss</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground }}>Sélection Blyss</Text>
                 </View>
-                <Text className="text-xs text-muted-foreground mt-0.5">
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   {pros.length} experte{pros.length > 1 ? "s" : ""} disponible{pros.length > 1 ? "s" : ""}
                 </Text>
               </View>
@@ -630,7 +635,7 @@ export default function ClientHome() {
                 style={Shadows.soft}
               >
                 <Text className="text-xs font-semibold text-white">Tout voir</Text>
-                <Ionicons name="chevron-forward" size={12} color={Colors.white} />
+                <Ionicons name="chevron-forward" size={12} color={colors.onColor} />
               </Pressable>
             </View>
 
@@ -660,30 +665,30 @@ export default function ClientHome() {
             )}
 
             {/* ── Tes nails à venir ──────────────────────────────────────── */}
-            <View className="px-6 mt-8 mb-3">
-              <Text className="text-xl font-bold text-foreground">Tes nails à venir</Text>
-              <Text className="text-xs text-muted-foreground mt-0.5">
+            <View style={{ paddingHorizontal: 24, marginTop: 32, marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground }}>Tes nails à venir</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                 Tes prochains rendez-vous beauté
               </Text>
             </View>
 
             {upcomingBookings.length === 0 ? (
               <View
-                className="mx-6 p-5 rounded-2xl"
                 style={{
-                  backgroundColor: "rgba(254,93,157,0.05)",
+                  marginHorizontal: 24, padding: 20, borderRadius: 16,
+                  backgroundColor: `${colors.primary}0D`,
                   borderWidth: 2,
                   borderStyle: "dashed",
-                  borderColor: "rgba(254,93,157,0.3)",
+                  borderColor: `${colors.primary}4D`,
                 }}
               >
                 <View className="flex-row gap-4 items-start">
                   <EmptyBookingsIcon />
-                  <View className="flex-1">
-                    <Text className="font-semibold text-base text-foreground">
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: "600", fontSize: 15, color: colors.foreground }}>
                       Aucun rendez-vous prévu
                     </Text>
-                    <Text className="text-xs text-muted-foreground mt-1 leading-4">
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, lineHeight: 16 }}>
                       Réserve dès maintenant auprès d'une experte près de chez toi
                     </Text>
                     <Pressable

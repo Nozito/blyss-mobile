@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { ActivityIndicator, Animated, Pressable, Text, type ViewStyle } from "react-native";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface LoadingButtonProps {
   loading: boolean;
@@ -12,13 +12,6 @@ interface LoadingButtonProps {
   fullWidth?: boolean;
 }
 
-const BG: Record<string, string> = {
-  primary: Colors.primary,
-  destructive: Colors.destructive,
-  success: Colors.success,
-  ghost: "transparent",
-};
-
 export function LoadingButton({
   loading,
   onPress,
@@ -28,8 +21,15 @@ export function LoadingButton({
   style,
   fullWidth = true,
 }: LoadingButtonProps) {
+  const colors = useThemeColors();
+  const BG: Record<string, string> = {
+    primary: colors.primary,
+    destructive: colors.destructive,
+    success: colors.success,
+    ghost: "transparent",
+  };
   const isDisabled = disabled || loading;
-  const bg = BG[variant] ?? Colors.primary;
+  const bg = BG[variant] ?? colors.primary;
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () =>
@@ -52,7 +52,7 @@ export function LoadingButton({
             borderRadius: 16,
             backgroundColor: variant === "ghost" ? "transparent" : bg,
             borderWidth: variant === "ghost" ? 1.5 : 0,
-            borderColor: variant === "ghost" ? Colors.border : "transparent",
+            borderColor: variant === "ghost" ? colors.border : "transparent",
             alignItems: "center",
             justifyContent: "center",
             opacity: isDisabled ? 0.6 : 1,
@@ -61,13 +61,13 @@ export function LoadingButton({
         ]}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={variant === "ghost" ? Colors.foreground : Colors.white} />
+          <ActivityIndicator size="small" color={variant === "ghost" ? colors.foreground : "#FFFFFF"} />
         ) : (
           <Text
             style={{
               fontSize: 15,
               fontWeight: "700",
-              color: variant === "ghost" ? Colors.foreground : Colors.white,
+              color: variant === "ghost" ? colors.foreground : "#FFFFFF",
             }}
           >
             {label}

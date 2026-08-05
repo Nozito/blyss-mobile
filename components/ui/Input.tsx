@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, TextInput, Text, Pressable, Animated, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -24,6 +24,7 @@ export function Input({
   className: _,
   ...props
 }: InputProps) {
+  const colors = useThemeColors();
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -52,15 +53,15 @@ export function Input({
 
   const borderColor = focusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [error ? Colors.destructive : Colors.border, error ? Colors.destructive : Colors.primary],
+    outputRange: [error ? colors.destructive : colors.border, error ? colors.destructive : colors.primary],
   });
 
-  const iconColor = isFocused ? Colors.primary : Colors.mutedForeground;
+  const iconColor = isFocused ? colors.primary : colors.mutedForeground;
 
   return (
     <View style={{ gap: 6 }}>
       {label && (
-        <Text style={{ fontSize: 13, fontWeight: '600', color: isFocused ? Colors.primary : '#3F3F46', letterSpacing: 0.1 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: isFocused ? colors.primary : colors.foreground, letterSpacing: 0.1 }}>
           {label}
         </Text>
       )}
@@ -71,7 +72,7 @@ export function Input({
           borderRadius: 14,
           borderWidth: 1.5,
           borderColor,
-          backgroundColor: isFocused ? Colors.white : Colors.cream,
+          backgroundColor: isFocused ? colors.white : colors.cream,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
@@ -90,8 +91,8 @@ export function Input({
           onFocus={handleFocus}
           onBlur={handleBlur}
           secureTextEntry={secure && !showPassword}
-          style={{ flex: 1, fontSize: 14.5, color: Colors.foreground, padding: 0, margin: 0 }}
-          placeholderTextColor={Colors.inputPlaceholder}
+          style={{ flex: 1, fontSize: 14.5, color: colors.foreground, padding: 0, margin: 0 }}
+          placeholderTextColor={colors.inputPlaceholder}
           autoCapitalize={props.autoCapitalize ?? 'none'}
           autoCorrect={props.autoCorrect ?? false}
           accessibilityLabel={label}
@@ -122,12 +123,12 @@ export function Input({
       </Animated.View>
 
       {error && (
-        <Text style={{ fontSize: 11.5, color: Colors.destructive, paddingLeft: 2, fontWeight: '500' }}>
+        <Text style={{ fontSize: 11.5, color: colors.destructive, paddingLeft: 2, fontWeight: '500' }}>
           {error}
         </Text>
       )}
       {!error && hint && (
-        <Text style={{ fontSize: 11.5, color: Colors.mutedForeground, paddingLeft: 2 }}>
+        <Text style={{ fontSize: 11.5, color: colors.mutedForeground, paddingLeft: 2 }}>
           {hint}
         </Text>
       )}

@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Animated } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -33,11 +34,13 @@ const PLAN_ICON: Record<RCPlan, keyof typeof Ionicons.glyphMap> = {
   signature: "sparkles-outline",
 };
 
-const PLAN_COLOR: Record<RCPlan, string> = {
-  start: Colors.primary,
-  serenite: Colors.pro,
-  signature: Colors.secondary,
-};
+function getPlanColor(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, string> {
+  return {
+    start: colors.primary,
+    serenite: colors.pro,
+    signature: colors.secondary,
+  };
+}
 
 const PLAN_NEXT_STEP: Record<RCPlan, string> = {
   start: "Ajoute tes premiers créneaux pour commencer à recevoir des réservations.",
@@ -48,6 +51,8 @@ const PLAN_NEXT_STEP: Record<RCPlan, string> = {
 export default function ProSubscriptionSuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ plan?: string; previousPlan?: string; preview?: string }>();
   const plan = isRCPlan(params.plan) ? params.plan : "start";
   const previousPlan = isRCPlan(params.previousPlan) ? params.previousPlan : null;
@@ -56,15 +61,15 @@ export default function ProSubscriptionSuccessScreen() {
   const reduceMotion = useReducedMotion();
   const badgeScale = useRef(new Animated.Value(reduceMotion ? 1 : 0.6)).current;
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const planColor = PLAN_COLOR[plan];
+  const planColor = getPlanColor(colors)[plan];
 
   // Aperçu concret de ce qui arrive juste après, plutôt qu'un badge décoratif —
   // ça prépare la pro à l'onboarding qui suit au lieu de la surprendre.
   const upcomingSlides = useMemo(() => {
-    if (isPreview) return buildOnboardingSlides(plan, null).slice(0, -1);
+    if (isPreview) return buildOnboardingSlides(plan, null, colors).slice(0, -1);
     if (!hasNewFeatures(plan, previousPlan)) return [];
-    return buildOnboardingSlides(plan, previousPlan).slice(0, -1);
-  }, [isPreview, plan, previousPlan]);
+    return buildOnboardingSlides(plan, previousPlan, colors).slice(0, -1);
+  }, [isPreview, plan, previousPlan, colors]);
 
   useEffect(() => {
     Animated.parallel([
@@ -82,7 +87,7 @@ export default function ProSubscriptionSuccessScreen() {
   }, [isPreview]);
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View
         style={[
           styles.content,
@@ -95,14 +100,14 @@ export default function ProSubscriptionSuccessScreen() {
             { backgroundColor: planColor, shadowColor: planColor, transform: [{ scale: badgeScale }] },
           ]}
         >
-          <Ionicons name={PLAN_ICON[plan]} size={26} color={Colors.white} />
+          <Ionicons name={PLAN_ICON[plan]} size={26} color="#FFFFFF" />
         </Animated.View>
 
         <Text style={[styles.eyebrow, { color: planColor }]}>Abonnement confirmé</Text>
-        <Text style={[styles.title, { color: Colors.foreground }]}>
+        <Text style={[styles.title, { color: colors.foreground }]}>
           Formule {PLAN_LABELS[plan]} activée
         </Text>
-        <Text style={[styles.body, { color: Colors.mutedForeground }]}>
+        <Text style={[styles.body, { color: colors.mutedForeground }]}>
           {PLAN_NEXT_STEP[plan]}
         </Text>
 
@@ -150,97 +155,99 @@ export default function ProSubscriptionSuccessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  badge: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.24,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "900",
-    textAlign: "center",
-    marginBottom: 12,
-    letterSpacing: -0.4,
-  },
-  body: {
-    fontSize: 15,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 32,
-    maxWidth: 280,
-  },
-  upcoming: {
-    width: "100%",
-    marginBottom: 32,
-  },
-  upcomingLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    color: Colors.mutedForeground,
-    textAlign: "center",
-    marginBottom: 14,
-  },
-  upcomingRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 14,
-    marginBottom: 14,
-  },
-  upcomingItem: {
-    alignItems: "center",
-    width: 76,
-    gap: 8,
-  },
-  upcomingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  upcomingText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: Colors.mutedForeground,
-    textAlign: "center",
-    lineHeight: 14,
-  },
-  cta: {
-    height: 52,
-    paddingHorizontal: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ctaText: {
-    color: Colors.white,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+    badge: {
+      width: 56,
+      height: 56,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 24,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.24,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    eyebrow: {
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+      marginBottom: 10,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: "900",
+      textAlign: "center",
+      marginBottom: 12,
+      letterSpacing: -0.4,
+    },
+    body: {
+      fontSize: 15,
+      textAlign: "center",
+      lineHeight: 22,
+      marginBottom: 32,
+      maxWidth: 280,
+    },
+    upcoming: {
+      width: "100%",
+      marginBottom: 32,
+    },
+    upcomingLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+      color: colors.mutedForeground,
+      textAlign: "center",
+      marginBottom: 14,
+    },
+    upcomingRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 14,
+      marginBottom: 14,
+    },
+    upcomingItem: {
+      alignItems: "center",
+      width: 76,
+      gap: 8,
+    },
+    upcomingIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    upcomingText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.mutedForeground,
+      textAlign: "center",
+      lineHeight: 14,
+    },
+    cta: {
+      height: 52,
+      paddingHorizontal: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ctaText: {
+      color: "#FFFFFF",
+      fontWeight: "700",
+      fontSize: 15,
+    },
+  });
+}

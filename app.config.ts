@@ -10,7 +10,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "nozito",
   version: "1.0.0",
   orientation: "portrait",
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "automatic",
   backgroundColor: "#FFF0F5",
 
   icon: "./assets/icon-appstore.png",
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     buildNumber: "1",
     supportsTablet: false,
     requireFullScreen: true,
-    userInterfaceStyle: "light",
+    userInterfaceStyle: "automatic",
     associatedDomains: ["applinks:blyssapp.fr"],
     entitlements: {
       "com.apple.developer.applesignin": ["Default"],
@@ -117,12 +117,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         // Image statique du "B" affichée par l'OS avant que le JS ne démarre.
         // Le logo animé (dessin → remplissage) ne peut vivre qu'en JS — c'est
         // ce même B qui prend le relais dès que le bundle est prêt (voir
-        // app/_layout.tsx → LaunchSplash). La couleur DOIT matcher
-        // constants/splash.ts pour éviter un flash au hand-off.
+        // app/_layout.tsx → LaunchSplash). Les couleurs (light/dark) DOIVENT
+        // matcher constants/splash.ts pour éviter un flash au hand-off.
         image: "./assets/splash.png",
         imageWidth: 180,
         resizeMode: "contain",
         backgroundColor: "#FFF0F5",
+        dark: {
+          image: "./assets/splash.png",
+          backgroundColor: "#0A0A0B",
+        },
       },
     ],
     "expo-secure-store",

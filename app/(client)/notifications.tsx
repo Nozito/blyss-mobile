@@ -16,7 +16,8 @@ import * as Haptics from "expo-haptics";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -77,19 +78,23 @@ interface PrefItem {
   iconColor: string;
 }
 
-const PREF_SECTIONS: Array<{ title: string; items: PrefItem[] }> = [
-  {
-    title: "Rendez-vous",
-    items: [
-      { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: withAlpha(Colors.primary, 0.13), iconColor: Colors.primary },
-      { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: withAlpha(Colors.warning, 0.13), iconColor: Colors.warning },
-      { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: withAlpha("#06B6D4", 0.13), iconColor: "#06B6D4" },
-    ],
-  },
-];
+function getPrefSections(colors: ReturnType<typeof useThemeColors>): Array<{ title: string; items: PrefItem[] }> {
+  return [
+    {
+      title: "Rendez-vous",
+      items: [
+        { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: withAlpha(colors.primary, 0.13), iconColor: colors.primary },
+        { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: withAlpha(colors.warning, 0.13), iconColor: colors.warning },
+        { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: withAlpha("#06B6D4", 0.13), iconColor: "#06B6D4" },
+      ],
+    },
+  ];
+}
 
 export default function ClientNotificationsScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
+  const PREF_SECTIONS = useMemo(() => getPrefSections(colors), [colors]);
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const [tab, setTab] = useState<Tab>("activity");
   const listRef = useRef(null);
@@ -143,12 +148,12 @@ export default function ClientNotificationsScreen() {
   const grouped = useMemo(() => groupByDay(notifications), [notifications]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 0, paddingBottom: 16 }}>
-          <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
           {tab === "activity" && unreadCount > 0 && (
             <Pressable
               onPress={() => {
@@ -157,13 +162,13 @@ export default function ClientNotificationsScreen() {
               }}
               hitSlop={8}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Tout marquer comme lu</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Tout marquer comme lu</Text>
             </Pressable>
           )}
         </View>
 
         {/* Segmented control */}
-        <View style={{ flexDirection: "row", backgroundColor: Colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
+        <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
           {([["activity", "Activité"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
             <AnimatedPressable
               key={id}
@@ -173,13 +178,13 @@ export default function ClientNotificationsScreen() {
               }}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
-                backgroundColor: tab === id ? Colors.white : "transparent",
-                shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 },
+                backgroundColor: tab === id ? colors.white : "transparent",
+                shadowColor: colors.black, shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: tab === id ? 0.08 : 0, shadowRadius: 4,
                 elevation: tab === id ? 2 : 0,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? Colors.foreground : Colors.mutedForeground }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? colors.foreground : colors.mutedForeground }}>
                 {label}
               </Text>
             </AnimatedPressable>
@@ -202,7 +207,7 @@ export default function ClientNotificationsScreen() {
               contentContainerStyle={{ paddingBottom: 100 }}
               renderItem={({ item: group }) => (
                 <View style={{ marginBottom: 20 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
                     {group.label}
                   </Text>
                   <View style={{ gap: 6 }}>
@@ -232,9 +237,9 @@ export default function ClientNotificationsScreen() {
                           style={{
                             flexDirection: "row", alignItems: "flex-start", gap: 12,
                             padding: 14, borderRadius: 16,
-                            backgroundColor: notif.is_read ? Colors.muted : Colors.white,
+                            backgroundColor: notif.is_read ? colors.muted : colors.white,
                             borderWidth: notif.is_read ? 0 : 1,
-                            borderColor: withAlpha(Colors.primary, 0.10),
+                            borderColor: withAlpha(colors.primary, 0.10),
                             ...(notif.is_read ? {} : Shadows.card),
                           }}
                         >
@@ -242,15 +247,15 @@ export default function ClientNotificationsScreen() {
                             <Ionicons name={cfg.icon} size={17} color={cfg.color} />
                           </View>
                           <View style={{ flex: 1, paddingTop: 2 }}>
-                            <Text style={{ fontSize: 13, lineHeight: 18, color: notif.is_read ? Colors.mutedForeground : Colors.foreground, fontWeight: notif.is_read ? "400" : "600" }} numberOfLines={2}>
+                            <Text style={{ fontSize: 13, lineHeight: 18, color: notif.is_read ? colors.mutedForeground : colors.foreground, fontWeight: notif.is_read ? "400" : "600" }} numberOfLines={2}>
                               {notif.message}
                             </Text>
-                            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 6, fontWeight: "500" }}>
+                            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6, fontWeight: "500" }}>
                               {formatRelTime(notif.created_at)}
                             </Text>
                           </View>
                           {!notif.is_read && (
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, marginTop: 6, flexShrink: 0 }} />
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginTop: 6, flexShrink: 0 }} />
                           )}
                         </AnimatedPressable>
                       );
@@ -262,12 +267,12 @@ export default function ClientNotificationsScreen() {
           )
         ) : prefsLoading ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator color={Colors.primary} />
+            <ActivityIndicator color={colors.primary} />
           </View>
         ) : prefsError ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <Ionicons name="wifi-outline" size={32} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 14, color: Colors.mutedForeground, textAlign: "center" }}>
+            <Ionicons name="wifi-outline" size={32} color={colors.mutedForeground} />
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, textAlign: "center" }}>
               Impossible de charger les préférences.
             </Text>
           </View>
@@ -281,9 +286,9 @@ export default function ClientNotificationsScreen() {
             renderItem={() => (
               <View>
                 {/* Bandeau info */}
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: withAlpha(Colors.primary, 0.08), borderRadius: 12, padding: 14, marginBottom: 24 }}>
-                  <Ionicons name="notifications-outline" size={18} color={Colors.primary} />
-                  <Text style={{ flex: 1, fontSize: 13, color: Colors.primary, lineHeight: 18 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: withAlpha(colors.primary, 0.08), borderRadius: 12, padding: 14, marginBottom: 24 }}>
+                  <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+                  <Text style={{ flex: 1, fontSize: 13, color: colors.primary, lineHeight: 18 }}>
                     Choisis les alertes que tu souhaites recevoir.{" "}
                     Tu peux modifier tes préférences à tout moment.
                   </Text>
@@ -292,27 +297,27 @@ export default function ClientNotificationsScreen() {
                 {/* Sections */}
                 {PREF_SECTIONS.map((section) => (
                   <View key={section.title} style={{ marginBottom: 24 }}>
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
                       {section.title}
                     </Text>
-                    <View style={{ backgroundColor: Colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
+                    <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
                       {section.items.map((item, idx) => (
                         <View
                           key={item.key}
-                          style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14, borderBottomWidth: idx < section.items.length - 1 ? 1 : 0, borderBottomColor: "#F3F4F6" }}
+                          style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14, borderBottomWidth: idx < section.items.length - 1 ? 1 : 0, borderBottomColor: colors.muted }}
                         >
                           <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: item.iconBg, alignItems: "center", justifyContent: "center" }}>
                             <Ionicons name={item.icon} size={20} color={item.iconColor} />
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>{item.label}</Text>
-                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{item.subtitle}</Text>
+                            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>{item.label}</Text>
+                            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>{item.subtitle}</Text>
                           </View>
                           <Switch
                             value={preferences[item.key]}
                             onValueChange={() => togglePref(item.key)}
-                            trackColor={{ false: Colors.border, true: Colors.primary }}
-                            thumbColor={Colors.white}
+                            trackColor={{ false: colors.border, true: colors.primary }}
+                            thumbColor={colors.onColor}
                             disabled={savingKey === item.key}
                           />
                         </View>
@@ -323,29 +328,29 @@ export default function ClientNotificationsScreen() {
 
                 {/* Système */}
                 <View style={{ marginBottom: 24 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
                     Système
                   </Text>
-                  <View style={{ backgroundColor: Colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border }}>
+                  <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
                     <AnimatedPressable
                       onPress={() => Linking.openSettings()}
                       style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14 }}
                     >
-                      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" }}>
-                        <Ionicons name="settings-outline" size={20} color={Colors.mutedForeground} />
+                      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="settings-outline" size={20} color={colors.mutedForeground} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>Réglages système</Text>
-                        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>Activer les notifications pour Blyss</Text>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Réglages système</Text>
+                        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>Activer les notifications pour Blyss</Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
+                      <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
                     </AnimatedPressable>
                   </View>
                 </View>
 
                 {saveSuccess && (
                   <View style={{ alignItems: "center", paddingVertical: 8 }}>
-                    <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>Préférences à jour ✓</Text>
+                    <Text style={{ fontSize: 14, color: colors.mutedForeground }}>Préférences à jour ✓</Text>
                   </View>
                 )}
               </View>

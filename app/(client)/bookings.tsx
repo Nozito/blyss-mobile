@@ -19,7 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { clientApi, nailTechApi, type WaitingListEntry } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
@@ -74,6 +74,7 @@ function RescheduleModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const colors = useThemeColors();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ id: number; time: string } | null>(null);
   const [slots, setSlots] = useState<Array<{ id: number; time: string }>>([]);
@@ -128,17 +129,17 @@ function RescheduleModal({
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlay }}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlay }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ backgroundColor: Colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32, maxHeight: "80%" }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 }} />
+        <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32, maxHeight: "80%" }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
             </View>
             <View>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Reporter le RDV</Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{booking.prestation_name}</Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>Reporter le RDV</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{booking.prestation_name}</Text>
             </View>
           </View>
 
@@ -148,11 +149,11 @@ function RescheduleModal({
                 const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
                 const active = selectedDate === key;
                 return (
-                  <AnimatedPressable key={key} onPress={() => handleSelectDate(date)} style={{ width: 52, paddingVertical: 10, borderRadius: 14, alignItems: "center", backgroundColor: active ? Colors.primary : Colors.muted }}>
-                    <Text style={{ fontSize: 10, fontWeight: "600", color: active ? "rgba(255,255,255,0.8)" : Colors.mutedForeground, marginBottom: 2 }}>
+                  <AnimatedPressable key={key} onPress={() => handleSelectDate(date)} style={{ width: 52, paddingVertical: 10, borderRadius: 14, alignItems: "center", backgroundColor: active ? colors.primary : colors.muted }}>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: active ? "rgba(255,255,255,0.8)" : colors.mutedForeground, marginBottom: 2 }}>
                       {date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3)}
                     </Text>
-                    <Text style={{ fontSize: 16, fontWeight: "800", color: active ? Colors.white : Colors.foreground }}>{date.getDate()}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: "800", color: active ? colors.onColor : colors.foreground }}>{date.getDate()}</Text>
                   </AnimatedPressable>
                 );
               })}
@@ -161,18 +162,18 @@ function RescheduleModal({
 
           {selectedDate && (
             <View style={{ marginBottom: 20, minHeight: 60 }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.mutedForeground, marginBottom: 8 }}>Créneaux disponibles</Text>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: colors.mutedForeground, marginBottom: 8 }}>Créneaux disponibles</Text>
               {loadingSlots ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : slots.length === 0 ? (
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center", paddingVertical: 12, backgroundColor: Colors.muted, borderRadius: 12 }}>Aucun créneau disponible ce jour</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center", paddingVertical: 12, backgroundColor: colors.muted, borderRadius: 12 }}>Aucun créneau disponible ce jour</Text>
               ) : (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                   {slots.map((slot) => {
                     const active = selectedSlot?.id === slot.id;
                     return (
-                      <AnimatedPressable key={slot.id} onPress={() => setSelectedSlot(slot)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: active ? Colors.primary : Colors.muted }}>
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: active ? Colors.white : Colors.foreground }}>{slot.time}</Text>
+                      <AnimatedPressable key={slot.id} onPress={() => setSelectedSlot(slot)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: active ? colors.primary : colors.muted }}>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: active ? colors.onColor : colors.foreground }}>{slot.time}</Text>
                       </AnimatedPressable>
                     );
                   })}
@@ -183,11 +184,11 @@ function RescheduleModal({
 
           {rescheduleError && <View style={{ marginBottom: 12 }}><ErrorMessage message={rescheduleError} /></View>}
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <AnimatedPressable onPress={onClose} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Annuler</Text>
+            <AnimatedPressable onPress={onClose} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
             </AnimatedPressable>
-            <AnimatedPressable onPress={handleConfirm} disabled={!selectedSlot || isSubmitting} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", opacity: !selectedSlot || isSubmitting ? 0.5 : 1 }}>
-              {isSubmitting ? <ActivityIndicator size="small" color={Colors.white} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Confirmer</Text>}
+            <AnimatedPressable onPress={handleConfirm} disabled={!selectedSlot || isSubmitting} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", opacity: !selectedSlot || isSubmitting ? 0.5 : 1 }}>
+              {isSubmitting ? <ActivityIndicator size="small" color={colors.onColor} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Confirmer</Text>}
             </AnimatedPressable>
           </View>
         </View>
@@ -210,6 +211,7 @@ function BookingCard({
   onCancel?: (id: number) => void;
 }) {
   const router = useRouter();
+  const colors = useThemeColors();
   const proName = booking.activity_name || `${booking.pro_first_name} ${booking.pro_last_name}`.trim() || "Professionnel";
 
   if (isUpcoming) {
@@ -218,76 +220,76 @@ function BookingCard({
       <AnimatedPressable
         onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })}
         accessibilityLabel={`Réservation avec ${proName}, ${booking.prestation_name}, ${fmtDate(booking.start_datetime)} à ${fmtTime(booking.start_datetime)}`}
-        style={{ backgroundColor: Colors.white, borderRadius: 20, overflow: "hidden", borderWidth: 2, borderColor: `${Colors.primary}33`, marginBottom: 12, ...Shadows.card }}
+        style={{ backgroundColor: colors.white, borderRadius: 20, overflow: "hidden", borderWidth: 2, borderColor: `${colors.primary}33`, marginBottom: 12, ...Shadows.card }}
       >
         <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
           <View style={{ position: "relative" }}>
-            <View style={{ width: 60, height: 60, borderRadius: 16, overflow: "hidden", backgroundColor: Colors.primaryLight }}>
+            <View style={{ width: 60, height: 60, borderRadius: 16, overflow: "hidden", backgroundColor: colors.primaryLight }}>
               {booking.profile_photo ? (
                 <Image source={{ uri: booking.profile_photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
               ) : (
                 <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.primary }}>{proName[0]}</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "800", color: colors.primary }}>{proName[0]}</Text>
                 </View>
               )}
             </View>
-            <View style={{ position: "absolute", top: -3, right: -3, width: 18, height: 18, borderRadius: 9, backgroundColor: booking.status === "pending" ? Colors.warning : Colors.success, borderWidth: 2, borderColor: Colors.white, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name={booking.status === "pending" ? "time" : "checkmark"} size={10} color={Colors.white} />
+            <View style={{ position: "absolute", top: -3, right: -3, width: 18, height: 18, borderRadius: 9, backgroundColor: booking.status === "pending" ? colors.warning : colors.success, borderWidth: 2, borderColor: colors.white, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name={booking.status === "pending" ? "time" : "checkmark"} size={10} color={colors.onColor} />
             </View>
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, flexShrink: 1 }} numberOfLines={1}>{proName}</Text>
-              <Ionicons name="chevron-forward" size={18} color={Colors.mutedForeground} />
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground, flexShrink: 1 }} numberOfLines={1}>{proName}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground, flexShrink: 1 }} numberOfLines={1}>{booking.prestation_name}</Text>
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>·</Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>{Number(booking.price).toFixed(2)}€</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, flexShrink: 1 }} numberOfLines={1}>{booking.prestation_name}</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>·</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>{Number(booking.price).toFixed(2)}€</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {relativeDay && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.white }}>{relativeDay}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.onColor }}>{relativeDay}</Text>
                 </View>
               )}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.muted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
-                <Text style={{ fontSize: 11, fontWeight: "500", color: Colors.mutedForeground }}>{fmtDate(booking.start_datetime)}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.muted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <Ionicons name="calendar-outline" size={11} color={colors.mutedForeground} />
+                <Text style={{ fontSize: 11, fontWeight: "500", color: colors.mutedForeground }}>{fmtDate(booking.start_datetime)}</Text>
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                <Ionicons name="time-outline" size={11} color={Colors.primary} />
-                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.primary }}>{fmtTime(booking.start_datetime)}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <Ionicons name="time-outline" size={11} color={colors.primary} />
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.primary }}>{fmtTime(booking.start_datetime)}</Text>
               </View>
               {booking.status === "pending" && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.warningLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                  <Ionicons name="time-outline" size={11} color={Colors.warningText} />
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.warningText }}>En attente de confirmation</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.warningLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                  <Ionicons name="time-outline" size={11} color={colors.warningText} />
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.warningText }}>En attente de confirmation</Text>
                 </View>
               )}
             </View>
           </View>
         </View>
         {onReschedule && onCancel && (
-          <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: Colors.border }}>
+          <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: colors.border }}>
             <AnimatedPressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 onReschedule(booking);
               }}
               accessibilityLabel="Reporter ce rendez-vous"
-              style={{ flex: 1, paddingVertical: 13, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, borderRightWidth: 1, borderRightColor: Colors.border }}
+              style={{ flex: 1, paddingVertical: 13, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, borderRightWidth: 1, borderRightColor: colors.border }}
             >
-              <Ionicons name="calendar-clear-outline" size={15} color={Colors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Reporter</Text>
+              <Ionicons name="calendar-clear-outline" size={15} color={colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Reporter</Text>
             </AnimatedPressable>
             <AnimatedPressable
               onPress={() => onCancel(booking.id)}
               accessibilityLabel="Annuler ce rendez-vous"
               style={{ flex: 1, paddingVertical: 13, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
             >
-              <Ionicons name="close-circle-outline" size={15} color={Colors.destructive} />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.destructive }}>Annuler</Text>
+              <Ionicons name="close-circle-outline" size={15} color={colors.destructive} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.destructive }}>Annuler</Text>
             </AnimatedPressable>
           </View>
         )}
@@ -303,56 +305,56 @@ function BookingCard({
       onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })}
       accessibilityLabel={`Réservation avec ${proName}, ${booking.prestation_name}, ${fmtDate(booking.start_datetime)}, ${isCompleted ? "terminé" : isNoShow ? "non honoré" : "annulé"}`}
       style={{
-        backgroundColor: Colors.white,
+        backgroundColor: colors.white,
         borderRadius: 18,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         marginBottom: 8,
         opacity: isCancelled ? 0.85 : 1,
         ...Shadows.card,
       }}
     >
       <View style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", backgroundColor: Colors.muted, opacity: 0.75 }}>
+        <View style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", backgroundColor: colors.muted, opacity: 0.75 }}>
           {booking.profile_photo ? (
             <Image source={{ uri: booking.profile_photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
           ) : (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: Colors.primary }}>{proName[0]}</Text>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}>{proName[0]}</Text>
             </View>
           )}
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }} numberOfLines={1}>{proName}</Text>
-            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: isCompleted ? Colors.successLight : Colors.destructiveLight }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: isCompleted ? Colors.successText : Colors.destructiveText }}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>{proName}</Text>
+            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: isCompleted ? colors.successLight : colors.destructiveLight }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: isCompleted ? colors.successText : colors.destructiveText }}>
                 {isCompleted ? "✓ Terminé" : isNoShow ? "Non honoré" : "✕ Annulé"}
               </Text>
             </View>
           </View>
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 4 }} numberOfLines={1}>{booking.prestation_name} · {Number(booking.price).toFixed(2)}€</Text>
+          <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 4 }} numberOfLines={1}>{booking.prestation_name} · {Number(booking.price).toFixed(2)}€</Text>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Ionicons name="calendar-outline" size={10} color={Colors.mutedForeground} />
-              <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>{fmtDate(booking.start_datetime)}</Text>
+              <Ionicons name="calendar-outline" size={10} color={colors.mutedForeground} />
+              <Text style={{ fontSize: 10, color: colors.mutedForeground }}>{fmtDate(booking.start_datetime)}</Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Ionicons name="time-outline" size={10} color={Colors.mutedForeground} />
-              <Text style={{ fontSize: 10, color: Colors.mutedForeground }}>{fmtTime(booking.start_datetime)}</Text>
+              <Ionicons name="time-outline" size={10} color={colors.mutedForeground} />
+              <Text style={{ fontSize: 10, color: colors.mutedForeground }}>{fmtTime(booking.start_datetime)}</Text>
             </View>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+        <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
       </View>
       {isCompleted && (
-        <View style={{ borderTopWidth: 1, borderTopColor: Colors.border }}>
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
           <AnimatedPressable
             onPress={() => router.push({ pathname: "/specialist/[id]", params: { id: booking.pro_id } })}
             accessibilityLabel={`Craquer à nouveau pour ${proName}`}
             style={{ paddingVertical: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
           >
-            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primary }}>Craquer à nouveau pour elle</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>Craquer à nouveau pour elle</Text>
           </AnimatedPressable>
         </View>
       )}
@@ -363,6 +365,7 @@ function BookingCard({
 // ── Waiting List ──────────────────────────────────────────────────────────────
 
 function WaitingListSection() {
+  const colors = useThemeColors();
   const queryClient = useQueryClient();
   const { data: entries = [] } = useQuery<WaitingListEntry[]>({
     queryKey: ["client-waiting-list"],
@@ -394,28 +397,28 @@ function WaitingListSection() {
   return (
     <View style={{ marginTop: 8, marginBottom: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <Ionicons name="notifications-outline" size={15} color={Colors.warning} />
-        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>Listes d'attente</Text>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: Colors.warningLight }}>
-          <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.warningText }}>{entries.length}</Text>
+        <Ionicons name="notifications-outline" size={15} color={colors.warning} />
+        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Listes d'attente</Text>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: colors.warningLight }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: colors.warningText }}>{entries.length}</Text>
         </View>
       </View>
       {entries.map((entry) => (
-        <View key={entry.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, marginBottom: 8, ...Shadows.card }}>
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+        <View key={entry.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, marginBottom: 8, ...Shadows.card }}>
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
             {entry.pro_photo ? (
               <Image source={{ uri: entry.pro_photo }} style={{ width: 40, height: 40 }} contentFit="cover" />
             ) : (
-              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.primary }}>{entry.pro_name.charAt(0)}</Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primary }}>{entry.pro_name.charAt(0)}</Text>
             )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.foreground }}>{entry.pro_name}</Text>
-            {entry.prestation_name && <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{entry.prestation_name}</Text>}
-            {entry.preferred_date && <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Souhaité : {new Date(entry.preferred_date).toLocaleDateString("fr-FR")}</Text>}
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>{entry.pro_name}</Text>
+            {entry.prestation_name && <Text style={{ fontSize: 11, color: colors.mutedForeground }}>{entry.prestation_name}</Text>}
+            {entry.preferred_date && <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Souhaité : {new Date(entry.preferred_date).toLocaleDateString("fr-FR")}</Text>}
           </View>
-          <AnimatedIconButton onPress={() => leaveMutation.mutate(entry.pro_id)} disabled={leaveMutation.isPending} accessibilityLabel="Se désinscrire de la liste d'attente" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="notifications-off-outline" size={14} color={Colors.mutedForeground} />
+          <AnimatedIconButton onPress={() => leaveMutation.mutate(entry.pro_id)} disabled={leaveMutation.isPending} accessibilityLabel="Se désinscrire de la liste d'attente" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="notifications-off-outline" size={14} color={colors.mutedForeground} />
           </AnimatedIconButton>
         </View>
       ))}
@@ -427,6 +430,7 @@ function WaitingListSection() {
 
 export default function MyBookingsScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const queryClient = useQueryClient();
   const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
@@ -544,17 +548,17 @@ export default function MyBookingsScreen() {
   ), [activeTab, handleCancel]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12 }}>
-          <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.foreground, marginBottom: 20 }}>
+          <Text style={{ fontSize: 28, fontWeight: "800", color: colors.foreground, marginBottom: 20 }}>
             Mes réservations
           </Text>
           {/* Segmented control */}
           <View
             onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
-            style={{ flexDirection: "row", backgroundColor: Colors.muted, borderRadius: 14, padding: 4 }}
+            style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4 }}
           >
             {segmentWidth > 0 && (
               <Animated.View
@@ -565,9 +569,9 @@ export default function MyBookingsScreen() {
                   left: 4,
                   width: segmentWidth,
                   borderRadius: 10,
-                  backgroundColor: Colors.white,
+                  backgroundColor: colors.white,
                   transform: [{ translateX: tabIndicatorX }],
-                  shadowColor: Colors.black,
+                  shadowColor: colors.black,
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.08,
                   shadowRadius: 4,
@@ -581,7 +585,7 @@ export default function MyBookingsScreen() {
                 onPress={() => handleTabChange(tab)}
                 style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center" }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: activeTab === tab ? Colors.foreground : Colors.mutedForeground }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: activeTab === tab ? colors.foreground : colors.mutedForeground }}>
                   {TAB_LABELS[tab]}{tab === "upcoming" && upcoming.length > 0 ? ` (${upcoming.length})` : ""}
                 </Text>
               </Pressable>
@@ -592,11 +596,11 @@ export default function MyBookingsScreen() {
         {/* Promo banner */}
         {hasOnlyPastBookings && activeTab === "upcoming" && (
           <View style={{ marginHorizontal: 20, marginBottom: 12 }}>
-            <LinearGradient colors={[Colors.primaryLight, "#FFF4F9"]} style={{ padding: 20, borderWidth: 2, borderColor: `${Colors.primary}33`, borderRadius: 20 }}>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground, marginBottom: 6 }}>Prête pour un nouveau soin ?</Text>
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 12, lineHeight: 18 }}>Retrouve nos expertes et réserve ta prochaine prestation !</Text>
-              <AnimatedPressable onPress={() => router.push("/specialists")} style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
-                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 13 }}>Réserve dès maintenant</Text>
+            <LinearGradient colors={[colors.primaryLight, colors.background]} style={{ padding: 20, borderWidth: 2, borderColor: `${colors.primary}33`, borderRadius: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground, marginBottom: 6 }}>Prête pour un nouveau soin ?</Text>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 12, lineHeight: 18 }}>Retrouve nos expertes et réserve ta prochaine prestation !</Text>
+              <AnimatedPressable onPress={() => router.push("/specialists")} style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 13 }}>Réserve dès maintenant</Text>
               </AnimatedPressable>
             </LinearGradient>
           </View>
@@ -604,16 +608,16 @@ export default function MyBookingsScreen() {
 
         {isLoading ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : isError ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
             <ErrorMessage message="Impossible de charger tes réservations. Vérifie ta connexion." />
             <AnimatedPressable
               onPress={() => refetch()}
-              style={{ backgroundColor: Colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 }}
+              style={{ backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 }}
             >
-              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
             </AnimatedPressable>
           </View>
         ) : (
@@ -624,21 +628,21 @@ export default function MyBookingsScreen() {
             renderItem={renderItem}
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 }}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={Colors.primary} />}
+            refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
             removeClippedSubviews // BLYSS-FIX: 2.5
             maxToRenderPerBatch={8} // BLYSS-FIX: 2.5
             ListFooterComponent={activeTab === "upcoming" && (bookings?.length ?? 0) > 0 ? <WaitingListSection /> : null}
             ListEmptyComponent={
               <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
-                <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="calendar-outline" size={32} color={Colors.mutedForeground} />
+                <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="calendar-outline" size={32} color={colors.mutedForeground} />
                 </View>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>
                   {activeTab === "upcoming" ? "Aucune réservation à venir" : activeTab === "past" ? "Aucun historique" : "Aucune annulation"}
                 </Text>
                 {activeTab === "upcoming" && (
-                  <AnimatedPressable onPress={() => router.push("/specialists")} style={{ marginTop: 8, backgroundColor: Colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Découvrir les expertes</Text>
+                  <AnimatedPressable onPress={() => router.push("/specialists")} style={{ marginTop: 8, backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Découvrir les expertes</Text>
                   </AnimatedPressable>
                 )}
               </View>
@@ -658,15 +662,15 @@ export default function MyBookingsScreen() {
 
       {/* Cancel confirmation modal */}
       <Modal visible={cancelTargetId != null} transparent animationType="slide" onRequestClose={() => setCancelTargetId(null)}>
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlayDark }}>
           <Pressable style={{ flex: 1 }} onPress={() => setCancelTargetId(null)} />
-          <View style={{ backgroundColor: Colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}>
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 }} />
-            <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: Colors.destructiveLight, alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 16 }}>
-              <Ionicons name="close-circle-outline" size={28} color={Colors.destructive} />
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
+            <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: colors.destructiveLight, alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 16 }}>
+              <Ionicons name="close-circle-outline" size={28} color={colors.destructive} />
             </View>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground, textAlign: "center", marginBottom: 8 }}>Annuler le rendez-vous ?</Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 8 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: colors.foreground, textAlign: "center", marginBottom: 8 }}>Annuler le rendez-vous ?</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 8 }}>
               Cette action est irréversible. Tu ne pourras pas récupérer ce créneau.
             </Text>
             {(() => {
@@ -674,7 +678,7 @@ export default function MyBookingsScreen() {
               const target = list.find((b) => b.id === cancelTargetId);
               if (!target) return null;
               return (
-                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.warningText, textAlign: "center", marginBottom: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.warningText, textAlign: "center", marginBottom: 8 }}>
                   Annulation possible jusqu'à {target.cancellation_notice_hours}h avant le rendez-vous.
                 </Text>
               );
@@ -683,9 +687,9 @@ export default function MyBookingsScreen() {
             <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
               <AnimatedPressable
                 onPress={() => setCancelTargetId(null)}
-                style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.muted, alignItems: "center", justifyContent: "center" }}
+                style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Retour</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>Retour</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 onPress={() => {
@@ -693,11 +697,11 @@ export default function MyBookingsScreen() {
                   if (cancelTargetId != null) cancelMutation.mutate(cancelTargetId);
                 }}
                 disabled={cancelMutation.isPending}
-                style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", opacity: cancelMutation.isPending ? 0.7 : 1 }}
+                style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.destructive, alignItems: "center", justifyContent: "center", opacity: cancelMutation.isPending ? 0.7 : 1 }}
               >
                 {cancelMutation.isPending
-                  ? <ActivityIndicator size="small" color={Colors.white} />
-                  : <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Confirmer l'annulation</Text>}
+                  ? <ActivityIndicator size="small" color={colors.onColor} />
+                  : <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Confirmer l'annulation</Text>}
               </AnimatedPressable>
             </View>
           </View>

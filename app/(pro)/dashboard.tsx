@@ -22,7 +22,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox"; // BLYSS-FIX: 2.3
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
@@ -64,6 +65,8 @@ function n(v: unknown): number {
 
 function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: number }) {
   const router = useRouter();
+  const colors = useThemeColors();
+  const STATUS_CFG = useMemo(() => getStatusCfg(colors), [colors]);
   const reduceMotion = useReducedMotion();
   const scale = useRef(new Animated.Value(1)).current;
   const entryOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -95,10 +98,10 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
         style={{
           borderRadius: 12,
           padding: 16,
-          backgroundColor: Colors.card,
+          backgroundColor: colors.card,
           borderWidth: 1,
-          borderColor: Colors.border,
-          shadowColor: Colors.black,
+          borderColor: colors.border,
+          shadowColor: colors.black,
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.04,
           shadowRadius: 4,
@@ -111,17 +114,17 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
               width: 48,
               height: 48,
               borderRadius: 12,
-              backgroundColor: Colors.primary,
+              backgroundColor: colors.primary,
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: Colors.primary,
+              shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 3 },
               shadowOpacity: 0.25,
               shadowRadius: 6,
               elevation: 2,
             }}
           >
-            <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 14 }}>
+            <Text style={{ color: colors.onColor, fontWeight: "900", fontSize: 14 }}>
               {client.avatar}
             </Text>
           </View>
@@ -135,7 +138,7 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
               }}
             >
               <Text
-                style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground, flex: 1 }}
+                style={{ fontWeight: "700", fontSize: 14, color: colors.foreground, flex: 1 }}
                 numberOfLines={1}
               >
                 {client.name}
@@ -154,19 +157,19 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
               </View>
             </View>
             <Text
-              style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 8, fontWeight: "500" }}
+              style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 8, fontWeight: "500" }}
               numberOfLines={1}
             >
               {client.service}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
-                <Text style={{ fontSize: 11, color: Colors.mutedForeground, fontWeight: "600" }}>
+                <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, fontWeight: "600" }}>
                   {client.time}
                 </Text>
               </View>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.primary }}>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: colors.primary }}>
                 {n(client.price).toFixed(2).replace(".", ",")} €
               </Text>
             </View>
@@ -177,16 +180,20 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
   );
 }
 
-const STATUS_CFG = {
-  ongoing:   { label: "En cours",  bg: "rgba(52,199,89,0.15)",  text: "#34C759" },
-  upcoming:  { label: "À venir",   bg: "rgba(0,122,255,0.15)",  text: "#007AFF" },
-  completed: { label: "Terminé",   bg: "rgba(120,120,128,0.15)", text: Colors.mutedForeground },
-} as const;
+function getStatusCfg(colors: ReturnType<typeof useThemeColors>) {
+  return {
+    ongoing:   { label: "En cours",  bg: withAlpha(colors.success, 0.15),  text: colors.success },
+    upcoming:  { label: "À venir",   bg: withAlpha(colors.info, 0.15),  text: colors.info },
+    completed: { label: "Terminé",   bg: withAlpha(colors.mutedForeground, 0.15), text: colors.mutedForeground },
+  } as const;
+}
 
 export default function ProDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const isDark = useIsDarkMode();
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
   const reduceMotion = useReducedMotion();
@@ -320,7 +327,7 @@ export default function ProDashboard() {
 
   if (isLoading) { // BLYSS-FIX: 2.3 — shimmer skeletons replacing static boxes
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
         <View style={{ padding: 20, gap: 16 }}>
           {/* Hero gradient area */}
           <SkeletonBox height={160} borderRadius={20} />
@@ -346,7 +353,7 @@ export default function ProDashboard() {
     <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }}>
     <ScrollView
       ref={scrollRef}
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 100,
@@ -354,7 +361,7 @@ export default function ProDashboard() {
         gap: 16,
       }}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* ── HEADER ── */}
       <View>
@@ -362,13 +369,13 @@ export default function ProDashboard() {
           style={{
             fontSize: 24,
             fontWeight: "900",
-            color: Colors.foreground,
+            color: colors.foreground,
             letterSpacing: -0.5,
           }}
         >
           Bonjour {user?.first_name ?? ""}
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginTop: 2 }}>
+        <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 2 }}>
           Ton planning du jour
         </Text>
       </View>
@@ -376,7 +383,7 @@ export default function ProDashboard() {
       {/* ── WEEKLY PERFORMANCE HERO ── */}
       <View>
         <LinearGradient
-          colors={["#FF4D96", Colors.primary, "#FF82B8"]}
+          colors={["#FF4D96", colors.primary, "#FF82B8"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -399,15 +406,15 @@ export default function ProDashboard() {
             {/* Label */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
-                <Ionicons name="today-outline" size={12} color={Colors.white} />
-                <Text style={{ color: Colors.white, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                <Ionicons name="today-outline" size={12} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>
                   Aujourd'hui
                 </Text>
               </View>
               {/* Trend badge — pouls hebdo, conservé en repère secondaire */}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: weeklyStats.isUp ? "rgba(255,255,255,0.22)" : Colors.overlayLight, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}>
-                <Ionicons name={weeklyStats.isUp ? "trending-up" : "trending-down"} size={14} color={Colors.white} />
-                <Text style={{ color: Colors.white, fontWeight: "900", fontSize: 13, letterSpacing: -0.2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: weeklyStats.isUp ? "rgba(255,255,255,0.22)" : colors.overlayLight, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}>
+                <Ionicons name={weeklyStats.isUp ? "trending-up" : "trending-down"} size={14} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontWeight: "900", fontSize: 13, letterSpacing: -0.2 }}>
                   {weeklyStats.isUp ? "+" : "-"}{weeklyStats.change}%
                 </Text>
               </View>
@@ -415,7 +422,7 @@ export default function ProDashboard() {
 
             {/* État du jour — plus un chiffre passif, un verdict */}
             <View>
-              <Text style={{ fontSize: 26, fontWeight: "900", color: Colors.white, letterSpacing: -0.6, lineHeight: 30 }}>
+              <Text style={{ fontSize: 26, fontWeight: "900", color: colors.onColor, letterSpacing: -0.6, lineHeight: 30 }}>
                 {heroState.headline}
               </Text>
               <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: "600", marginTop: 8 }}>
@@ -446,8 +453,8 @@ export default function ProDashboard() {
                   borderColor: "rgba(255,255,255,0.3)",
                 }}
               >
-                <Ionicons name={heroState.ctaIcon} size={14} color={Colors.white} />
-                <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.white }}>
+                <Ionicons name={heroState.ctaIcon} size={14} color={colors.onColor} />
+                <Text style={{ fontSize: 12, fontWeight: "800", color: colors.onColor }}>
                   {heroState.ctaLabel}
                 </Text>
               </AnimatedPressable>
@@ -471,12 +478,12 @@ export default function ProDashboard() {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.2 }}>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground, letterSpacing: -0.2 }}>
                 Prochaines clientes
               </Text>
             </View>
             <Pressable onPress={() => router.push("/(pro)/calendar")}>
-              <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "700" }}>Voir tout →</Text>
+              <Text style={{ fontSize: 11, color: colors.primary, fontWeight: "700" }}>Voir tout →</Text>
             </Pressable>
           </View>
 
@@ -492,9 +499,9 @@ export default function ProDashboard() {
       <View>
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
-            { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: Colors.primary, iconBg: "#FFE8F3" },
-            { label: "Bloquer",  icon: "ban-outline" as const, onPress: openBlockModal, color: Colors.destructive, iconBg: "#FFE8E8" },
-            { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: Colors.primary, iconBg: "#FFE8F3" },
+            { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: colors.primary, iconBg: withAlpha(colors.primary, 0.15) },
+            { label: "Bloquer",  icon: "ban-outline" as const, onPress: openBlockModal, color: colors.destructive, iconBg: withAlpha(colors.destructive, 0.15) },
+            { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: colors.primary, iconBg: withAlpha(colors.primary, 0.15) },
           ].map(({ label, icon, onPress, color, iconBg }) => (
             <AnimatedPressable
               key={label}
@@ -506,12 +513,12 @@ export default function ProDashboard() {
                 flex: 1,
                 borderRadius: 12,
                 padding: 16,
-                backgroundColor: Colors.card,
+                backgroundColor: colors.card,
                 borderWidth: 1,
-                borderColor: Colors.border,
+                borderColor: colors.border,
                 alignItems: "center",
                 gap: 10,
-                shadowColor: Colors.black,
+                shadowColor: colors.black,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.04,
                 shadowRadius: 4,
@@ -530,7 +537,7 @@ export default function ProDashboard() {
               >
                 <Ionicons name={icon} size={20} color={color} />
               </View>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.foreground }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.foreground }}>
                 {label}
               </Text>
             </AnimatedPressable>
@@ -541,16 +548,16 @@ export default function ProDashboard() {
       {/* ── TODAY FORECAST ── */}
       <View>
         <LinearGradient
-          colors={["#FFF0F8", "#FFDFF0", "#FFD6EB"]}
+          colors={isDark ? [withAlpha(colors.primary, 0.18), withAlpha(colors.primary, 0.12), withAlpha(colors.primary, 0.08)] : ["#FFF0F8", "#FFDFF0", "#FFD6EB"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
             borderRadius: 20,
             padding: 18,
             borderWidth: 1,
-            borderColor: "#FFCCE5",
+            borderColor: withAlpha(colors.primary, 0.25),
             overflow: "hidden",
-            shadowColor: Colors.primary,
+            shadowColor: colors.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.12,
             shadowRadius: 12,
@@ -564,19 +571,19 @@ export default function ProDashboard() {
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             {/* Left */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }}>
-                <Ionicons name="flash" size={22} color={Colors.white} />
+              <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }}>
+                <Ionicons name="flash" size={22} color={colors.onColor} />
               </View>
               <View style={{ gap: 2 }}>
-                <Text style={{ fontSize: 10, fontWeight: "900", color: Colors.primary, letterSpacing: 1.2, textTransform: "uppercase" }}>
+                <Text style={{ fontSize: 10, fontWeight: "900", color: colors.primary, letterSpacing: 1.2, textTransform: "uppercase" }}>
                   Aujourd'hui
                 </Text>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
                   Revenu estimé
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#34C759" }} />
-                  <Text style={{ fontSize: 10, color: Colors.mutedForeground, fontWeight: "600" }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
+                  <Text style={{ fontSize: 10, color: colors.mutedForeground, fontWeight: "600" }}>
                     {upcomingClients.length} rdv prévu{upcomingClients.length > 1 ? "s" : ""}
                   </Text>
                 </View>
@@ -585,10 +592,10 @@ export default function ProDashboard() {
 
             {/* Right — valeur */}
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: 32, fontWeight: "900", color: Colors.primary, letterSpacing: -1 }}>
+              <Text style={{ fontSize: 32, fontWeight: "900", color: colors.primary, letterSpacing: -1 }}>
                 {todayForecast.toFixed(0)}
               </Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: `${Colors.primary}99`, marginTop: -2 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: `${colors.primary}99`, marginTop: -2 }}>
                 euros
               </Text>
             </View>
@@ -605,11 +612,11 @@ export default function ProDashboard() {
               flex: 1,
               borderRadius: 12,
               padding: 16,
-              backgroundColor: Colors.card,
+              backgroundColor: colors.card,
               borderWidth: 1,
-              borderColor: Colors.border,
+              borderColor: colors.border,
               overflow: "hidden",
-              shadowColor: Colors.black,
+              shadowColor: colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -624,7 +631,7 @@ export default function ProDashboard() {
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                backgroundColor: `${Colors.primary}0D`,
+                backgroundColor: `${colors.primary}0D`,
               }}
             />
             <View style={{ gap: 12 }}>
@@ -639,12 +646,12 @@ export default function ProDashboard() {
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
                 </View>
                 <Text
                   style={{
                     fontSize: 9,
-                    color: Colors.mutedForeground,
+                    color: colors.mutedForeground,
                     fontWeight: "800",
                     letterSpacing: 0.5,
                     textTransform: "uppercase",
@@ -659,17 +666,17 @@ export default function ProDashboard() {
                     style={{
                       fontSize: 32,
                       fontWeight: "900",
-                      color: Colors.foreground,
+                      color: colors.foreground,
                       letterSpacing: -0.5,
                     }}
                   >
                     {fillRate.toFixed(0)}
                   </Text>
-                  <Text style={{ fontSize: 20, fontWeight: "900", color: Colors.primary }}>
+                  <Text style={{ fontSize: 20, fontWeight: "900", color: colors.primary }}>
                     %
                   </Text>
                 </View>
-                <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 4, fontWeight: "500" }}>
+                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 4, fontWeight: "500" }}>
                   Créneaux réservés
                 </Text>
               </View>
@@ -682,11 +689,11 @@ export default function ProDashboard() {
               flex: 1,
               borderRadius: 12,
               padding: 16,
-              backgroundColor: Colors.card,
+              backgroundColor: colors.card,
               borderWidth: 1,
-              borderColor: Colors.border,
+              borderColor: colors.border,
               overflow: "hidden",
-              shadowColor: Colors.black,
+              shadowColor: colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -701,7 +708,7 @@ export default function ProDashboard() {
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                backgroundColor: "rgba(52,199,89,0.05)",
+                backgroundColor: withAlpha(colors.success, 0.05),
               }}
             />
             <View style={{ gap: 12 }}>
@@ -711,17 +718,17 @@ export default function ProDashboard() {
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    backgroundColor: "rgba(52,199,89,0.15)",
+                    backgroundColor: withAlpha(colors.success, 0.15),
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="people-outline" size={16} color="#34C759" />
+                  <Ionicons name="people-outline" size={16} color={colors.success} />
                 </View>
                 <Text
                   style={{
                     fontSize: 9,
-                    color: Colors.mutedForeground,
+                    color: colors.mutedForeground,
                     fontWeight: "800",
                     letterSpacing: 0.5,
                     textTransform: "uppercase",
@@ -735,13 +742,13 @@ export default function ProDashboard() {
                   style={{
                     fontSize: 32,
                     fontWeight: "900",
-                    color: Colors.foreground,
+                    color: colors.foreground,
                     letterSpacing: -0.5,
                   }}
                 >
                   {clientsThisWeek}
                 </Text>
-                <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 4, fontWeight: "500" }}>
+                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 4, fontWeight: "500" }}>
                   Servies cette semaine
                 </Text>
               </View>
@@ -757,10 +764,10 @@ export default function ProDashboard() {
             style={{
               borderRadius: 12,
               padding: 16,
-              backgroundColor: Colors.card,
+              backgroundColor: colors.card,
               borderWidth: 1,
-              borderColor: Colors.border,
-              shadowColor: Colors.black,
+              borderColor: colors.border,
+              shadowColor: colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -769,9 +776,9 @@ export default function ProDashboard() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>Top prestations</Text>
+                <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground }}>Top prestations</Text>
               </View>
-              <Ionicons name="star" size={16} color={Colors.primary} />
+              <Ionicons name="star" size={16} color={colors.primary} />
             </View>
 
             <View style={{ gap: 14 }}>
@@ -784,33 +791,33 @@ export default function ProDashboard() {
                           width: 20,
                           height: 20,
                           borderRadius: 6,
-                          backgroundColor: `${Colors.primary}1A`,
+                          backgroundColor: `${colors.primary}1A`,
                           alignItems: "center",
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ fontSize: 10, fontWeight: "900", color: Colors.primary }}>
+                        <Text style={{ fontSize: 10, fontWeight: "900", color: colors.primary }}>
                           {i + 1}
                         </Text>
                       </View>
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>
                         {svc.name}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 12, fontWeight: "900", color: Colors.primary }}>
+                    <Text style={{ fontSize: 12, fontWeight: "900", color: colors.primary }}>
                       {svc.percentage}%
                     </Text>
                   </View>
                   <View
                     style={{
                       height: 10,
-                      backgroundColor: Colors.muted,
+                      backgroundColor: colors.muted,
                       borderRadius: 5,
                       overflow: "hidden",
                     }}
                   >
                     <LinearGradient
-                      colors={[Colors.primary, `${Colors.primary}CC`]}
+                      colors={[colors.primary, `${colors.primary}CC`]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={{
@@ -834,10 +841,10 @@ export default function ProDashboard() {
             style={{
               borderRadius: 12,
               padding: 16,
-              backgroundColor: Colors.card,
+              backgroundColor: colors.card,
               borderWidth: 1,
-              borderColor: Colors.border,
-              shadowColor: Colors.black,
+              borderColor: colors.border,
+              shadowColor: colors.black,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.04,
               shadowRadius: 4,
@@ -846,12 +853,12 @@ export default function ProDashboard() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.foreground }}>
+                <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground }}>
                   Revenus de la semaine
                 </Text>
               </View>
               {totalRevenue > 0 && (
-                <Text style={{ fontSize: 12, fontWeight: "900", color: Colors.primary }}>
+                <Text style={{ fontSize: 12, fontWeight: "900", color: colors.primary }}>
                   {totalRevenue.toFixed(0)} €
                 </Text>
               )}
@@ -877,12 +884,12 @@ export default function ProDashboard() {
                     <View key={i} style={{ flex: 1, alignItems: "center", gap: 8 }}>
                       {isMax ? (
                         <LinearGradient
-                          colors={[Colors.primary, `${Colors.primary}B3`]}
+                          colors={[colors.primary, `${colors.primary}B3`]}
                           style={{
                             width: "100%",
                             height: barH,
                             borderRadius: 8,
-                            shadowColor: Colors.primary,
+                            shadowColor: colors.primary,
                             shadowOffset: { width: 0, height: 2 },
                             shadowOpacity: 0.3,
                             shadowRadius: 4,
@@ -895,7 +902,7 @@ export default function ProDashboard() {
                             width: "100%",
                             height: barH,
                             borderRadius: 8,
-                            backgroundColor: Colors.muted,
+                            backgroundColor: colors.muted,
                           }}
                         />
                       )}
@@ -903,7 +910,7 @@ export default function ProDashboard() {
                         style={{
                           fontSize: 10,
                           fontWeight: "700",
-                          color: isMax ? Colors.primary : Colors.mutedForeground,
+                          color: isMax ? colors.primary : colors.mutedForeground,
                         }}
                       >
                         {dayLabel}
@@ -914,8 +921,8 @@ export default function ProDashboard() {
               </View>
             ) : (
               <View style={{ paddingVertical: 28, alignItems: "center", gap: 8 }}>
-                <Ionicons name="bar-chart-outline" size={28} color={Colors.border} />
-                <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                <Ionicons name="bar-chart-outline" size={28} color={colors.border} />
+                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                   Aucune donnée cette semaine
                 </Text>
               </View>
@@ -926,7 +933,7 @@ export default function ProDashboard() {
 
       {/* ── SLOTS MODAL ── */}
       <Modal visible={showSlotsModal} onClose={() => setShowSlotsModal(false)} title="Ajouter des créneaux" bottomSheet>
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
           Ouvrez de nouveaux créneaux depuis votre calendrier pour permettre à vos clientes de réserver.
         </Text>
         <AnimatedPressable
@@ -937,7 +944,7 @@ export default function ProDashboard() {
           }}
           style={{
             borderRadius: 12,
-            backgroundColor: Colors.primary,
+            backgroundColor: colors.primary,
             paddingVertical: 14,
             flexDirection: "row",
             alignItems: "center",
@@ -945,30 +952,30 @@ export default function ProDashboard() {
             gap: 8,
           }}
         >
-          <Ionicons name="calendar-outline" size={18} color={Colors.white} />
-          <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
+          <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
+          <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Aller au calendrier</Text>
         </AnimatedPressable>
       </Modal>
 
       {/* ── BLOCK MODAL ── */}
       <Modal visible={showBlockModal} onClose={() => setShowBlockModal(false)} title="Bloquer une journée" bottomSheet>
         {/* Date picker */}
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground,
+        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground,
           textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
           Journée à bloquer
         </Text>
         <Pressable
           onPress={() => setShowBlockDatePicker((v) => !v)}
           style={{ height: 48, borderRadius: 14, borderWidth: 1.5,
-            borderColor: showBlockDatePicker ? Colors.destructive : Colors.border,
-            paddingHorizontal: 14, backgroundColor: "#FFF1F1",
+            borderColor: showBlockDatePicker ? colors.destructive : colors.border,
+            paddingHorizontal: 14, backgroundColor: colors.destructiveLight,
             flexDirection: "row", alignItems: "center", justifyContent: "space-between",
             marginBottom: 12 }}
         >
-          <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>
             {blockDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </Text>
-          <Ionicons name="calendar-outline" size={18} color={Colors.destructive} />
+          <Ionicons name="calendar-outline" size={18} color={colors.destructive} />
         </Pressable>
 
         {showBlockDatePicker && (
@@ -981,14 +988,14 @@ export default function ProDashboard() {
               if (Platform.OS === "android") setShowBlockDatePicker(false);
               if (date) setBlockDate(date);
             }}
-            themeVariant="light"
-            accentColor={Colors.destructive}
+            themeVariant={isDark ? "dark" : "light"}
+            accentColor={colors.destructive}
           />
         )}
 
         {/* Statut de la journée sélectionnée */}
         <Text style={{ fontSize: 12, marginBottom: 20, lineHeight: 18,
-          color: isBlockedDay(blockDate) ? Colors.destructive : Colors.mutedForeground,
+          color: isBlockedDay(blockDate) ? colors.destructive : colors.mutedForeground,
           fontWeight: isBlockedDay(blockDate) ? "700" : "400" }}>
           {isBlockedDay(blockDate)
             ? "Cette journée est bloquée — appuie sur Débloquer pour la réouvrir"
@@ -999,9 +1006,9 @@ export default function ProDashboard() {
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Pressable
             onPress={() => { setBlockError(null); setShowBlockModal(false); }}
-            style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.muted, alignItems: "center" }}
+            style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.muted, alignItems: "center" }}
           >
-            <Text style={{ fontWeight: "700", color: Colors.foreground, fontSize: 14 }}>Annuler</Text>
+            <Text style={{ fontWeight: "700", color: colors.foreground, fontSize: 14 }}>Annuler</Text>
           </Pressable>
           <AnimatedPressable
             onPress={() => {
@@ -1014,7 +1021,7 @@ export default function ProDashboard() {
             style={{
               flex: 1,
               borderRadius: 12,
-              backgroundColor: Colors.destructive,
+              backgroundColor: colors.destructive,
               paddingVertical: 14,
               flexDirection: "row",
               alignItems: "center",
@@ -1024,11 +1031,11 @@ export default function ProDashboard() {
             }}
           >
             {blockLoading ? (
-              <ActivityIndicator color={Colors.white} size="small" />
+              <ActivityIndicator color={colors.onColor} size="small" />
             ) : (
               <>
-                <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color={Colors.white} />
-                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>
+                <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>
                   {isBlockedDay(blockDate) ? "Débloquer" : "Bloquer"}
                 </Text>
               </>

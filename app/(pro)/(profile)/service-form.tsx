@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { proApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
@@ -47,8 +48,9 @@ type FormData = {
 };
 
 function SectionLabel({ text }: { text: string }) {
+  const colors = useThemeColors();
   return (
-    <Text style={{ fontSize: 13, fontWeight: "600", color: "#3F3F46", letterSpacing: 0.1, marginBottom: 6 }}>
+    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground, letterSpacing: 0.1, marginBottom: 6 }}>
       {text}
     </Text>
   );
@@ -57,6 +59,7 @@ function SectionLabel({ text }: { text: string }) {
 export default function ServiceFormScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const qc = useQueryClient();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
@@ -157,7 +160,7 @@ export default function ServiceFormScreen() {
   const durationValue = watch("duration_minutes");
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top,
@@ -174,17 +177,17 @@ export default function ServiceFormScreen() {
             accessibilityLabel="Retour"
             style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+              backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>
               {isEdit ? "Modifier la prestation" : "Nouvelle prestation"}
             </Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
               {isEdit ? "Mets à jour les informations" : "Ajoute une prestation à ton catalogue"}
             </Text>
           </View>
@@ -218,19 +221,19 @@ export default function ServiceFormScreen() {
             name="description"
             render={({ field: { onChange, value } }) => (
               <View style={{
-                backgroundColor: Colors.cream, borderRadius: 14,
-                borderWidth: 1.5, borderColor: Colors.border,
+                backgroundColor: colors.cream, borderRadius: 14,
+                borderWidth: 1.5, borderColor: colors.border,
                 paddingHorizontal: 14, paddingVertical: 12, minHeight: 90,
               }}>
                 <TextInput
                   value={value}
                   onChangeText={onChange}
                   placeholder="Décris ta prestation : technique, matériaux, résultat..."
-                  placeholderTextColor={Colors.inputPlaceholder}
+                  placeholderTextColor={colors.inputPlaceholder}
                   multiline
                   textAlignVertical="top"
                   maxLength={500}
-                  style={{ fontSize: 14.5, color: Colors.foreground, padding: 0 }}
+                  style={{ fontSize: 14.5, color: colors.foreground, padding: 0 }}
                 />
               </View>
             )}
@@ -270,12 +273,12 @@ export default function ServiceFormScreen() {
                   style={{
                     flex: 1, paddingVertical: 10, borderRadius: 12,
                     borderWidth: 1.5,
-                    borderColor: selected ? Colors.primary : Colors.border,
-                    backgroundColor: selected ? `${Colors.primary}15` : Colors.cream,
+                    borderColor: selected ? colors.primary : colors.border,
+                    backgroundColor: selected ? `${colors.primary}15` : colors.cream,
                     alignItems: "center",
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: selected ? Colors.primary : Colors.mutedForeground }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: selected ? colors.primary : colors.mutedForeground }}>
                     {formatDurationLabel(d)}
                   </Text>
                 </Pressable>
@@ -302,34 +305,34 @@ export default function ServiceFormScreen() {
 
         {/* Actif / Inactif */}
         <View style={{
-          backgroundColor: Colors.card, borderRadius: 16,
-          borderWidth: 1, borderColor: Colors.border,
+          backgroundColor: colors.card, borderRadius: 16,
+          borderWidth: 1, borderColor: colors.border,
           padding: 16, flexDirection: "row", alignItems: "center", gap: 14,
         }}>
           <View style={{
             width: 44, height: 44, borderRadius: 12,
-            backgroundColor: isActive ? `${Colors.primary}15` : Colors.muted,
+            backgroundColor: isActive ? `${colors.primary}15` : colors.muted,
             alignItems: "center", justifyContent: "center",
           }}>
             <Ionicons
               name={isActive ? "checkmark-circle-outline" : "pause-circle-outline"}
               size={22}
-              color={isActive ? Colors.primary : Colors.mutedForeground}
+              color={isActive ? colors.primary : colors.mutedForeground}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
               Prestation {isActive ? "active" : "inactive"}
             </Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
               {isActive ? "Visible et réservable par tes clientes" : "Masquée, non réservable"}
             </Text>
           </View>
           <Switch
             value={isActive}
             onValueChange={setIsActive}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.white}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.onColor}
           />
         </View>
       </ScrollView>
@@ -339,7 +342,7 @@ export default function ServiceFormScreen() {
         position: "absolute", bottom: 0, left: 0, right: 0,
         paddingHorizontal: 20, paddingTop: 12,
         paddingBottom: insets.bottom + 96,
-        backgroundColor: "rgba(255,234,241,0.97)",
+        backgroundColor: withAlpha(colors.background, 0.97),
       }}>
         {formError && <View style={{ marginBottom: 10 }}><ErrorMessage message={formError} /></View>}
         <Pressable
@@ -347,21 +350,21 @@ export default function ServiceFormScreen() {
           disabled={isLoading}
           style={{
             height: 56, borderRadius: 20,
-            backgroundColor: Colors.primary,
+            backgroundColor: colors.primary,
             alignItems: "center", justifyContent: "center",
             flexDirection: "row", gap: 8,
             opacity: isLoading ? 0.7 : 1,
-            shadowColor: Colors.primary,
+            shadowColor: colors.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
           }}
         >
           {isLoading ? (
-            <ActivityIndicator color={Colors.white} />
+            <ActivityIndicator color={colors.onColor} />
           ) : (
             <>
-              <Ionicons name={isEdit ? "save-outline" : "add-circle-outline"} size={20} color={Colors.white} />
-              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>
+              <Ionicons name={isEdit ? "save-outline" : "add-circle-outline"} size={20} color={colors.onColor} />
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>
                 {isEdit ? "Enregistrer les modifications" : "Créer la prestation"}
               </Text>
             </>

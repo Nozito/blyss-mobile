@@ -20,7 +20,8 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { proApi, usersApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
@@ -43,6 +44,7 @@ const MAX_GALLERY = 10;
 export default function ProPublicProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const { user, patchUser, refreshProfile } = useAuth();
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
@@ -238,14 +240,14 @@ export default function ProPublicProfileScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
@@ -260,23 +262,24 @@ export default function ProPublicProfileScreen() {
           <View className="flex-row items-center mb-2">
             <AnimatedIconButton
               onPress={() => safeBack(router)}
-              className="w-10 h-10 rounded-xl bg-muted items-center justify-center mr-3"
+              className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+              style={{ backgroundColor: colors.muted }}
               accessibilityLabel="Retour"
             >
-              <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+              <Ionicons name="chevron-back" size={20} color={colors.foreground} />
             </AnimatedIconButton>
-            <Text className="text-2xl font-bold text-foreground flex-1">Profil public</Text>
+            <Text className="text-2xl font-bold flex-1" style={{ color: colors.foreground }}>Profil public</Text>
             <Pressable
               onPress={() => setShowPreview(true)}
               className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: `${Colors.primary}15` }}
+              style={{ backgroundColor: `${colors.primary}15` }}
               accessibilityRole="button"
               accessibilityLabel="Aperçu du profil"
             >
-              <Ionicons name="eye-outline" size={20} color={Colors.primary} />
+              <Ionicons name="eye-outline" size={20} color={colors.primary} />
             </Pressable>
           </View>
-          <Text className="text-sm text-muted-foreground ml-1">
+          <Text className="text-sm ml-1" style={{ color: colors.mutedForeground }}>
             Informations visibles par tes clientes
           </Text>
         </View>
@@ -284,28 +287,28 @@ export default function ProPublicProfileScreen() {
         {/* Unsaved changes banner */}
         {hasChanges && (
           <View
-            className="bg-card rounded-2xl p-4 mb-4 flex-row items-center gap-3 border"
-            style={{ borderColor: `${Colors.primary}40`, backgroundColor: `${Colors.primary}08` }}
+            className="rounded-2xl p-4 mb-4 flex-row items-center gap-3 border"
+            style={{ borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}08` }}
           >
-            <Ionicons name="alert-circle-outline" size={18} color={Colors.primary} />
+            <Ionicons name="alert-circle-outline" size={18} color={colors.primary} />
             <View className="flex-1">
-              <Text className="text-sm font-semibold text-foreground">Modifications non enregistrées</Text>
-              <Text className="text-xs text-muted-foreground mt-0.5">N'oublie pas de sauvegarder tes changements</Text>
+              <Text className="text-sm font-semibold" style={{ color: colors.foreground }}>Modifications non enregistrées</Text>
+              <Text className="text-xs mt-0.5" style={{ color: colors.mutedForeground }}>N'oublie pas de sauvegarder tes changements</Text>
             </View>
           </View>
         )}
 
         {/* Info card */}
         <View
-          className="bg-card rounded-2xl p-4 mb-6 flex-row items-start gap-4 border border-border"
-          style={{ shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+          className="rounded-2xl p-4 mb-6 flex-row items-start gap-4 border"
+          style={{ backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.black, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
-          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: Colors.primary }}>
-            <Ionicons name="information-circle-outline" size={20} color={Colors.white} />
+          <View className="w-12 h-12 rounded-2xl items-center justify-center" style={{ backgroundColor: colors.primary }}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.onColor} />
           </View>
           <View className="flex-1">
-            <Text className="text-base font-semibold text-foreground mb-1">Optimise ton profil</Text>
-            <Text className="text-sm text-muted-foreground leading-relaxed">
+            <Text className="text-base font-semibold mb-1" style={{ color: colors.foreground }}>Optimise ton profil</Text>
+            <Text className="text-sm leading-relaxed" style={{ color: colors.mutedForeground }}>
               Un profil complet et détaillé augmente tes chances d'être réservée de 3×.
             </Text>
           </View>
@@ -322,9 +325,9 @@ export default function ProPublicProfileScreen() {
               height: 140,
               borderRadius: 12,
               overflow: "hidden",
-              backgroundColor: "#F3F4F6",
+              backgroundColor: colors.muted,
               borderWidth: 1.5,
-              borderColor: Colors.border,
+              borderColor: colors.border,
               borderStyle: "dashed",
               alignItems: "center",
               justifyContent: "center",
@@ -338,8 +341,8 @@ export default function ProPublicProfileScreen() {
               />
             ) : (
               <View style={{ alignItems: "center", gap: 8 }}>
-                <Ionicons name="image-outline" size={32} color={Colors.mutedForeground} />
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+                <Ionicons name="image-outline" size={32} color={colors.mutedForeground} />
+                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                   Ajouter une photo de couverture
                 </Text>
               </View>
@@ -351,7 +354,7 @@ export default function ProPublicProfileScreen() {
                 backgroundColor: "rgba(0,0,0,0.45)",
                 alignItems: "center", justifyContent: "center",
               }}>
-                <ActivityIndicator size="large" color={Colors.white} />
+                <ActivityIndicator size="large" color={colors.onColor} />
               </View>
             ) : (
               <View style={{
@@ -360,7 +363,7 @@ export default function ProPublicProfileScreen() {
                 backgroundColor: "rgba(0,0,0,0.45)",
                 alignItems: "center", justifyContent: "center",
               }}>
-                <Ionicons name="camera-outline" size={16} color={Colors.white} />
+                <Ionicons name="camera-outline" size={16} color={colors.onColor} />
               </View>
             )}
           </Pressable>
@@ -369,7 +372,7 @@ export default function ProPublicProfileScreen() {
         {/* Section: Infos principales */}
         <View className="mb-6">
           <SectionTitle title="Informations principales" />
-          <View className="bg-card rounded-2xl p-5 border border-border gap-4">
+          <View className="rounded-2xl p-5 border gap-4" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
             <View style={{ gap: 4 }}>
               <Input
                 label="Nom de l'activité *"
@@ -397,12 +400,12 @@ export default function ProPublicProfileScreen() {
         {/* Section: Bio */}
         <View className="mb-6">
           <SectionTitle title="À propos de toi" />
-          <View className="bg-card rounded-2xl p-5 border border-border">
+          <View className="rounded-2xl p-5 border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#3F3F46", letterSpacing: 0.1 }}>Biographie</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground, letterSpacing: 0.1 }}>Biographie</Text>
               <TextInput
                 placeholder="Parle de ton parcours, tes spécialités, ce qui te passionne..."
-                placeholderTextColor={Colors.inputPlaceholder}
+                placeholderTextColor={colors.inputPlaceholder}
                 value={bio}
                 onChangeText={(t) => setBio(t.slice(0, MAX_BIO))}
                 multiline
@@ -410,20 +413,20 @@ export default function ProPublicProfileScreen() {
                 textAlignVertical="top"
                 maxLength={MAX_BIO}
                 style={{
-                  backgroundColor: Colors.cream,
+                  backgroundColor: colors.cream,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: Colors.border,
+                  borderColor: colors.border,
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   fontSize: 14.5,
-                  color: Colors.foreground,
+                  color: colors.foreground,
                   minHeight: 100,
                 }}
               />
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 11.5, color: "#A1A1AA" }}>Aide tes clientes à mieux te connaître</Text>
-                <Text style={{ fontSize: 11.5, color: bio.length > MAX_BIO - 50 ? Colors.destructive : "#A1A1AA" }}>
+                <Text style={{ fontSize: 11.5, color: colors.mutedForeground }}>Aide tes clientes à mieux te connaître</Text>
+                <Text style={{ fontSize: 11.5, color: bio.length > MAX_BIO - 50 ? colors.destructive : colors.mutedForeground }}>
                   {MAX_BIO - bio.length}/{MAX_BIO}
                 </Text>
               </View>
@@ -434,7 +437,7 @@ export default function ProPublicProfileScreen() {
         {/* Section: Réseaux sociaux */}
         <View className="mb-6">
           <SectionTitle title="Réseaux sociaux" />
-          <View className="bg-card rounded-2xl p-5 border border-border">
+          <View className="rounded-2xl p-5 border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
             <Input
               label="Instagram (optionnel)"
               value={instagram}
@@ -474,7 +477,7 @@ export default function ProPublicProfileScreen() {
                 onPress={() => setSelectedGalleryImage(img)}
                 accessibilityRole="button"
                 accessibilityLabel="Voir la photo de réalisation"
-                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: Colors.muted }}
+                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: colors.muted }}
               >
                 <Image source={{ uri: img.thumbnail || img.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
               </Pressable>
@@ -485,15 +488,15 @@ export default function ProPublicProfileScreen() {
                 disabled={galleryUploading}
                 accessibilityRole="button"
                 accessibilityLabel="Ajouter une photo à la galerie"
-                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, backgroundColor: Colors.muted, borderWidth: 1.5, borderColor: Colors.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" }}
+                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, backgroundColor: colors.muted, borderWidth: 1.5, borderColor: colors.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" }}
               >
                 {galleryUploading
-                  ? <ActivityIndicator size="small" color={Colors.primary} />
-                  : <Ionicons name="add" size={28} color={Colors.mutedForeground} />}
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Ionicons name="add" size={28} color={colors.mutedForeground} />}
               </Pressable>
             )}
           </View>
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 6, paddingHorizontal: 2 }}>
+          <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6, paddingHorizontal: 2 }}>
             {gallery.length}/{MAX_GALLERY} photos
           </Text>
         </View>
@@ -501,35 +504,35 @@ export default function ProPublicProfileScreen() {
         {/* Section: Lien de partage */}
         <View className="mb-6">
           <SectionTitle title="Votre lien professionnel" />
-          <View style={{ backgroundColor: Colors.primaryLight, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: `${Colors.primary}30` }}>
+          <View style={{ backgroundColor: colors.primaryLight, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: `${colors.primary}30` }}>
             {copyToast && (
               <View
                 pointerEvents="none"
                 style={{
                   position: "absolute", top: -10, left: 16,
-                  backgroundColor: Colors.success, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12,
-                  shadowColor: Colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
+                  backgroundColor: colors.success, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12,
+                  shadowColor: colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.white }}>Lien copié !</Text>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Lien copié !</Text>
               </View>
             )}
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 4 }}>Ton profil Blyss</Text>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.primary, marginBottom: 14 }} numberOfLines={1}>{profileUrl}</Text>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 4 }}>Ton profil Blyss</Text>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primary, marginBottom: 14 }} numberOfLines={1}>{profileUrl}</Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
               <AnimatedPressable
                 onPress={handleCopyLink}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.white, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: `${Colors.primary}30` }}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.white, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: `${colors.primary}30` }}
               >
-                <Ionicons name="copy-outline" size={16} color={Colors.primary} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Copier</Text>
+                <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Copier</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 onPress={handleShareLink}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
+                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
               >
-                <Ionicons name="share-outline" size={16} color={Colors.white} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Partager</Text>
+                <Ionicons name="share-outline" size={16} color={colors.onColor} />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Partager</Text>
               </AnimatedPressable>
             </View>
           </View>
@@ -538,13 +541,13 @@ export default function ProPublicProfileScreen() {
         {/* Section: Conditions de réservation */}
         <View className="mb-6">
           <SectionTitle title="Conditions de réservation" />
-          <View className="bg-card rounded-2xl p-5 border border-border" style={{ gap: 14 }}>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+          <View className="rounded-2xl p-5 border" style={{ gap: 14, backgroundColor: colors.card, borderColor: colors.border }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
               Tes propres règles (acompte, accompagnant, accès...), affichées aux clientes avant qu'elles réservent.
             </Text>
 
             {conditions.length === 0 ? (
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground, fontStyle: "italic" }}>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, fontStyle: "italic" }}>
                 Aucune condition ajoutée pour l'instant.
               </Text>
             ) : (
@@ -554,7 +557,7 @@ export default function ProPublicProfileScreen() {
                     key={index}
                     style={{
                       flexDirection: "row", alignItems: "center", gap: 10,
-                      backgroundColor: Colors.cream, borderRadius: 12, padding: 10,
+                      backgroundColor: colors.cream, borderRadius: 12, padding: 10,
                     }}
                   >
                     <Pressable
@@ -566,13 +569,13 @@ export default function ProPublicProfileScreen() {
                       accessibilityLabel={cond.accepted ? "Marquer comme non autorisé" : "Marquer comme autorisé"}
                       style={{
                         width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
-                        backgroundColor: cond.accepted ? Colors.successLight : "#FFF1F2",
+                        backgroundColor: cond.accepted ? colors.successLight : colors.destructiveLight,
                       }}
                     >
                       <Ionicons
                         name={cond.accepted ? "checkmark" : "close"}
                         size={16}
-                        color={cond.accepted ? Colors.success : "#FB7185"}
+                        color={cond.accepted ? colors.success : colors.destructive}
                       />
                     </Pressable>
                     <TextInput
@@ -580,7 +583,7 @@ export default function ProPublicProfileScreen() {
                       onChangeText={(text) => {
                         setConditions((prev) => prev.map((c, i) => (i === index ? { ...c, text } : c)));
                       }}
-                      style={{ flex: 1, fontSize: 13, color: Colors.foreground, paddingVertical: 4 }}
+                      style={{ flex: 1, fontSize: 13, color: colors.foreground, paddingVertical: 4 }}
                       multiline
                     />
                     <Pressable
@@ -588,7 +591,7 @@ export default function ProPublicProfileScreen() {
                       accessibilityLabel="Supprimer cette condition"
                       hitSlop={8}
                     >
-                      <Ionicons name="trash-outline" size={18} color={Colors.destructive} />
+                      <Ionicons name="trash-outline" size={18} color={colors.destructive} />
                     </Pressable>
                   </View>
                 ))}
@@ -615,15 +618,15 @@ export default function ProPublicProfileScreen() {
                   disabled={!newConditionText.trim()}
                   style={{
                     height: 48, paddingHorizontal: 16, borderRadius: 12,
-                    backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center",
+                    backgroundColor: colors.primary, alignItems: "center", justifyContent: "center",
                     opacity: newConditionText.trim() ? 1 : 0.5,
                   }}
                 >
-                  <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 13 }}>Ajouter</Text>
+                  <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 13 }}>Ajouter</Text>
                 </AnimatedPressable>
               </View>
             ) : (
-              <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                 Maximum {MAX_CONDITIONS} conditions atteint.
               </Text>
             )}
@@ -633,24 +636,24 @@ export default function ProPublicProfileScreen() {
         {/* Section: Visibilité */}
         <View className="mb-6">
           <SectionTitle title="Visibilité du profil" />
-          <View className="bg-card rounded-2xl p-5 border border-border">
+          <View className="rounded-2xl p-5 border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
             <View className="flex-row items-center justify-between gap-4">
               <View className="flex-row items-start gap-3 flex-1">
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: isPublic ? `${Colors.primary}15` : Colors.muted }}
+                  style={{ backgroundColor: isPublic ? `${colors.primary}15` : colors.muted }}
                 >
                   <Ionicons
                     name={isPublic ? "eye-outline" : "eye-off-outline"}
                     size={18}
-                    color={isPublic ? Colors.primary : Colors.mutedForeground}
+                    color={isPublic ? colors.primary : colors.mutedForeground}
                   />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-foreground">
+                  <Text className="text-sm font-semibold" style={{ color: colors.foreground }}>
                     Profil {isPublic ? "public" : "privé"}
                   </Text>
-                  <Text className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                  <Text className="text-xs leading-relaxed mt-0.5" style={{ color: colors.mutedForeground }}>
                     {isPublic
                       ? "Ton profil est visible par toutes les clientes sur Blyss."
                       : "Ton profil n'est visible que par toi."}
@@ -660,8 +663,8 @@ export default function ProPublicProfileScreen() {
               <Switch
                 value={isPublic}
                 onValueChange={setIsPublic}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={Colors.white}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.onColor}
               />
             </View>
           </View>
@@ -669,9 +672,9 @@ export default function ProPublicProfileScreen() {
 
         {saveError && <View style={{ marginBottom: 12 }}><ErrorMessage message={saveError} /></View>}
         {saveSuccess && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.successLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 }}>
-            <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.successText }}>Profil public mis à jour !</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.successLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 }}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.successText }}>Profil public mis à jour !</Text>
           </View>
         )}
         <AnimatedPressable
@@ -679,21 +682,21 @@ export default function ProPublicProfileScreen() {
           disabled={!hasChanges || isSaving}
           className="h-14 rounded-2xl items-center justify-center flex-row gap-2"
           style={{
-            backgroundColor: hasChanges ? Colors.primary : Colors.muted,
+            backgroundColor: hasChanges ? colors.primary : colors.muted,
             opacity: isSaving ? 0.7 : 1,
           }}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color={Colors.white} />
+            <ActivityIndicator size="small" color={colors.onColor} />
           ) : hasChanges ? (
             <>
-              <Ionicons name="save-outline" size={18} color={Colors.white} />
+              <Ionicons name="save-outline" size={18} color={colors.onColor} />
               <Text className="text-white font-bold text-base">Enregistrer le profil public</Text>
             </>
           ) : (
             <>
-              <Ionicons name="checkmark" size={18} color={Colors.mutedForeground} />
-              <Text className="font-semibold text-sm text-muted-foreground">Profil à jour</Text>
+              <Ionicons name="checkmark" size={18} color={colors.mutedForeground} />
+              <Text className="font-semibold text-sm" style={{ color: colors.mutedForeground }}>Profil à jour</Text>
             </>
           )}
         </AnimatedPressable>
@@ -711,7 +714,7 @@ export default function ProPublicProfileScreen() {
               accessibilityLabel="Fermer"
             >
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="close" size={20} color={Colors.white} />
+                <Ionicons name="close" size={20} color={colors.onColor} />
               </View>
             </Pressable>
             <Image
@@ -721,10 +724,10 @@ export default function ProPublicProfileScreen() {
             />
             <Pressable
               onPress={() => handleDeleteGalleryPhoto(selectedGalleryImage)}
-              style={{ marginTop: 20, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, backgroundColor: Colors.destructive }}
+              style={{ marginTop: 20, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, backgroundColor: colors.destructive }}
             >
-              <Ionicons name="trash-outline" size={18} color={Colors.white} />
-              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Supprimer</Text>
+              <Ionicons name="trash-outline" size={18} color={colors.onColor} />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Supprimer</Text>
             </Pressable>
           </View>
         )}
@@ -732,19 +735,20 @@ export default function ProPublicProfileScreen() {
 
       {/* Preview modal */}
       <Modal visible={showPreview} animationType="slide" presentationStyle="pageSheet">
-        <View className="flex-1 bg-background">
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
           <View
-            className="flex-row items-center justify-between px-5 border-b border-border"
-            style={{ paddingTop: insets.top + 12, paddingBottom: 12 }}
+            className="flex-row items-center justify-between px-5 border-b"
+            style={{ paddingTop: insets.top + 12, paddingBottom: 12, borderBottomColor: colors.border }}
           >
-            <Text className="font-bold text-foreground text-base">Aperçu profil public</Text>
+            <Text className="font-bold text-base" style={{ color: colors.foreground }}>Aperçu profil public</Text>
             <Pressable
               onPress={() => setShowPreview(false)}
-              className="w-8 h-8 rounded-full bg-muted items-center justify-center"
+              className="w-8 h-8 rounded-full items-center justify-center"
+              style={{ backgroundColor: colors.muted }}
               accessibilityRole="button"
               accessibilityLabel="Fermer l'aperçu"
             >
-              <Ionicons name="close" size={18} color={Colors.foreground} />
+              <Ionicons name="close" size={18} color={colors.foreground} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
@@ -759,44 +763,44 @@ export default function ProPublicProfileScreen() {
               )}
               <View
                 className="w-20 h-20 rounded-2xl items-center justify-center mb-3"
-                style={{ backgroundColor: `${Colors.primary}20` }}
+                style={{ backgroundColor: `${colors.primary}20` }}
               >
-                <Text className="text-3xl font-bold" style={{ color: Colors.primary }}>
+                <Text className="text-3xl font-bold" style={{ color: colors.primary }}>
                   {(activityName || user?.first_name || "P")[0]}
                 </Text>
               </View>
-              <Text className="text-xl font-bold text-foreground text-center">
+              <Text className="text-xl font-bold text-center" style={{ color: colors.foreground }}>
                 {activityName || "Nom de l'activité"}
               </Text>
               {user?.pro_specialties?.[0] ? (
-                <Text className="text-sm text-muted-foreground mt-1">
+                <Text className="text-sm mt-1" style={{ color: colors.mutedForeground }}>
                   {user.pro_specialties[0]}
                 </Text>
               ) : null}
               {city ? (
                 <View className="flex-row items-center gap-1 mt-2">
-                  <Ionicons name="location-outline" size={14} color={Colors.mutedForeground} />
-                  <Text className="text-sm text-muted-foreground">{city}</Text>
+                  <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
+                  <Text className="text-sm" style={{ color: colors.mutedForeground }}>{city}</Text>
                 </View>
               ) : null}
               {instagram ? (
-                <Text className="text-sm mt-1" style={{ color: Colors.primary }}>
+                <Text className="text-sm mt-1" style={{ color: colors.primary }}>
                   {instagram.startsWith("@") ? instagram : `@${instagram}`}
                 </Text>
               ) : null}
             </View>
 
             {bio ? (
-              <View className="bg-card rounded-2xl p-4 mb-4 border border-border">
-                <Text className="text-base font-bold text-foreground mb-2">À propos</Text>
-                <Text className="text-sm text-muted-foreground leading-relaxed">{bio}</Text>
+              <View className="rounded-2xl p-4 mb-4 border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <Text className="text-base font-bold mb-2" style={{ color: colors.foreground }}>À propos</Text>
+                <Text className="text-sm leading-relaxed" style={{ color: colors.mutedForeground }}>{bio}</Text>
               </View>
             ) : null}
 
             {/* Réalisations */}
             {gallery.length > 0 && (
               <View className="mb-4">
-                <Text className="text-base font-bold text-foreground mb-3">Réalisations</Text>
+                <Text className="text-base font-bold mb-3" style={{ color: colors.foreground }}>Réalisations</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                   {gallery.map((img) => (
                     <Image
@@ -812,25 +816,25 @@ export default function ProPublicProfileScreen() {
 
             {/* Prestations */}
             {services.length > 0 && (
-              <View className="bg-card rounded-2xl p-4 mb-4 border border-border">
-                <Text className="text-base font-bold text-foreground mb-3">Prestations</Text>
+              <View className="rounded-2xl p-4 mb-4 border" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                <Text className="text-base font-bold mb-3" style={{ color: colors.foreground }}>Prestations</Text>
                 <View style={{ gap: 10 }}>
                   {services.slice(0, 5).map((s) => (
                     <View key={s.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>{s.name}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>{s.name}</Text>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-                          <Ionicons name="time-outline" size={11} color={Colors.mutedForeground} />
-                          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{s.duration_minutes} min</Text>
+                          <Ionicons name="time-outline" size={11} color={colors.mutedForeground} />
+                          <Text style={{ fontSize: 11, color: colors.mutedForeground }}>{s.duration_minutes} min</Text>
                         </View>
                       </View>
-                      <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.primary }}>
+                      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.primary }}>
                         {(typeof s.price === "number" ? s.price : parseFloat(String(s.price ?? "0"))).toFixed(2)} €
                       </Text>
                     </View>
                   ))}
                   {services.length > 5 && (
-                    <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center" }}>
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>
                       +{services.length - 5} autres prestations
                     </Text>
                   )}
@@ -839,14 +843,14 @@ export default function ProPublicProfileScreen() {
             )}
 
             {!isPublic && (
-              <View className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
+              <View className="rounded-2xl p-4 mb-4 border" style={{ backgroundColor: colors.destructiveLight, borderColor: withAlpha(colors.destructive, 0.3) }}>
                 <View className="flex-row items-center gap-3">
-                  <View className="w-10 h-10 rounded-xl bg-red-100 items-center justify-center">
-                    <Ionicons name="eye-off-outline" size={18} color={Colors.destructiveText} />
+                  <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: withAlpha(colors.destructive, 0.15) }}>
+                    <Ionicons name="eye-off-outline" size={18} color={colors.destructiveText} />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-semibold text-foreground">Profil actuellement privé</Text>
-                    <Text className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                    <Text className="text-sm font-semibold" style={{ color: colors.foreground }}>Profil actuellement privé</Text>
+                    <Text className="text-xs leading-relaxed mt-0.5" style={{ color: colors.mutedForeground }}>
                       Ton profil n'est pas visible par les clientes.
                     </Text>
                   </View>
@@ -858,21 +862,21 @@ export default function ProPublicProfileScreen() {
               onPress={() => setShowPreview(false)}
               style={{
                 height: 56, borderRadius: 20,
-                backgroundColor: Colors.primary,
+                backgroundColor: colors.primary,
                 alignItems: "center", justifyContent: "center",
                 flexDirection: "row", gap: 8,
-                shadowColor: Colors.primary,
+                shadowColor: colors.primary,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
               }}
             >
-              <Ionicons name="calendar-outline" size={18} color={Colors.white} />
-              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 15 }}>Réserver</Text>
+              <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 15 }}>Réserver</Text>
             </Pressable>
             <Pressable onPress={() => setShowPreview(false)} style={{ marginTop: 12, alignItems: "center" }}>
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Fermer l'aperçu</Text>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground }}>Fermer l'aperçu</Text>
             </Pressable>
-            <Text className="text-xs text-muted-foreground text-center mt-2">
+            <Text className="text-xs text-center mt-2" style={{ color: colors.mutedForeground }}>
               Aperçu uniquement — les vraies données s'affichent sur le profil public.
             </Text>
           </ScrollView>
@@ -883,11 +887,12 @@ export default function ProPublicProfileScreen() {
 }
 
 function SectionTitle({ title }: { title: string }) {
+  const colors = useThemeColors();
   return (
     <View className="flex-row items-center gap-2 mb-3 px-1">
-      <View className="flex-1 h-px bg-border" />
-      <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</Text>
-      <View className="flex-1 h-px bg-border" />
+      <View className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
+      <Text className="text-xs font-bold uppercase tracking-wider" style={{ color: colors.mutedForeground }}>{title}</Text>
+      <View className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
     </View>
   );
 }

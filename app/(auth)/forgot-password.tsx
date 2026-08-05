@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import * as Haptics from "expo-haptics";
 import { authApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
@@ -24,6 +24,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail]         = useState("");
   const [emailError, setEmailError] = useState<string | undefined>(undefined);
   const [isSending, setIsSending] = useState(false);
@@ -78,7 +80,7 @@ export default function ForgotPasswordScreen() {
             onPress={() => safeBack(router)}
             style={styles.backBtn}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.mutedForeground} />
+            <Ionicons name="chevron-back" size={20} color={colors.mutedForeground} />
             <Text style={styles.backText}>Retour</Text>
           </AnimatedIconButton>
 
@@ -86,7 +88,7 @@ export default function ForgotPasswordScreen() {
             /* ── Success state ───────────────────────────────────────── */
             <View style={styles.centeredBlock}>
               <View style={styles.iconCircle}>
-                <Ionicons name="mail-outline" size={36} color={Colors.primary} />
+                <Ionicons name="mail-outline" size={36} color={colors.primary} />
               </View>
               <Text style={styles.title}>Email envoyé ✉️</Text>
               <Text style={styles.subtitle}>
@@ -106,7 +108,7 @@ export default function ForgotPasswordScreen() {
             <>
               <View style={styles.centeredBlock}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="lock-open-outline" size={36} color={Colors.primary} />
+                  <Ionicons name="lock-open-outline" size={36} color={colors.primary} />
                 </View>
                 <Text style={styles.title}>Mot de passe oublié</Text>
                 <Text style={styles.subtitle}>
@@ -135,10 +137,10 @@ export default function ForgotPasswordScreen() {
                   style={[styles.ctaBtn, isDisabled && styles.ctaBtnDisabled]}
                 >
                   {isSending ? (
-                    <ActivityIndicator color={Colors.white} />
+                    <ActivityIndicator color={colors.onColor} />
                   ) : (
                     <View style={styles.ctaBtnInner}>
-                      <Ionicons name="send-outline" size={18} color={Colors.white} />
+                      <Ionicons name="send-outline" size={18} color={colors.onColor} />
                       <Text style={styles.ctaBtnText}>Envoyer le lien</Text>
                     </View>
                   )}
@@ -161,8 +163,9 @@ export default function ForgotPasswordScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 0,
@@ -171,14 +174,14 @@ const styles = StyleSheet.create({
   },
 
   backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 32 },
-  backText: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
+  backText: { fontSize: 14, color: colors.mutedForeground, fontWeight: "500" },
 
   centeredBlock: { alignItems: "center", marginBottom: 32, gap: 12 },
   iconCircle: {
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -186,20 +189,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: Colors.foreground,
+    color: colors.foreground,
     letterSpacing: -0.4,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: "center",
     lineHeight: 21,
     maxWidth: 280,
   },
   spamHint: {
     fontSize: 12,
-    color: Colors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: "center",
     opacity: 0.7,
   },
@@ -209,19 +212,20 @@ const styles = StyleSheet.create({
   ctaBtn: {
     height: 56,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 5,
   },
-  ctaBtnDisabled: { backgroundColor: Colors.disabled, shadowOpacity: 0, elevation: 0 },
+  ctaBtnDisabled: { backgroundColor: colors.disabled, shadowOpacity: 0, elevation: 0 },
   ctaBtnInner: { flexDirection: "row", alignItems: "center", gap: 8 },
-  ctaBtnText: { fontSize: 16, fontWeight: "700", color: Colors.white },
+  ctaBtnText: { fontSize: 16, fontWeight: "700", color: colors.onColor },
 
   loginLink: { alignItems: "center", marginTop: 20 },
-  loginLinkText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
-});
+  loginLinkText: { fontSize: 14, fontWeight: "600", color: colors.primary },
+  });
+}

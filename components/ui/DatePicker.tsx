@@ -4,7 +4,7 @@ import RNDateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface DatePickerProps {
@@ -36,6 +36,8 @@ export function DatePicker({
   error,
   hint,
 }: DatePickerProps) {
+  const colors = useThemeColors();
+  const isDark = useIsDarkMode();
   const [open, setOpen] = useState(false);
   // Temp value while user scrolls on iOS (confirmed on "Valider")
   const [tempDate, setTempDate] = useState<Date>(value ?? new Date());
@@ -57,7 +59,7 @@ export function DatePicker({
   return (
     <View className="gap-1.5">
       {label && (
-        <Text className="text-sm font-medium text-foreground">{label}</Text>
+        <Text className="text-sm font-medium" style={{ color: colors.foreground }}>{label}</Text>
       )}
 
       <AnimatedPressable
@@ -66,28 +68,27 @@ export function DatePicker({
           setOpen(true);
         }}
         accessibilityLabel={label ?? "Sélectionner une date"}
-        className={[
-          "flex-row items-center h-11 px-3 bg-background rounded-md border",
-          error ? "border-destructive" : "border-input",
-        ].join(" ")}
+        className="flex-row items-center h-11 px-3 rounded-md border"
+        style={{ backgroundColor: colors.background, borderColor: error ? colors.destructive : colors.border }}
       >
         <Ionicons
           name="calendar-outline"
           size={16}
-          color={Colors.mutedForeground}
+          color={colors.mutedForeground}
           style={{ marginRight: 6 }}
         />
         <Text
-          className={`flex-1 text-base ${value ? "text-foreground" : "text-muted-foreground"}`}
+          className="flex-1 text-base"
+          style={{ color: value ? colors.foreground : colors.mutedForeground }}
         >
           {value ? formatDate(value) : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={14} color={Colors.mutedForeground} />
+        <Ionicons name="chevron-down" size={14} color={colors.mutedForeground} />
       </AnimatedPressable>
 
-      {error && <Text className="text-xs text-destructive">{error}</Text>}
+      {error && <Text className="text-xs" style={{ color: colors.destructive }}>{error}</Text>}
       {!error && hint && (
-        <Text className="text-xs text-muted-foreground">{hint}</Text>
+        <Text className="text-xs" style={{ color: colors.mutedForeground }}>{hint}</Text>
       )}
 
       {/* Android: picker renders inline as system modal */}
@@ -113,17 +114,17 @@ export function DatePicker({
             className="flex-1 bg-black/40"
             onPress={() => setOpen(false)}
           />
-          <View className="bg-card rounded-t-3xl px-4 pt-4 pb-8">
+          <View className="rounded-t-3xl px-4 pt-4 pb-8" style={{ backgroundColor: colors.card }}>
             {/* Modal header */}
             <View className="flex-row items-center justify-between mb-2">
               <AnimatedPressable onPress={() => setOpen(false)} className="p-2">
-                <Text className="text-base text-muted-foreground">Annuler</Text>
+                <Text className="text-base" style={{ color: colors.mutedForeground }}>Annuler</Text>
               </AnimatedPressable>
-              <Text className="text-base font-semibold text-foreground">
+              <Text className="text-base font-semibold" style={{ color: colors.foreground }}>
                 {label ?? "Choisir une date"}
               </Text>
               <AnimatedPressable onPress={handleConfirmIOS} className="p-2">
-                <Text className="text-base font-semibold text-primary">Valider</Text>
+                <Text className="text-base font-semibold" style={{ color: colors.primary }}>Valider</Text>
               </AnimatedPressable>
             </View>
 
@@ -135,6 +136,7 @@ export function DatePicker({
               minimumDate={minimumDate}
               maximumDate={maximumDate}
               locale="fr-FR"
+              themeVariant={isDark ? "dark" : "light"}
               style={{ height: 200 }}
             />
           </View>

@@ -19,7 +19,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { BlockedClient } from "@/lib/api";
@@ -61,22 +62,23 @@ function BlockedClientRow({
   onUnblock: (clientId: number) => void;
   isUnblocking: boolean;
 }) {
+  const colors = useThemeColors();
   return (
     <View
       style={{
         flexDirection: "row", alignItems: "center", gap: 12,
-        backgroundColor: Colors.white, borderRadius: 16, padding: 14,
+        backgroundColor: colors.white, borderRadius: 16, padding: 14,
         marginBottom: 10, ...Shadows.card,
       }}
     >
       <Avatar name={`${item.first_name} ${item.last_name}`} size={44} />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }} numberOfLines={1}>
           {item.first_name} {item.last_name}
         </Text>
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{item.email}</Text>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{item.email}</Text>
         {item.reason && (
-          <Text style={{ fontSize: 11, color: Colors.destructive, marginTop: 3, fontWeight: "600" }}>
+          <Text style={{ fontSize: 11, color: colors.destructive, marginTop: 3, fontWeight: "600" }}>
             {item.reason}
           </Text>
         )}
@@ -89,12 +91,12 @@ function BlockedClientRow({
         disabled={isUnblocking}
         style={{
           paddingHorizontal: 12, paddingVertical: 8,
-          backgroundColor: withAlpha(Colors.success, 0.12),
+          backgroundColor: withAlpha(colors.success, 0.12),
           borderRadius: 10,
           opacity: isUnblocking ? 0.5 : 1,
         }}
       >
-        <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.success }}>Débloquer</Text>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.success }}>Débloquer</Text>
       </AnimatedPressable>
     </View>
   );
@@ -104,6 +106,7 @@ export default function ProClientsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState<TabKey>("clients");
   const [search, setSearch] = useState("");
@@ -172,48 +175,48 @@ export default function ProClientsScreen() {
       onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${item.id}`)}
       style={{
         flexDirection: "row", alignItems: "center", gap: 12,
-        backgroundColor: Colors.white, borderRadius: 16, padding: 14,
+        backgroundColor: colors.white, borderRadius: 16, padding: 14,
         marginBottom: 10, ...Shadows.card,
       }}
     >
       <Avatar name={item.name} size={44} />
 
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }} numberOfLines={1}>
           {item.name}
         </Text>
         {item.phone ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 }}>
-            <Ionicons name="call-outline" size={11} color={Colors.mutedForeground} />
-            <Text style={{ fontSize: 12.5, fontWeight: "600", color: "#52525B" }} numberOfLines={1}>{item.phone}</Text>
+            <Ionicons name="call-outline" size={11} color={colors.mutedForeground} />
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>{item.phone}</Text>
           </View>
         ) : null}
       </View>
 
       <View style={{ alignItems: "flex-end", gap: 5 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Ionicons name="calendar-outline" size={11} color={Colors.primary} />
-          <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.foreground }}>
+          <Ionicons name="calendar-outline" size={11} color={colors.primary} />
+          <Text style={{ fontSize: 12, fontWeight: "800", color: colors.foreground }}>
             {item.totalVisits ?? 0} visite{(item.totalVisits ?? 0) !== 1 ? "s" : ""}
           </Text>
         </View>
-        <Text style={{ fontSize: 10, color: Colors.mutedForeground }} numberOfLines={1}>
+        <Text style={{ fontSize: 10, color: colors.mutedForeground }} numberOfLines={1}>
           {formatLastVisit(item.lastVisit)}
         </Text>
       </View>
     </AnimatedPressable>
-  ), [router]);
+  ), [router, colors]);
 
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top, opacity: contentOpacity }}>
+    <Animated.View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, opacity: contentOpacity }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5, marginBottom: clientError ? 8 : 16 }}>
+        <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5, marginBottom: clientError ? 8 : 16 }}>
           Mes clientes
         </Text>
         {clientError && <View style={{ marginBottom: 12 }}><ErrorMessage message={clientError} /></View>}
 
         {/* Tabs */}
-        <View style={{ flexDirection: "row", backgroundColor: Colors.card, borderRadius: 16, padding: 4, gap: 4, marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 16, padding: 4, gap: 4, marginBottom: 12 }}>
           {TABS.map(({ key, label, icon }) => (
             <Pressable
               key={key}
@@ -221,20 +224,20 @@ export default function ProClientsScreen() {
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 12,
                 flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                backgroundColor: tab === key ? Colors.primary : "transparent",
+                backgroundColor: tab === key ? colors.primary : "transparent",
               }}
             >
-              <Ionicons name={icon} size={15} color={tab === key ? Colors.white : Colors.mutedForeground} />
-              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? Colors.white : Colors.mutedForeground }}>
+              <Ionicons name={icon} size={15} color={tab === key ? colors.onColor : colors.mutedForeground} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? colors.onColor : colors.mutedForeground }}>
                 {label}
               </Text>
               {key === "blocked" && blocked.length > 0 && (
                 <View style={{
                   width: 16, height: 16, borderRadius: 8,
-                  backgroundColor: tab === key ? "rgba(255,255,255,0.3)" : Colors.destructive,
+                  backgroundColor: tab === key ? "rgba(255,255,255,0.3)" : colors.destructive,
                   alignItems: "center", justifyContent: "center",
                 }}>
-                  <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{blocked.length}</Text>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: colors.onColor }}>{blocked.length}</Text>
                 </View>
               )}
             </Pressable>
@@ -243,14 +246,14 @@ export default function ProClientsScreen() {
 
         {/* Barre de recherche */}
         {tab === "clients" && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.cream, paddingHorizontal: 14 }}>
-            <Ionicons name="search-outline" size={16} color="#A1A1AA" />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.cream, paddingHorizontal: 14 }}>
+            <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Rechercher par nom ou téléphone..."
-              placeholderTextColor={Colors.inputPlaceholder}
-              style={{ flex: 1, fontSize: 14.5, color: Colors.foreground, padding: 0 }}
+              placeholderTextColor={colors.inputPlaceholder}
+              style={{ flex: 1, fontSize: 14.5, color: colors.foreground, padding: 0 }}
               autoCorrect={false}
             />
             {search.length > 0 && (
@@ -259,7 +262,7 @@ export default function ProClientsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Effacer la recherche"
               >
-                <Ionicons name="close-circle" size={16} color="#A1A1AA" />
+                <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
               </Pressable>
             )}
           </View>
@@ -280,8 +283,8 @@ export default function ProClientsScreen() {
               <View>
                 {/* Stats */}
                 <View style={{
-                  flexDirection: "row", backgroundColor: Colors.card,
-                  borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
+                  flexDirection: "row", backgroundColor: colors.card,
+                  borderRadius: 16, borderWidth: 1, borderColor: colors.border,
                   marginBottom: 20, overflow: "hidden",
                 }}>
                   {[
@@ -290,25 +293,25 @@ export default function ProClientsScreen() {
                   ].map(({ label, value }, i) => (
                     <View key={label} style={{
                       flex: 1, alignItems: "center", paddingVertical: 16,
-                      borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: Colors.border,
+                      borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: colors.border,
                     }}>
-                      <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground }}>{value}</Text>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, marginTop: 2, letterSpacing: 0.5 }}>{label}</Text>
+                      <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground }}>{value}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, marginTop: 2, letterSpacing: 0.5 }}>{label}</Text>
                     </View>
                   ))}
                 </View>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 12 }}>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground, marginBottom: 12 }}>
                   {deferredSearch ? `${filteredClients.length} résultat${filteredClients.length !== 1 ? "s" : ""}` : "Toutes mes clientes"}
                 </Text>
               </View>
             }
             ListEmptyComponent={
-              <View style={{ backgroundColor: Colors.card, borderRadius: 16, padding: 40, alignItems: "center", gap: 8 }}>
-                <Ionicons name="people-outline" size={40} color={Colors.border} />
-                <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>
+              <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 40, alignItems: "center", gap: 8 }}>
+                <Ionicons name="people-outline" size={40} color={colors.border} />
+                <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>
                   {search ? "Aucun résultat" : "Aucune cliente"}
                 </Text>
-                <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                   {search ? "Essaie un autre terme de recherche" : "Tes clientes apparaîtront ici"}
                 </Text>
               </View>
@@ -327,11 +330,11 @@ export default function ProClientsScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 48, gap: 8 }}>
-              <Ionicons name="shield-checkmark-outline" size={48} color={Colors.border} />
-              <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>
+              <Ionicons name="shield-checkmark-outline" size={48} color={colors.border} />
+              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>
                 Aucune cliente bloquée
               </Text>
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                 Ta liste de blocage est vide
               </Text>
             </View>

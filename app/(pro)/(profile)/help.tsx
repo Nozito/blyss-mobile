@@ -11,7 +11,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
@@ -48,6 +48,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
 
 export default function ProHelpScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<Category>("agenda");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -63,7 +64,7 @@ export default function ProHelpScreen() {
   return (
     <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 100,
@@ -76,28 +77,28 @@ export default function ProHelpScreen() {
         <AnimatedIconButton
           onPress={() => safeBack(router)}
           accessibilityLabel="Retour"
-          style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" }}
+          style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}
         >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={20} color={colors.foreground} />
         </AnimatedIconButton>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground }}>Aide & support</Text>
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>Tout pour bien gérer ton activité</Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Aide & support</Text>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Tout pour bien gérer ton activité</Text>
         </View>
       </View>
 
       {/* Intro card */}
       <View style={{
         flexDirection: "row", alignItems: "center", gap: 12,
-        backgroundColor: Colors.white, borderRadius: 20, padding: 16,
+        backgroundColor: colors.white, borderRadius: 20, padding: 16,
         marginBottom: 16, ...Shadows.card,
       }}>
-        <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: `${Colors.primary}18`, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="sparkles-outline" size={16} color={Colors.primary} />
+        <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: `${colors.primary}18`, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>Une question sur ton espace pro ?</Text>
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2, lineHeight: 15 }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>Une question sur ton espace pro ?</Text>
+          <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2, lineHeight: 15 }}>
             Consulte les FAQs ou contacte directement notre équipe.
           </Text>
         </View>
@@ -117,11 +118,11 @@ export default function ProHelpScreen() {
               }}
               style={{
                 paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20,
-                backgroundColor: active ? Colors.primary : Colors.white,
-                borderWidth: 1, borderColor: active ? Colors.primary : Colors.border,
+                backgroundColor: active ? colors.primary : colors.white,
+                borderWidth: 1, borderColor: active ? colors.primary : colors.border,
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? colors.onColor : colors.mutedForeground }}>
                 {cat.label}
               </Text>
             </Pressable>
@@ -141,14 +142,14 @@ export default function ProHelpScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setOpenIndex(isOpen ? null : globalIdx);
               }}
-              style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}
+              style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground, flex: 1 }}>{faq.question}</Text>
-                <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={18} color={Colors.mutedForeground} />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground, flex: 1 }}>{faq.question}</Text>
+                <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.mutedForeground} />
               </View>
               {isOpen && (
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 10, lineHeight: 18 }}>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 10, lineHeight: 18 }}>
                   {faq.answer}
                 </Text>
               )}
@@ -166,17 +167,17 @@ export default function ProHelpScreen() {
         style={{
           borderRadius: 16, padding: 16, flexDirection: "row",
           alignItems: "center", justifyContent: "space-between",
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.primary,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Ionicons name="mail-outline" size={18} color={Colors.white} />
+          <Ionicons name="mail-outline" size={18} color={colors.onColor} />
           <View>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>Écrire au support Pro</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Écrire au support Pro</Text>
             <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 1 }}>Réponse sous 24h ouvrées.</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={Colors.white} />
+        <Ionicons name="chevron-forward" size={16} color={colors.onColor} />
       </AnimatedPressable>
     </ScrollView>
     </Animated.View>

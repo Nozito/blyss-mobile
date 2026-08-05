@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { proApi } from "@/lib/api";
 import { Fonts } from "@/constants/fonts";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,57 +42,59 @@ async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   return false;
 }
 
-const PLAN_CONFIG: Record<RCPlan, {
+function getPlanConfig(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, {
   label: string;
   fallbackMonthly: number;
   fallbackAnnualTotal: number;
   color: string;
   icon: "rocket-outline" | "shield-checkmark-outline" | "diamond-outline";
   features: { text: string; icon: string }[];
-}> = {
-  start: {
-    label: "Start",
-    fallbackMonthly: 29.99,
-    fallbackAnnualTotal: 299.99,
-    color: Colors.primary,
-    icon: "rocket-outline",
-    features: [
-      { text: "Tes clientes réservent sans DM ni appel", icon: "calendar-outline" },
-      { text: "Rappels automatiques — zéro lapin", icon: "notifications-outline" },
-      { text: "Profil public visible par toutes tes clientes", icon: "globe-outline" },
-      { text: "Dashboard pour suivre ta semaine", icon: "bar-chart-outline" },
-      { text: "Paiement en ligne sécurisé", icon: "card-outline" },
-    ],
-  },
-  serenite: {
-    label: "Sérénité",
-    fallbackMonthly: 39.99,
-    fallbackAnnualTotal: 399.99,
-    color: Colors.pro,
-    icon: "shield-checkmark-outline",
-    features: [
-      { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
-      { text: "CA en temps réel + facturation automatique", icon: "receipt-outline" },
-      { text: "Portfolio photos pour attirer de nouvelles clientes", icon: "camera-outline" },
-      { text: "Statistiques détaillées de ton activité", icon: "analytics-outline" },
-      { text: "Rappels post-prestation pour fidéliser", icon: "heart-outline" },
-    ],
-  },
-  signature: {
-    label: "Signature",
-    fallbackMonthly: 49.99,
-    fallbackAnnualTotal: 499.99,
-    color: Colors.secondary,
-    icon: "diamond-outline",
-    features: [
-      { text: "Tout Sérénité inclus", icon: "checkmark-circle-outline" },
-      { text: "Mise en avant prioritaire dans la recherche", icon: "star-outline" },
-      { text: "Encaissement à distance depuis ton profil", icon: "card-outline" },
-      { text: "Badge Pro Signature visible par tes clientes", icon: "diamond-outline" },
-      { text: "Support prioritaire 7j/7", icon: "headset-outline" },
-    ],
-  },
-};
+}> {
+  return {
+    start: {
+      label: "Start",
+      fallbackMonthly: 29.99,
+      fallbackAnnualTotal: 299.99,
+      color: colors.primary,
+      icon: "rocket-outline",
+      features: [
+        { text: "Tes clientes réservent sans DM ni appel", icon: "calendar-outline" },
+        { text: "Rappels automatiques — zéro lapin", icon: "notifications-outline" },
+        { text: "Profil public visible par toutes tes clientes", icon: "globe-outline" },
+        { text: "Dashboard pour suivre ta semaine", icon: "bar-chart-outline" },
+        { text: "Paiement en ligne sécurisé", icon: "card-outline" },
+      ],
+    },
+    serenite: {
+      label: "Sérénité",
+      fallbackMonthly: 39.99,
+      fallbackAnnualTotal: 399.99,
+      color: colors.pro,
+      icon: "shield-checkmark-outline",
+      features: [
+        { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
+        { text: "CA en temps réel + facturation automatique", icon: "receipt-outline" },
+        { text: "Portfolio photos pour attirer de nouvelles clientes", icon: "camera-outline" },
+        { text: "Statistiques détaillées de ton activité", icon: "analytics-outline" },
+        { text: "Rappels post-prestation pour fidéliser", icon: "heart-outline" },
+      ],
+    },
+    signature: {
+      label: "Signature",
+      fallbackMonthly: 49.99,
+      fallbackAnnualTotal: 499.99,
+      color: colors.secondary,
+      icon: "diamond-outline",
+      features: [
+        { text: "Tout Sérénité inclus", icon: "checkmark-circle-outline" },
+        { text: "Mise en avant prioritaire dans la recherche", icon: "star-outline" },
+        { text: "Encaissement à distance depuis ton profil", icon: "card-outline" },
+        { text: "Badge Pro Signature visible par tes clientes", icon: "diamond-outline" },
+        { text: "Support prioritaire 7j/7", icon: "headset-outline" },
+      ],
+    },
+  };
+}
 
 function savingsPercent(monthly: number, annualMonthly: number) {
   return Math.round((1 - annualMonthly / monthly) * 100);
@@ -101,6 +103,8 @@ function savingsPercent(monthly: number, annualMonthly: number) {
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useThemeColors();
+  const PLAN_CONFIG = useMemo(() => getPlanConfig(colors), [colors]);
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -195,7 +199,7 @@ export default function SubscriptionScreen() {
     : "Gère ton plan Blyss Pro";
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{
         gestureEnabled: hasActiveSubscription,
         headerBackVisible: false,
@@ -217,18 +221,18 @@ export default function SubscriptionScreen() {
               accessibilityLabel="Retour"
               style={{
                 width: 40, height: 40, borderRadius: 12,
-                backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+                backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
                 alignItems: "center", justifyContent: "center",
               }}
             >
-              <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+              <Ionicons name="chevron-back" size={20} color={colors.foreground} />
             </AnimatedIconButton>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
               {screenTitle}
             </Text>
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{screenSubtitle}</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{screenSubtitle}</Text>
           </View>
         </View>
 
@@ -238,9 +242,9 @@ export default function SubscriptionScreen() {
               </View>
             )}
             {syncWarning && (
-              <View style={{ marginBottom: 16, backgroundColor: Colors.warningLight, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-                <Ionicons name="alert-circle-outline" size={16} color={Colors.warning} style={{ marginTop: 1 }} />
-                <Text style={{ flex: 1, fontSize: 13, color: Colors.warningText, lineHeight: 18 }}>
+              <View style={{ marginBottom: 16, backgroundColor: colors.warningLight, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                <Ionicons name="alert-circle-outline" size={16} color={colors.warning} style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, fontSize: 13, color: colors.warningText, lineHeight: 18 }}>
                   Abonnement actif. Synchronisation mineure échouée — redémarre l'app si certaines fonctionnalités manquent.
                 </Text>
               </View>
@@ -252,15 +256,15 @@ export default function SubscriptionScreen() {
             {!subscription && (
               <View style={{ marginBottom: 24 }}>
                 <Text style={{
-                  fontSize: 26, fontWeight: "900", color: Colors.foreground,
+                  fontSize: 26, fontWeight: "900", color: colors.foreground,
                   letterSpacing: -0.8, lineHeight: 33, marginBottom: 8,
                 }}>
                   Ton activité mérite{"\n"}
-                  <Text style={{ color: Colors.primary, fontFamily: Fonts.serifItalic }}>
+                  <Text style={{ color: colors.primary, fontFamily: Fonts.serifItalic }}>
                     mieux qu'un agenda papier
                   </Text>
                 </Text>
-                <Text style={{ fontSize: 14, color: Colors.mutedForeground, lineHeight: 22, marginBottom: 16 }}>
+                <Text style={{ fontSize: 14, color: colors.mutedForeground, lineHeight: 22, marginBottom: 16 }}>
                   1 rendez-vous suffit à rentabiliser ton abonnement mensuel.
                 </Text>
               </View>
@@ -268,64 +272,64 @@ export default function SubscriptionScreen() {
 
             {subscription ? (
               <View style={{
-                backgroundColor: Colors.card, borderRadius: 20,
-                borderWidth: 2, borderColor: Colors.primary,
+                backgroundColor: colors.card, borderRadius: 20,
+                borderWidth: 2, borderColor: colors.primary,
                 padding: 18, marginBottom: 20,
               }}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.foreground }}>
+                  <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground }}>
                     Plan {PLAN_CONFIG[subscription.plan as RCPlan]?.label ?? subscription.plan}
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <View style={{
                       width: 7, height: 7, borderRadius: 3.5,
-                      backgroundColor: subscription.status === "active" ? Colors.success : Colors.warning,
+                      backgroundColor: subscription.status === "active" ? colors.success : colors.warning,
                     }} />
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: subscription.status === "active" ? Colors.success : Colors.warning }}>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: subscription.status === "active" ? colors.success : colors.warning }}>
                       {subscription.status === "active" ? "Actif" : subscription.status}
                     </Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 30, fontWeight: "800", color: Colors.primary, marginBottom: 4 }}>
+                <Text style={{ fontSize: 30, fontWeight: "800", color: colors.primary, marginBottom: 4 }}>
                   {(Number(subscription.monthlyPrice) || 0).toFixed(2)} €
-                  <Text style={{ fontSize: 14, fontWeight: "400", color: Colors.mutedForeground }}>/mois</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "400", color: colors.mutedForeground }}>/mois</Text>
                 </Text>
                 {subscription.endDate && (
-                  <Text style={{ fontSize: 13, color: Colors.mutedForeground, marginBottom: 14 }}>
+                  <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 14 }}>
                     Expire le {new Date(subscription.endDate).toLocaleDateString("fr-FR")}
                   </Text>
                 )}
 
                 {/* Repères utiles au-delà du simple prix : ancienneté + type de facturation */}
                 <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
-                  <View style={{ flex: 1, backgroundColor: Colors.background, borderRadius: 12, padding: 10 }}>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
+                  <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
                       Membre depuis
                     </Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
                       {new Date(subscription.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                     </Text>
                   </View>
-                  <View style={{ flex: 1, backgroundColor: Colors.background, borderRadius: 12, padding: 10 }}>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
+                  <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
                       Facturation
                     </Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
                       {subscription.billingType === "monthly" ? "Mensuelle" : "Paiement unique"}
                     </Text>
                   </View>
                 </View>
 
-                <View style={{ height: 1, backgroundColor: Colors.border, marginBottom: 14 }} />
+                <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 14 }} />
 
-                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
                   Ce qui est inclus
                 </Text>
                 <View style={{ gap: 8, marginBottom: 16 }}>
                   {(PLAN_CONFIG[subscription.plan as RCPlan]?.features ?? []).map((f) => (
                     <View key={f.text} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Ionicons name="checkmark" size={14} color={Colors.success} />
-                      <Text style={{ fontSize: 12.5, color: Colors.foreground, flex: 1 }}>{f.text}</Text>
+                      <Ionicons name="checkmark" size={14} color={colors.success} />
+                      <Text style={{ fontSize: 12.5, color: colors.foreground, flex: 1 }}>{f.text}</Text>
                     </View>
                   ))}
                 </View>
@@ -333,12 +337,12 @@ export default function SubscriptionScreen() {
                 <Pressable
                   onPress={handleCancelSubscription}
                   style={{
-                    borderWidth: 1.5, borderColor: Colors.border,
+                    borderWidth: 1.5, borderColor: colors.border,
                     borderRadius: 14, paddingVertical: 10,
                     alignItems: "center", marginBottom: 10,
                   }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.mutedForeground }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: colors.mutedForeground }}>
                     Annuler l'abonnement
                   </Text>
                 </Pressable>
@@ -347,7 +351,7 @@ export default function SubscriptionScreen() {
                     onPress={() => router.push("/(pro)/(profile)/subscription-settings" as any)}
                     style={{ alignItems: "center", paddingVertical: 4 }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primary }}>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primary }}>
                       Gérer mon abonnement →
                     </Text>
                   </Pressable>
@@ -356,9 +360,9 @@ export default function SubscriptionScreen() {
             ) : null}
 
             <View style={{
-              flexDirection: "row", backgroundColor: Colors.card,
+              flexDirection: "row", backgroundColor: colors.card,
               borderRadius: 18, padding: 4, marginBottom: 20,
-              borderWidth: 1, borderColor: Colors.border,
+              borderWidth: 1, borderColor: colors.border,
             }}>
               {(["monthly", "annual"] as BillingPeriod[]).map((p) => {
                 const active = billing === p;
@@ -371,20 +375,20 @@ export default function SubscriptionScreen() {
                     }}
                     style={{
                       flex: 1, paddingVertical: 11, borderRadius: 14,
-                      backgroundColor: active ? Colors.primary : "transparent",
+                      backgroundColor: active ? colors.primary : "transparent",
                       alignItems: "center", flexDirection: "row",
                       justifyContent: "center", gap: 6,
                     }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: active ? colors.onColor : colors.mutedForeground }}>
                       {p === "monthly" ? "Mensuel" : "Annuel"}
                     </Text>
                     {p === "annual" && (
                       <View style={{
-                        backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success,
+                        backgroundColor: active ? "rgba(255,255,255,0.25)" : colors.success,
                         borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
                       }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.white }}>2 mois offerts</Text>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: colors.onColor }}>2 mois offerts</Text>
                       </View>
                     )}
                   </Pressable>
@@ -395,12 +399,12 @@ export default function SubscriptionScreen() {
             {isAnnual && (
               <View style={{
                 flexDirection: "row", alignItems: "center", gap: 8,
-                backgroundColor: `${Colors.success}10`, borderRadius: 14,
-                borderWidth: 1, borderColor: `${Colors.success}30`,
+                backgroundColor: `${colors.success}10`, borderRadius: 14,
+                borderWidth: 1, borderColor: `${colors.success}30`,
                 padding: 12, marginBottom: 16,
               }}>
-                <Ionicons name="gift-outline" size={18} color={Colors.success} />
-                <Text style={{ flex: 1, fontSize: 13, color: Colors.success, fontWeight: "500" }}>
+                <Ionicons name="gift-outline" size={18} color={colors.success} />
+                <Text style={{ flex: 1, fontSize: 13, color: colors.success, fontWeight: "500" }}>
                   2 mois offerts · soit 2 prestations économisées sur ton abonnement
                 </Text>
               </View>
@@ -408,8 +412,8 @@ export default function SubscriptionScreen() {
 
             {!isReady ? (
               <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>Chargement des offres...</Text>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={{ fontSize: 14, color: colors.mutedForeground }}>Chargement des offres...</Text>
               </View>
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
@@ -439,15 +443,15 @@ export default function SubscriptionScreen() {
                   <View
                     key={planKey}
                     style={{
-                      backgroundColor: Colors.card, borderRadius: 20,
+                      backgroundColor: colors.card, borderRadius: 20,
                       borderWidth: isCurrent ? 2.5 : 1,
-                      borderColor: isCurrent ? config.color : Colors.border,
+                      borderColor: isCurrent ? config.color : colors.border,
                       marginBottom: 16, overflow: "hidden",
                     }}
                   >
                     {planKey === "serenite" && (
-                      <View style={{ backgroundColor: Colors.primary, paddingVertical: 5, alignItems: "center" }}>
-                        <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.white, letterSpacing: 1 }}>POPULAIRE</Text>
+                      <View style={{ backgroundColor: colors.primary, paddingVertical: 5, alignItems: "center" }}>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: colors.onColor, letterSpacing: 1 }}>POPULAIRE</Text>
                       </View>
                     )}
 
@@ -455,15 +459,15 @@ export default function SubscriptionScreen() {
                       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
                         <View style={{ flex: 1, marginRight: 12 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                            <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground }}>{config.label}</Text>
+                            <Text style={{ fontSize: 19, fontWeight: "800", color: colors.foreground }}>{config.label}</Text>
                             {isCurrent && (
                               <View style={{ backgroundColor: `${config.color}20`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                                 <Text style={{ fontSize: 11, fontWeight: "700", color: config.color }}>Actuel</Text>
                               </View>
                             )}
                             {isAnnual && (
-                              <View style={{ backgroundColor: `${Colors.success}20`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.success }}>-{planSavings}%</Text>
+                              <View style={{ backgroundColor: `${colors.success}20`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.success }}>-{planSavings}%</Text>
                               </View>
                             )}
                           </View>
@@ -471,10 +475,10 @@ export default function SubscriptionScreen() {
                             <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>
                               {isAnnual ? `${annualTotal} €` : displayStr}
                             </Text>
-                            <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>{isAnnual ? "/an" : "/mois"}</Text>
+                            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{isAnnual ? "/an" : "/mois"}</Text>
                           </View>
                           {isAnnual && (
-                            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>soit {displayStr}/mois</Text>
+                            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>soit {displayStr}/mois</Text>
                           )}
                         </View>
                         <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: `${config.color}15`, alignItems: "center", justifyContent: "center" }}>
@@ -488,7 +492,7 @@ export default function SubscriptionScreen() {
                             <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: `${config.color}15`, alignItems: "center", justifyContent: "center" }}>
                               <Ionicons name={f.icon as any} size={14} color={config.color} />
                             </View>
-                            <Text style={{ fontSize: 13, color: Colors.foreground, flex: 1 }}>{f.text}</Text>
+                            <Text style={{ fontSize: 13, color: colors.foreground, flex: 1 }}>{f.text}</Text>
                           </View>
                         ))}
                       </View>
@@ -507,11 +511,11 @@ export default function SubscriptionScreen() {
                           }}
                         >
                           {isPurchasing ? (
-                            <ActivityIndicator color={Colors.white} size="small" />
+                            <ActivityIndicator color={colors.onColor} size="small" />
                           ) : (
                             <>
-                              <Ionicons name="arrow-up-circle-outline" size={18} color={Colors.white} />
-                              <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 14 }}>Choisir {config.label}</Text>
+                              <Ionicons name="arrow-up-circle-outline" size={18} color={colors.onColor} />
+                              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Choisir {config.label}</Text>
                             </>
                           )}
                         </AnimatedPressable>
@@ -525,28 +529,28 @@ export default function SubscriptionScreen() {
             <View style={{ alignItems: "center", marginTop: 8, marginBottom: 4 }}>
               <Pressable onPress={() => void handleRestore()} disabled={restoring} hitSlop={8}>
                 {restoring ? (
-                  <ActivityIndicator size="small" color={Colors.mutedForeground} />
+                  <ActivityIndicator size="small" color={colors.mutedForeground} />
                 ) : (
-                  <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
+                  <Text style={{ fontSize: 13, color: colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
                 )}
               </Pressable>
             </View>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", marginTop: 8, lineHeight: 16 }}>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, textAlign: "center", marginTop: 8, lineHeight: 16 }}>
               Annule à tout moment • Paiement sécurisé
             </Text>
 
             {/* Mentions légales obligatoires (Apple Guideline 3.1.2) — doivent être visibles
                 près du bouton d'achat, pas seulement dans les réglages post-achat. */}
-            <Text style={{ fontSize: 10, color: Colors.mutedForeground, textAlign: "center", lineHeight: 15, marginTop: 12, paddingHorizontal: 8 }}>
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, textAlign: "center", lineHeight: 15, marginTop: 12, paddingHorizontal: 8 }}>
               {"L'abonnement se renouvelle automatiquement pour la même durée sauf annulation au moins 24h avant la fin de la période en cours, via Réglages > Apple ID > Abonnements. Le paiement est débité sur ton compte Apple à la confirmation de l'achat."}
             </Text>
             <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 8 }}>
               <Pressable onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")} hitSlop={8}>
-                <Text style={{ fontSize: 11, color: Colors.primary, textDecorationLine: "underline" }}>Conditions d'utilisation</Text>
+                <Text style={{ fontSize: 11, color: colors.primary, textDecorationLine: "underline" }}>Conditions d'utilisation</Text>
               </Pressable>
-              <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>•</Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground }}>•</Text>
               <Pressable onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")} hitSlop={8}>
-                <Text style={{ fontSize: 11, color: Colors.primary, textDecorationLine: "underline" }}>Politique de confidentialité</Text>
+                <Text style={{ fontSize: 11, color: colors.primary, textDecorationLine: "underline" }}>Politique de confidentialité</Text>
               </Pressable>
             </View>
 
@@ -555,7 +559,7 @@ export default function SubscriptionScreen() {
                 onPress={() => { void logout().then(() => router.replace("/(auth)/login")); }}
                 style={{ alignItems: "center", paddingVertical: 16 }}
               >
-                <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                   Pas maintenant — se déconnecter
                 </Text>
               </Pressable>

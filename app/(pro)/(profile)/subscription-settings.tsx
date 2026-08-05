@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import * as Haptics from "expo-haptics";
@@ -22,17 +22,19 @@ import { useToast } from "@/components/ui/Toast";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
-const PLAN_META: Record<RCPlan, {
+function getPlanMeta(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   description: string;
   featureCount: number;
-}> = {
-  start:     { label: "Start",     icon: "flash-outline",    color: Colors.primary,   description: "Réservations & agenda",          featureCount: 5 },
-  serenite:  { label: "Sérénité",  icon: "heart-outline",    color: Colors.pro,       description: "Finance & statistiques",         featureCount: 9 },
-  signature: { label: "Signature", icon: "sparkles-outline", color: Colors.secondary, description: "Paiements & visibilité premium",   featureCount: 14 },
-};
+}> {
+  return {
+    start:     { label: "Start",     icon: "flash-outline",    color: colors.primary,   description: "Réservations & agenda",          featureCount: 5 },
+    serenite:  { label: "Sérénité",  icon: "heart-outline",    color: colors.pro,       description: "Finance & statistiques",         featureCount: 9 },
+    signature: { label: "Signature", icon: "sparkles-outline", color: colors.secondary, description: "Paiements & visibilité premium",   featureCount: 14 },
+  };
+}
 
 const PLAN_ORDER: Record<RCPlan, number> = { start: 0, serenite: 1, signature: 2 };
 
@@ -52,6 +54,8 @@ async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
 export default function ProSubscriptionSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const PLAN_META = useMemo(() => getPlanMeta(colors), [colors]);
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -136,8 +140,8 @@ export default function ProSubscriptionSettingsScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -145,7 +149,7 @@ export default function ProSubscriptionSettingsScreen() {
   return (
     <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 40,
@@ -159,21 +163,21 @@ export default function ProSubscriptionSettingsScreen() {
           accessibilityLabel="Retour"
           style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+            backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
             alignItems: "center", justifyContent: "center",
           }}
         >
-          <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={20} color={colors.foreground} />
         </AnimatedIconButton>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>Mon abonnement</Text>
-          <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Gérer ton plan Blyss Pro</Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>Mon abonnement</Text>
+          <Text style={{ fontSize: 13, color: colors.mutedForeground }}>Gérer ton plan Blyss Pro</Text>
         </View>
       </View>
 
       {activePlan && (
         <View style={{
-          backgroundColor: Colors.card, borderRadius: 20,
+          backgroundColor: colors.card, borderRadius: 20,
           borderWidth: 2, borderColor: `${PLAN_META[activePlan].color}50`,
           padding: 20, marginBottom: 20,
           shadowColor: PLAN_META[activePlan].color,
@@ -188,8 +192,8 @@ export default function ProSubscriptionSettingsScreen() {
               <Ionicons name={PLAN_META[activePlan].icon} size={28} color={PLAN_META[activePlan].color} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Plan actuel</Text>
-              <Text style={{ fontSize: 19, fontWeight: "800", color: Colors.foreground, marginBottom: 2 }}>Formule {PLAN_META[activePlan].label}</Text>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Plan actuel</Text>
+              <Text style={{ fontSize: 19, fontWeight: "800", color: colors.foreground, marginBottom: 2 }}>Formule {PLAN_META[activePlan].label}</Text>
               {(() => {
                 const activePkg = packages.find((p) => p.key === activePlan);
                 const isActiveAnnual = subscription?.billingType === "one_time";
@@ -199,7 +203,7 @@ export default function ProSubscriptionSettingsScreen() {
                       <Text style={{ fontSize: 14, fontWeight: "700", color: PLAN_META[activePlan].color }}>
                         {activePkg.annualPriceString}/an
                       </Text>
-                      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1 }}>
+                      <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>
                         soit {activePkg.annualMonthlyPrice.toFixed(2)} €/mois
                       </Text>
                     </>
@@ -225,15 +229,15 @@ export default function ProSubscriptionSettingsScreen() {
             </View>
             <View style={{
               paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-              backgroundColor: Colors.successLight, borderWidth: 1, borderColor: Colors.successBorder,
+              backgroundColor: colors.successLight, borderWidth: 1, borderColor: colors.successBorder,
               flexDirection: "row", alignItems: "center", gap: 6,
             }}>
-              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success }} />
-              <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.successTextDark }}>Actif</Text>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success }} />
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.successTextDark }}>Actif</Text>
             </View>
           </View>
           {subscription?.endDate && (
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 12 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 12 }}>
               Renouvellement le {new Date(subscription.endDate).toLocaleDateString("fr-FR")}
             </Text>
           )}
@@ -241,9 +245,9 @@ export default function ProSubscriptionSettingsScreen() {
       )}
 
       <View style={{
-        flexDirection: "row", backgroundColor: Colors.card,
+        flexDirection: "row", backgroundColor: colors.card,
         borderRadius: 18, padding: 4, marginBottom: 16,
-        borderWidth: 1, borderColor: Colors.border,
+        borderWidth: 1, borderColor: colors.border,
       }}>
         {(["monthly", "annual"] as const).map((period) => {
           const active = (period === "annual") === isAnnual;
@@ -256,17 +260,17 @@ export default function ProSubscriptionSettingsScreen() {
               }}
               style={{
                 flex: 1, paddingVertical: 10, borderRadius: 14,
-                backgroundColor: active ? Colors.primary : "transparent",
+                backgroundColor: active ? colors.primary : "transparent",
                 alignItems: "center", flexDirection: "row",
                 justifyContent: "center", gap: 6,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: active ? Colors.white : Colors.mutedForeground }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: active ? colors.onColor : colors.mutedForeground }}>
                 {period === "monthly" ? "Mensuel" : "Annuel"}
               </Text>
               {period === "annual" && (
-                <View style={{ backgroundColor: active ? "rgba(255,255,255,0.25)" : Colors.success, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.white }}>-17%</Text>
+                <View style={{ backgroundColor: active ? "rgba(255,255,255,0.25)" : colors.success, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: colors.onColor }}>-17%</Text>
                 </View>
               )}
             </Pressable>
@@ -281,7 +285,7 @@ export default function ProSubscriptionSettingsScreen() {
       )}
 
       <Text style={{
-        fontSize: 11, fontWeight: "800", color: Colors.mutedForeground,
+        fontSize: 11, fontWeight: "800", color: colors.mutedForeground,
         textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, paddingHorizontal: 2,
       }}>Changer de formule</Text>
 
@@ -300,11 +304,11 @@ export default function ProSubscriptionSettingsScreen() {
               onPress={() => { if (!isCurrent) void handleUpgrade(planId); }}
               disabled={isCurrent || isChanging}
               style={{
-                backgroundColor: Colors.card, borderRadius: 16, padding: 16,
+                backgroundColor: colors.card, borderRadius: 16, padding: 16,
                 borderWidth: isCurrent ? 2 : 1,
-                borderColor: isCurrent ? meta.color : Colors.border,
+                borderColor: isCurrent ? meta.color : colors.border,
                 opacity: isChanging && !isCurrent ? 0.7 : 1,
-                shadowColor: Colors.black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+                shadowColor: colors.black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -312,11 +316,11 @@ export default function ProSubscriptionSettingsScreen() {
                   <Ionicons name={meta.icon} size={18} color={meta.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "700", fontSize: 14, color: Colors.foreground }}>{meta.label}</Text>
-                  <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{meta.description} · {meta.featureCount} fonctionnalités</Text>
-                  <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{priceStr}{isAnnual ? "/an" : "/mois"}</Text>
+                  <Text style={{ fontWeight: "700", fontSize: 14, color: colors.foreground }}>{meta.label}</Text>
+                  <Text style={{ fontSize: 11, color: colors.mutedForeground }}>{meta.description} · {meta.featureCount} fonctionnalités</Text>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>{priceStr}{isAnnual ? "/an" : "/mois"}</Text>
                   {isAnnual && rcPkg && (
-                    <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
+                    <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
                       soit {rcPkg.annualMonthlyPrice.toFixed(2)} €/mois
                     </Text>
                   )}
@@ -327,9 +331,9 @@ export default function ProSubscriptionSettingsScreen() {
                   </View>
                 ) : (
                   <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: meta.color, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    {!isUpgrade && <Ionicons name="arrow-back" size={11} color={Colors.white} />}
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.white }}>{meta.label}</Text>
-                    {isUpgrade && <Ionicons name="arrow-forward" size={11} color={Colors.white} />}
+                    {!isUpgrade && <Ionicons name="arrow-back" size={11} color={colors.onColor} />}
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.onColor }}>{meta.label}</Text>
+                    {isUpgrade && <Ionicons name="arrow-forward" size={11} color={colors.onColor} />}
                   </View>
                 )}
               </View>
@@ -341,31 +345,31 @@ export default function ProSubscriptionSettingsScreen() {
       <View style={{ alignItems: "center", marginBottom: 8 }}>
         <Pressable onPress={() => void handleRestore()} disabled={restoring} hitSlop={8}>
           {restoring ? (
-            <ActivityIndicator size="small" color={Colors.mutedForeground} />
+            <ActivityIndicator size="small" color={colors.mutedForeground} />
           ) : (
-            <Text style={{ fontSize: 13, color: Colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, textDecorationLine: "underline" }}>Restaurer mes achats</Text>
           )}
         </Pressable>
       </View>
-      <Text style={{ fontSize: 11, color: Colors.mutedForeground, textAlign: "center", lineHeight: 16, marginBottom: 16 }}>
+      <Text style={{ fontSize: 11, color: colors.mutedForeground, textAlign: "center", lineHeight: 16, marginBottom: 16 }}>
         Annule à tout moment • Paiement sécurisé
       </Text>
 
-      <Text style={{ fontSize: 10, color: Colors.mutedForeground, textAlign: "center", lineHeight: 15, marginBottom: 16, paddingHorizontal: 8 }}>
+      <Text style={{ fontSize: 10, color: colors.mutedForeground, textAlign: "center", lineHeight: 15, marginBottom: 16, paddingHorizontal: 8 }}>
         {'L\'abonnement se renouvelle automatiquement sauf annulation au moins 24h avant la fin de la période en cours via Réglages > Apple ID > Abonnements. Paiement débité à la confirmation de l\'achat.'}
       </Text>
 
       {subscription && (
         <>
-          <View style={{ height: 1, backgroundColor: Colors.border, marginBottom: 20 }} />
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground, textAlign: "center", marginBottom: 12 }}>
+          <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 20 }} />
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center", marginBottom: 12 }}>
             Tu garderas l'accès jusqu'à la fin de ta période actuelle.
           </Text>
           <AnimatedPressable
             onPress={handleCancel}
-            style={{ height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.border }}
+            style={{ height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border }}
           >
-            <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.mutedForeground }}>Annuler mon abonnement</Text>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground }}>Annuler mon abonnement</Text>
           </AnimatedPressable>
         </>
       )}

@@ -17,7 +17,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
@@ -45,20 +46,22 @@ function formatLastVisit(raw?: string | null): string {
 }
 
 function SectionTitle({ title }: { title: string }) {
+  const colors = useThemeColors();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 12 }}>
-      <View style={{ flex: 1, height: 1, backgroundColor: Colors.border }} />
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
         {title}
       </Text>
-      <View style={{ flex: 1, height: 1, backgroundColor: Colors.border }} />
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
     </View>
   );
 }
 
 function FieldLabel({ text }: { text: string }) {
+  const colors = useThemeColors();
   return (
-    <Text style={{ fontSize: 13, fontWeight: "600", color: "#3F3F46", letterSpacing: 0.1, marginBottom: 6 }}>
+    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground, letterSpacing: 0.1, marginBottom: 6 }}>
       {text}
     </Text>
   );
@@ -67,6 +70,7 @@ function FieldLabel({ text }: { text: string }) {
 export default function ClientDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -178,17 +182,17 @@ export default function ClientDetailScreen() {
 
   if (loadingNotes || (loadingClients && !notesData)) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
   if (!notesData?.data && !client) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 12 }}>
-        <Ionicons name="person-outline" size={48} color={Colors.border} />
-        <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.foreground }}>Cliente introuvable</Text>
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <Ionicons name="person-outline" size={48} color={colors.border} />
+        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>Cliente introuvable</Text>
       </View>
     );
   }
@@ -201,7 +205,7 @@ export default function ClientDetailScreen() {
   const displayPhone = noteInfo?.phone_number ?? client?.phone ?? null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
       <ScrollView
         contentContainerStyle={{
@@ -219,26 +223,26 @@ export default function ClientDetailScreen() {
             accessibilityLabel="Retour"
             style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+              backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.foreground, flex: 1 }}>
+          <Text style={{ fontSize: 20, fontWeight: "800", color: colors.foreground, flex: 1 }}>
             Fiche cliente
           </Text>
         </View>
 
         {/* Profil card */}
         <View style={{
-          backgroundColor: Colors.card, borderRadius: 20, padding: 20, marginBottom: 16,
-          borderWidth: 1, borderColor: Colors.border, alignItems: "center",
+          backgroundColor: colors.card, borderRadius: 20, padding: 20, marginBottom: 16,
+          borderWidth: 1, borderColor: colors.border, alignItems: "center",
         }}>
           <View style={{ marginBottom: 12 }}>
             <Avatar name={displayName} size={72} />
           </View>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.foreground, marginBottom: 4 }}>
+          <Text style={{ fontSize: 20, fontWeight: "800", color: colors.foreground, marginBottom: 4 }}>
             {displayName}
           </Text>
 
@@ -257,14 +261,14 @@ export default function ClientDetailScreen() {
               }}
               style={{
                 flex: 1, paddingVertical: 10, borderRadius: 14,
-                backgroundColor: `${Colors.primary}15`,
-                borderWidth: 1, borderColor: `${Colors.primary}20`,
+                backgroundColor: `${colors.primary}15`,
+                borderWidth: 1, borderColor: `${colors.primary}20`,
                 flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
                 opacity: displayPhone ? 1 : 0.4,
               }}
             >
-              <Ionicons name="call-outline" size={16} color={Colors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Appeler</Text>
+              <Ionicons name="call-outline" size={16} color={colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Appeler</Text>
             </Pressable>
             <Pressable
               disabled={!displayEmail}
@@ -279,38 +283,38 @@ export default function ClientDetailScreen() {
               }}
               style={{
                 flex: 1, paddingVertical: 10, borderRadius: 14,
-                backgroundColor: `${Colors.primary}15`,
-                borderWidth: 1, borderColor: `${Colors.primary}20`,
+                backgroundColor: `${colors.primary}15`,
+                borderWidth: 1, borderColor: `${colors.primary}20`,
                 flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
                 opacity: displayEmail ? 1 : 0.4,
               }}
             >
-              <Ionicons name="mail-outline" size={16} color={Colors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primary }}>Email</Text>
+              <Ionicons name="mail-outline" size={16} color={colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Email</Text>
             </Pressable>
           </View>
         </View>
 
         {/* Stats */}
         <View style={{
-          flexDirection: "row", backgroundColor: Colors.card,
-          borderRadius: 20, borderWidth: 1, borderColor: Colors.border,
+          flexDirection: "row", backgroundColor: colors.card,
+          borderRadius: 20, borderWidth: 1, borderColor: colors.border,
           marginBottom: 20, overflow: "hidden",
         }}>
           <View style={{ flex: 1, alignItems: "center", paddingVertical: 18 }}>
-            <Ionicons name="calendar-outline" size={18} color={Colors.primary} style={{ marginBottom: 4 }} />
-            <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground }}>
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} style={{ marginBottom: 4 }} />
+            <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground }}>
               {client?.totalVisits ?? 0}
             </Text>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5 }}>VISITES</Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, letterSpacing: 0.5 }}>VISITES</Text>
           </View>
           {client?.lastVisit ? (
             <>
-              <View style={{ width: 1, backgroundColor: Colors.border, marginVertical: 12 }} />
+              <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 12 }} />
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 18, paddingHorizontal: 10 }}>
-                <Ionicons name="time-outline" size={18} color={Colors.primary} style={{ marginBottom: 6 }} />
-                <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.mutedForeground, letterSpacing: 0.5, marginBottom: 4 }}>DERNIÈRE VISITE</Text>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.foreground, textAlign: "center" }} numberOfLines={2}>
+                <Ionicons name="time-outline" size={18} color={colors.primary} style={{ marginBottom: 6 }} />
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, letterSpacing: 0.5, marginBottom: 4 }}>DERNIÈRE VISITE</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.foreground, textAlign: "center" }} numberOfLines={2}>
                   {formatLastVisit(client.lastVisit)}
                 </Text>
               </View>
@@ -322,11 +326,11 @@ export default function ClientDetailScreen() {
         <SectionTitle title="Notes & Préférences" />
 
         {loadingNotes ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 20 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
         ) : (
           <View style={{
-            backgroundColor: Colors.card, borderRadius: 20,
-            borderWidth: 1, borderColor: Colors.border,
+            backgroundColor: colors.card, borderRadius: 20,
+            borderWidth: 1, borderColor: colors.border,
             padding: 16, marginBottom: 20, gap: 14,
           }}>
             {/* Notes libres */}
@@ -336,15 +340,15 @@ export default function ClientDetailScreen() {
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Notes sur la cliente, habitudes, historique..."
-                placeholderTextColor={Colors.inputPlaceholder}
+                placeholderTextColor={colors.inputPlaceholder}
                 multiline
                 textAlignVertical="top"
                 maxLength={1000}
                 style={{
-                  backgroundColor: Colors.cream, borderRadius: 12,
-                  borderWidth: 1.5, borderColor: Colors.border,
+                  backgroundColor: colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: Colors.foreground, minHeight: 80,
+                  fontSize: 14, color: colors.foreground, minHeight: 80,
                 }}
               />
             </View>
@@ -356,15 +360,15 @@ export default function ClientDetailScreen() {
                 value={allergies}
                 onChangeText={setAllergies}
                 placeholder="Ex : acrylique, résine UV..."
-                placeholderTextColor={Colors.inputPlaceholder}
+                placeholderTextColor={colors.inputPlaceholder}
                 multiline
                 textAlignVertical="top"
                 maxLength={300}
                 style={{
-                  backgroundColor: Colors.cream, borderRadius: 12,
-                  borderWidth: 1.5, borderColor: Colors.border,
+                  backgroundColor: colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: Colors.foreground, minHeight: 60,
+                  fontSize: 14, color: colors.foreground, minHeight: 60,
                 }}
               />
             </View>
@@ -376,13 +380,13 @@ export default function ClientDetailScreen() {
                 value={shape}
                 onChangeText={setShape}
                 placeholder="Ex : amande, carré, stiletto..."
-                placeholderTextColor={Colors.inputPlaceholder}
+                placeholderTextColor={colors.inputPlaceholder}
                 maxLength={100}
                 style={{
-                  backgroundColor: Colors.cream, borderRadius: 12,
-                  borderWidth: 1.5, borderColor: Colors.border,
+                  backgroundColor: colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: Colors.foreground, height: 44,
+                  fontSize: 14, color: colors.foreground, height: 44,
                 }}
               />
             </View>
@@ -394,13 +398,13 @@ export default function ClientDetailScreen() {
                 value={style}
                 onChangeText={setStyle}
                 placeholder="Ex : minimaliste, nail art, french..."
-                placeholderTextColor={Colors.inputPlaceholder}
+                placeholderTextColor={colors.inputPlaceholder}
                 maxLength={100}
                 style={{
-                  backgroundColor: Colors.cream, borderRadius: 12,
-                  borderWidth: 1.5, borderColor: Colors.border,
+                  backgroundColor: colors.cream, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: colors.border,
                   paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 14, color: Colors.foreground, height: 44,
+                  fontSize: 14, color: colors.foreground, height: 44,
                 }}
               />
             </View>
@@ -408,16 +412,16 @@ export default function ClientDetailScreen() {
             {/* Patch test */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground }}>Test patch effectué</Text>
-                <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>Test patch effectué</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   Confirme si un test patch a été réalisé
                 </Text>
               </View>
               <Switch
                 value={patchTest}
                 onValueChange={setPatchTest}
-                trackColor={{ false: "#E5E7EB", true: Colors.primary }}
-                thumbColor={Colors.white}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.onColor}
               />
             </View>
           </View>
@@ -435,28 +439,28 @@ export default function ClientDetailScreen() {
           }}
           disabled={blockMutation.isPending}
           style={{
-            backgroundColor: "#FFF0F0", borderRadius: 16,
-            borderWidth: 1, borderColor: `${Colors.destructive}30`,
+            backgroundColor: colors.destructiveLight, borderRadius: 16,
+            borderWidth: 1, borderColor: `${colors.destructive}30`,
             padding: 16, flexDirection: "row", alignItems: "center", gap: 12,
             opacity: blockMutation.isPending ? 0.6 : 1,
           }}
         >
           <View style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: `${Colors.destructive}15`,
+            backgroundColor: `${colors.destructive}15`,
             alignItems: "center", justifyContent: "center",
           }}>
             {blockMutation.isPending
-              ? <ActivityIndicator size="small" color={Colors.destructive} />
-              : <Ionicons name="ban-outline" size={20} color={Colors.destructive} />}
+              ? <ActivityIndicator size="small" color={colors.destructive} />
+              : <Ionicons name="ban-outline" size={20} color={colors.destructive} />}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.destructive }}>Bloquer cette cliente</Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.destructive }}>Bloquer cette cliente</Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
               Elle ne pourra plus réserver chez toi
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={Colors.destructive} />
+          <Ionicons name="chevron-forward" size={16} color={colors.destructive} />
         </AnimatedPressable>
       </ScrollView>
 
@@ -466,7 +470,7 @@ export default function ClientDetailScreen() {
           position: "absolute", bottom: 0, left: 0, right: 0,
           paddingHorizontal: 20, paddingTop: 12,
           paddingBottom: insets.bottom + 96,
-          backgroundColor: "rgba(255,234,241,0.97)",
+          backgroundColor: withAlpha(colors.background, 0.97),
         }}>
           {saveError && <View style={{ marginBottom: 10 }}><ErrorMessage message={saveError} /></View>}
           <AnimatedPressable
@@ -474,21 +478,21 @@ export default function ClientDetailScreen() {
             disabled={isSaving}
             style={{
               height: 56, borderRadius: 20,
-              backgroundColor: Colors.primary,
+              backgroundColor: colors.primary,
               alignItems: "center", justifyContent: "center",
               flexDirection: "row", gap: 8,
               opacity: isSaving ? 0.7 : 1,
-              shadowColor: Colors.primary,
+              shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
             }}
           >
             {isSaving ? (
-              <ActivityIndicator color={Colors.white} />
+              <ActivityIndicator color={colors.onColor} />
             ) : (
               <>
-                <Ionicons name="save-outline" size={20} color={Colors.white} />
-                <Text style={{ color: Colors.white, fontWeight: "700", fontSize: 16 }}>Enregistrer les notes</Text>
+                <Ionicons name="save-outline" size={20} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>Enregistrer les notes</Text>
               </>
             )}
           </AnimatedPressable>

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, ViewStyle } from "react-native";
 import { BlyssLogoLoader } from "@/components/ui/BlyssLogoLoader";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -13,15 +14,17 @@ interface LoadingSpinnerProps {
 const LOGO_SIZE = { small: 40, large: 64 } as const;
 
 export function LoadingSpinner({ message, fullScreen = false, size = "large", backgroundColor, style }: LoadingSpinnerProps) {
+  const colors = useThemeColors();
+
   if (fullScreen) {
     return (
       <View
-        className="flex-1 items-center justify-center bg-background"
-        style={[backgroundColor ? { backgroundColor } : undefined, style]}
+        className="flex-1 items-center justify-center"
+        style={[{ backgroundColor: backgroundColor ?? colors.background }, style]}
       >
         <BlyssLogoLoader size={LOGO_SIZE[size]} />
         {message && (
-          <Text className="mt-3 text-sm text-muted-foreground">{message}</Text>
+          <Text className="mt-3 text-sm" style={{ color: colors.mutedForeground }}>{message}</Text>
         )}
       </View>
     );
@@ -31,7 +34,7 @@ export function LoadingSpinner({ message, fullScreen = false, size = "large", ba
     <View className="items-center justify-center py-8">
       <BlyssLogoLoader size={LOGO_SIZE[size]} />
       {message && (
-        <Text className="mt-2 text-sm text-muted-foreground">{message}</Text>
+        <Text className="mt-2 text-sm" style={{ color: colors.mutedForeground }}>{message}</Text>
       )}
     </View>
   );

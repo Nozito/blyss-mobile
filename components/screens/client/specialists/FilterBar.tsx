@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import { View, Text, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 const SERVICE_CHIPS = [
@@ -64,6 +64,7 @@ function Chip({
   label: string;
   children: React.ReactNode;
 }) {
+  const colors = useThemeColors();
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -76,7 +77,7 @@ function Chip({
         height: 36,
         paddingHorizontal: 16,
         borderRadius: 999,
-        backgroundColor: active ? Colors.primary : Colors.cream,
+        backgroundColor: active ? colors.primary : colors.cream,
         flexShrink: 0,
       }}
     >
@@ -99,14 +100,15 @@ export function FilterBar({
   activeFiltersCount,
   onClearAll,
 }: Props) {
+  const colors = useThemeColors();
   const renderChip = useCallback(
     ({ item }: { item: ChipData }) => {
       if (item.type === "rating") {
         const active = ratingFilter === item.value;
         return (
           <Chip active={active} onPress={() => onRatingChange(active ? 0 : item.value)} label={item.label}>
-            <Ionicons name="star" size={12} color={active ? Colors.white : "#FBBF24"} />
-            <Text style={{ fontSize: 13, fontWeight: "500", color: active ? Colors.white : Colors.foreground }}>
+            <Ionicons name="star" size={12} color={active ? "#FFFFFF" : "#FBBF24"} />
+            <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#FFFFFF" : colors.foreground }}>
               {item.label}
             </Text>
           </Chip>
@@ -118,8 +120,8 @@ export function FilterBar({
         const cityLabel = cityFilter || "Ville";
         return (
           <Chip active={active} onPress={onCityToggle} label={cityLabel}>
-            <Ionicons name="location-outline" size={13} color={active ? Colors.white : Colors.foreground} />
-            <Text style={{ fontSize: 13, fontWeight: "500", color: active ? Colors.white : Colors.foreground }}>
+            <Ionicons name="location-outline" size={13} color={active ? "#FFFFFF" : colors.foreground} />
+            <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#FFFFFF" : colors.foreground }}>
               {cityLabel}
             </Text>
           </Chip>
@@ -130,8 +132,8 @@ export function FilterBar({
       const active = serviceFilter === item.query;
       return (
         <Chip active={active} onPress={() => onServiceChange(active ? "" : item.query)} label={item.label}>
-          {active && <Ionicons name="checkmark" size={12} color={Colors.white} />}
-          <Text style={{ fontSize: 13, fontWeight: "500", color: active ? Colors.white : Colors.foreground }}>
+          {active && <Ionicons name="checkmark" size={12} color={"#FFFFFF"} />}
+          <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#FFFFFF" : colors.foreground }}>
             {item.label}
           </Text>
         </Chip>
@@ -166,7 +168,7 @@ export function FilterBar({
                 onPress={() => onCitySelect(city === cityFilter ? "" : city)}
                 label={chipLabel}
               >
-                <Text style={{ fontSize: 13, fontWeight: "500", color: active ? Colors.white : Colors.foreground }}>
+                <Text style={{ fontSize: 13, fontWeight: "500", color: active ? "#FFFFFF" : colors.foreground }}>
                   {chipLabel}
                 </Text>
               </Chip>
@@ -185,7 +187,7 @@ export function FilterBar({
             marginTop: 12,
           }}
         >
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
             {activeFiltersCount > 0
               ? `${activeFiltersCount} filtre${activeFiltersCount > 1 ? "s" : ""} actif${activeFiltersCount > 1 ? "s" : ""}`
               : "Filtres actifs"}
@@ -196,8 +198,8 @@ export function FilterBar({
             accessibilityLabel="Effacer tous les filtres"
             style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
           >
-            <Ionicons name="close" size={10} color={Colors.primary} />
-            <Text style={{ fontSize: 12, color: Colors.primary, fontWeight: "600" }}>Tout effacer</Text>
+            <Ionicons name="close" size={10} color={colors.primary} />
+            <Text style={{ fontSize: 12, color: colors.primary, fontWeight: "600" }}>Tout effacer</Text>
           </AnimatedPressable>
         </View>
       )}
