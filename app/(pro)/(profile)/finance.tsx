@@ -278,7 +278,7 @@ export default function ProFinanceScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top,
-          paddingBottom: insets.bottom + 40,
+          paddingBottom: insets.bottom + 100,
           paddingHorizontal: 20,
           gap: 16,
         }}
@@ -432,26 +432,60 @@ export default function ProFinanceScreen() {
               )}
             </AnimatedPressable>
 
-            {/* Stats grid */}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {statCards.map(({ label, value, icon, color }) => (
-                <View
-                  key={label}
-                  style={{
-                    width: "47%",
-                    backgroundColor: Colors.white,
-                    borderRadius: 16,
-                    padding: 16,
-                    ...Shadows.card,
-                  }}
-                >
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${color}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                    <Ionicons name={icon} size={16} color={color} />
-                  </View>
-                  <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>
-                    {value.toFixed(0)} €
-                  </Text>
-                  <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>{label}</Text>
+            {/* Analyses & rapports */}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push("/(pro)/(profile)/finance-performance" as any);
+                }}
+                style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
+              >
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="analytics-outline" size={16} color={Colors.primary} />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>Analyses de performance</Text>
+                <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 15 }}>Meilleur jour, panier moyen, remplissage</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push("/(pro)/(profile)/finance-reports" as any);
+                }}
+                style={{ flex: 1, backgroundColor: Colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
+              >
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="document-text-outline" size={16} color="#34C759" />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: Colors.foreground }}>Rapports automatiques</Text>
+                <Text style={{ fontSize: 11, color: Colors.mutedForeground, lineHeight: 15 }}>Résumés hebdo & mensuels</Text>
+              </Pressable>
+            </View>
+
+            {/* Stats grid — 2 rangées de flex:1 (pas des % avec gap, qui désaligne) */}
+            <View style={{ gap: 10 }}>
+              {[statCards.slice(0, 2), statCards.slice(2, 4)].map((row, rowIdx) => (
+                <View key={rowIdx} style={{ flexDirection: "row", gap: 10 }}>
+                  {row.map(({ label, value, icon, color }) => (
+                    <View
+                      key={label}
+                      style={{
+                        flex: 1,
+                        backgroundColor: Colors.white,
+                        borderRadius: 16,
+                        padding: 16,
+                        ...Shadows.card,
+                      }}
+                    >
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${color}15`, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                        <Ionicons name={icon} size={16} color={color} />
+                      </View>
+                      <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.foreground, letterSpacing: -0.5 }}>
+                        {value.toFixed(0)} €
+                      </Text>
+                      <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>{label}</Text>
+                    </View>
+                  ))}
                 </View>
               ))}
             </View>
