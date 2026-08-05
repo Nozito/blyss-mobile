@@ -84,8 +84,6 @@ jest.mock('@/lib/validation', () => ({
 const mockGetGallery = jest.fn();
 const mockGetProfile = jest.fn();
 const mockGetServices = jest.fn();
-const mockGetIgStatus = jest.fn();
-const mockGetIgFeed = jest.fn();
 const mockUpdateProfile = jest.fn();
 const mockUploadGallery = jest.fn();
 const mockDeleteGallery = jest.fn();
@@ -102,12 +100,6 @@ jest.mock('@/lib/api', () => ({
   },
   usersApi: {
     uploadBannerPhoto: (...args: any[]) => mockUploadBannerPhoto(...args),
-  },
-  instagramApi: {
-    getStatus: (...args: any[]) => mockGetIgStatus(...args),
-    getFeed: (...args: any[]) => mockGetIgFeed(...args),
-    disconnect: jest.fn(),
-    importPhoto: jest.fn(),
   },
 }));
 
@@ -135,8 +127,6 @@ describe('ProPublicProfileScreen', () => {
     mockGetGallery.mockResolvedValue({ success: true, data: MOCK_GALLERY });
     mockGetProfile.mockResolvedValue({ success: true, data: { activity_name: 'Studio Sophie', city: 'Paris', bio: 'Expert', instagram_account: '@sophiestudio', profile_visibility: 'public' } });
     mockGetServices.mockResolvedValue({ success: true, data: [] });
-    mockGetIgStatus.mockResolvedValue({ success: true, data: { connected: false } });
-    mockGetIgFeed.mockResolvedValue({ success: true, data: { photos: [] } });
     mockUpdateProfile.mockResolvedValue({ success: true });
   });
 
@@ -153,18 +143,7 @@ describe('ProPublicProfileScreen', () => {
 
   it('renders gallery images count', async () => {
     const { findByText } = renderPublicProfile();
-    await findByText('2/20 photos');
-  });
-
-  it('shows Instagram connect button when not connected', async () => {
-    const { findByText } = renderPublicProfile();
-    await findByText('Connecter Instagram');
-  });
-
-  it('shows connected Instagram status when connected', async () => {
-    mockGetIgStatus.mockResolvedValue({ success: true, data: { connected: true, username: 'sophiestudio' } });
-    const { findByText } = renderPublicProfile();
-    await findByText('@sophiestudio');
+    await findByText('2/10 photos');
   });
 
   it('renders visibility section', async () => {

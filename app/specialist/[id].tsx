@@ -4,9 +4,9 @@ import {
   Text,
   ScrollView,
   Pressable,
-  FlatList,
   Animated,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +16,6 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   specialistsApi,
   reviewsApi,
-  instagramApi,
   clientApi,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,6 +74,7 @@ export default function SpecialistProfileScreen() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["specialist", id],
@@ -94,9 +94,9 @@ export default function SpecialistProfileScreen() {
     enabled: Boolean(id),
   });
 
-  const { data: igData } = useQuery({
-    queryKey: ["instagram", id],
-    queryFn: () => instagramApi.getPublicPhotos(Number(id)),
+  const { data: galleryData } = useQuery({
+    queryKey: ["gallery", id],
+    queryFn: () => specialistsApi.getGalleryByPro(Number(id)),
     enabled: Boolean(id),
   });
 
@@ -120,10 +120,6 @@ export default function SpecialistProfileScreen() {
     | Record<string, unknown>
     | undefined;
 
-  const igPhotos = (
-    (igData?.data as Record<string, unknown> | undefined)?.photos ??
-    (igData as Record<string, unknown> | undefined)?.photos
-  ) as Array<Record<string, unknown>> | undefined;
   const isFavorited = isFavoritedFn(Number(id));
 
   const myBookings = Array.isArray(myBookingsData?.data)
@@ -198,6 +194,7 @@ export default function SpecialistProfileScreen() {
   const services: unknown[] = Array.isArray(servicesData?.data)
     ? (servicesData.data as unknown[])
     : [];
+  const gallery = galleryData?.data ?? [];
 
   const reviewsCount =
     (reviewsMeta?.total as number | undefined) ??
@@ -437,6 +434,38 @@ export default function SpecialistProfileScreen() {
           </Text>
         </Pressable>
 
+        {/* Réalisations — masquée si la pro n'a pas de photo de portfolio */}
+        {gallery.length > 0 && (
+          <View style={{ marginBottom: 24 }}>
+            <Text
+              style={{
+                fontSize: 17,
+                fontWeight: "800",
+                color: Colors.foreground,
+                marginBottom: 12,
+                letterSpacing: -0.3,
+              }}
+            >
+              Réalisations
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {gallery.map((img) => (
+                <Pressable
+                  key={img.id}
+                  onPress={() => setLightboxImage(resolveMediaUrl(img.url) ?? img.url)}
+                  style={{ width: 110, height: 110, borderRadius: 14, overflow: "hidden", backgroundColor: Colors.cream }}
+                >
+                  <Image
+                    source={{ uri: resolveMediaUrl(img.thumbnail) ?? img.thumbnail }}
+                    style={{ width: "100%", height: "100%" }}
+                    contentFit="cover"
+                  />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* BUG 3 / 5 fix — Prestations always rendered */}
         <View>
           <Text
@@ -499,36 +528,6 @@ export default function SpecialistProfileScreen() {
             </>
           )}
         </View>
-
-        {/* Instagram gallery */}
-        {igPhotos && igPhotos.length > 0 && (
-          <View>
-            <Text
-              style={{
-                fontSize: 17,
-                fontWeight: "800",
-                color: Colors.foreground,
-                marginBottom: 12,
-                letterSpacing: -0.3,
-              }}
-            >
-              Instagram
-            </Text>
-            <FlatList
-              horizontal
-              data={igPhotos}
-              keyExtractor={(item) => String(item.media_id)}
-              showsHorizontalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <Image
-                  source={{ uri: String(item.media_url) }}
-                  style={{ width: 120, height: 120, borderRadius: 14, marginRight: 8 }}
-                  contentFit="cover"
-                />
-              )}
-            />
-          </View>
-        )}
 
         {/* BUG 5 fix — Avis always rendered */}
         <View>
@@ -627,6 +626,22 @@ export default function SpecialistProfileScreen() {
         onClose={() => setShowReviewModal(false)}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["reviews", id] })}
       />
+      <Modal visible={lightboxImage != null} transparent animationType="fade" onRequestClose={() => setLightboxImage(null)}>
+        <Pressable
+          onPress={() => setLightboxImage(null)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}
+        >
+          {lightboxImage && (
+            <Image source={{ uri: lightboxImage }} style={{ width: "100%", height: "70%" }} contentFit="contain" />
+          )}
+          <Pressable
+            onPress={() => setLightboxImage(null)}
+            style={{ position: "absolute", top: 60, right: 20, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons name="close" size={20} color={Colors.white} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }

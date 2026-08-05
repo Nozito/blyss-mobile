@@ -22,6 +22,7 @@ import { Shadows } from "@/constants/shadows";
 import { Colors } from "@/constants/colors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useFavorites } from "@/hooks/useFavorites";
+import { resolveMediaUrl } from "@/lib/media";
 
 // ── Style constants (module-level → never recreated) ─────────────────────────
 const CATEGORY_LIST_STYLE  = { paddingHorizontal: 24, gap: 8, paddingBottom: 4 } as const;
@@ -155,7 +156,7 @@ function SpecialistCard({
   const entryTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
   const displayName = pro.activity_name ?? `${pro.first_name} ${pro.last_name}`;
   const specialty = pro.pro_specialties?.[0] ?? "Nail Artist";
-  const bannerUrl = pro.banner_photo ?? pro.profile_photo;
+  const bannerUrl = resolveMediaUrl(pro.banner_photo ?? pro.profile_photo);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -256,9 +257,9 @@ function SpecialistCard({
               borderColor: "rgba(255,255,255,0.9)", overflow: "hidden" }}
             className="bg-primary items-center justify-center flex-shrink-0"
           >
-            {pro.profile_photo ? (
+            {resolveMediaUrl(pro.profile_photo) ? (
               <Image
-                source={{ uri: pro.profile_photo }}
+                source={{ uri: resolveMediaUrl(pro.profile_photo) }}
                 style={{ width: "100%", height: "100%" }}
                 contentFit="cover"
               />

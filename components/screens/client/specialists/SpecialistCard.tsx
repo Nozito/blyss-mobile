@@ -46,7 +46,7 @@ interface Props {
 }
 
 export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index, onPress, onToggleFav, onBook }: Props) {
-  const photo = resolveMediaUrl(item.cover_image_url ?? item.profile_image_url);
+  const photo = resolveMediaUrl(item.profile_image_url ?? item.cover_image_url);
   const reduceMotion = useReducedMotion();
   const cardScale = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
@@ -112,8 +112,10 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
           ...Shadows.card,
         }}
       >
-        {/* Photo */}
-        <View style={{ width: 108, flexShrink: 0, backgroundColor: Colors.cream, minHeight: 130 }}>
+        {/* Photo — largeur fixe réduite (84) qui remplit toute la hauteur de la
+            ligne (height: 100%, cover), sans changer la largeur totale de la
+            card : l'espace repris va au bloc texte à droite. */}
+        <View style={{ width: 114, flexShrink: 0, backgroundColor: Colors.cream, minHeight: 130 }}>
           {photo && !imageError ? (
             <Image
               source={{ uri: photo }}
@@ -165,13 +167,13 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
               {item.business_name}
             </Text>
             <Text
-              style={{ fontSize: 12, color: Colors.primary, fontWeight: "500", marginTop: 2 }}
+              style={{ fontSize: 12, color: Colors.primary, fontWeight: "500", marginTop: 4 }}
               numberOfLines={1}
             >
               {item.specialty}
             </Text>
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 12 }}>
               {item.rating > 0 && (
                 <>
                   <Ionicons name="star" size={11} color="#FBBF24" />
@@ -192,7 +194,7 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
               )}
             </View>
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 10 }}>
               <Ionicons name="location-outline" size={11} color={Colors.mutedForeground} />
               <Text style={{ fontSize: 12, color: Colors.mutedForeground, flex: 1 }} numberOfLines={1}>
                 {item.city}

@@ -27,8 +27,6 @@ export interface User {
   clients_count?: number;
   avg_rating?: number | null;
   years_on_blyss?: number;
-  bankaccountname?: string | null;
-  IBAN?: string | null;
   accept_online_payment?: boolean;
   geo_precision?: "city" | "address" | null;
   address_line?: string | null;
@@ -98,12 +96,6 @@ export interface ProNotificationSettings {
   activity_summary: boolean;
 }
 
-export interface PaymentsSettings {
-  bankaccountname: string | null;
-  IBAN: string | null;
-  accept_online_payment: boolean;
-}
-
 export interface SavedCard {
   id: number;
   brand: "visa" | "mastercard" | "amex";
@@ -149,23 +141,6 @@ export interface WaitingListEntry {
   pro_name: string;
   pro_photo: string | null;
   prestation_name: string | null;
-}
-
-export interface InstagramPhoto {
-  media_id: string;
-  media_type: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
-  media_url: string;
-  thumbnail_url: string | null;
-  permalink: string;
-  caption: string | null;
-  ig_timestamp: string;
-  display_order: number;
-}
-
-export interface InstagramStatus {
-  connected: boolean;
-  username?: string;
-  expiresAt?: string;
 }
 
 // ── HTTP core ───────────────────────────────────────────────────────────────
@@ -454,6 +429,9 @@ export const specialistsApi = {
   getProById: (id: number) => apiCall(`/api/users/pros/${id}`),
 
   getServices: (proId: number) => apiCall("GET", `/api/prestations/pro/${proId}`),
+
+  getGalleryByPro: (proId: number) =>
+    apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>(`/api/gallery/pro/${proId}`),
 };
 
 // ── Reviews API ───────────────────────────────────────────────────────────────
@@ -535,9 +513,8 @@ export const proApi = {
 
   // BLYSS-FIX: 3.3 — removed getPaymentSettings (duplicate of getProfile, same /api/users)
 
-  updatePaymentSettings: (data: { iban?: string; accept_online?: boolean }) =>
+  updatePaymentSettings: (data: { accept_online?: boolean }) =>
     apiCall("/api/users/payments", { method: "PUT", body: JSON.stringify({
-      IBAN: data.iban,
       accept_online_payment: data.accept_online,
     }) }),
 
@@ -600,6 +577,46 @@ export const proApi = {
   updateFinanceObjective: (objective: number) =>
     apiCall("/api/pro/finance/objective", { method: "PUT", body: JSON.stringify({ objective }) }),
 
+  getFinanceReports: () =>
+    apiCall<Array<{
+      id: number;
+      periodType: "week" | "month";
+      periodStart: string;
+      periodEnd: string;
+      revenue: number;
+      previousRevenue: number;
+      bookingsCount: number;
+      avgBasket: number;
+      viewedAt: string | null;
+      createdAt: string;
+    }>>("/api/pro/finance/reports"),
+
+  getFinanceReport: (id: number) =>
+    apiCall<{
+      id: number;
+      periodType: "week" | "month";
+      periodStart: string;
+      periodEnd: string;
+      revenue: number;
+      previousRevenue: number;
+      bookingsCount: number;
+      avgBasket: number;
+      topServices: Array<{ name: string; revenue: number; count: number; percentage: number }>;
+      viewedAt: string;
+      createdAt: string;
+    }>(`/api/pro/finance/reports/${id}`),
+
+  getFinancePerformance: () =>
+    apiCall<{
+      bestDay: string | null;
+      bestHour: string | null;
+      avgBasket: number;
+      fillRate: number;
+      newClients: number;
+      returningClients: number;
+      monthlyEvolution: Array<{ month: string; revenue: number }>;
+    }>("/api/pro/finance/performance"),
+
   getStats: (period: "month" | "week" = "month") =>
     apiCall<{ bookings: number; revenue: number; uniqueClients: number; completionRate: number }>(
       `/api/pro/stats?period=${period}`
@@ -651,11 +668,6 @@ export const clientApi = {
 
 // ── Payments API ──────────────────────────────────────────────────────────────
 
-export const paymentsApi = {
-  updateProPayments: (data: { bankaccountname: string; IBAN: string; accept_online_payment: boolean }): Promise<ApiResponse<PaymentsSettings>> =>
-    apiCall("/api/users/payments", { method: "PUT", body: JSON.stringify(data) }),
-};
-
 export const stripePaymentsApi = {
   createPaymentIntent: (data: { reservation_id: number; type: "deposit" | "balance" | "full" }): Promise<ApiResponse<{ client_secret: string; payment_intent_id: string; amount: number }>> =>
     apiCall("/api/payments/create-intent", { method: "POST", body: JSON.stringify(data) }),
@@ -687,22 +699,6 @@ export const stripeApi = {
 
   updateDeposit: (deposit_percentage: number): Promise<ApiResponse<{ deposit_percentage: number }>> =>
     apiCall("/api/pro/stripe/deposit", { method: "PUT", body: JSON.stringify({ deposit_percentage }) }),
-};
-
-// ── Instagram API ─────────────────────────────────────────────────────────────
-
-export const instagramApi = {
-  getStatus: (): Promise<ApiResponse<InstagramStatus>> => apiCall("/api/instagram/status"),
-  disconnect: (): Promise<ApiResponse<void>> => apiCall("/api/instagram/disconnect", { method: "DELETE" }),
-  sync: (): Promise<ApiResponse<boolean>> => apiCall("/api/instagram/sync", { method: "POST" }),
-  getPublicPhotos: async (proId: number): Promise<ApiResponse<{ photos: InstagramPhoto[]; connected: boolean; username?: string }>> => {
-    const res = await fetch(`${API_BASE_URL}/api/public/pro/${proId}/instagram`);
-    return res.json() as Promise<ApiResponse<{ photos: InstagramPhoto[]; connected: boolean; username?: string }>>;
-  },
-  getFeed: (): Promise<ApiResponse<{ photos: Array<{ id: string; url: string; thumbnail: string }> }>> =>
-    apiCall("/api/pro/instagram/feed"),
-  importPhoto: (photoId: string): Promise<ApiResponse<{ id: number; url: string }>> =>
-    apiCall("/api/pro/instagram/import", { method: "POST", body: JSON.stringify({ photoId }) }),
 };
 
 // ── Users API ─────────────────────────────────────────────────────────────────

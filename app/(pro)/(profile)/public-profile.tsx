@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Modal,
   Share,
-  Linking,
   Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -22,7 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Colors } from "@/constants/colors";
-import { proApi, usersApi, instagramApi } from "@/lib/api";
+import { proApi, usersApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
@@ -39,7 +38,7 @@ type Service = { id: number; name: string; price: number; duration_minutes: numb
 type GalleryImage = { id: number; url: string; thumbnail: string; created_at: string };
 
 const MAX_BIO = 300;
-const MAX_GALLERY = 20;
+const MAX_GALLERY = 10;
 
 export default function ProPublicProfileScreen() {
   const router = useRouter();
@@ -59,29 +58,11 @@ export default function ProPublicProfileScreen() {
   // Share state
   const [copyToast, setCopyToast] = useState(false);
 
-  // Instagram
-  const [igImporting, setIgImporting] = useState<string | null>(null);
-  const [igError, setIgError] = useState<string | null>(null);
-
   const { data: galleryData, refetch: refetchGallery } = useQuery({
     queryKey: ["pro-gallery"],
     queryFn: () => proApi.getGallery(),
   });
   const gallery: GalleryImage[] = (galleryData?.data as GalleryImage[] | undefined) ?? [];
-
-  const { data: igStatusData } = useQuery({
-    queryKey: ["ig-status"],
-    queryFn: () => instagramApi.getStatus(),
-  });
-  const igConnected = igStatusData?.data?.connected ?? false;
-  const igUsername = igStatusData?.data?.username;
-
-  const { data: igFeedData } = useQuery({
-    queryKey: ["ig-feed"],
-    queryFn: () => instagramApi.getFeed(),
-    enabled: igConnected,
-  });
-  const igPhotos = igFeedData?.data?.photos ?? [];
 
   const profileUrl = user?.id
     ? `https://blyssapp.fr/s/${user.id}`
@@ -147,27 +128,6 @@ export default function ProPublicProfileScreen() {
   const handleShareLink = async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await Share.share({ url: profileUrl, message: `Réservez avec moi sur Blyss : ${profileUrl}` });
-  };
-
-  const handleImportIgPhoto = async (photoId: string) => {
-    setIgImporting(photoId);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const res = await instagramApi.importPhoto(photoId);
-    setIgImporting(null);
-    if (!res.success) { setIgError("Impossible d'importer cette photo."); return; }
-    void refetchGallery();
-  };
-
-  const handleDisconnectIg = async () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await instagramApi.disconnect();
-    qc.invalidateQueries({ queryKey: ["ig-status"] });
-    qc.invalidateQueries({ queryKey: ["ig-feed"] });
-  };
-
-  const handleConnectIg = () => {
-    const apiBase = process.env.EXPO_PUBLIC_API_URL ?? "";
-    void Linking.openURL(`${apiBase}/api/auth/instagram?redirect=blyss://instagram-callback`);
   };
 
   const [activityName, setActivityName] = useState("");
@@ -538,71 +498,6 @@ export default function ProPublicProfileScreen() {
           </Text>
         </View>
 
-        {/* Section: Instagram */}
-        <View className="mb-6">
-          <SectionTitle title="Photos Instagram" />
-          <View className="bg-card rounded-2xl border border-border overflow-hidden">
-            {igConnected ? (
-              <>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-                  <Ionicons name="logo-instagram" size={20} color={Colors.primary} />
-                  <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: Colors.foreground }}>
-                    {igUsername ? `@${igUsername}` : "Connecté"}
-                  </Text>
-                  <Pressable
-                    onPress={handleDisconnectIg}
-                    style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: Colors.destructive }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.destructive }}>Déconnecter</Text>
-                  </Pressable>
-                </View>
-                {igError && <View style={{ padding: 12 }}><ErrorMessage message={igError} /></View>}
-                {igPhotos.length > 0 ? (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                    {igPhotos.slice(0, 9).map((photo) => (
-                      <Pressable
-                        key={photo.id}
-                        onPress={() => void handleImportIgPhoto(photo.id)}
-                        disabled={igImporting === photo.id}
-                        accessibilityRole="button"
-                        accessibilityLabel="Importer cette photo Instagram"
-                        style={{ width: "33.333%", aspectRatio: 1, position: "relative" }}
-                      >
-                        <Image source={{ uri: photo.thumbnail || photo.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                        {igImporting === photo.id && (
-                          <View style={{ ...require("react-native").StyleSheet.absoluteFillObject, backgroundColor: Colors.overlayDark, alignItems: "center", justifyContent: "center" }}>
-                            <ActivityIndicator size="small" color={Colors.white} />
-                          </View>
-                        )}
-                        <View style={{ position: "absolute", top: 4, right: 4, backgroundColor: Colors.primary, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
-                          <Text style={{ fontSize: 8, fontWeight: "800", color: Colors.white }}>IG</Text>
-                        </View>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={{ padding: 20, alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>Aucune photo disponible</Text>
-                  </View>
-                )}
-              </>
-            ) : (
-              <View style={{ padding: 20, alignItems: "center", gap: 12 }}>
-                <Ionicons name="logo-instagram" size={36} color={Colors.mutedForeground} />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground, textAlign: "center" }}>
-                  Importez vos réalisations directement depuis Instagram
-                </Text>
-                <Pressable
-                  onPress={handleConnectIg}
-                  style={{ height: 44, paddingHorizontal: 24, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.white }}>Connecter Instagram</Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        </View>
-
         {/* Section: Lien de partage */}
         <View className="mb-6">
           <SectionTitle title="Votre lien professionnel" />
@@ -897,6 +792,23 @@ export default function ProPublicProfileScreen() {
                 <Text className="text-sm text-muted-foreground leading-relaxed">{bio}</Text>
               </View>
             ) : null}
+
+            {/* Réalisations */}
+            {gallery.length > 0 && (
+              <View className="mb-4">
+                <Text className="text-base font-bold text-foreground mb-3">Réalisations</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {gallery.map((img) => (
+                    <Image
+                      key={img.id}
+                      source={{ uri: img.thumbnail }}
+                      style={{ width: 90, height: 90, borderRadius: 12 }}
+                      resizeMode="cover"
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
             {/* Prestations */}
             {services.length > 0 && (
