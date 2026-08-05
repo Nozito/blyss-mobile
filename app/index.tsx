@@ -18,7 +18,7 @@ export default function Index() {
       router.replace("/(admin)/dashboard");
     } else if (user?.role === "pro") {
       if (!user.pro_status) {
-        router.replace("/(pro)/onboarding" as any);
+        router.replace("/pro-onboarding" as any);
       } else {
         router.replace("/(pro)/dashboard");
       }

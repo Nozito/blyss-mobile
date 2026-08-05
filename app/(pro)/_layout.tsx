@@ -79,8 +79,6 @@ export default function ProLayout() {
         }} />
       </NativeTabs.Trigger>
 
-      {/* Routes cachées — non affichées dans la tab bar */}
-      <NativeTabs.Trigger name="onboarding" hidden />
     </NativeTabs>
   );
 }

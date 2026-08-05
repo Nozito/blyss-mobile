@@ -590,6 +590,24 @@ export default function ProProfileScreen() {
               <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Vue Client</Text>
             </Pressable>
           </View>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/pro-subscription-success" as any,
+                params: { plan: "signature", preview: "1" },
+              })
+            }
+            style={{
+              flexDirection: "row", alignItems: "center", justifyContent: "center",
+              gap: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 10,
+              paddingVertical: 10, marginTop: 8,
+            }}
+          >
+            <Ionicons name="play-outline" size={15} color="rgba(255,255,255,0.7)" />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
+              Aperçu onboarding (confirmation → fin)
+            </Text>
+          </Pressable>
         </View>
       )}
 
