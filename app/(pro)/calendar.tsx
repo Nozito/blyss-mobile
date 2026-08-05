@@ -11,6 +11,7 @@ import {
   Dimensions,
   Platform,
   RefreshControl,
+  Switch,
 } from "react-native";
 import { useActionSheet } from "@/components/ui/ActionSheet";
 import * as Notifications from "expo-notifications";
@@ -24,6 +25,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { proApi, nailTechApi } from "@/lib/api";
 import { toLocalDate } from "@/lib/dateUtils";
+import {
+  isCalendarSyncEnabled,
+  enableCalendarSync,
+  disableCalendarSync,
+  syncAppointmentsToCalendar,
+} from "@/lib/appleCalendarSync";
 import { Colors, withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
@@ -313,36 +320,40 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
   const statusKey = getAptStatus(apt);
   const cfg = STATUS_CFG[statusKey] ?? STATUS_CFG.pending;
   const clientName = apt.client_name ?? `${apt.client_first_name ?? ""} ${apt.client_last_name ?? ""}`.trim();
-  const canAct = ["pending", "ongoing", "past_pending"].includes(statusKey);
+  const initials = clientName.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
+
   return (
     <AnimatedPressable
       onPress={onPress}
-      style={{ backgroundColor: Colors.white, borderRadius: 16, padding: 16, ...Shadows.card, borderLeftWidth: 3, borderLeftColor: cfg.color }}
+      style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.white, borderRadius: 16, padding: 14, ...Shadows.card }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.primary }}>{apt.time}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: cfg.bg }}>
-          <Ionicons name={cfg.icon as React.ComponentProps<typeof Ionicons>["name"]} size={12} color={cfg.color} />
+      <View style={{ minWidth: 42, alignItems: "center", flexShrink: 0 }}>
+        <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground }} numberOfLines={1}>{apt.time}</Text>
+        <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{formatDuration(parseDuration(apt.duration))}</Text>
+      </View>
+
+      <View style={{ width: 1, alignSelf: "stretch", backgroundColor: Colors.border }} />
+
+      <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: withAlpha(cfg.color, 0.12), alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ fontSize: 13, fontWeight: "800", color: cfg.color }}>{initials}</Text>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>{clientName}</Text>
+        {apt.prestation_name && (
+          <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{apt.prestation_name}</Text>
+        )}
+      </View>
+
+      <View style={{ alignItems: "flex-end", gap: 5 }}>
+        {apt.price != null && (
+          <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.foreground }}>{Number(apt.price).toFixed(2).replace(".", ",")} €</Text>
+        )}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: cfg.color }} />
           <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
         </View>
       </View>
-      <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }}>{clientName}</Text>
-      {apt.prestation_name && <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>{apt.prestation_name}</Text>}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>{formatDuration(parseDuration(apt.duration))}</Text>
-        </View>
-        {apt.price != null && (
-          <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.primary }}>{Number(apt.price).toFixed(2).replace(".", ",")} €</Text>
-        )}
-      </View>
-      {canAct && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 }}>
-          <Ionicons name="ellipsis-horizontal" size={14} color={Colors.mutedForeground} />
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>Appuie pour gérer</Text>
-        </View>
-      )}
     </AnimatedPressable>
   );
 }
@@ -365,6 +376,9 @@ export default function ProCalendarScreen() {
   const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
+
+  const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(false);
+  const [calendarSyncLoading, setCalendarSyncLoading] = useState(false);
 
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [addingSlot, setAddingSlot] = useState(false);
@@ -421,8 +435,8 @@ export default function ProCalendarScreen() {
 
   const knownAptIdsRef = useRef<Set<number>>(new Set());
 
-  const fetchMonthData = useCallback(async (year: number, month: number) => {
-    setLoading(true);
+  const fetchMonthData = useCallback(async (year: number, month: number, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
       const to   = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(year, month + 1, 0).getDate()}`;
@@ -455,39 +469,90 @@ export default function ProCalendarScreen() {
     } catch {
       // silent fail
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
-  const fetchSlots = useCallback(async (dateStr: string) => {
-    setSlotsLoading(true);
+  const fetchSlots = useCallback(async (dateStr: string, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setSlotsLoading(true);
     try {
       const res = await proApi.getSlots({ date: dateStr });
       if (res.success && res.data) setSlots((res.data as Record<string, unknown>[]).map(mapSlot));
     } catch {
       // silent
     } finally {
-      setSlotsLoading(false);
+      if (!opts?.silent) setSlotsLoading(false);
     }
   }, []);
 
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
   useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
 
+  // Sync Apple Calendar — indépendant du mois affiché à l'écran : on regarde
+  // toujours 180 jours devant aujourd'hui, pas la plage du calendrier visible.
+  const runCalendarSync = useCallback(async () => {
+    if (!(await isCalendarSyncEnabled())) return;
+    const from = toLocalDate(new Date());
+    const to = toLocalDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
+    try {
+      const res = await proApi.getCalendar({ from, to });
+      if (!res.success || !res.data) return;
+      const apts = res.data as Appointment[];
+      await syncAppointmentsToCalendar(
+        apts.map((a) => ({
+          id: a.id,
+          date: toLocalDate(new Date(a.date)),
+          time: a.time,
+          duration: parseDuration(a.duration),
+          status: a.status,
+          clientName: a.client_name ?? `${a.client_first_name ?? ""} ${a.client_last_name ?? ""}`.trim(),
+          prestationName: a.prestation_name,
+        }))
+      );
+    } catch {
+      // silent — un cycle raté sera rattrapé au suivant
+    }
+  }, []);
+
+  useEffect(() => { void isCalendarSyncEnabled().then(setCalendarSyncEnabled); }, []);
+  useEffect(() => { if (calendarSyncEnabled) void runCalendarSync(); }, [calendarSyncEnabled, runCalendarSync]);
+
+  const toggleCalendarSync = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setCalendarSyncLoading(true);
+    try {
+      if (calendarSyncEnabled) {
+        await disableCalendarSync();
+        setCalendarSyncEnabled(false);
+      } else {
+        const result = await enableCalendarSync();
+        if (result.ok) {
+          setCalendarSyncEnabled(true);
+        } else {
+          showToast(result.error ?? "Impossible d'activer la synchronisation", "error");
+        }
+      }
+    } finally {
+      setCalendarSyncLoading(false);
+    }
+  }, [calendarSyncEnabled, showToast]);
+
+  // Background polling — silent so it doesn't blank the lists / shift scroll every 30s
   useEffect(() => {
     const id = setInterval(() => {
-      void fetchMonthData(selectedYear, selectedMonth);
-      void fetchSlots(selectedDateStr);
+      void fetchMonthData(selectedYear, selectedMonth, { silent: true });
+      void fetchSlots(selectedDateStr, { silent: true });
+      void runCalendarSync();
     }, 30_000);
     return () => clearInterval(id);
-  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr]);
+  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr, runCalendarSync]);
 
   // Refresh instantly when a push notification arrives (new booking, etc.)
   useEffect(() => {
     if (Platform.OS === "web") return;
     const sub = Notifications.addNotificationReceivedListener(() => {
-      void fetchMonthData(selectedYear, selectedMonth);
-      void fetchSlots(selectedDateStr);
+      void fetchMonthData(selectedYear, selectedMonth, { silent: true });
+      void fetchSlots(selectedDateStr, { silent: true });
     });
     return () => sub.remove();
   }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr]);
@@ -609,6 +674,7 @@ export default function ProCalendarScreen() {
       // et sans qu'aucune erreur ne soit montrée à la pro.
       const res = await proApi.updateReservationStatus(apt.id, "completed");
       if (!res.success) throw new Error(res.error);
+      void runCalendarSync();
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible de marquer ce rendez-vous comme terminé", "error");
@@ -622,6 +688,7 @@ export default function ProCalendarScreen() {
     try {
       const res = await proApi.updateReservationStatus(apt.id, "cancelled");
       if (!res.success) throw new Error(res.error);
+      void runCalendarSync();
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible d'annuler ce rendez-vous", "error");
@@ -635,6 +702,7 @@ export default function ProCalendarScreen() {
     try {
       const res = await nailTechApi.markNoShow(apt.id);
       if (!res.success) throw new Error(res.error);
+      void runCalendarSync();
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible de marquer cette absence", "error");
@@ -839,7 +907,7 @@ export default function ProCalendarScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {/* ── CALENDAR GRID ── */}
@@ -939,6 +1007,35 @@ export default function ProCalendarScreen() {
                 );
               })}
             </View>
+          </View>
+        )}
+
+        {/* ── APPLE CALENDAR SYNC ── */}
+        {Platform.OS === "ios" && (
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 12,
+            backgroundColor: Colors.white, borderRadius: 16, padding: 14,
+            marginBottom: 16, ...Shadows.card,
+          }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${Colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.foreground }}>Synchro Apple Calendar</Text>
+              <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 1, lineHeight: 15 }}>
+                Tes rendez-vous Blyss dans ton calendrier iPhone
+              </Text>
+            </View>
+            {calendarSyncLoading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <Switch
+                value={calendarSyncEnabled}
+                onValueChange={() => void toggleCalendarSync()}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            )}
           </View>
         )}
 

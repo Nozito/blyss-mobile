@@ -19,7 +19,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors } from "@/constants/colors";
+import { Colors, withAlpha } from "@/constants/colors";
+import { Shadows } from "@/constants/shadows";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { BlockedClient } from "@/lib/api";
 
@@ -32,6 +33,18 @@ type Client = {
   notes?: string | null;
   avatar?: string | null;
 };
+
+// Le backend renvoie parfois des écarts en jours mal signés (ex: "-57j" pour
+// une visite passée). On normalise vers un affichage toujours positif et lisible.
+function formatLastVisit(raw?: string | null): string {
+  if (!raw) return "Jamais venue";
+  const match = raw.match(/(-?\d+)\s*j\b/i);
+  if (!match) return raw;
+  const days = Math.abs(parseInt(match[1], 10));
+  if (days === 0) return "Aujourd'hui";
+  if (days === 1) return "Il y a 1 jour";
+  return `Il y a ${days} jours`;
+}
 
 const TABS = [
   { key: "clients", label: "Clientes", icon: "people-outline" as const },
@@ -52,18 +65,18 @@ function BlockedClientRow({
     <View
       style={{
         flexDirection: "row", alignItems: "center", gap: 12,
-        backgroundColor: Colors.card, borderRadius: 20, padding: 14,
-        marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: Colors.white, borderRadius: 16, padding: 14,
+        marginBottom: 10, ...Shadows.card,
       }}
     >
-      <Avatar name={`${item.first_name} ${item.last_name}`} size={46} />
+      <Avatar name={`${item.first_name} ${item.last_name}`} size={44} />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
           {item.first_name} {item.last_name}
         </Text>
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.email}</Text>
+        <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }} numberOfLines={1}>{item.email}</Text>
         {item.reason && (
-          <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginTop: 2 }}>
+          <Text style={{ fontSize: 11, color: Colors.destructive, marginTop: 3, fontWeight: "600" }}>
             {item.reason}
           </Text>
         )}
@@ -75,13 +88,13 @@ function BlockedClientRow({
         }}
         disabled={isUnblocking}
         style={{
-          paddingHorizontal: 12, paddingVertical: 7,
-          backgroundColor: `${Colors.success}15`,
-          borderRadius: 12, borderWidth: 1, borderColor: `${Colors.success}30`,
+          paddingHorizontal: 12, paddingVertical: 8,
+          backgroundColor: withAlpha(Colors.success, 0.12),
+          borderRadius: 10,
           opacity: isUnblocking ? 0.5 : 1,
         }}
       >
-        <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.success }}>Débloquer</Text>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.success }}>Débloquer</Text>
       </AnimatedPressable>
     </View>
   );
@@ -159,33 +172,35 @@ export default function ProClientsScreen() {
       onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${item.id}`)}
       style={{
         flexDirection: "row", alignItems: "center", gap: 12,
-        backgroundColor: Colors.card, borderRadius: 20, padding: 14,
-        marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: Colors.white, borderRadius: 16, padding: 14,
+        marginBottom: 10, ...Shadows.card,
       }}
     >
-      <Avatar name={item.name} size={46} />
+      <Avatar name={item.name} size={44} />
+
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.foreground }} numberOfLines={1}>
           {item.name}
         </Text>
         {item.phone ? (
-          <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{item.phone}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 }}>
+            <Ionicons name="call-outline" size={11} color={Colors.mutedForeground} />
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: "#52525B" }} numberOfLines={1}>{item.phone}</Text>
+          </View>
         ) : null}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
-          {item.totalVisits != null && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Ionicons name="calendar-outline" size={11} color={Colors.mutedForeground} />
-              <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>
-                {item.totalVisits} visite{item.totalVisits !== 1 ? "s" : ""}
-              </Text>
-            </View>
-          )}
-          {item.lastVisit ? (
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground }}>· {item.lastVisit}</Text>
-          ) : null}
-        </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.mutedForeground} />
+
+      <View style={{ alignItems: "flex-end", gap: 5 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Ionicons name="calendar-outline" size={11} color={Colors.primary} />
+          <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.foreground }}>
+            {item.totalVisits ?? 0} visite{(item.totalVisits ?? 0) !== 1 ? "s" : ""}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 10, color: Colors.mutedForeground }} numberOfLines={1}>
+          {formatLastVisit(item.lastVisit)}
+        </Text>
+      </View>
     </AnimatedPressable>
   ), [router]);
 
@@ -283,7 +298,7 @@ export default function ProClientsScreen() {
                   ))}
                 </View>
                 <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground, marginBottom: 12 }}>
-                  {deferredSearch ? `${filteredClients.length} résultat${filteredClients.length !== 1 ? "s" : ""}` : "Toutes les clientes"}
+                  {deferredSearch ? `${filteredClients.length} résultat${filteredClients.length !== 1 ? "s" : ""}` : "Toutes mes clientes"}
                 </Text>
               </View>
             }

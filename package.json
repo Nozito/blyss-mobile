@@ -31,6 +31,7 @@
     "expo": "~54.0.35",
     "expo-apple-authentication": "~8.0.8",
     "expo-blur": "~15.0.8",
+    "expo-calendar": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
@@ -85,5 +86,8 @@
     "ts-jest": "^29.4.11",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "keyv": "4.5.4"
+  }
 }

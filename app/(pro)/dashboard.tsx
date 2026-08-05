@@ -166,12 +166,9 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
                   {client.time}
                 </Text>
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                <Ionicons name="cash-outline" size={14} color={Colors.primary} />
-                <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.primary }}>
-                  {n(client.price).toFixed(2).replace(".", ",")}
-                </Text>
-              </View>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.primary }}>
+                {n(client.price).toFixed(2).replace(".", ",")} €
+              </Text>
             </View>
           </View>
         </View>
@@ -206,7 +203,7 @@ export default function ProDashboard() {
   // Redirect new pros to onboarding if they haven't seen it yet
   useEffect(() => {
     AsyncStorage.getItem("pro_onboarding_done").then((done) => {
-      if (done !== "true") router.replace("/(pro)/onboarding");
+      if (done !== "true") router.replace("/pro-onboarding" as any);
     });
   // router is stable in Expo Router
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -352,7 +349,7 @@ export default function ProDashboard() {
       style={{ flex: 1, backgroundColor: Colors.background }}
       contentContainerStyle={{
         paddingTop: insets.top,
-        paddingBottom: insets.bottom + 24,
+        paddingBottom: insets.bottom + 100,
         paddingHorizontal: 20,
         gap: 16,
       }}
@@ -430,7 +427,7 @@ export default function ProDashboard() {
             <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.18)" }} />
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "500" }}>
-                vs semaine dernière
+                {weeklyStats.isUp ? "+" : "-"}{weeklyStats.change}% vs semaine dernière
               </Text>
               <AnimatedPressable
                 onPress={() => {
@@ -854,12 +851,9 @@ export default function ProDashboard() {
                 </Text>
               </View>
               {totalRevenue > 0 && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Ionicons name="cash-outline" size={14} color={Colors.primary} />
-                  <Text style={{ fontSize: 12, fontWeight: "900", color: Colors.primary }}>
-                    {totalRevenue.toFixed(0)}
-                  </Text>
-                </View>
+                <Text style={{ fontSize: 12, fontWeight: "900", color: Colors.primary }}>
+                  {totalRevenue.toFixed(0)} €
+                </Text>
               )}
             </View>
 
@@ -869,7 +863,7 @@ export default function ProDashboard() {
                   flexDirection: "row",
                   alignItems: "flex-end",
                   justifyContent: "space-between",
-                  gap: 8,
+                  gap: 14,
                   height: 120,
                   paddingTop: 8,
                 }}
@@ -877,7 +871,8 @@ export default function ProDashboard() {
                 {weeklyRevenue.map((day, i) => {
                   const amt = n(day.amount);
                   const isMax = amt === maxRevenue && amt > 0;
-                  const barH = Math.max((amt / maxRevenue) * 120, 8);
+                  const barH = Math.max((amt / maxRevenue) * 104, 8);
+                  const dayLabel = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"][i] ?? day.day;
                   return (
                     <View key={i} style={{ flex: 1, alignItems: "center", gap: 8 }}>
                       {isMax ? (
@@ -911,7 +906,7 @@ export default function ProDashboard() {
                           color: isMax ? Colors.primary : Colors.mutedForeground,
                         }}
                       >
-                        {day.day}
+                        {dayLabel}
                       </Text>
                     </View>
                   );

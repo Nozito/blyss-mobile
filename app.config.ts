@@ -47,6 +47,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Blyss utilise votre localisation pour trouver des spécialistes près de vous.",
       NSUserNotificationsUsageDescription:
         "Blyss vous envoie des rappels pour vos rendez-vous.",
+      // Pas de plugin "expo-calendar" dans plugins[] ci-dessous : il injecte aussi
+      // NSRemindersUsageDescription + les permissions Android READ/WRITE_CALENDAR,
+      // qu'on n'utilise pas (sync Apple Calendar only, iOS only) — même logique que
+      // pour NSContactsUsageDescription plus haut, une permission déclarée sans
+      // usage réel est un motif de rejet App Store. Les deux clés Calendars
+      // couvrent iOS 17+ (Full Access) et les versions antérieures (legacy).
+      NSCalendarsFullAccessUsageDescription:
+        "Blyss ajoute tes rendez-vous à ton calendrier Apple pour que tu les retrouves partout.",
+      NSCalendarsUsageDescription:
+        "Blyss ajoute tes rendez-vous à ton calendrier Apple pour que tu les retrouves partout.",
       // NSContactsUsageDescription et NSUserTrackingUsageDescription retirées :
       // aucune des deux API correspondantes (expo-contacts, ATT) n'est utilisée
       // dans le code — une permission déclarée sans usage réel est un motif de
