@@ -10,6 +10,8 @@ import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { hasPlanAtLeast } from "@/constants/plans";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
 
 type ReportSummary = {
   id: number;
@@ -139,6 +141,7 @@ export default function ProFinanceReportsScreen() {
   const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const { activePlan, isReady: rcReady } = useRevenueCat();
 
   const { data, isLoading } = useQuery({
     queryKey: ["pro-finance-reports"],
@@ -150,6 +153,15 @@ export default function ProFinanceReportsScreen() {
     if (isLoading || reduceMotion) return;
     Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
   }, [isLoading, reduceMotion, contentOpacity]);
+
+  // Rapports automatiques = Signature — rien n'empêche côté client d'ouvrir
+  // cet écran aujourd'hui, l'API répond juste 403.
+  useEffect(() => {
+    if (!rcReady) return;
+    if (!hasPlanAtLeast(activePlan, "signature")) {
+      router.replace({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "signature" } });
+    }
+  }, [rcReady, activePlan, router]);
 
   const reports = (data?.data as ReportSummary[] | undefined) ?? [];
 

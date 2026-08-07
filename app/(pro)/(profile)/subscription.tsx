@@ -20,6 +20,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { getPlanDefinitions } from "@/constants/plans";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/Toast";
@@ -42,60 +43,6 @@ async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   return false;
 }
 
-function getPlanConfig(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, {
-  label: string;
-  fallbackMonthly: number;
-  fallbackAnnualTotal: number;
-  color: string;
-  icon: "rocket-outline" | "shield-checkmark-outline" | "diamond-outline";
-  features: { text: string; icon: string }[];
-}> {
-  return {
-    start: {
-      label: "Start",
-      fallbackMonthly: 29.99,
-      fallbackAnnualTotal: 299.99,
-      color: colors.primary,
-      icon: "rocket-outline",
-      features: [
-        { text: "Tes clientes réservent sans DM ni appel", icon: "calendar-outline" },
-        { text: "Rappels automatiques — zéro lapin", icon: "notifications-outline" },
-        { text: "Profil public visible par toutes tes clientes", icon: "globe-outline" },
-        { text: "Dashboard pour suivre ta semaine", icon: "bar-chart-outline" },
-        { text: "Paiement en ligne sécurisé", icon: "card-outline" },
-      ],
-    },
-    serenite: {
-      label: "Sérénité",
-      fallbackMonthly: 39.99,
-      fallbackAnnualTotal: 399.99,
-      color: colors.pro,
-      icon: "shield-checkmark-outline",
-      features: [
-        { text: "Tout Start inclus", icon: "checkmark-circle-outline" },
-        { text: "CA en temps réel + facturation automatique", icon: "receipt-outline" },
-        { text: "Portfolio photos pour attirer de nouvelles clientes", icon: "camera-outline" },
-        { text: "Statistiques détaillées de ton activité", icon: "analytics-outline" },
-        { text: "Rappels post-prestation pour fidéliser", icon: "heart-outline" },
-      ],
-    },
-    signature: {
-      label: "Signature",
-      fallbackMonthly: 49.99,
-      fallbackAnnualTotal: 499.99,
-      color: colors.secondary,
-      icon: "diamond-outline",
-      features: [
-        { text: "Tout Sérénité inclus", icon: "checkmark-circle-outline" },
-        { text: "Mise en avant prioritaire dans la recherche", icon: "star-outline" },
-        { text: "Encaissement à distance depuis ton profil", icon: "card-outline" },
-        { text: "Badge Pro Signature visible par tes clientes", icon: "diamond-outline" },
-        { text: "Support prioritaire 7j/7", icon: "headset-outline" },
-      ],
-    },
-  };
-}
-
 function savingsPercent(monthly: number, annualMonthly: number) {
   return Math.round((1 - annualMonthly / monthly) * 100);
 }
@@ -104,7 +51,7 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colors = useThemeColors();
-  const PLAN_CONFIG = useMemo(() => getPlanConfig(colors), [colors]);
+  const PLAN_CONFIG = useMemo(() => getPlanDefinitions(colors), [colors]);
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -154,6 +101,12 @@ export default function SubscriptionScreen() {
 
   const subscription = data?.data;
   const isAnnual = billing === "annual";
+  // Plan affiché dans la carte "abonnement actuel" : le backend fait foi quand
+  // il a synchronisé, mais RC reste la source de vérité tant que ce n'est pas
+  // le cas (cf. hasActiveSubscription plus haut) — évite d'afficher "aucun
+  // abonnement" juste après un achat pendant que le backend rattrape son retard.
+  const currentPlanKey = (subscription?.plan as RCPlan | undefined) ?? activePlan;
+  const currentPlanPkg = currentPlanKey ? packages.find((p) => p.key === currentPlanKey) : undefined;
 
   const handlePurchase = useCallback(async (planKey: RCPlan) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -253,7 +206,7 @@ export default function SubscriptionScreen() {
           <LoadingSpinner />
         ) : (
           <>
-            {!subscription && (
+            {!hasActiveSubscription && (
               <View style={{ marginBottom: 24 }}>
                 <Text style={{
                   fontSize: 26, fontWeight: "900", color: colors.foreground,
@@ -270,7 +223,7 @@ export default function SubscriptionScreen() {
               </View>
             )}
 
-            {subscription ? (
+            {currentPlanKey ? (
               <View style={{
                 backgroundColor: colors.card, borderRadius: 20,
                 borderWidth: 2, borderColor: colors.primary,
@@ -278,47 +231,64 @@ export default function SubscriptionScreen() {
               }}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                   <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground }}>
-                    Plan {PLAN_CONFIG[subscription.plan as RCPlan]?.label ?? subscription.plan}
+                    Plan {PLAN_CONFIG[currentPlanKey]?.label ?? currentPlanKey}
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <View style={{
                       width: 7, height: 7, borderRadius: 3.5,
-                      backgroundColor: subscription.status === "active" ? colors.success : colors.warning,
+                      backgroundColor: !subscription || subscription.status === "active" ? colors.success : colors.warning,
                     }} />
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: subscription.status === "active" ? colors.success : colors.warning }}>
-                      {subscription.status === "active" ? "Actif" : subscription.status}
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: !subscription || subscription.status === "active" ? colors.success : colors.warning }}>
+                      {!subscription || subscription.status === "active" ? "Actif" : subscription.status}
                     </Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 30, fontWeight: "800", color: colors.primary, marginBottom: 4 }}>
-                  {(Number(subscription.monthlyPrice) || 0).toFixed(2)} €
-                  <Text style={{ fontSize: 14, fontWeight: "400", color: colors.mutedForeground }}>/mois</Text>
-                </Text>
-                {subscription.endDate && (
+                {/* Le prix réellement facturé vient de RC (source de vérité), pas du champ
+                    monthlyPrice du backend qui peut diverger de l'offre RC active. */}
+                {subscription?.billingType === "one_time" && currentPlanPkg ? (
+                  <>
+                    <Text style={{ fontSize: 30, fontWeight: "800", color: colors.primary, marginBottom: 0 }}>
+                      {currentPlanPkg.annualPriceString}
+                      <Text style={{ fontSize: 14, fontWeight: "400", color: colors.mutedForeground }}>/an</Text>
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 4 }}>
+                      soit {currentPlanPkg.annualMonthlyPrice.toFixed(2)} €/mois
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={{ fontSize: 30, fontWeight: "800", color: colors.primary, marginBottom: 4 }}>
+                    {currentPlanPkg?.priceString ?? `${(currentPlanPkg?.monthlyPrice ?? PLAN_CONFIG[currentPlanKey].fallbackMonthly).toFixed(2)} €`}
+                    <Text style={{ fontSize: 14, fontWeight: "400", color: colors.mutedForeground }}>/mois</Text>
+                  </Text>
+                )}
+                {subscription?.endDate && (
                   <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 14 }}>
                     Expire le {new Date(subscription.endDate).toLocaleDateString("fr-FR")}
                   </Text>
                 )}
 
-                {/* Repères utiles au-delà du simple prix : ancienneté + type de facturation */}
-                <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
-                  <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
-                      Membre depuis
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
-                      {new Date(subscription.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                    </Text>
+                {/* Repères utiles au-delà du simple prix : ancienneté + type de facturation —
+                    disponibles uniquement une fois le backend synchronisé */}
+                {subscription && (
+                  <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+                    <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
+                        Membre depuis
+                      </Text>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
+                        {new Date(subscription.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
+                        Facturation
+                      </Text>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
+                        {subscription.billingType === "monthly" ? "Mensuelle" : "Paiement unique"}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
-                      Facturation
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
-                      {subscription.billingType === "monthly" ? "Mensuelle" : "Paiement unique"}
-                    </Text>
-                  </View>
-                </View>
+                )}
 
                 <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 14 }} />
 
@@ -326,7 +296,7 @@ export default function SubscriptionScreen() {
                   Ce qui est inclus
                 </Text>
                 <View style={{ gap: 8, marginBottom: 16 }}>
-                  {(PLAN_CONFIG[subscription.plan as RCPlan]?.features ?? []).map((f) => (
+                  {(PLAN_CONFIG[currentPlanKey]?.features ?? []).map((f) => (
                     <View key={f.text} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <Ionicons name="checkmark" size={14} color={colors.success} />
                       <Text style={{ fontSize: 12.5, color: colors.foreground, flex: 1 }}>{f.text}</Text>
@@ -346,16 +316,6 @@ export default function SubscriptionScreen() {
                     Annuler l'abonnement
                   </Text>
                 </Pressable>
-                {activePlan !== null && (
-                  <Pressable
-                    onPress={() => router.push("/(pro)/(profile)/subscription-settings" as any)}
-                    style={{ alignItems: "center", paddingVertical: 4 }}
-                  >
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primary }}>
-                      Gérer mon abonnement →
-                    </Text>
-                  </Pressable>
-                )}
               </View>
             ) : null}
 
@@ -418,7 +378,7 @@ export default function SubscriptionScreen() {
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {
                 const config = PLAN_CONFIG[planKey];
-                const isCurrent = subscription?.plan === planKey;
+                const isCurrent = currentPlanKey === planKey;
                 const rcPkg = packages.find((p) => p.key === planKey);
                 const isPurchasing = purchasing === planKey;
 

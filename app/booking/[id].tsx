@@ -22,10 +22,11 @@ import { clientApi, reviewsApi, stripePaymentsApi } from "@/lib/api";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { resolveMediaUrl } from "@/lib/media";
+import { computeRemainingBalance } from "@/lib/bookingUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BookingDetailData {
@@ -95,6 +96,7 @@ function FadeCard({ delay, style, children }: { delay: number; style?: object; c
 
 // ─── Star Picker ──────────────────────────────────────────────────────────────
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const colors = useThemeColors();
   const s0 = useRef(new Animated.Value(1)).current;
   const s1 = useRef(new Animated.Value(1)).current;
   const s2 = useRef(new Animated.Value(1)).current;
@@ -119,7 +121,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
             accessibilityState={{ selected: i < value }}
             hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           >
-            <Ionicons name={i < value ? "star" : "star-outline"} size={36} color={i < value ? Colors.primary : Colors.disabled} />
+            <Ionicons name={i < value ? "star" : "star-outline"} size={36} color={i < value ? colors.primary : colors.disabled} />
           </Pressable>
         </Animated.View>
       ))}
@@ -129,6 +131,8 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 
 // ─── Review Modal ─────────────────────────────────────────────────────────────
 function ReviewModal({ visible, proId, onClose }: { visible: boolean; proId: number; onClose: () => void }) {
+  const colors = useThemeColors();
+  const styles = useStyles(colors);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -156,7 +160,7 @@ function ReviewModal({ visible, proId, onClose }: { visible: boolean; proId: num
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlayDark }}
       >
         <View style={styles.modalSheet}>
           <View style={styles.modalHandle} />
@@ -166,7 +170,7 @@ function ReviewModal({ visible, proId, onClose }: { visible: boolean; proId: num
           <TextInput
             style={styles.modalInput}
             placeholder="Ton commentaire (optionnel)"
-            placeholderTextColor={Colors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             multiline
             numberOfLines={4}
             maxLength={200}
@@ -184,7 +188,7 @@ function ReviewModal({ visible, proId, onClose }: { visible: boolean; proId: num
               disabled={rating === 0 || mutation.isPending}
             >
               {mutation.isPending
-                ? <ActivityIndicator color={Colors.white} size="small" />
+                ? <ActivityIndicator color={colors.onColor} size="small" />
                 : <Text style={styles.modalSubmitText}>Envoyer</Text>}
             </Pressable>
           </View>
@@ -196,6 +200,8 @@ function ReviewModal({ visible, proId, onClose }: { visible: boolean; proId: num
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function BookingDetailScreen() {
+  const colors = useThemeColors();
+  const styles = useStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -252,7 +258,7 @@ export default function BookingDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Chargement des détails...</Text>
       </View>
     );
@@ -263,7 +269,7 @@ export default function BookingDetailScreen() {
   if (isError || !booking) {
     return (
       <View style={styles.centered}>
-        <Ionicons name="alert-circle-outline" size={48} color={Colors.primary} />
+        <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
         <Text style={styles.errorText}>Impossible de charger cette réservation.</Text>
         <Pressable style={styles.errorBtn} onPress={() => void refetch()}>
           <Text style={styles.errorBtnText}>Réessayer</Text>
@@ -281,31 +287,31 @@ export default function BookingDetailScreen() {
   const initial = proName[0]?.toUpperCase() ?? "P";
   const avatarUri = resolveMediaUrl(booking.pro_photo ?? booking.profile_photo);
   const city = booking.pro_city ?? booking.city;
-  const remaining = Math.max(0, booking.price - (booking.total_paid ?? 0));
+  const remaining = computeRemainingBalance(booking.price, booking.total_paid ?? 0);
 
   const paymentBadge = (() => {
     const s = booking.payment_status;
     if (s === "fully_paid" || s === "paid")
-      return { label: "✓ Payé en ligne", color: "#27AE60", bg: "#E8F8F0" };
+      return { label: "✓ Payé en ligne", color: colors.successText, bg: colors.successLight };
     if (s === "paid_on_site")
-      return { label: "✓ Payé sur place", color: "#27AE60", bg: "#E8F8F0" };
+      return { label: "✓ Payé sur place", color: colors.successText, bg: colors.successLight };
     if (s === "deposit_paid")
-      return { label: "Acompte versé", color: Colors.info, bg: Colors.infoLight };
-    return { label: "Paiement en attente", color: Colors.warning, bg: Colors.warningLight };
+      return { label: "Acompte versé", color: colors.info, bg: colors.infoLight };
+    return { label: "Paiement en attente", color: colors.warning, bg: colors.warningLight };
   })();
 
   const statusBadge = (() => {
     switch (booking.status) {
       case "confirmed":
-        return { label: "✓ Confirmé", color: "#27AE60", bg: "#E8F8F0" };
+        return { label: "✓ Confirmé", color: colors.successText, bg: colors.successLight };
       case "pending":
-        return { label: "En attente de confirmation", color: Colors.warning, bg: Colors.warningLight };
+        return { label: "En attente de confirmation", color: colors.warning, bg: colors.warningLight };
       case "cancelled":
-        return { label: "✕ Annulé", color: Colors.destructive, bg: Colors.destructiveLight };
+        return { label: "✕ Annulé", color: colors.destructive, bg: colors.destructiveLight };
       case "completed":
-        return { label: "✓ Terminé", color: "#27AE60", bg: "#E8F8F0" };
+        return { label: "✓ Terminé", color: colors.successText, bg: colors.successLight };
       case "no_show":
-        return { label: "Non honoré", color: Colors.destructive, bg: Colors.destructiveLight };
+        return { label: "Non honoré", color: colors.destructive, bg: colors.destructiveLight };
       default:
         return null;
     }
@@ -316,7 +322,7 @@ export default function BookingDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <AnimatedIconButton onPress={() => safeBack(router)} style={styles.headerBack} accessibilityLabel="Retour">
-          <Ionicons name="chevron-back" size={24} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </AnimatedIconButton>
         <Text style={styles.headerTitle}>Détail réservation</Text>
         <View style={{ width: 40 }} />
@@ -352,13 +358,13 @@ export default function BookingDetailScreen() {
               )}
               {Boolean(city) && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
-                  <Ionicons name="location-outline" size={13} color={Colors.mutedForeground} />
+                  <Ionicons name="location-outline" size={13} color={colors.mutedForeground} />
                   <Text style={styles.proSub}>{city}</Text>
                 </View>
               )}
               {Boolean(booking.address_line) && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
-                  <Ionicons name="pin-outline" size={13} color={Colors.mutedForeground} />
+                  <Ionicons name="pin-outline" size={13} color={colors.mutedForeground} />
                   <Text style={styles.proSub} numberOfLines={1}>
                     {booking.address_line}{booking.postal_code ? `, ${booking.postal_code}` : ""}
                   </Text>
@@ -366,7 +372,7 @@ export default function BookingDetailScreen() {
               )}
               {!booking.address_line && booking.status === "pending" && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
-                  <Ionicons name="lock-closed-outline" size={12} color={Colors.mutedForeground} />
+                  <Ionicons name="lock-closed-outline" size={12} color={colors.mutedForeground} />
                   <Text style={[styles.proSub, { fontSize: 11.5 }]}>
                     L'adresse exacte sera communiquée une fois la réservation confirmée
                   </Text>
@@ -390,7 +396,7 @@ export default function BookingDetailScreen() {
                 Linking.openURL(url!).catch(() => {});
               }}
             >
-              <Ionicons name="navigate-outline" size={16} color={Colors.primary} />
+              <Ionicons name="navigate-outline" size={16} color={colors.primary} />
               <Text style={styles.contactBtnText}>Voir l'itinéraire</Text>
             </Pressable>
           )}
@@ -405,7 +411,7 @@ export default function BookingDetailScreen() {
                     .catch(() => {})
                 }
               >
-                <Ionicons name="call-outline" size={16} color={Colors.primary} />
+                <Ionicons name="call-outline" size={16} color={colors.primary} />
                 <Text style={styles.contactBtnText}>Appeler</Text>
               </Pressable>
               <Pressable
@@ -416,7 +422,7 @@ export default function BookingDetailScreen() {
                     .catch(() => {})
                 }
               >
-                <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
+                <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
                 <Text style={styles.contactBtnText}>SMS</Text>
               </Pressable>
             </View>
@@ -435,7 +441,7 @@ export default function BookingDetailScreen() {
           <View style={styles.infoRows}>
             <View style={styles.infoRow}>
               <View style={styles.infoIcon}>
-                <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.infoLabel}>Date</Text>
@@ -445,7 +451,7 @@ export default function BookingDetailScreen() {
 
             <View style={styles.infoRow}>
               <View style={styles.infoIcon}>
-                <Ionicons name="time-outline" size={20} color={Colors.primary} />
+                <Ionicons name="time-outline" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.infoLabel}>Horaire & Durée</Text>
@@ -459,7 +465,7 @@ export default function BookingDetailScreen() {
             {Boolean(city) && (
               <View style={styles.infoRow}>
                 <View style={styles.infoIcon}>
-                  <Ionicons name="location-outline" size={20} color={Colors.primary} />
+                  <Ionicons name="location-outline" size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.infoLabel}>Lieu</Text>
@@ -489,7 +495,7 @@ export default function BookingDetailScreen() {
               disabled={balanceLoading}
             >
               {balanceLoading
-                ? <ActivityIndicator color={Colors.white} size="small" />
+                ? <ActivityIndicator color={colors.onColor} size="small" />
                 : <Text style={styles.payBtnText}>Payer le solde ({remaining.toFixed(2)} €)</Text>}
             </Pressable>
           )}
@@ -499,7 +505,7 @@ export default function BookingDetailScreen() {
         {booking.status === "completed" && (
           <FadeCard delay={300}>
             <Pressable style={[styles.reviewBtn, { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }]} onPress={() => setReviewVisible(true)}>
-              <Ionicons name="star" size={16} color={Colors.white} />
+              <Ionicons name="star" size={16} color={colors.onColor} />
               <Text style={styles.reviewBtnText}>Laisser un avis</Text>
             </Pressable>
           </FadeCard>
@@ -528,13 +534,13 @@ export default function BookingDetailScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}
+          style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlayDark }}
         >
-          <View style={{ backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground }}>Paiement du solde</Text>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.foreground }}>Paiement du solde</Text>
               <Pressable onPress={() => setBalanceVisible(false)} accessibilityRole="button" accessibilityLabel="Fermer">
-                <Ionicons name="close" size={24} color={Colors.foreground} />
+                <Ionicons name="close" size={24} color={colors.foreground} />
               </Pressable>
             </View>
             <PaymentStep
@@ -563,29 +569,29 @@ export default function BookingDetailScreen() {
         presentationStyle="overFullScreen"
         onRequestClose={() => setCancelConfirmVisible(false)}
       >
-        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: Colors.overlayDark }}>
-          <View style={{ backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: insets.bottom + 24 }}>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.foreground, marginBottom: 8 }}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.overlayDark }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: insets.bottom + 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: colors.foreground, marginBottom: 8 }}>
               Annuler cette réservation ?
             </Text>
-            <Text style={{ fontSize: 14, color: Colors.mutedForeground, lineHeight: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, lineHeight: 20, marginBottom: 20 }}>
               {proName} sera notifié·e de l'annulation. Selon les conditions d'annulation de la pro, un remboursement partiel ou total de l'acompte peut s'appliquer.
             </Text>
             <Pressable
-              style={{ height: 50, borderRadius: 14, backgroundColor: Colors.destructive, alignItems: "center", justifyContent: "center", opacity: cancelMutation.isPending ? 0.7 : 1, marginBottom: 10 }}
+              style={{ height: 50, borderRadius: 14, backgroundColor: colors.destructive, alignItems: "center", justifyContent: "center", opacity: cancelMutation.isPending ? 0.7 : 1, marginBottom: 10 }}
               onPress={() => cancelMutation.mutate(booking.id)}
               disabled={cancelMutation.isPending}
             >
               {cancelMutation.isPending
-                ? <ActivityIndicator color={Colors.white} size="small" />
-                : <Text style={{ color: Colors.white, fontSize: 15, fontWeight: "700" }}>Confirmer l'annulation</Text>}
+                ? <ActivityIndicator color={colors.onColor} size="small" />
+                : <Text style={{ color: colors.onColor, fontSize: 15, fontWeight: "700" }}>Confirmer l'annulation</Text>}
             </Pressable>
             <Pressable
               style={{ height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center" }}
               onPress={() => setCancelConfirmVisible(false)}
               disabled={cancelMutation.isPending}
             >
-              <Text style={{ color: Colors.foreground, fontSize: 15, fontWeight: "600" }}>Garder ma réservation</Text>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600" }}>Garder ma réservation</Text>
             </Pressable>
           </View>
         </View>
@@ -595,100 +601,102 @@ export default function BookingDetailScreen() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+function useStyles(colors: Record<string, string>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
 
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingTop: 0, paddingBottom: 12, backgroundColor: Colors.background,
-  },
-  headerBack: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.white,
-    alignItems: "center", justifyContent: "center",
-    shadowColor: Colors.black, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
-  },
-  headerTitle: { fontSize: 17, fontWeight: "700", color: Colors.foreground },
+    header: {
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      paddingHorizontal: 16, paddingTop: 0, paddingBottom: 12, backgroundColor: colors.background,
+    },
+    headerBack: {
+      width: 40, height: 40, borderRadius: 20, backgroundColor: colors.card,
+      alignItems: "center", justifyContent: "center",
+      shadowColor: colors.black, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    },
+    headerTitle: { fontSize: 17, fontWeight: "700", color: colors.foreground },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 8 },
+    scroll: { paddingHorizontal: 16, paddingTop: 8 },
 
-  centered: { flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
-  loadingText: { fontSize: 14, color: Colors.mutedForeground, marginTop: 8 },
-  errorText: { fontSize: 15, color: Colors.foreground, textAlign: "center", lineHeight: 22 },
-  errorBtn: { marginTop: 8, backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 24, minWidth: 160, alignItems: "center" },
-  errorBtnText: { color: Colors.white, fontWeight: "700", fontSize: 14 },
-  errorBtnSecondary: { marginTop: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 999, paddingVertical: 11, paddingHorizontal: 24, minWidth: 160, alignItems: "center" },
-  errorBtnSecondaryText: { color: Colors.mutedForeground, fontWeight: "600", fontSize: 14 },
+    centered: { flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
+    loadingText: { fontSize: 14, color: colors.mutedForeground, marginTop: 8 },
+    errorText: { fontSize: 15, color: colors.foreground, textAlign: "center", lineHeight: 22 },
+    errorBtn: { marginTop: 8, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 24, minWidth: 160, alignItems: "center" },
+    errorBtnText: { color: colors.onColor, fontWeight: "700", fontSize: 14 },
+    errorBtnSecondary: { marginTop: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 11, paddingHorizontal: 24, minWidth: 160, alignItems: "center" },
+    errorBtnSecondaryText: { color: colors.mutedForeground, fontWeight: "600", fontSize: 14 },
 
-  statusBadge: { borderRadius: 999, paddingHorizontal: 20, paddingVertical: 8 },
-  statusBadgeText: { fontSize: 15, fontWeight: "700" },
+    statusBadge: { borderRadius: 999, paddingHorizontal: 20, paddingVertical: 8 },
+    statusBadgeText: { fontSize: 15, fontWeight: "700" },
 
-  card: {
-    backgroundColor: Colors.white, borderRadius: 20, padding: 18, marginBottom: 16,
-    shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
-  },
+    card: {
+      backgroundColor: colors.card, borderRadius: 20, padding: 18, marginBottom: 16,
+      shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+    },
 
-  proAvatar: {
-    width: 64, height: 64, borderRadius: 16,
-    backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center", overflow: "hidden",
-  },
-  proAvatarInitial: { fontSize: 24, fontWeight: "800", color: Colors.primary },
-  proName: { fontSize: 17, fontWeight: "800", color: Colors.foreground, marginBottom: 2 },
-  proSub: { fontSize: 13, color: Colors.mutedForeground },
+    proAvatar: {
+      width: 64, height: 64, borderRadius: 16,
+      backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center", overflow: "hidden",
+    },
+    proAvatarInitial: { fontSize: 24, fontWeight: "800", color: colors.primary },
+    proName: { fontSize: 17, fontWeight: "800", color: colors.foreground, marginBottom: 2 },
+    proSub: { fontSize: 13, color: colors.mutedForeground },
 
-  contactBtn: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    borderWidth: 1, borderColor: `${Colors.primary}30`, borderRadius: 12,
-    paddingVertical: 13, minHeight: 44, backgroundColor: Colors.primaryLight,
-  },
-  contactBtnText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+    contactBtn: {
+      flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+      borderWidth: 1, borderColor: `${colors.primary}30`, borderRadius: 12,
+      paddingVertical: 13, minHeight: 44, backgroundColor: colors.primaryLight,
+    },
+    contactBtnText: { fontSize: 14, fontWeight: "600", color: colors.primary },
 
-  prestationName: { fontSize: 18, fontWeight: "800", color: Colors.foreground, marginBottom: 6 },
-  prestationDesc: { fontSize: 13, color: Colors.mutedForeground, lineHeight: 19, marginBottom: 14 },
+    prestationName: { fontSize: 18, fontWeight: "800", color: colors.foreground, marginBottom: 6 },
+    prestationDesc: { fontSize: 13, color: colors.mutedForeground, lineHeight: 19, marginBottom: 14 },
 
-  infoRows: { gap: 12, marginTop: 8 },
-  infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  infoIcon: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center",
-  },
-  infoLabel: { fontSize: 11, color: Colors.mutedForeground, fontWeight: "600", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 },
-  infoValue: { fontSize: 14, fontWeight: "600", color: Colors.foreground },
+    infoRows: { gap: 12, marginTop: 8 },
+    infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+    infoIcon: {
+      width: 44, height: 44, borderRadius: 12,
+      backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center",
+    },
+    infoLabel: { fontSize: 11, color: colors.mutedForeground, fontWeight: "600", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+    infoValue: { fontSize: 14, fontWeight: "600", color: colors.foreground },
 
-  separator: { height: 1, backgroundColor: Colors.border, marginVertical: 16 },
-  totalLabel: { fontSize: 15, color: Colors.mutedForeground, fontWeight: "600" },
-  totalPrice: { fontSize: 28, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
+    separator: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
+    totalLabel: { fontSize: 15, color: colors.mutedForeground, fontWeight: "600" },
+    totalPrice: { fontSize: 28, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 },
 
-  paymentBadge: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
-  paymentBadgeText: { fontSize: 12, fontWeight: "700" },
+    paymentBadge: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
+    paymentBadgeText: { fontSize: 12, fontWeight: "700" },
 
-  payBtn: {
-    marginTop: 14, backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center",
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3,
-  },
-  payBtnText: { color: Colors.white, fontWeight: "700", fontSize: 15 },
+    payBtn: {
+      marginTop: 14, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center",
+      shadowColor: colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3,
+    },
+    payBtnText: { color: colors.onColor, fontWeight: "700", fontSize: 15 },
 
-  reviewBtn: {
-    backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 15, alignItems: "center", marginBottom: 12,
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  reviewBtnText: { color: Colors.white, fontWeight: "700", fontSize: 16 },
+    reviewBtn: {
+      backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 15, alignItems: "center", marginBottom: 12,
+      shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    reviewBtnText: { color: colors.onColor, fontWeight: "700", fontSize: 16 },
 
-  cancelBookingBtn: {
-    backgroundColor: "transparent", borderRadius: 999, borderWidth: 1, borderColor: Colors.destructive,
-    paddingVertical: 14, alignItems: "center", marginBottom: 12,
-  },
-  cancelBookingBtnText: { color: Colors.destructive, fontWeight: "700", fontSize: 15 },
+    cancelBookingBtn: {
+      backgroundColor: "transparent", borderRadius: 999, borderWidth: 1, borderColor: colors.destructive,
+      paddingVertical: 14, alignItems: "center", marginBottom: 12,
+    },
+    cancelBookingBtnText: { color: colors.destructive, fontWeight: "700", fontSize: 15 },
 
-  modalSheet: { backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: "800", color: Colors.foreground, textAlign: "center", marginBottom: 4 },
-  modalSubtitle: { fontSize: 13, color: Colors.mutedForeground, textAlign: "center", marginBottom: 20 },
-  modalInput: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: 12, padding: 12,
-    marginTop: 20, fontSize: 14, color: Colors.foreground, minHeight: 90, textAlignVertical: "top",
-  },
-  modalCancelBtn: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
-  modalCancelText: { fontSize: 15, fontWeight: "600", color: Colors.mutedForeground },
-  modalSubmitBtn: { flex: 1, backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
-  modalSubmitText: { fontSize: 15, fontWeight: "700", color: Colors.white },
-});
+    modalSheet: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: "800", color: colors.foreground, textAlign: "center", marginBottom: 4 },
+    modalSubtitle: { fontSize: 13, color: colors.mutedForeground, textAlign: "center", marginBottom: 20 },
+    modalInput: {
+      borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12,
+      marginTop: 20, fontSize: 14, color: colors.foreground, minHeight: 90, textAlignVertical: "top",
+    },
+    modalCancelBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
+    modalCancelText: { fontSize: 15, fontWeight: "600", color: colors.mutedForeground },
+    modalSubmitBtn: { flex: 1, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 13, alignItems: "center" },
+    modalSubmitText: { fontSize: 15, fontWeight: "700", color: colors.onColor },
+  });
+}

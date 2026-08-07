@@ -51,7 +51,7 @@ interface PurchaseResult {
   error?: string;
 }
 
-// ── syncSubscriptionWithRetry (copie exacte de subscription-settings.tsx) ─────
+// ── syncSubscriptionWithRetry (copie exacte de subscription.tsx) ─────
 
 async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -67,7 +67,7 @@ async function syncSubscriptionWithRetry(maxAttempts = 3): Promise<boolean> {
   return false;
 }
 
-// ── handleUpgrade (logique extraite de subscription-settings.tsx) ─────────────
+// ── handleUpgrade (logique extraite de subscription.tsx) ─────────────
 
 interface UpgradeParams {
   planId: RCPlan;

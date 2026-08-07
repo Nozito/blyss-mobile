@@ -337,9 +337,7 @@ export default function ProProfileScreen() {
       {/* Abonnement card */}
       <View style={{ marginBottom: 20 }}>
         <AnimatedPressable
-          onPress={() =>
-            router.push(subscription ? "/(pro)/(profile)/subscription-settings" : "/(pro)/(profile)/subscription")
-          }
+          onPress={() => router.push("/(pro)/(profile)/subscription")}
           style={{ borderRadius: 16, overflow: "hidden" }}
         >
           <View

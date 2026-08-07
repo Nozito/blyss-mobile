@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Redirect, useRouter } from "expo-router";
+import React from "react";
+import { Redirect, useSegments } from "expo-router";
 import { NativeTabs, Icon, Badge, VectorIcon } from "expo-router/unstable-native-tabs";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,29 +12,29 @@ export default function ProLayout() {
   const { user, isLoading: authLoading } = useAuth();
   const { activePlan, isReady: rcReady } = useRevenueCat();
   const { unreadCount } = useNotifications();
-  const router = useRouter();
+  const segments = useSegments();
 
   const isAdmin = user?.is_admin ?? false;
   const hasActiveSub = isAdmin || Boolean(activePlan);
-
-  useEffect(() => {
-    if (authLoading || !rcReady) return;
-    if (!user || isAdmin) return;
-    if (!hasActiveSub) {
-      router.replace("/(pro)/(profile)/subscription");
-    }
-    // router is intentionally omitted — it's a stable singleton in Expo Router.
-    // user?.id replaces the full user object to avoid re-running on every object re-creation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, rcReady, user?.id, isAdmin, hasActiveSub]);
+  // Already on the paywall itself — don't redirect to it again, or every
+  // render would produce a fresh <Redirect> to the same screen we're on.
+  const isOnSubscriptionScreen = segments.includes("subscription" as never);
 
   if (authLoading || !rcReady) return <LoadingSpinner fullScreen />;
   if (!user) return <Redirect href="/(auth)/welcome" />;
   if (user.role !== "pro" && !isAdmin) return <Redirect href="/(client)" />;
 
-  // NativeTabs MUST be mounted before the router.replace effect fires.
-  // Returning a spinner here (no NativeTabs) caused Expo Router to re-mount
-  // the layout on each replace call, creating an infinite redirect loop.
+  // Declarative redirect (resolved during render, before NativeTabs mounts)
+  // instead of an imperative router.replace() from an effect — the latter
+  // was firing correctly (confirmed via logging) but silently no-op'd when
+  // called right after the NativeTabs navigator's own initial transition
+  // (e.g. right after "Commencer" on the signup success screen) was still
+  // settling, letting a pro with no subscription land on the dashboard with
+  // full access. A Redirect resolved at render time doesn't race that
+  // transition at all.
+  if (!hasActiveSub && !isOnSubscriptionScreen) {
+    return <Redirect href="/(pro)/(profile)/subscription" />;
+  }
 
   return (
     <NativeTabs

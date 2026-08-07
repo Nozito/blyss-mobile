@@ -29,6 +29,7 @@ const NOTIF_CFG: Record<string, { icon: React.ComponentProps<typeof Ionicons>["n
   booking_confirmed: { icon: "checkmark-circle-outline", color: "#007AFF", bg: "rgba(0,122,255,.12)" },
   booking_cancelled: { icon: "alert-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
   booking_reminder:  { icon: "time-outline",             color: "#FF9500", bg: "rgba(255,149,0,.12)" },
+  post_appointment:  { icon: "star-outline",              color: "#5856D6", bg: "rgba(88,86,214,.12)" },
   message_received:  { icon: "chatbubble-outline",       color: "#5856D6", bg: "rgba(88,86,214,.12)" },
   payment_received:  { icon: "card-outline",             color: "#34C759", bg: "rgba(52,199,89,.12)" },
   promotional:       { icon: "gift-outline",             color: "#FF2D55", bg: "rgba(255,45,85,.12)" },

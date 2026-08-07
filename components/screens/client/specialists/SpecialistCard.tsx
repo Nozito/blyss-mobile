@@ -104,20 +104,25 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
         accessibilityRole="button"
         accessibilityLabel={`Voir le profil de ${item.business_name}`}
         style={{
-          flexDirection: "row",
           backgroundColor: colors.white,
           borderRadius: 16,
           overflow: "hidden",
           borderWidth: 1,
           borderColor: withAlpha(colors.border, 0.4),
           marginBottom: 12,
+          minHeight: 130,
           ...Shadows.card,
         }}
       >
-        {/* Photo — largeur fixe réduite (84) qui remplit toute la hauteur de la
-            ligne (height: 100%, cover), sans changer la largeur totale de la
-            card : l'espace repris va au bloc texte à droite. */}
-        <View style={{ width: 114, flexShrink: 0, backgroundColor: colors.cream, minHeight: 130 }}>
+        {/* Photo — positionnée en absolu (top/bottom à 0) plutôt qu'en enfant
+            flex "row" avec juste une minHeight : certaines photos très hautes
+            (crop portrait serré) faisaient sinon résoudre `height: "100%"`
+            sur leur propre ratio intrinsèque au lieu de la hauteur de la card,
+            explosant la taille de cette seule card bien au-delà des autres
+            malgré le overflow: hidden. En absolu, elle est toujours calée
+            exactement sur la hauteur finale de la card (dictée par le bloc
+            texte), quel que soit le ratio de la photo source. */}
+        <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 114, backgroundColor: colors.cream }}>
           {photo && !imageError ? (
             <Image
               source={{ uri: photo }}
@@ -159,8 +164,10 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
           </Pressable>
         </View>
 
-        {/* Info */}
-        <View style={{ flex: 1, padding: 16, flexDirection: "column", minHeight: 130 }}>
+        {/* Info — la photo n'étant plus un sibling flex (cf. ci-dessus), c'est
+            ce bloc qui dicte seul la hauteur de la card ; marginLeft réserve
+            la largeur de la photo positionnée en absolu. */}
+        <View style={{ marginLeft: 114, padding: 16, flexDirection: "column", minHeight: 130 }}>
           <View style={{ flex: 1 }}>
             <Text
               style={{ fontSize: 15, fontWeight: "600", color: colors.foreground, lineHeight: 20 }}
@@ -175,7 +182,10 @@ export const SpecialistCard = memo(function SpecialistCard({ item, isFav, index,
               {item.specialty}
             </Text>
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 12 }}>
+            {/* minHeight réserve la ligne même sans note ni prix — sinon cette
+                rangée s'effondre à 0px et la card devient plus courte que
+                les autres (toutes les cards doivent garder la même taille). */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 12, minHeight: 15 }}>
               {item.rating > 0 && (
                 <>
                   <Ionicons name="star" size={11} color="#FBBF24" />

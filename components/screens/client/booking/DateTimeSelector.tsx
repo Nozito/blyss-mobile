@@ -8,8 +8,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
-import { Colors } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { toLocalDateStr } from "@/lib/bookingUtils";
 
 const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -35,13 +37,6 @@ interface Props {
   onMonthChange: (date: Date) => void;
 }
 
-const toLocalDateStr = (date: Date): string => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -61,6 +56,7 @@ function CalendarGrid({
   availableDates: Set<string>;
   onMonthChange: (date: Date) => void;
 }) {
+  const colors = useThemeColors();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const screenWidth = Dimensions.get("window").width;
@@ -123,7 +119,7 @@ function CalendarGrid({
   return (
     <View
       style={{
-        backgroundColor: Colors.white,
+        backgroundColor: colors.white,
         borderRadius: 20,
         padding: 20,
         ...Shadows.card,
@@ -139,15 +135,15 @@ function CalendarGrid({
             width: 36,
             height: 36,
             borderRadius: 12,
-            backgroundColor: Colors.cream,
+            backgroundColor: colors.cream,
             alignItems: "center",
             justifyContent: "center",
             opacity: isFirstDayOfCurrentMonth() ? 0.3 : 1,
           }}
         >
-          <Ionicons name="chevron-back" size={18} color={Colors.foreground} />
+          <Ionicons name="chevron-back" size={18} color={colors.foreground} />
         </AnimatedIconButton>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
           {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </Text>
         <AnimatedIconButton
@@ -157,12 +153,12 @@ function CalendarGrid({
             width: 36,
             height: 36,
             borderRadius: 12,
-            backgroundColor: Colors.cream,
+            backgroundColor: colors.cream,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Ionicons name="chevron-forward" size={18} color={Colors.foreground} />
+          <Ionicons name="chevron-forward" size={18} color={colors.foreground} />
         </AnimatedIconButton>
       </View>
 
@@ -170,7 +166,7 @@ function CalendarGrid({
       <View style={{ flexDirection: "row", marginBottom: 8 }}>
         {DAY_NAMES.map((d) => (
           <View key={d} style={{ width: cellSize, alignItems: "center" }}>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.mutedForeground }}>{d}</Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: colors.mutedForeground }}>{d}</Text>
           </View>
         ))}
       </View>
@@ -200,12 +196,12 @@ function CalendarGrid({
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: selected
-                    ? Colors.primary
+                    ? colors.primary
                     : today_ && !selected
                     ? "transparent"
                     : "transparent",
                   borderWidth: today_ && !selected ? 2 : 0,
-                  borderColor: today_ && !selected ? Colors.primary : "transparent",
+                  borderColor: today_ && !selected ? colors.primary : "transparent",
                   opacity: past || (!past && !available) ? 0.3 : 1,
                 }}
               >
@@ -213,7 +209,7 @@ function CalendarGrid({
                   style={{
                     fontSize: 13,
                     fontWeight: "600",
-                    color: selected ? Colors.white : past ? Colors.mutedForeground : Colors.foreground,
+                    color: selected ? colors.white : past ? colors.mutedForeground : colors.foreground,
                   }}
                 >
                   {date.getDate()}
@@ -226,7 +222,7 @@ function CalendarGrid({
                     width: 4,
                     height: 4,
                     borderRadius: 2,
-                    backgroundColor: Colors.primary,
+                    backgroundColor: colors.primary,
                     marginTop: 2,
                   }}
                 />
@@ -251,15 +247,16 @@ export function DateTimeSelector({
   isLoadingSlots,
   onMonthChange,
 }: Props) {
+  const colors = useThemeColors();
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={{ paddingBottom: 24, gap: 20 }}>
         {/* Header */}
         <View style={{ gap: 4 }}>
-          <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
             Quand ?
           </Text>
-          <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>
+          <Text style={{ fontSize: 14, color: colors.mutedForeground }}>
             Choisis la date et l'horaire qui t'arrangent
           </Text>
         </View>
@@ -267,8 +264,8 @@ export function DateTimeSelector({
         {/* Calendar */}
         <View style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-            <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Date</Text>
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}>Date</Text>
           </View>
           <CalendarGrid
             selectedDate={selectedDate}
@@ -282,10 +279,10 @@ export function DateTimeSelector({
           {!isLoadingDates && availableDates.size === 0 && (
             <View style={{
               flexDirection: "row", alignItems: "center", gap: 10,
-              backgroundColor: Colors.cream, borderRadius: 14, padding: 14,
+              backgroundColor: colors.cream, borderRadius: 14, padding: 14,
             }}>
-              <Ionicons name="calendar-clear-outline" size={18} color={Colors.mutedForeground} />
-              <Text style={{ flex: 1, fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+              <Ionicons name="calendar-clear-outline" size={18} color={colors.mutedForeground} />
+              <Text style={{ flex: 1, fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
                 Aucun créneau publié ce mois-ci pour cette pro. Essaie un autre mois ou reviens un peu plus tard.
               </Text>
             </View>
@@ -295,26 +292,26 @@ export function DateTimeSelector({
         {/* Time slots */}
         <View style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="time-outline" size={18} color={Colors.primary} />
-            <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Horaire</Text>
+            <Ionicons name="time-outline" size={18} color={colors.primary} />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}>Horaire</Text>
           </View>
 
           {isLoadingSlots ? (
             <View style={{ alignItems: "center", paddingVertical: 32 }}>
-              <ActivityIndicator size="small" color={Colors.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : availableSlots.length === 0 ? (
             <View
               style={{
                 alignItems: "center",
                 paddingVertical: 32,
-                backgroundColor: Colors.white,
+                backgroundColor: colors.white,
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: Colors.border,
+                borderColor: colors.border,
               }}
             >
-              <Text style={{ fontSize: 13, color: Colors.mutedForeground }}>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                 {selectedDate
                   ? "Aucun créneau disponible pour cette date"
                   : "Sélectionne d'abord une date"}
@@ -335,9 +332,9 @@ export function DateTimeSelector({
                       paddingVertical: 14,
                       alignItems: "center",
                       gap: 2,
-                      backgroundColor: active ? Colors.primary : Colors.white,
+                      backgroundColor: active ? colors.primary : colors.white,
                       borderWidth: active ? 0 : 1,
-                      borderColor: Colors.border,
+                      borderColor: colors.border,
                       ...(active ? Shadows.soft : Shadows.card),
                     }}
                   >
@@ -346,7 +343,7 @@ export function DateTimeSelector({
                         fontSize: 17,
                         fontWeight: "800",
                         lineHeight: 20,
-                        color: active ? Colors.white : Colors.foreground,
+                        color: active ? colors.white : colors.foreground,
                       }}
                     >
                       {slot.time}
@@ -355,7 +352,7 @@ export function DateTimeSelector({
                       style={{
                         fontSize: 11,
                         fontWeight: "500",
-                        color: active ? "rgba(255,255,255,0.7)" : Colors.mutedForeground,
+                        color: active ? withAlpha(colors.onColor, 0.7) : colors.mutedForeground,
                       }}
                     >
                       {formatDuration(slot.duration)}

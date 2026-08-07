@@ -25,8 +25,6 @@ interface RevenueCatContextType {
   packages: RCPackage[];
   customerInfo: CustomerInfo | null;
   activePlan: RCPlan | null;
-  /** @deprecated Utiliser activePlan */
-  activeEntitlement: string | null;
   purchase: (pkg: PurchasesPackage) => Promise<{ success: boolean; paymentId?: string; error?: string }>;
   restorePurchases: () => Promise<{ success: boolean; restored: boolean; error?: string }>;
   refreshCustomerInfo: () => Promise<void>;
@@ -181,7 +179,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
 
   const rcActivePlan = getActivePlanFromRC(customerInfo);
   const activePlan: RCPlan | null = rcActivePlan ?? backendPlan;
-  const activeEntitlement = activePlan;
 
   const purchase = useCallback(async (pkg: PurchasesPackage) => {
     try {
@@ -220,9 +217,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   }, [refreshCustomerInfo]);
 
   const contextValue = useMemo(() => ({
-    isReady, packages, customerInfo, activePlan, activeEntitlement,
+    isReady, packages, customerInfo, activePlan,
     purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan,
-  }), [isReady, packages, customerInfo, activePlan, activeEntitlement,
+  }), [isReady, packages, customerInfo, activePlan,
       purchase, restorePurchases, refreshCustomerInfo, refreshActivePlan]);
 
   return (

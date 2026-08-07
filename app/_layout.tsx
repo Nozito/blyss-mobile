@@ -15,6 +15,7 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { queryClient } from "@/lib/queryClient";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -83,6 +84,7 @@ function LaunchSplash({ revealed, onHidden }: { revealed: boolean; onHidden: () 
 // puisque c'est le seul instant où ce logo devient visible à l'écran.
 function AppContent() {
   const { isLoading } = useAuth();
+  const colors = useThemeColors();
   const [fontsLoaded, fontError] = useFonts({ PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic });
   const [splashVisible, setSplashVisible] = useState(true);
   const [failsafeTriggered, setFailsafeTriggered] = useState(false);
@@ -117,6 +119,7 @@ function AppContent() {
           headerShown: false,
           animation: "fade_from_bottom",
           animationDuration: 280,
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="index" />

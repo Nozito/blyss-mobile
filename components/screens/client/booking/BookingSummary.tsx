@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface Props {
@@ -41,19 +42,20 @@ function PaymentChoice({
   subtitle: string;
   disabled?: boolean;
 }) {
+  const colors = useThemeColors();
   return (
     <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
       style={{
-        backgroundColor: Colors.white,
+        backgroundColor: colors.white,
         borderRadius: 20,
         padding: 20,
         flexDirection: "row",
         alignItems: "center",
         gap: 16,
         borderWidth: 2,
-        borderColor: selected ? Colors.primary : Colors.border,
+        borderColor: selected ? colors.primary : colors.border,
         opacity: disabled ? 0.5 : 1,
         ...Shadows.card,
       }}
@@ -63,7 +65,7 @@ function PaymentChoice({
           width: 40,
           height: 40,
           borderRadius: 12,
-          backgroundColor: "#FFE6F0",
+          backgroundColor: colors.primaryLight,
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
@@ -72,23 +74,23 @@ function PaymentChoice({
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.foreground, marginBottom: 2 }}>
+        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground, marginBottom: 2 }}>
           {title}
         </Text>
-        <Text style={{ fontSize: 12, color: Colors.mutedForeground }}>{subtitle}</Text>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{subtitle}</Text>
       </View>
       <View
         style={{
           width: 24,
           height: 24,
           borderRadius: 12,
-          backgroundColor: selected ? Colors.primary : Colors.cream,
+          backgroundColor: selected ? colors.primary : colors.cream,
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
         }}
       >
-        {selected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
+        {selected && <Ionicons name="checkmark" size={14} color={colors.white} />}
       </View>
     </AnimatedPressable>
   );
@@ -106,6 +108,7 @@ export function BookingSummary({
   onSelectPayment,
   canPayOnline,
 }: Props) {
+  const colors = useThemeColors();
   const dateLabel = selectedDate.toLocaleDateString("fr-FR", {
     weekday: "short",
     day: "numeric",
@@ -116,16 +119,16 @@ export function BookingSummary({
     <View style={{ gap: 20 }}>
       {/* Header */}
       <View style={{ gap: 4 }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
           Récapitulatif
         </Text>
-        <Text style={{ fontSize: 14, color: Colors.mutedForeground }}>Vérifie que tout est bon</Text>
+        <Text style={{ fontSize: 14, color: colors.mutedForeground }}>Vérifie que tout est bon</Text>
       </View>
 
       {/* Summary card */}
       <View
         style={{
-          backgroundColor: Colors.white,
+          backgroundColor: colors.white,
           borderRadius: 20,
           padding: 20,
           gap: 16,
@@ -135,40 +138,40 @@ export function BookingSummary({
         {/* Prestation + price */}
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 2 }}>Prestation</Text>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.foreground }}>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 2 }}>Prestation</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
               {prestationName}
             </Text>
-            <Text style={{ fontSize: 12, color: Colors.mutedForeground, marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
               avec {proName}
               {proCity ? ` · ${proCity}` : ""}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
-            <Text style={{ fontSize: 11, color: Colors.mutedForeground, marginBottom: 2 }}>Total</Text>
-            <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.foreground }}>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 2 }}>Total</Text>
+            <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground }}>
               {prestationPrice.toFixed(2)}€
             </Text>
           </View>
         </View>
 
         {/* Divider */}
-        <View style={{ height: 1, backgroundColor: Colors.border }} />
+        <View style={{ height: 1, backgroundColor: colors.border }} />
 
         {/* Date / Time / Duration row */}
         <View style={{ flexDirection: "row", gap: 8 }}>
           <View
             style={{
               flex: 1,
-              backgroundColor: Colors.cream,
+              backgroundColor: colors.cream,
               borderRadius: 14,
               paddingVertical: 12,
               alignItems: "center",
             }}
           >
-            <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginBottom: 4 }}>Date</Text>
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginBottom: 4 }}>Date</Text>
             <Text
-              style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground, textTransform: "capitalize" }}
+              style={{ fontSize: 12, fontWeight: "700", color: colors.foreground, textTransform: "capitalize" }}
             >
               {dateLabel}
             </Text>
@@ -176,28 +179,28 @@ export function BookingSummary({
           <View
             style={{
               flex: 1,
-              backgroundColor: "#FFE6F0",
+              backgroundColor: colors.primaryLight,
               borderRadius: 14,
               paddingVertical: 12,
               alignItems: "center",
             }}
           >
-            <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginBottom: 4 }}>Horaire</Text>
-            <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.primary }}>
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginBottom: 4 }}>Horaire</Text>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.primary }}>
               {selectedTime}
             </Text>
           </View>
           <View
             style={{
               flex: 1,
-              backgroundColor: Colors.cream,
+              backgroundColor: colors.cream,
               borderRadius: 14,
               paddingVertical: 12,
               alignItems: "center",
             }}
           >
-            <Text style={{ fontSize: 10, color: Colors.mutedForeground, marginBottom: 4 }}>Durée</Text>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.foreground }}>
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginBottom: 4 }}>Durée</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>
               {formatDuration(prestationDuration)}
             </Text>
           </View>
@@ -206,8 +209,8 @@ export function BookingSummary({
 
       {/* Réassurance annulation — visible avant le choix du mode de paiement */}
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-        <Ionicons name="information-circle-outline" size={15} color={Colors.mutedForeground} style={{ marginTop: 1 }} />
-        <Text style={{ flex: 1, fontSize: 12, color: Colors.mutedForeground, lineHeight: 17 }}>
+        <Ionicons name="information-circle-outline" size={15} color={colors.mutedForeground} style={{ marginTop: 1 }} />
+        <Text style={{ flex: 1, fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
           Tu pourras annuler ce rendez-vous depuis l'app. Les conditions d'annulation du professionnel s'appliquent.
         </Text>
       </View>
@@ -215,19 +218,19 @@ export function BookingSummary({
       {/* Payment method */}
       {canPayOnline ? (
         <View style={{ gap: 12 }}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.foreground }}>Mode de paiement</Text>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}>Mode de paiement</Text>
           <View style={{ gap: 10 }}>
             <PaymentChoice
               selected={paymentMethod === "on_site"}
               onPress={() => onSelectPayment("on_site")}
-              icon={<Ionicons name="card-outline" size={20} color={Colors.primary} />}
+              icon={<Ionicons name="card-outline" size={20} color={colors.primary} />}
               title="Payer sur place"
               subtitle="Espèces, carte bancaire"
             />
             <PaymentChoice
               selected={paymentMethod === "online"}
               onPress={() => onSelectPayment("online")}
-              icon={<Ionicons name="phone-portrait-outline" size={20} color={Colors.primary} />}
+              icon={<Ionicons name="phone-portrait-outline" size={20} color={colors.primary} />}
               title="Payer en ligne"
               subtitle="Carte, Apple Pay, Google Pay"
             />
@@ -236,21 +239,21 @@ export function BookingSummary({
       ) : (
         <View style={{
           flexDirection: "row", alignItems: "center", gap: 12,
-          backgroundColor: "#FFF8EC", borderRadius: 14,
-          padding: 14, borderWidth: 1, borderColor: withAlpha("#F39C12", 0.25),
+          backgroundColor: colors.warningLight, borderRadius: 14,
+          padding: 14, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.25),
         }}>
           <View style={{
             width: 36, height: 36, borderRadius: 10,
-            backgroundColor: Colors.warningLight,
+            backgroundColor: colors.warningLight,
             alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>
-            <Ionicons name="information-circle-outline" size={20} color={Colors.warningText} />
+            <Ionicons name="information-circle-outline" size={20} color={colors.warningText} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: "#92400E", marginBottom: 2 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningTextDark, marginBottom: 2 }}>
               Paiement sur place
             </Text>
-            <Text style={{ fontSize: 12, color: Colors.warningTextDark, lineHeight: 17 }}>
+            <Text style={{ fontSize: 12, color: colors.warningTextDark, lineHeight: 17 }}>
               Ce professionnel n'accepte pas le paiement en ligne. Le règlement se fait directement lors du rendez-vous.
             </Text>
           </View>

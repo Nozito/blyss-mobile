@@ -10,12 +10,10 @@ import {
   Animated,
   ActivityIndicator,
   Modal,
-  Share,
   Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { Clipboard } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +22,8 @@ import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { proApi, usersApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
+import { hasPlanAtLeast } from "@/constants/plans";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -46,6 +46,7 @@ export default function ProPublicProfileScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const { user, patchUser, refreshProfile } = useAuth();
+  const { activePlan } = useRevenueCat();
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -57,18 +58,11 @@ export default function ProPublicProfileScreen() {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<GalleryImage | null>(null);
   const [galleryError, setGalleryError] = useState<string | null>(null);
 
-  // Share state
-  const [copyToast, setCopyToast] = useState(false);
-
   const { data: galleryData, refetch: refetchGallery } = useQuery({
     queryKey: ["pro-gallery"],
     queryFn: () => proApi.getGallery(),
   });
   const gallery: GalleryImage[] = (galleryData?.data as GalleryImage[] | undefined) ?? [];
-
-  const profileUrl = user?.id
-    ? `https://blyssapp.fr/s/${user.id}`
-    : "https://blyssapp.fr";
 
   const bannerUri = resolveMediaUrl(user?.banner_photo);
 
@@ -91,6 +85,10 @@ export default function ProPublicProfileScreen() {
   };
 
   const handleAddGalleryPhoto = async () => {
+    if (!hasPlanAtLeast(activePlan, "serenite")) {
+      router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "serenite" } });
+      return;
+    }
     if (gallery.length >= MAX_GALLERY) { setGalleryError(`Maximum ${MAX_GALLERY} photos.`); return; }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (perm.status !== "granted") return;
@@ -118,18 +116,6 @@ export default function ProPublicProfileScreen() {
     } catch {
       setGalleryError("Impossible de supprimer la photo."); // BLYSS-NAV: surface delete error
     }
-  };
-
-  const handleCopyLink = async () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Clipboard.setString(profileUrl);
-    setCopyToast(true);
-    setTimeout(() => setCopyToast(false), 2000);
-  };
-
-  const handleShareLink = async () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await Share.share({ url: profileUrl, message: `Réservez avec moi sur Blyss : ${profileUrl}` });
   };
 
   const [activityName, setActivityName] = useState("");
@@ -479,7 +465,7 @@ export default function ProPublicProfileScreen() {
                 accessibilityLabel="Voir la photo de réalisation"
                 style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: colors.muted }}
               >
-                <Image source={{ uri: img.thumbnail || img.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                <Image source={{ uri: resolveMediaUrl(img.thumbnail || img.url) }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
               </Pressable>
             ))}
             {gallery.length < MAX_GALLERY && (
@@ -501,42 +487,6 @@ export default function ProPublicProfileScreen() {
           </Text>
         </View>
 
-        {/* Section: Lien de partage */}
-        <View className="mb-6">
-          <SectionTitle title="Votre lien professionnel" />
-          <View style={{ backgroundColor: colors.primaryLight, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: `${colors.primary}30` }}>
-            {copyToast && (
-              <View
-                pointerEvents="none"
-                style={{
-                  position: "absolute", top: -10, left: 16,
-                  backgroundColor: colors.success, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12,
-                  shadowColor: colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Lien copié !</Text>
-              </View>
-            )}
-            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 4 }}>Ton profil Blyss</Text>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primary, marginBottom: 14 }} numberOfLines={1}>{profileUrl}</Text>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <AnimatedPressable
-                onPress={handleCopyLink}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.white, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: `${colors.primary}30` }}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Copier</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                onPress={handleShareLink}
-                style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-              >
-                <Ionicons name="share-outline" size={16} color={colors.onColor} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Partager</Text>
-              </AnimatedPressable>
-            </View>
-          </View>
-        </View>
 
         {/* Section: Conditions de réservation */}
         <View className="mb-6">
@@ -718,7 +668,7 @@ export default function ProPublicProfileScreen() {
               </View>
             </Pressable>
             <Image
-              source={{ uri: selectedGalleryImage.url }}
+              source={{ uri: resolveMediaUrl(selectedGalleryImage.url) }}
               style={{ width: SCREEN_W - 40, height: SCREEN_W - 40, borderRadius: 16 }}
               resizeMode="cover"
             />
@@ -805,7 +755,7 @@ export default function ProPublicProfileScreen() {
                   {gallery.map((img) => (
                     <Image
                       key={img.id}
-                      source={{ uri: img.thumbnail }}
+                      source={{ uri: resolveMediaUrl(img.thumbnail) }}
                       style={{ width: 90, height: 90, borderRadius: 12 }}
                       resizeMode="cover"
                     />

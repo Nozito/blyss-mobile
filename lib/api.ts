@@ -254,9 +254,14 @@ async function apiCall<T>(a: string, b?: RequestInit | string, c: RequestInit = 
       };
     }
 
+    // `json.data` can legitimately be `null` (e.g. "no active subscription").
+    // `??` can't tell that apart from a missing `data` key, so it must be
+    // checked explicitly — otherwise a null `data` gets replaced by the whole
+    // envelope object as a false-truthy fallback.
+    const hasDataKey = json != null && typeof json === "object" && "data" in json;
     return {
       success: true,
-      data: (json as { data?: T })?.data ?? (json as T | null) ?? undefined,
+      data: hasDataKey ? (json as { data?: T }).data : ((json as T | null) ?? undefined),
       message: (json as { message?: string })?.message,
     };
   } catch (error) {

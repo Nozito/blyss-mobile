@@ -16,6 +16,8 @@ import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { hasPlanAtLeast } from "@/constants/plans";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
 
 type Category = "agenda" | "clientes" | "paiement" | "compte";
 
@@ -50,6 +52,8 @@ export default function ProHelpScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { activePlan } = useRevenueCat();
+  const isPrioritySupport = hasPlanAtLeast(activePlan, "signature");
   const [activeCategory, setActiveCategory] = useState<Category>("agenda");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const reduceMotion = useReducedMotion();
@@ -162,7 +166,10 @@ export default function ProHelpScreen() {
       <AnimatedPressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          Linking.openURL("mailto:pro@blyssapp.fr");
+          const subject = isPrioritySupport
+            ? "[PRIORITAIRE] Support Pro Signature"
+            : "Support Pro";
+          Linking.openURL(`mailto:pro@blyssapp.fr?subject=${encodeURIComponent(subject)}`);
         }}
         style={{
           borderRadius: 16, padding: 16, flexDirection: "row",
@@ -173,8 +180,12 @@ export default function ProHelpScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <Ionicons name="mail-outline" size={18} color={colors.onColor} />
           <View>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Écrire au support Pro</Text>
-            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 1 }}>Réponse sous 24h ouvrées.</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>
+              {isPrioritySupport ? "Support prioritaire" : "Écrire au support Pro"}
+            </Text>
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 1 }}>
+              {isPrioritySupport ? "Réponse sous 4h — Signature." : "Réponse sous 24h ouvrées."}
+            </Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.onColor} />

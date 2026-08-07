@@ -37,6 +37,9 @@ import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useToast } from "@/components/ui/Toast";
+import { useRouter } from "expo-router";
+import { hasPlanAtLeast } from "@/constants/plans";
+import { useRevenueCat } from "@/contexts/RevenueCatContext";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -378,8 +381,10 @@ export default function ProCalendarScreen() {
   const ABSENCES = useMemo(() => getAbsences(colors), [colors]);
   const STATUS_CFG = useMemo(() => getStatusCfg(colors), [colors]);
   const qc = useQueryClient();
+  const router = useRouter();
   const showActionSheet = useActionSheet();
   const { showToast } = useToast();
+  const { activePlan } = useRevenueCat();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -534,6 +539,10 @@ export default function ProCalendarScreen() {
 
   const toggleCalendarSync = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (!calendarSyncEnabled && !hasPlanAtLeast(activePlan, "signature")) {
+      router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "signature" } });
+      return;
+    }
     setCalendarSyncLoading(true);
     try {
       if (calendarSyncEnabled) {
@@ -550,7 +559,7 @@ export default function ProCalendarScreen() {
     } finally {
       setCalendarSyncLoading(false);
     }
-  }, [calendarSyncEnabled, showToast]);
+  }, [calendarSyncEnabled, showToast, activePlan, router]);
 
   // Background polling — silent so it doesn't blank the lists / shift scroll every 30s
   useEffect(() => {

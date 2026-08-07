@@ -4,50 +4,30 @@ import {
   Text,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getPlanDefinitions } from "@/constants/plans";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { safeBack } from "@/lib/navigation"; // BLYSS-NAV: back button needs safeBack
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
-function getPlanMeta(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  features: string[];
-}> {
-  return {
-    start: {
-      label: "Start",
-      icon: "flash-outline",
-      color: colors.primary,
-      features: ["Dashboard activité", "Agenda intelligent", "Gestion clientes", "Profil public"],
-    },
-    serenite: {
-      label: "Sérénité",
-      icon: "heart-outline",
-      color: colors.pro,
-      features: ["Tout Start inclus", "Module finance & statistiques", "Portfolio photos", "Rappels automatiques"],
-    },
-    signature: {
-      label: "Signature",
-      icon: "sparkles-outline",
-      color: colors.secondary,
-      features: ["Tout Sérénité inclus", "Paiements en ligne", "Visibilité premium", "Rappels post-prestation"],
-    },
-  };
-}
+const VALID_PLANS: RCPlan[] = ["start", "serenite", "signature"];
 
 export default function ProUpgradeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const { packages } = useRevenueCat();
+  const { requiredPlan: requiredPlanParam } = useLocalSearchParams<{ requiredPlan?: string }>();
 
-  const requiredPlan: RCPlan = "serenite";
-  const meta = getPlanMeta(colors)[requiredPlan];
+  // Chaque écran verrouillé passe le palier qu'il exige réellement — Sérénité
+  // reste la valeur de repli si l'écran appelant a oublié de le préciser.
+  const requiredPlan: RCPlan = VALID_PLANS.includes(requiredPlanParam as RCPlan)
+    ? (requiredPlanParam as RCPlan)
+    : "serenite";
+  const plan = getPlanDefinitions(colors)[requiredPlan];
   const rcPkg = packages.find((p) => p.key === requiredPlan);
 
   return (
@@ -78,7 +58,7 @@ export default function ProUpgradeScreen() {
         {/* Hero */}
         <View style={{
           borderRadius: 24, overflow: "hidden", marginBottom: 20,
-          backgroundColor: meta.color,
+          backgroundColor: plan.color,
           padding: 32, alignItems: "center",
         }}>
           <View style={{
@@ -93,7 +73,7 @@ export default function ProUpgradeScreen() {
           </Text>
           <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", textAlign: "center", lineHeight: 20 }}>
             Cette page nécessite le plan{" "}
-            <Text style={{ fontWeight: "800", color: colors.onColor }}>{meta.label}</Text>.{"\n"}
+            <Text style={{ fontWeight: "800", color: colors.onColor }}>{plan.label}</Text>.{"\n"}
             Ton abonnement actuel ne comprend pas cet accès.
           </Text>
         </View>
@@ -108,14 +88,14 @@ export default function ProUpgradeScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <View style={{
               width: 40, height: 40, borderRadius: 12,
-              backgroundColor: meta.color,
+              backgroundColor: plan.color,
               alignItems: "center", justifyContent: "center",
             }}>
-              <Ionicons name={meta.icon} size={18} color={colors.onColor} />
+              <Ionicons name={plan.icon} size={18} color={colors.onColor} />
             </View>
             <View>
               <Text style={{ fontWeight: "700", fontSize: 15, color: colors.foreground }}>
-                Formule {meta.label}
+                Formule {plan.label}
               </Text>
               <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
                 {rcPkg ? `${rcPkg.priceString}/mois` : "—"}
@@ -124,14 +104,14 @@ export default function ProUpgradeScreen() {
           </View>
 
           <View style={{ gap: 10 }}>
-            {meta.features.map((feature) => (
+            {plan.upgradeFeatures.map((feature) => (
               <View key={feature} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{
                   width: 20, height: 20, borderRadius: 10,
-                  backgroundColor: `${meta.color}18`,
+                  backgroundColor: `${plan.color}18`,
                   alignItems: "center", justifyContent: "center",
                 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: meta.color }} />
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: plan.color }} />
                 </View>
                 <Text style={{ fontSize: 13, color: colors.foreground, flex: 1 }}>{feature}</Text>
               </View>
@@ -145,13 +125,13 @@ export default function ProUpgradeScreen() {
             onPress={() => router.push("/(pro)/(profile)/subscription")}
             style={{
               height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center",
-              backgroundColor: meta.color,
-              shadowColor: meta.color, shadowOffset: { width: 0, height: 4 },
+              backgroundColor: plan.color,
+              shadowColor: plan.color, shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
             }}
           >
             <Text style={{ color: colors.onColor, fontWeight: "800", fontSize: 15 }}>
-              Passer au plan {meta.label}
+              Passer au plan {plan.label}
             </Text>
           </AnimatedPressable>
 

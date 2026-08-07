@@ -10,13 +10,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Colors } from "@/constants/colors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function BookingConfirmationScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const params = useLocalSearchParams<{
     specialistName?: string;
@@ -60,7 +61,7 @@ export default function BookingConfirmationScreen() {
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (
-    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -69,18 +70,19 @@ export default function BookingConfirmationScreen() {
         <Animated.View
           style={[
             styles.checkCircle,
+            { backgroundColor: colors.success, shadowColor: colors.success },
             { transform: [{ scale: scaleAnim }], opacity: opacAnim },
           ]}
         >
-          <Ionicons name="checkmark" size={52} color={Colors.white} />
+          <Ionicons name="checkmark" size={52} color={colors.onColor} />
         </Animated.View>
 
         {/* Title */}
         <Animated.View
           style={{ opacity: opacAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}
         >
-          <Text style={styles.title}>Réservation confirmée !</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Réservation confirmée !</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Tu recevras une confirmation et un rappel avant ton rendez-vous.
           </Text>
         </Animated.View>
@@ -88,14 +90,14 @@ export default function BookingConfirmationScreen() {
         {/* Detail card */}
         {details.length > 0 && (
           <Animated.View
-            style={[styles.card, { opacity: opacAnim, transform: [{ translateY: slideAnim }] }]}
+            style={[styles.card, { backgroundColor: colors.card }, { opacity: opacAnim, transform: [{ translateY: slideAnim }] }]}
           >
             {details.map((d, i) => (
               <View key={d.label}>
-                {i > 0 && <View style={styles.divider} />}
+                {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>{d.label}</Text>
-                  <Text style={styles.rowValue}>{d.value}</Text>
+                  <Text style={[styles.rowLabel, { color: colors.mutedForeground }]}>{d.label}</Text>
+                  <Text style={[styles.rowValue, { color: colors.foreground }]}>{d.value}</Text>
                 </View>
               </View>
             ))}
@@ -109,10 +111,10 @@ export default function BookingConfirmationScreen() {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push("/(client)/bookings" as Parameters<typeof router.push>[0]);
             }}
-            style={styles.ctaPrimary}
+            style={[styles.ctaPrimary, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
           >
-            <Ionicons name="calendar-outline" size={18} color={Colors.white} />
-            <Text style={styles.ctaPrimaryText}>Voir mes réservations</Text>
+            <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
+            <Text style={[styles.ctaPrimaryText, { color: colors.onColor }]}>Voir mes réservations</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -121,7 +123,7 @@ export default function BookingConfirmationScreen() {
             }}
             style={styles.ctaGhost}
           >
-            <Text style={styles.ctaGhostText}>Retour à l'accueil</Text>
+            <Text style={[styles.ctaGhostText, { color: colors.mutedForeground }]}>Retour à l'accueil</Text>
           </AnimatedPressable>
         </Animated.View>
       </ScrollView>
@@ -132,7 +134,7 @@ export default function BookingConfirmationScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1 },
   content: {
     flexGrow: 1,
     alignItems: "center",
@@ -146,10 +148,8 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.success,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.success,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -159,47 +159,42 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: Colors.foreground,
     textAlign: "center",
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.mutedForeground,
     textAlign: "center",
     lineHeight: 21,
     maxWidth: 300,
   },
 
   card: {
-    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 20,
     width: "100%",
     ...Shadows.card,
   },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 10 },
+  divider: { height: 1, marginVertical: 10 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  rowLabel: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "500", flex: 1 },
-  rowValue: { fontSize: 14, color: Colors.foreground, fontWeight: "700", textAlign: "right", flex: 1 },
+  rowLabel: { fontSize: 13, fontWeight: "500", flex: 1 },
+  rowValue: { fontSize: 14, fontWeight: "700", textAlign: "right", flex: 1 },
 
   ctas: { width: "100%", gap: 12 },
   ctaPrimary: {
     height: 56,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 14,
     elevation: 6,
   },
-  ctaPrimaryText: { fontSize: 15, fontWeight: "700", color: Colors.white },
+  ctaPrimaryText: { fontSize: 15, fontWeight: "700" },
   ctaGhost: { height: 48, alignItems: "center", justifyContent: "center" },
-  ctaGhostText: { fontSize: 14, fontWeight: "600", color: Colors.mutedForeground },
+  ctaGhostText: { fontSize: 14, fontWeight: "600" },
 });

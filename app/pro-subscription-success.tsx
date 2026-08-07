@@ -27,7 +27,7 @@ const PLAN_LABELS: Record<RCPlan, string> = {
 };
 
 // Alignées sur les icônes/couleurs déjà utilisées pour ces formules dans
-// subscription-settings.tsx — même identité visuelle partout dans l'app.
+// subscription.tsx — même identité visuelle partout dans l'app.
 const PLAN_ICON: Record<RCPlan, keyof typeof Ionicons.glyphMap> = {
   start: "flash-outline",
   serenite: "heart-outline",

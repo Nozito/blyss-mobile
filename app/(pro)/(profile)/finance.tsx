@@ -26,6 +26,8 @@ import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedP
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { hasPlanAtLeast } from "@/constants/plans";
+import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 
 type Period = "week" | "month" | "year";
 
@@ -46,6 +48,7 @@ export default function ProFinanceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colors = useThemeColors();
+  const { activePlan } = useRevenueCat();
   const qc = useQueryClient();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -85,18 +88,25 @@ export default function ProFinanceScreen() {
 
   const rawStats = data?.data as Record<string, unknown> | undefined;
 
+  // topServices/trend (Statistiques détaillées = Sérénité+) et forecast
+  // (Prévision CA = Signature) ne sont renvoyés par l'API que si le palier
+  // du pro les couvre — absents (pas juste à 0) pour un pro Start/Sérénité.
   const stats = rawStats
     ? {
+        plan:        rawStats.plan as RCPlan | undefined,
         today:       n(rawStats.today),
         week:        n(rawStats.week),
         month:       n(rawStats.month),
         lastMonth:   n(rawStats.lastMonth),
         objective:   n(rawStats.objective),
-        forecast:    n(rawStats.forecast),
+        forecast:    rawStats.forecast !== undefined ? n(rawStats.forecast) : undefined,
         trend:       rawStats.trend as string | undefined,
-        topServices: (rawStats.topServices as Array<{ name: string; revenue: unknown; count: number; percentage: unknown }> | undefined) ?? [],
+        topServices: rawStats.topServices as Array<{ name: string; revenue: unknown; count: number; percentage: unknown }> | undefined,
       }
     : null;
+
+  const hasDetailedStats = hasPlanAtLeast(stats?.plan ?? null, "serenite");
+  const hasForecast = hasPlanAtLeast(stats?.plan ?? null, "signature");
 
   const periodValue = stats
     ? selectedPeriod === "week"
@@ -117,7 +127,14 @@ export default function ProFinanceScreen() {
 
   const monthLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 
-  const handleExport = () => { setFinanceError(null); setShowExportModal(true); };
+  const handleExport = () => {
+    if (!hasPlanAtLeast(activePlan, "serenite")) {
+      router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "serenite" } });
+      return;
+    }
+    setFinanceError(null);
+    setShowExportModal(true);
+  };
 
   const exportCSV = async () => {
     setShowExportModal(false);
@@ -130,7 +147,7 @@ export default function ProFinanceScreen() {
     try {
       const lines: string[] = ["Prestation,CA (€),Nb rendez-vous,Part (%)"];
       if (stats) {
-        for (const svc of stats.topServices) {
+        for (const svc of stats.topServices ?? []) {
           const rev = n(svc.revenue).toFixed(2);
           const pct = n(svc.percentage).toFixed(1);
           const name = `"${svc.name.replace(/"/g, '""')}"`;
@@ -168,7 +185,7 @@ export default function ProFinanceScreen() {
     setExporting(true);
     try {
       const topServicesRows = stats?.topServices
-        .map(
+        ?.map(
           (svc, i) => `
           <tr>
             <td>${i + 1}</td>
@@ -372,9 +389,21 @@ export default function ProFinanceScreen() {
               <Text style={{ fontSize: 42, fontWeight: "900", color: colors.onColor, letterSpacing: -1, marginBottom: 4 }}>
                 {periodValue.toFixed(2).replace(".", ",")} €
               </Text>
-              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
-                Prévision fin de mois : {stats.forecast.toFixed(2).replace(".", ",")} €
-              </Text>
+              {hasForecast && stats.forecast !== undefined ? (
+                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+                  Prévision fin de mois : {stats.forecast.toFixed(2).replace(".", ",")} €
+                </Text>
+              ) : (
+                <Pressable
+                  onPress={() => router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "signature" } })}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
+                  <Ionicons name="lock-closed-outline" size={12} color="rgba(255,255,255,0.65)" />
+                  <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+                    Prévision du CA — passe en Signature
+                  </Text>
+                </Pressable>
+              )}
             </View>
 
             {/* Objectif mensuel */}
@@ -434,17 +463,24 @@ export default function ProFinanceScreen() {
               )}
             </AnimatedPressable>
 
-            {/* Analyses & rapports */}
+            {/* Analyses & rapports — Signature uniquement */}
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push("/(pro)/(profile)/finance-performance" as any);
+                  router.push(
+                    hasForecast
+                      ? ("/(pro)/(profile)/finance-performance" as any)
+                      : { pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "signature" } }
+                  );
                 }}
-                style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
+                style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, opacity: hasForecast ? 1 : 0.6, ...Shadows.card }}
               >
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="analytics-outline" size={16} color={colors.primary} />
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="analytics-outline" size={16} color={colors.primary} />
+                  </View>
+                  {!hasForecast && <Ionicons name="lock-closed-outline" size={14} color={colors.mutedForeground} />}
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: "800", color: colors.foreground }}>Analyses de performance</Text>
                 <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>Meilleur jour, panier moyen, remplissage</Text>
@@ -452,12 +488,19 @@ export default function ProFinanceScreen() {
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push("/(pro)/(profile)/finance-reports" as any);
+                  router.push(
+                    hasForecast
+                      ? ("/(pro)/(profile)/finance-reports" as any)
+                      : { pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "signature" } }
+                  );
                 }}
-                style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, ...Shadows.card }}
+                style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, opacity: hasForecast ? 1 : 0.6, ...Shadows.card }}
               >
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(colors.success, 0.15), alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="document-text-outline" size={16} color={colors.success} />
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(colors.success, 0.15), alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="document-text-outline" size={16} color={colors.success} />
+                  </View>
+                  {!hasForecast && <Ionicons name="lock-closed-outline" size={14} color={colors.mutedForeground} />}
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: "800", color: colors.foreground }}>Rapports automatiques</Text>
                 <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>Résumés hebdo & mensuels</Text>
@@ -492,8 +535,22 @@ export default function ProFinanceScreen() {
               ))}
             </View>
 
-            {/* Top services */}
-            {stats.topServices.length > 0 && (
+            {/* Top services — Statistiques détaillées = Sérénité+ */}
+            {!hasDetailedStats ? (
+              <Pressable
+                onPress={() => router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "serenite" } })}
+                style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, ...Shadows.card }}
+              >
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>Statistiques détaillées</Text>
+                  <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Débloque le top de tes prestations avec le palier Sérénité</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            ) : stats.topServices && stats.topServices.length > 0 && (
               <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <Text style={{ fontSize: 14, fontWeight: "900", color: colors.foreground }}>Top prestations</Text>
