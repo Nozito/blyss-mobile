@@ -128,6 +128,7 @@ function AppContent() {
         <Stack.Screen name="(pro)" options={{ animation: "fade" }} />
         <Stack.Screen name="(admin)" options={{ animation: "fade" }} />
         <Stack.Screen name="pro-onboarding" options={{ animation: "fade" }} />
+        <Stack.Screen name="pro-subscription" options={{ animation: "fade" }} />
         <Stack.Screen name="pro-subscription-success" options={{ animation: "fade" }} />
         <Stack.Screen
           name="specialists"

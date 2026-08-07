@@ -122,7 +122,7 @@ export default function ProUpgradeScreen() {
         {/* CTAs */}
         <View style={{ gap: 10 }}>
           <AnimatedPressable
-            onPress={() => router.push("/(pro)/(profile)/subscription")}
+            onPress={() => router.push("/pro-subscription")}
             style={{
               height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center",
               backgroundColor: plan.color,

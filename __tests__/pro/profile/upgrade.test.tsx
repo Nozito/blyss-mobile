@@ -100,7 +100,7 @@ describe('ProUpgradeScreen', () => {
   it('navigates to subscription screen when CTA pressed', () => {
     const { getByText } = renderUpgrade();
     fireEvent.press(getByText('Passer au plan Sérénité'));
-    expect(mockPush).toHaveBeenCalledWith('/(pro)/(profile)/subscription');
+    expect(mockPush).toHaveBeenCalledWith('/pro-subscription');
   });
 
   it('renders Retour au tableau de bord link', () => {

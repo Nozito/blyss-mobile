@@ -106,7 +106,7 @@ jest.mock('@/lib/api', () => ({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderSubscription() {
-  const ProSubscriptionScreen = require('../../../app/(pro)/(profile)/subscription').default;
+  const ProSubscriptionScreen = require('../../../app/pro-subscription').default;
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
       <ProSubscriptionScreen />

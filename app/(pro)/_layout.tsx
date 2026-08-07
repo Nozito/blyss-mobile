@@ -1,5 +1,5 @@
 import React from "react";
-import { Redirect, useSegments } from "expo-router";
+import { Redirect } from "expo-router";
 import { NativeTabs, Icon, Badge, VectorIcon } from "expo-router/unstable-native-tabs";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,13 +12,9 @@ export default function ProLayout() {
   const { user, isLoading: authLoading } = useAuth();
   const { activePlan, isReady: rcReady } = useRevenueCat();
   const { unreadCount } = useNotifications();
-  const segments = useSegments();
 
   const isAdmin = user?.is_admin ?? false;
   const hasActiveSub = isAdmin || Boolean(activePlan);
-  // Already on the paywall itself — don't redirect to it again, or every
-  // render would produce a fresh <Redirect> to the same screen we're on.
-  const isOnSubscriptionScreen = segments.includes("subscription" as never);
 
   if (authLoading || !rcReady) return <LoadingSpinner fullScreen />;
   if (!user) return <Redirect href="/(auth)/welcome" />;
@@ -32,8 +28,14 @@ export default function ProLayout() {
   // settling, letting a pro with no subscription land on the dashboard with
   // full access. A Redirect resolved at render time doesn't race that
   // transition at all.
-  if (!hasActiveSub && !isOnSubscriptionScreen) {
-    return <Redirect href="/(pro)/(profile)/subscription" />;
+  //
+  // pro-subscription now lives as a top-level route (sibling of this (pro)
+  // group, not a child of it) specifically so this redirect fully replaces
+  // the (pro) stack — including NativeTabs — instead of mounting the
+  // paywall inside the tab bar. A pro with no subscription must not see
+  // app navigation at all, only the paywall.
+  if (!hasActiveSub) {
+    return <Redirect href="/pro-subscription" />;
   }
 
   return (

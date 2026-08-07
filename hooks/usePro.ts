@@ -21,7 +21,7 @@ export function usePro() {
   }, []);
 
   const showPaywall = useCallback(() => {
-    router.push("/(pro)/(profile)/subscription" as Parameters<typeof router.push>[0]);
+    router.push("/pro-subscription" as Parameters<typeof router.push>[0]);
   }, [router]);
 
   return { isPro, showPaywall, activePlan };
