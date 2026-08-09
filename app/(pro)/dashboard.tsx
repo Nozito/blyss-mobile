@@ -49,6 +49,7 @@ type WeeklyPoint = { day: string; amount: number };
 type DashData = {
   weeklyStats?: { services: number; change: number; isUp: boolean };
   todayForecast?: number;
+  todayAppointmentsCount?: number;
   upcomingClients?: UpcomingClient[];
   fillRate?: number;
   clientsThisWeek?: number;
@@ -241,6 +242,7 @@ export default function ProDashboard() {
 
   const weeklyStats  = raw?.weeklyStats  ?? { services: 0, change: 0, isUp: true };
   const todayForecast = n(raw?.todayForecast);
+  const todayAppointmentsCount = n(raw?.todayAppointmentsCount);
   const upcomingClients = raw?.upcomingClients ?? [];
   const fillRate     = n(raw?.fillRate);
   const clientsThisWeek = n(raw?.clientsThisWeek);
@@ -257,9 +259,10 @@ export default function ProDashboard() {
   );
 
   const heroState = useMemo(() => {
-    const count = upcomingClients.length;
-
-    if (count === 0) {
+    // `upcomingClients` looks at every future reservation (next 3, any day) —
+    // it must never stand in for "today". `todayAppointmentsCount` is the
+    // only field actually scoped to the current calendar day.
+    if (upcomingClients.length === 0) {
       return {
         headline: "Aucun rendez-vous\npour l'instant",
         sub: weeklyStats.services > 0
@@ -271,7 +274,17 @@ export default function ProDashboard() {
       };
     }
 
-    if (count <= 2) {
+    if (todayAppointmentsCount === 0) {
+      return {
+        headline: "Pas de rendez-vous\naujourd'hui",
+        sub: "Ton prochain rendez-vous arrive bientôt",
+        ctaLabel: "Voir le planning",
+        ctaIcon: "calendar-outline" as const,
+        onPressCta: () => router.push("/(pro)/calendar"),
+      };
+    }
+
+    if (todayAppointmentsCount <= 2) {
       return {
         headline: "Journée calme\naujourd'hui",
         sub: `${todayForecast.toFixed(0)} € prévus aujourd'hui`,
@@ -282,13 +295,13 @@ export default function ProDashboard() {
     }
 
     return {
-      headline: `${count} rendez-vous\naujourd'hui`,
+      headline: `${todayAppointmentsCount} rendez-vous\naujourd'hui`,
       sub: `${todayForecast.toFixed(0)} € prévus aujourd'hui`,
       ctaLabel: "Voir le planning",
       ctaIcon: "calendar-outline" as const,
       onPressCta: () => router.push("/(pro)/calendar"),
     };
-  }, [upcomingClients.length, weeklyStats.services, todayForecast, router]);
+  }, [upcomingClients.length, todayAppointmentsCount, weeklyStats.services, todayForecast, router]);
 
   const isBlockedDay = (d: Date) => {
     const s = toLocalDate(d);
@@ -583,7 +596,9 @@ export default function ProDashboard() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
                   <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
                   <Text style={{ fontSize: 10, color: colors.mutedForeground, fontWeight: "600" }}>
-                    {upcomingClients.length} rdv prévu{upcomingClients.length > 1 ? "s" : ""}
+                    {todayAppointmentsCount === 0
+                      ? "Aucun rdv aujourd'hui"
+                      : `${todayAppointmentsCount} rdv prévu${todayAppointmentsCount > 1 ? "s" : ""}`}
                   </Text>
                 </View>
               </View>
