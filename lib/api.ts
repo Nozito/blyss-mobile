@@ -485,6 +485,11 @@ export const proApi = {
     return apiCall<unknown[]>(`/api/pro/calendar${q}`);
   },
 
+  // Unlike getCalendar (bounded to whatever month is loaded), this searches
+  // every reservation — past and future — matching a client name or prestation.
+  searchReservations: (q: string) =>
+    apiCall<unknown[]>(`/api/pro/reservations/search?q=${encodeURIComponent(q)}`),
+
   getClients: () => apiCall<unknown[]>("/api/pro/clients"),
 
   getSubscription: () =>

@@ -41,6 +41,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
+import { useDebounce } from "@/hooks/useDebounce";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -326,6 +327,60 @@ function CalendarGrid({
   );
 }
 
+// ─── SEARCH RESULT SECTION ─────────────────────────────────────────────────
+// One of the two search buckets ("À venir" / "Déjà eu lieu"), each grouped
+// by date so multiple appointments with the same client stay easy to scan.
+
+function SearchResultSection({
+  title,
+  icon,
+  groups,
+  onSelectDate,
+  onSelectApt,
+}: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  groups: [string, Appointment[]][];
+  onSelectDate: (d: Date) => void;
+  onSelectApt: (apt: Appointment) => void;
+}) {
+  const colors = useThemeColors();
+  if (groups.length === 0) return null;
+  const count = groups.reduce((s, [, apts]) => s + apts.length, 0);
+
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12, paddingHorizontal: 2 }}>
+        <Ionicons name={icon} size={13} color={colors.mutedForeground} />
+        <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
+          {title} ({count})
+        </Text>
+      </View>
+      <View style={{ gap: 16 }}>
+        {groups.map(([date, apts]) => (
+          <View key={date}>
+            <AnimatedPressable onPress={() => onSelectDate(new Date(date + "T12:00:00"))} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <View style={{ width: 4, height: 16, backgroundColor: colors.border, borderRadius: 2 }} />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground, textTransform: "capitalize" }}>
+                {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </Text>
+            </AnimatedPressable>
+            <View style={{ gap: 8 }}>
+              {apts.map((apt) => (
+                <AptCard
+                  key={apt.id}
+                  apt={apt}
+                  onPress={() => { const canAct = ["pending", "ongoing", "past_pending"].includes(getAptStatus(apt)); if (canAct) onSelectApt(apt); }}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // ─── APT CARD ────────────────────────────────────────────────────────────────
 
 function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
@@ -393,6 +448,9 @@ export default function ProCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<Appointment[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery.trim(), 350);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -510,6 +568,30 @@ export default function ProCalendarScreen() {
 
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
   useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
+
+  // Search spans every reservation (past + future), not just the currently
+  // loaded month — proApi.getCalendar() is always date-bounded, so this goes
+  // through a dedicated search endpoint instead of filtering `appointments`.
+  useEffect(() => {
+    if (!debouncedSearchQuery) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSearchLoading(true);
+    proApi.searchReservations(debouncedSearchQuery).then((res) => {
+      if (cancelled) return;
+      setSearchResults(res.success && res.data ? (res.data as Appointment[]) : []);
+      setSearchLoading(false);
+    }).catch(() => {
+      if (!cancelled) {
+        setSearchResults([]);
+        setSearchLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [debouncedSearchQuery]);
 
   // Deep link from the Live Activity / push notification (blyss://calendar
   // ?appointmentId=...&date=...) — jump to the right day, then flag if the
@@ -629,23 +711,31 @@ export default function ProCalendarScreen() {
     [appointments, selectedDate]
   );
 
-  // Cross-month search: group matching appointments by date (used when searchQuery is active)
-  const allMonthSearchResults = useMemo(() => {
-    if (!searchQuery) return null;
-    const q = searchQuery.toLowerCase();
-    const matching = appointments.filter(
-      (a) =>
-        (a.client_name ?? `${a.client_first_name ?? ""} ${a.client_last_name ?? ""}`).toLowerCase().includes(q) ||
-        (a.prestation_name ?? "").toLowerCase().includes(q)
-    );
-    const byDate: Record<string, Appointment[]> = {};
-    for (const a of matching) {
-      const key = toLocalDate(new Date(a.date));
-      if (!byDate[key]) byDate[key] = [];
-      byDate[key].push(a);
-    }
-    return Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b));
-  }, [appointments, searchQuery]);
+  // Search results, split into "à venir" and "déjà eu lieu" — spans every
+  // reservation for the matching client(s)/prestation, not just the
+  // currently loaded month (see the debounced fetch effect above).
+  const searchSections = useMemo(() => {
+    if (!searchQuery.trim() || searchResults === null) return null;
+
+    const groupByDate = (list: Appointment[], sortDir: 1 | -1) => {
+      const byDate: Record<string, Appointment[]> = {};
+      for (const a of list) {
+        const key = toLocalDate(new Date(a.date));
+        if (!byDate[key]) byDate[key] = [];
+        byDate[key].push(a);
+      }
+      return Object.entries(byDate).sort(([a], [b]) => sortDir * a.localeCompare(b));
+    };
+
+    const isPast = (a: Appointment) =>
+      ["completed", "cancelled", "no_show", "past_pending"].includes(getAptStatus(a));
+
+    return {
+      upcoming: groupByDate(searchResults.filter((a) => !isPast(a)), 1),
+      past: groupByDate(searchResults.filter(isPast), -1),
+      total: searchResults.length,
+    };
+  }, [searchQuery, searchResults]);
 
   const toggleSlot = async (id: string) => {
     const slot = slots.find((s) => s.id === id);
@@ -915,7 +1005,12 @@ export default function ProCalendarScreen() {
               <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>Auj.</Text>
             </AnimatedPressable>
             <AnimatedPressable
-              onPress={() => setIsSearchOpen((v) => !v)}
+              onPress={() => {
+                setIsSearchOpen((v) => {
+                  if (v) setSearchQuery("");
+                  return !v;
+                });
+              }}
               accessibilityLabel={isSearchOpen ? "Fermer la recherche" : "Rechercher"}
               accessibilityState={{ checked: isSearchOpen }}
               style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", ...Shadows.card }}
@@ -1291,36 +1386,36 @@ export default function ProCalendarScreen() {
         )}
 
         {/* ── APPOINTMENTS ── */}
-        {allMonthSearchResults ? (
-          /* Cross-month search results */
-          <>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, paddingHorizontal: 2 }}>
-              Résultats ({allMonthSearchResults.reduce((s, [, a]) => s + a.length, 0)})
-            </Text>
-            {allMonthSearchResults.length === 0 ? (
-              <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, gap: 6 }}>
-                <Ionicons name="search-outline" size={36} color={colors.border} />
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun résultat</Text>
-                <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Essaie un autre prénom ou prestation</Text>
-              </View>
-            ) : (
-              <View style={{ gap: 16 }}>
-                {allMonthSearchResults.map(([date, apts]) => (
-                  <View key={date}>
-                    <AnimatedPressable onPress={() => handleSelectDate(new Date(date + "T12:00:00"))} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                      <View style={{ width: 4, height: 16, backgroundColor: colors.border, borderRadius: 2 }} />
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground, textTransform: "capitalize" }}>
-                        {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-                      </Text>
-                    </AnimatedPressable>
-                    <View style={{ gap: 8 }}>
-                      {apts.map((apt) => <AptCard key={apt.id} apt={apt} onPress={() => { const canAct = ["pending","ongoing","past_pending"].includes(getAptStatus(apt)); if (canAct) setSelectedApt(apt); }} />)}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </>
+        {searchSections ? (
+          /* Search results — every reservation for the match, split "à venir" / "déjà eu lieu" */
+          searchLoading && searchSections.total === 0 ? (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : searchSections.total === 0 ? (
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, gap: 6 }}>
+              <Ionicons name="search-outline" size={36} color={colors.border} />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun résultat</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Essaie un autre prénom ou prestation</Text>
+            </View>
+          ) : (
+            <View style={{ gap: 24 }}>
+              <SearchResultSection
+                title="À venir"
+                icon="calendar-outline"
+                groups={searchSections.upcoming}
+                onSelectDate={handleSelectDate}
+                onSelectApt={setSelectedApt}
+              />
+              <SearchResultSection
+                title="Déjà eu lieu"
+                icon="checkmark-done-outline"
+                groups={searchSections.past}
+                onSelectDate={handleSelectDate}
+                onSelectApt={setSelectedApt}
+              />
+            </View>
+          )
         ) : (
           /* Day-scoped list */
           <>
