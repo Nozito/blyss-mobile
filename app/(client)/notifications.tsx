@@ -24,16 +24,21 @@ import { EmptyState } from "@/components/ui/EmptyState";
 type Tab = "activity" | "preferences";
 type PrefKey = keyof ClientNotificationSettings;
 
+// booking_confirmed, message_received, and late_alert removed — no backend
+// code path ever emits those types, so they always fell through to
+// "default" anyway. Also added the real types that previously had no entry
+// (and therefore rendered with the generic bell): no_show, slot_available,
+// recall.
 const NOTIF_CFG: Record<string, { icon: React.ComponentProps<typeof Ionicons>["name"]; color: string; bg: string }> = {
   new_booking:       { icon: "checkmark-circle-outline", color: "#34C759", bg: "rgba(52,199,89,.12)" },
-  booking_confirmed: { icon: "checkmark-circle-outline", color: "#007AFF", bg: "rgba(0,122,255,.12)" },
   booking_cancelled: { icon: "alert-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
   booking_reminder:  { icon: "time-outline",             color: "#FF9500", bg: "rgba(255,149,0,.12)" },
   post_appointment:  { icon: "star-outline",              color: "#5856D6", bg: "rgba(88,86,214,.12)" },
-  message_received:  { icon: "chatbubble-outline",       color: "#5856D6", bg: "rgba(88,86,214,.12)" },
   payment_received:  { icon: "card-outline",             color: "#34C759", bg: "rgba(52,199,89,.12)" },
   promotional:       { icon: "gift-outline",             color: "#FF2D55", bg: "rgba(255,45,85,.12)" },
-  late_alert:        { icon: "warning-outline",          color: "#FF9500", bg: "rgba(255,149,0,.12)" },
+  no_show:           { icon: "close-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
+  slot_available:    { icon: "calendar-outline",         color: "#34C759", bg: "rgba(52,199,89,.12)" },
+  recall:            { icon: "refresh-outline",          color: "#5856D6", bg: "rgba(88,86,214,.12)" },
   default:           { icon: "notifications-outline",    color: "#8E8E93", bg: "rgba(142,142,147,.12)" },
 };
 
@@ -86,7 +91,8 @@ function getPrefSections(colors: ReturnType<typeof useThemeColors>): Array<{ tit
       items: [
         { key: "reminders", label: "Confirmations & rappels", subtitle: "La veille et 1h avant ton rendez-vous", icon: "notifications-outline", iconBg: withAlpha(colors.primary, 0.13), iconColor: colors.primary },
         { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: withAlpha(colors.warning, 0.13), iconColor: colors.warning },
-        { key: "late",      label: "Retard de l'experte", subtitle: "Si ton rendez-vous prend du retard", icon: "time-outline", iconBg: withAlpha("#06B6D4", 0.13), iconColor: "#06B6D4" },
+        // "late" (Retard de l'experte) removed — no backend code path ever
+        // sends a late_alert notification, so the toggle controlled nothing.
       ],
     },
   ];

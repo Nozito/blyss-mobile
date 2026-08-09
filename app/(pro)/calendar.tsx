@@ -514,8 +514,6 @@ export default function ProCalendarScreen() {
   const selectedMonth = selectedDate.getMonth();
   const selectedDateStr = toLocalDate(selectedDate);
 
-  const knownAptIdsRef = useRef<Set<number>>(new Set());
-
   const fetchMonthData = useCallback(async (year: number, month: number, opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
@@ -525,27 +523,11 @@ export default function ProCalendarScreen() {
         proApi.getCalendar({ from, to }),
         proApi.getUnavailabilities(),
       ]);
-      if (calRes.success && calRes.data) {
-        const newApts = calRes.data as Appointment[];
-        setAppointments(newApts);
-        if (knownAptIdsRef.current.size > 0) {
-          for (const apt of newApts) {
-            if (!knownAptIdsRef.current.has(apt.id)) {
-              const clientName = apt.client_name ?? `${apt.client_first_name ?? ""} ${apt.client_last_name ?? ""}`.trim();
-              void Notifications.scheduleNotificationAsync({
-                content: {
-                  title: "🗓 Nouveau rendez-vous",
-                  body: `${clientName} — ${apt.date} à ${apt.time}${apt.prestation_name ? ` · ${apt.prestation_name}` : ""}`,
-                  data: { appointmentId: apt.id },
-                  sound: "default",
-                },
-                trigger: null,
-              });
-            }
-          }
-        }
-        knownAptIdsRef.current = new Set(newApts.map((a) => a.id));
-      }
+      // A new appointment appearing here is already announced by the
+      // backend's own "new_booking" push (richer copy, includes payment
+      // info) — scheduling a second, differently-worded local notification
+      // from this polling loop just duplicated it.
+      if (calRes.success && calRes.data) setAppointments(calRes.data as Appointment[]);
       if (unavailRes.success && unavailRes.data) setUnavailabilities(unavailRes.data as Unavailability[]);
     } catch {
       // silent fail
