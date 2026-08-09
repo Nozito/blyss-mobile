@@ -61,7 +61,7 @@ function ReviewCard({ review, onFlag }: { review: ProReview; onFlag: (review: Pr
           backgroundColor: colors.warningLight, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
         }}>
           <Ionicons name="flag" size={12} color={colors.warningText} />
-          <Text style={{ fontSize: 11, fontWeight: "700", color: colors.warningText }}>Signalé, en cours d'examen</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "700", color: colors.warningText }}>Signalé, en cours d'examen</Text>
         </View>
       ) : (
         <AnimatedIconButton
@@ -74,7 +74,7 @@ function ReviewCard({ review, onFlag }: { review: ProReview; onFlag: (review: Pr
           }}
         >
           <Ionicons name="flag-outline" size={13} color={colors.mutedForeground} />
-          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>Signaler</Text>
+          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>Signaler</Text>
         </AnimatedIconButton>
       )}
     </View>

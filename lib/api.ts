@@ -1074,12 +1074,14 @@ export const adminApi = {
     apiCall(`/api/admin/pros/${id}/reject`, { method: "PATCH", body: JSON.stringify(data) }),
 
   // Reviews moderation
-  getReviews: (params?: { flagged?: boolean; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
+  getReviews: (params?: { flagged?: boolean; deleted?: boolean; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
     const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
     return apiCall(`/api/admin/reviews${q}`);
   },
   deleteReview: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/admin/reviews/${id}`, { method: "DELETE" }),
+  restoreReview: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/reviews/${id}/restore`, { method: "PATCH" }),
   ignoreReviewFlag: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/admin/reviews/${id}/ignore`, { method: "PATCH" }),
 };

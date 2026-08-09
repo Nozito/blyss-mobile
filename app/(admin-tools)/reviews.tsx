@@ -25,7 +25,7 @@ const TEXT1  = ADMIN.text;
 const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
 
-interface FlaggedReview {
+interface AdminReview {
   id: number;
   author_name: string;
   rating: number;
@@ -34,6 +34,8 @@ interface FlaggedReview {
   pro_name: string;
   flags_count: number;
 }
+
+type Tab = "flagged" | "deleted";
 
 function ReviewSkeleton() {
   return (
@@ -78,22 +80,28 @@ export default function ReviewsScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const [tab, setTab] = useState<Tab>("flagged");
   const [refreshing, setRefreshing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<FlaggedReview | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminReview | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["admin-reviews-flagged"],
-    queryFn: () => adminApi.getReviews({ flagged: true }),
+    queryKey: ["admin-reviews", tab],
+    queryFn: () => adminApi.getReviews(tab === "flagged" ? { flagged: true } : { deleted: true }),
   });
 
-  const reviews: FlaggedReview[] = ((data?.data as FlaggedReview[] | undefined) ?? []);
+  const reviews: AdminReview[] = ((data?.data as AdminReview[] | undefined) ?? []);
+
+  const invalidateBoth = () => {
+    void qc.invalidateQueries({ queryKey: ["admin-reviews", "flagged"] });
+    void qc.invalidateQueries({ queryKey: ["admin-reviews", "deleted"] });
+  };
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => adminApi.deleteReview(id),
     onSuccess: () => {
-      showToast("Avis supprimé.", "success");
-      void qc.invalidateQueries({ queryKey: ["admin-reviews-flagged"] });
+      showToast("Avis supprimé, la pro a été notifiée.", "success");
+      invalidateBoth();
       setDeleteTarget(null);
     },
     onError: () => { setDeleteTarget(null); setActionError("Impossible de supprimer cet avis."); },
@@ -103,9 +111,18 @@ export default function ReviewsScreen() {
     mutationFn: (id: number) => adminApi.ignoreReviewFlag(id),
     onSuccess: () => {
       showToast("Signalement ignoré.", "success");
-      void qc.invalidateQueries({ queryKey: ["admin-reviews-flagged"] });
+      invalidateBoth();
     },
     onError: () => setActionError("Impossible d'ignorer ce signalement."),
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: (id: number) => adminApi.restoreReview(id),
+    onSuccess: () => {
+      showToast("Avis remis en ligne, la pro a été notifiée.", "success");
+      invalidateBoth();
+    },
+    onError: () => setActionError("Impossible de restaurer cet avis."),
   });
 
   const onRefresh = useCallback(async () => {
@@ -126,13 +143,37 @@ export default function ReviewsScreen() {
           >
             <Ionicons name="arrow-back" size={18} color={TEXT1} />
           </AnimatedIconButton>
-          <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.6 }}>Avis signalés</Text>
+          <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.6 }}>Avis</Text>
           {!isLoading && reviews.length > 0 && (
             <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
               <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{reviews.length}</Text>
             </View>
           )}
         </View>
+
+        {/* Tabs */}
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+          {([
+            { key: "flagged" as const, label: "Signalés" },
+            { key: "deleted" as const, label: "Supprimés" },
+          ]).map((t) => {
+            const active = tab === t.key;
+            return (
+              <AnimatedPressable
+                key={t.key}
+                onPress={() => setTab(t.key)}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                  backgroundColor: active ? ADMIN.accent : ADMIN.surfaceHover,
+                  borderWidth: 1, borderColor: active ? ADMIN.accent : ADMIN.border,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : TEXT2 }}>{t.label}</Text>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
+
         {actionError && <View style={{ marginTop: 8 }}><ErrorMessage message={actionError} /></View>}
       </View>
 
@@ -148,11 +189,19 @@ export default function ReviewsScreen() {
           windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
           ListEmptyComponent={
-            <EmptyState
-              icon="shield-checkmark-outline"
-              title="Aucun avis signalé"
-              description="Tous les signalements ont été traités."
-            />
+            tab === "flagged" ? (
+              <EmptyState
+                icon="shield-checkmark-outline"
+                title="Aucun avis signalé"
+                description="Tous les signalements ont été traités."
+              />
+            ) : (
+              <EmptyState
+                icon="trash-outline"
+                title="Aucun avis supprimé"
+                description="Les avis retirés par un admin apparaîtront ici, restaurables à tout moment."
+              />
+            )
           }
           renderItem={({ item }) => (
             <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
@@ -167,10 +216,17 @@ export default function ReviewsScreen() {
                   <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT1, marginBottom: 3 }}>{item.author_name}</Text>
                   <StarRow rating={item.rating} />
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
-                  <Ionicons name="flag-outline" size={11} color={Colors.destructive} />
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.destructive }}>{item.flags_count}</Text>
-                </View>
+                {tab === "flagged" ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+                    <Ionicons name="flag-outline" size={11} color={Colors.destructive} />
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.destructive }}>{item.flags_count}</Text>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: ADMIN.border }}>
+                    <Ionicons name="trash-outline" size={11} color={TEXT3} />
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3 }}>Supprimé</Text>
+                  </View>
+                )}
               </View>
 
               {/* Pro name */}
@@ -192,25 +248,41 @@ export default function ReviewsScreen() {
               </Text>
 
               {/* Actions */}
-              <View style={{ flexDirection: "row", gap: 10 }}>
+              {tab === "flagged" ? (
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <AnimatedPressable
+                    onPress={() => { setActionError(null); ignoreMut.mutate(item.id); }}
+                    disabled={ignoreMut.isPending}
+                    style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
+                  >
+                    {ignoreMut.isPending
+                      ? <ActivityIndicator size="small" color={TEXT2} />
+                      : <Text style={{ fontSize: 12, fontWeight: "600", color: TEXT2 }}>Ignorer le signalement</Text>}
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    onPress={() => { setActionError(null); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); setDeleteTarget(item); }}
+                    accessibilityLabel="Supprimer cet avis"
+                    style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
+                  >
+                    <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Supprimer l'avis</Text>
+                  </AnimatedPressable>
+                </View>
+              ) : (
                 <AnimatedPressable
-                  onPress={() => { setActionError(null); ignoreMut.mutate(item.id); }}
-                  disabled={ignoreMut.isPending}
-                  style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
+                  onPress={() => { setActionError(null); restoreMut.mutate(item.id); }}
+                  disabled={restoreMut.isPending}
+                  accessibilityLabel="Restaurer cet avis"
+                  style={{ height: 38, borderRadius: 11, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
                 >
-                  {ignoreMut.isPending
-                    ? <ActivityIndicator size="small" color={TEXT2} />
-                    : <Text style={{ fontSize: 12, fontWeight: "600", color: TEXT2 }}>Ignorer le signalement</Text>}
+                  {restoreMut.isPending
+                    ? <ActivityIndicator size="small" color={ADMIN.accent} />
+                    : <>
+                        <Ionicons name="refresh-outline" size={13} color={ADMIN.accent} />
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: ADMIN.accent }}>Restaurer l'avis</Text>
+                      </>}
                 </AnimatedPressable>
-                <AnimatedPressable
-                  onPress={() => { setActionError(null); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); setDeleteTarget(item); }}
-                  accessibilityLabel="Supprimer cet avis"
-                  style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
-                >
-                  <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Supprimer l'avis</Text>
-                </AnimatedPressable>
-              </View>
+              )}
             </View>
           )}
         />
@@ -221,7 +293,7 @@ export default function ReviewsScreen() {
         title="Supprimer cet avis ?"
         message={
           deleteTarget ? (
-            <>{`L'avis de ${deleteTarget.author_name} sur ${deleteTarget.pro_name} sera supprimé définitivement.`}</>
+            <>{`L'avis de ${deleteTarget.author_name} sur ${deleteTarget.pro_name} sera retiré et la pro sera notifiée. Tu pourras le restaurer depuis l'onglet "Supprimés".`}</>
           ) : null
         }
         confirmLabel="Supprimer"
