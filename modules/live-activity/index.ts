@@ -38,7 +38,18 @@ interface NativeLiveActivityModule {
 }
 
 const isIOS = Platform.OS === "ios";
-const nativeModule = isIOS ? requireNativeModule<NativeLiveActivityModule>("LiveActivityModule") : null;
+// Guarded: a native binary that doesn't (yet) embed this module — a build
+// that skipped native prebuild after this module was added, or shipped
+// before the widget target's credentials were finalized — must degrade to
+// "unsupported" rather than take the whole app down at import time.
+let nativeModule: NativeLiveActivityModule | null = null;
+if (isIOS) {
+  try {
+    nativeModule = requireNativeModule<NativeLiveActivityModule>("LiveActivityModule");
+  } catch {
+    nativeModule = null;
+  }
+}
 
 /** True only on iOS, with Live Activities enabled in system settings. */
 export function isLiveActivitySupported(): boolean {
