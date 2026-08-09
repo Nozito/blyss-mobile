@@ -152,6 +152,7 @@ export default function ProProfileScreen() {
     { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/(profile)/services" },
     { icon: "trending-up-outline", label: "Finance", route: "/(pro)/(profile)/finance" },
     { icon: "card-outline", label: "Encaissements", route: "/(pro)/(profile)/payments" },
+    { icon: "star-outline", label: "Mes avis", route: "/(pro)/(profile)/reviews" },
     // iOS only (Live Activities) — the screen itself also guards, but there's
     // no reason to surface an entry point Android users can't act on.
     ...(Platform.OS === "ios"
