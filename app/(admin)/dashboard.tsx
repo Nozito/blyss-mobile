@@ -54,11 +54,11 @@ export default function AdminDashboard() {
     queryFn: () => adminApi.getDashboardStats(),
     staleTime: 5 * 60_000, retry: false,
   });
-  const { data: prosData } = useQuery({
-    queryKey: ["admin-pros-pending"],
-    queryFn: () => adminApi.getPros({ status: "pending", limit: 50 }),
-    staleTime: 60_000,
-  });
+  // "Validation Pros" was removed from this dashboard — there was no
+  // backend behind it at all (no /api/admin/pros routes, and pro_status
+  // has no 'pending'/'rejected' state in the schema; it's driven by
+  // subscription status instead). Re-add once that workflow actually
+  // exists.
   const { data: reviewsData } = useQuery({
     queryKey: ["admin-reviews-flagged"],
     queryFn: () => adminApi.getReviews({ flagged: true, limit: 50 }),
@@ -79,9 +79,8 @@ export default function AdminDashboard() {
   } : null;
   const sparkData = (d?.revenue_history ?? d?.revenueHistory ?? []) as number[];
   const pendingBookings = stats?.bookingsByStatus?.pending ?? 0;
-  const pendingPros     = (prosData?.data as unknown[] | undefined)?.length ?? 0;
   const flaggedReviews  = (reviewsData?.data as unknown[] | undefined)?.length ?? 0;
-  const urgentCount = pendingBookings + pendingPros + flaggedReviews;
+  const urgentCount = pendingBookings + flaggedReviews;
 
   const maxSpark = useMemo(() => Math.max(1, ...sparkData), [sparkData]);
   const totalSparkRevenue = useMemo(() => sparkData.reduce((s, v) => s + v, 0), [sparkData]);
@@ -119,7 +118,7 @@ export default function AdminDashboard() {
         headline: "Quelques tâches\nà traiter",
         sub: `${urgentCount} élément${urgentCount > 1 ? "s" : ""} en attente de votre validation.`,
         ctaLabel: "Traiter",
-        onPressCta: () => router.push(pendingPros > 0 ? "/(admin)/pro-validation" : "/(admin)/bookings"),
+        onPressCta: () => router.push("/(admin)/bookings"),
       };
     }
     return {
@@ -128,7 +127,7 @@ export default function AdminDashboard() {
       ctaLabel: "Voir les réservations",
       onPressCta: () => router.push("/(admin)/bookings"),
     };
-  }, [urgentCount, pendingPros, router]);
+  }, [urgentCount, router]);
 
   if (isLoading) return <DashboardSkeleton top={60} />;
   if (!stats) return (
@@ -197,7 +196,6 @@ export default function AdminDashboard() {
             <TodayOverview
               items={[
                 { label: "réservations à confirmer",      count: pendingBookings, tone: "warning", onPress: () => router.push("/(admin)/bookings") },
-                { label: "pros en attente de validation",  count: pendingPros,     tone: "info",    onPress: () => router.push("/(admin)/pro-validation") },
                 { label: "avis signalés",                  count: flaggedReviews,  tone: "danger",  onPress: () => router.push("/(admin-tools)/reviews") },
               ]}
             />
@@ -208,7 +206,6 @@ export default function AdminDashboard() {
       {/* ── Accès rapides ── */}
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl, flexDirection: "row", gap: ADMIN.space.md }}>
         {[
-          { label: "Valider",       icon: "checkmark-done-outline" as const, onPress: () => router.push("/(admin)/pro-validation") },
           { label: "Coupon",         icon: "pricetag-outline"       as const, onPress: () => router.push("/(admin-tools)/coupons") },
           { label: "Notifier",       icon: "notifications-outline"  as const, onPress: () => router.push("/(admin-tools)/notifications") },
         ].map(({ label, icon, onPress }) => (

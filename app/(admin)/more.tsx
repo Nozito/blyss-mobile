@@ -24,8 +24,8 @@ const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
 const ACCENT = ADMIN.accent;
 
+// "Validation pros" removed — no backend behind it (see dashboard.tsx).
 const TOOLS = [
-  { key: "validation", label: "Validation pros", sub: "Comptes en attente", symbol: "checkmark.seal.fill", androidIcon: "checkmark-done-outline" as const, color: Colors.admin,      route: "/(admin)/pro-validation" },
   { key: "coupons",    label: "Coupons",          sub: "Codes promo",       symbol: "tag.fill",             androidIcon: "pricetag-outline"        as const, color: Colors.warning,    route: "/(admin-tools)/coupons" },
   { key: "reviews",    label: "Avis",             sub: "Modération",        symbol: "text.bubble.fill",     androidIcon: "chatbubble-outline"      as const, color: Colors.destructive, route: "/(admin-tools)/reviews" },
   { key: "analytics",  label: "Analytics",        sub: "Métriques & revenus", symbol: "chart.bar.fill",     androidIcon: "bar-chart-outline"       as const, color: Colors.pro,        route: "/(admin-tools)/analytics" },
