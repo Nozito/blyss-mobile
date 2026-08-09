@@ -392,15 +392,6 @@ export const authApi = {
 
 // ── Bookings API ─────────────────────────────────────────────────────────────
 
-export const bookingsApi = {
-  // BLYSS-FIX: 1.2 — getAll removed (duplicate of clientApi.getMyBookings)
-  getById: (id: string): Promise<ApiResponse<unknown>> => apiCall(`/api/client/booking-detail/${id}`),
-  create: (data: unknown): Promise<ApiResponse<unknown>> =>
-    apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
-  cancel: (id: string): Promise<ApiResponse<void>> =>
-    apiCall(`/api/client/my-booking/${id}/cancel`, { method: "PATCH" }),
-};
-
 // ── Specialists API ───────────────────────────────────────────────────────────
 
 export const specialistsApi = {
@@ -504,8 +495,6 @@ export const proApi = {
       endDate: string | null;
       status: string;
     } | null>("/api/pro/subscription"),
-
-  cancelSubscription: () => apiCall("/api/pro/subscription/cancel", { method: "PUT" }),
 
   /**
    * Reconciles the backend's subscription state with RevenueCat's live
@@ -658,11 +647,6 @@ export const proApi = {
       monthlyEvolution: Array<{ month: string; revenue: number }>;
     }>("/api/pro/finance/performance"),
 
-  getStats: (period: "month" | "week" = "month") =>
-    apiCall<{ bookings: number; revenue: number; uniqueClients: number; completionRate: number }>(
-      `/api/pro/stats?period=${period}`
-    ),
-
   getGallery: () =>
     apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>("/api/pro/gallery"),
 
@@ -743,7 +727,6 @@ export const stripeApi = {
 // ── Users API ─────────────────────────────────────────────────────────────────
 
 export const usersApi = {
-  getMe: (): Promise<ApiResponse<User>> => apiCall("/api/users"),
   update: (data: Record<string, unknown>): Promise<ApiResponse<User>> =>
     apiCall("/api/users/update", { method: "PUT", body: JSON.stringify(data) }),
 
@@ -811,19 +794,6 @@ export const usersApi = {
       return { success: false, error: error instanceof Error ? error.message : "Erreur de connexion" };
     }
   },
-};
-
-// ── Cancellation API ──────────────────────────────────────────────────────────
-
-export const cancellationApi = {
-  getPolicy: (): Promise<ApiResponse<{ success: boolean; cancellation_notice_hours: number }>> =>
-    apiCall("/api/pro/settings/cancellation-policy"),
-
-  updatePolicy: (hours: 0 | 2 | 4 | 6 | 12 | 24 | 48 | 72): Promise<ApiResponse<{ success: boolean; cancellation_notice_hours: number }>> =>
-    apiCall("/api/pro/settings/cancellation-policy", {
-      method: "PATCH",
-      body: JSON.stringify({ cancellation_notice_hours: hours }),
-    }),
 };
 
 // ── Nail-Tech API ─────────────────────────────────────────────────────────────
@@ -1012,9 +982,7 @@ function buildQuery(params: Record<string, string | number | boolean | undefined
 
 export const adminApi = {
   // Dashboard
-  getDashboard: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/dashboard"),
   getDashboardStats: (): Promise<ApiResponse<unknown>> => apiCall("/api/admin/dashboard/stats"),
-  getHealth: (): Promise<ApiResponse<unknown>> => apiCall("/api/health"),
 
   // Users
   getUsers: (params?: { page?: number; limit?: number; search?: string; role?: string; banned?: boolean }): Promise<ApiResponse<AdminUser[]> & { meta?: AdminMeta }> => {
@@ -1029,10 +997,6 @@ export const adminApi = {
     apiCall(`/api/admin/users/${id}/ban`, { method: "POST" }),
   unbanUser: (id: number): Promise<ApiResponse<{ id: number; is_active: boolean }>> =>
     apiCall(`/api/admin/users/${id}/unban`, { method: "POST" }),
-  deactivateUser: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/admin/users/${id}/deactivate`, { method: "PATCH" }),
-  reactivateUser: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/admin/users/${id}/reactivate`, { method: "PATCH" }),
   deleteUser: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/admin/users/${id}`, { method: "DELETE" }),
   grantSubscription: (id: number, data: { plan: string; months: number }): Promise<ApiResponse<{ id: number; plan: string; months: number; end_date: string }>> =>
@@ -1043,24 +1007,16 @@ export const adminApi = {
     const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
     return apiCall(`/api/admin/bookings${q}`);
   },
-  getBooking: (id: number): Promise<ApiResponse<AdminBooking>> =>
-    apiCall(`/api/admin/bookings/${id}`),
-  updateBookingStatus: (id: number, status: "pending" | "confirmed" | "completed" | "cancelled"): Promise<ApiResponse<{ id: number; status: string }>> =>
-    apiCall(`/api/admin/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   confirmBooking: (id: number): Promise<ApiResponse<{ id: number; status: string }>> =>
     apiCall(`/api/admin/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ status: "confirmed" }) }),
   cancelBooking: (id: number): Promise<ApiResponse<{ id: number; status: string }>> =>
     apiCall(`/api/admin/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ status: "cancelled" }) }),
-  deleteBooking: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/admin/bookings/${id}`, { method: "DELETE" }),
 
   // Payments
   getPayments: (params?: { page?: number; limit?: number; status?: string }): Promise<ApiResponse<AdminPayment[]> & { meta?: AdminMeta }> => {
     const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
     return apiCall(`/api/admin/payments${q}`);
   },
-  getPayment: (id: number): Promise<ApiResponse<AdminPayment>> =>
-    apiCall(`/api/admin/payments/${id}`),
   refundPayment: (id: number): Promise<ApiResponse<{ id: number; status: string }>> =>
     apiCall(`/api/admin/payments/${id}/refund`, { method: "POST" }),
 
@@ -1068,16 +1024,12 @@ export const adminApi = {
   getCoupons: (): Promise<ApiResponse<AdminCoupon[]>> => apiCall("/api/admin/coupons"),
   createCoupon: (data: { code: string; discount_type: "percent" | "fixed"; discount_value: number; applicable_plans: string[]; expires_at?: string; max_uses?: number }): Promise<ApiResponse<{ id: number }>> =>
     apiCall("/api/admin/coupons", { method: "POST", body: JSON.stringify(data) }),
-  updateCoupon: (id: number, data: Partial<{ code: string; discount_type: "percent" | "fixed"; discount_value: number; applicable_plans: string[]; expires_at: string | null; max_uses: number | null }>): Promise<ApiResponse<{ id: number }>> =>
-    apiCall(`/api/admin/coupons/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteCoupon: (id: number): Promise<ApiResponse<{ id: number }>> =>
     apiCall(`/api/admin/coupons/${id}`, { method: "DELETE" }),
   toggleCoupon: (id: number, active: boolean): Promise<ApiResponse<{ id: number; is_active: boolean }>> =>
     apiCall(`/api/admin/coupons/${id}/toggle`, { method: "PATCH", body: JSON.stringify({ active }) }),
 
   // Notifications
-  sendNotification: (data: { user_id: number; type: string; title: string; message: string }): Promise<ApiResponse<{ id: number }>> =>
-    apiCall("/api/admin/notifications/create", { method: "POST", body: JSON.stringify(data) }),
   sendPush: (data: { target: "user_id" | "all" | "pros" | "clients"; user_id?: number; title: string; body: string }): Promise<ApiResponse<{ sent: number }>> =>
     apiCall("/api/admin/notifications/send", { method: "POST", body: JSON.stringify(data) }),
 
