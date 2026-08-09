@@ -23,6 +23,7 @@ import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedP
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { formatLastVisit } from "@/lib/dateUtils";
 
 type Client = {
   id: number;
@@ -32,18 +33,6 @@ type Client = {
   totalVisits?: number;
   avatar?: string | null;
 };
-
-// Le backend renvoie parfois des écarts en jours mal signés (ex: "-57j" pour
-// une visite passée). On normalise vers un affichage toujours positif et lisible.
-function formatLastVisit(raw?: string | null): string {
-  if (!raw) return "Jamais venue";
-  const match = raw.match(/(-?\d+)\s*j\b/i);
-  if (!match) return raw;
-  const days = Math.abs(parseInt(match[1], 10));
-  if (days === 0) return "Aujourd'hui";
-  if (days === 1) return "Il y a 1 jour";
-  return `Il y a ${days} jours`;
-}
 
 function SectionTitle({ title }: { title: string }) {
   const colors = useThemeColors();

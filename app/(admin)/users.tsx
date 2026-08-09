@@ -4,7 +4,6 @@ import {
   ActivityIndicator, ScrollView, RefreshControl, FlatList,
   Modal, Platform, Share,
 } from "react-native";
-import { Image } from "expo-image";
 import { useActionSheet } from "@/components/ui/ActionSheet";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,7 +26,7 @@ import { ActionGrid, type ActionTileData } from "@/components/admin/ActionGrid";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
-import { resolveMediaUrl } from "@/lib/media";
+import { Avatar } from "@/components/admin/Avatar";
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
@@ -35,9 +34,6 @@ const PLAN_OPTS   = ["start", "serenite", "signature"] as const;
 const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérénité", signature: "Signature" };
 const MONTHS_OPTS = [1, 3, 6, 12];
 
-function initials(name: string) {
-  return name.trim().split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-}
 function roleName(user: Pick<AdminUser, "is_admin" | "role">) {
   if (user.is_admin) return "Admin";
   if (user.role === "pro") return "Pro";
@@ -50,27 +46,6 @@ function getActivePlan(user: AdminUser): string | null {
 function joinedDate(user: AdminUser): string | null {
   if (!user.created_at) return null;
   return new Date(user.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-}
-
-// ── Avatar — real photo when available, plain initial circle otherwise ───────
-function Avatar({ name, photo, size = 36 }: { name: string; photo?: string | null; size?: number }) {
-  const uri = resolveMediaUrl(photo);
-  return (
-    <View style={{
-      width: size, height: size, borderRadius: size / 2,
-      backgroundColor: ADMIN.surfaceHover,
-      alignItems: "center", justifyContent: "center",
-      overflow: "hidden",
-    }}>
-      {uri ? (
-        <Image source={{ uri }} style={{ width: size, height: size }} contentFit="cover" />
-      ) : (
-        <Text style={{ color: ADMIN.textSub, fontWeight: "700", fontSize: Math.round(size * 0.36) }}>
-          {initials(name)}
-        </Text>
-      )}
-    </View>
-  );
 }
 
 // ── Skeleton — same card shape as the real rows, so the layout doesn't jump ──

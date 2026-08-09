@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
 import { toLocalDate } from "@/lib/dateUtils";
+import { toNumber as n } from "@/lib/bookingUtils";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -56,12 +57,6 @@ type DashData = {
   topServices?: TopService[];
   weeklyRevenue?: WeeklyPoint[];
 };
-
-function n(v: unknown): number {
-  if (typeof v === "number") return v;
-  const normalized = String(v ?? "0").replace(/\s/g, "").replace(",", ".");
-  return parseFloat(normalized) || 0;
-}
 
 function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: number }) {
   const router = useRouter();

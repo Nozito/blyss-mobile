@@ -28,6 +28,7 @@ import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
+import { toNumber as n } from "@/lib/bookingUtils";
 
 type Period = "week" | "month" | "year";
 
@@ -36,13 +37,6 @@ const PERIOD_LABELS: Record<Period, string> = {
   month: "Ce mois",
   year: "Cette année",
 };
-
-function n(v: unknown): number {
-  if (typeof v === "number") return v;
-  // Handle French decimal format ("123,45") as well as standard ("123.45")
-  const normalized = String(v ?? "0").replace(/\s/g, "").replace(",", ".");
-  return parseFloat(normalized) || 0;
-}
 
 export default function ProFinanceScreen() {
   const insets = useSafeAreaInsets();

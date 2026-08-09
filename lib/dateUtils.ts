@@ -1,3 +1,14 @@
+// Relative label ("Il y a 3 jours") from a backend string like "-3j".
+export function formatLastVisit(raw?: string | null): string {
+  if (!raw) return "Jamais venue";
+  const match = raw.match(/(-?\d+)\s*j\b/i);
+  if (!match) return raw;
+  const days = Math.abs(parseInt(match[1], 10));
+  if (days === 0) return "Aujourd'hui";
+  if (days === 1) return "Il y a 1 jour";
+  return `Il y a ${days} jours`;
+}
+
 export const toLocalDate = (d: Date): string => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");

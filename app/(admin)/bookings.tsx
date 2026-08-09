@@ -23,6 +23,7 @@ import { StatusBadge, type StatusTone } from "@/components/admin/StatusBadge";
 import { ActionGrid, type ActionTileData } from "@/components/admin/ActionGrid";
 import { Card } from "@/components/admin/Card";
 import { useDebounce } from "@/hooks/useDebounce";
+import { Avatar } from "@/components/admin/Avatar";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
@@ -56,15 +57,6 @@ const FILTERS: Array<{ key: StatusFilter; label: string }> = [
 ];
 
 // ── Avatar — a plain initial circle, same shape as the Users screen ──────────
-function Avatar({ name, size = 44 }: { name: string; size?: number }) {
-  const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      <Text style={{ color: ADMIN.textSub, fontWeight: "700", fontSize: Math.round(size * 0.36) }}>{initials || "?"}</Text>
-    </View>
-  );
-}
-
 // ── Booking card — same shape as UserCard: avatar, title/subtitle, trailing
 // badge + meta, swipe actions in the same bg-tint tone language. ────────────
 function BookingCard({

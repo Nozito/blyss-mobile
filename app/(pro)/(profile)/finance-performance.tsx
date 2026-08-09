@@ -12,10 +12,7 @@ import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
-
-function n(v: unknown): number {
-  return typeof v === "number" && Number.isFinite(v) ? v : 0;
-}
+import { toNumber as n } from "@/lib/bookingUtils";
 
 export default function ProFinancePerformanceScreen() {
   const insets = useSafeAreaInsets();

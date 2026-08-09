@@ -1,3 +1,11 @@
+// Coerces API values (numbers, or strings using French "123,45" or standard
+// "123.45" decimal notation) into a safe number, defaulting to 0.
+export function toNumber(v: unknown): number {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const normalized = String(v ?? "0").replace(/\s/g, "").replace(",", ".");
+  return parseFloat(normalized) || 0;
+}
+
 export const toLocalDateStr = (date: Date): string => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");

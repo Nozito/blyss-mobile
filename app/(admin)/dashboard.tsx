@@ -15,10 +15,7 @@ import { TodayOverview } from "@/components/admin/TodayOverview";
 import { SectionLabel } from "@/components/admin/SectionLabel";
 import { Card } from "@/components/admin/Card";
 import { useScrollToTop } from "@react-navigation/native";
-
-function n(v: unknown): number {
-  return typeof v === "number" ? v : parseFloat(String(v ?? "0")) || 0;
-}
+import { toNumber as n } from "@/lib/bookingUtils";
 
 function DashboardSkeleton({ top }: { top: number }) {
   return (

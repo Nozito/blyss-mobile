@@ -24,6 +24,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { BlockedClient } from "@/lib/api";
+import { formatLastVisit } from "@/lib/dateUtils";
 
 type Client = {
   id: number;
@@ -34,18 +35,6 @@ type Client = {
   notes?: string | null;
   avatar?: string | null;
 };
-
-// Le backend renvoie parfois des écarts en jours mal signés (ex: "-57j" pour
-// une visite passée). On normalise vers un affichage toujours positif et lisible.
-function formatLastVisit(raw?: string | null): string {
-  if (!raw) return "Jamais venue";
-  const match = raw.match(/(-?\d+)\s*j\b/i);
-  if (!match) return raw;
-  const days = Math.abs(parseInt(match[1], 10));
-  if (days === 0) return "Aujourd'hui";
-  if (days === 1) return "Il y a 1 jour";
-  return `Il y a ${days} jours`;
-}
 
 const TABS = [
   { key: "clients", label: "Clientes", icon: "people-outline" as const },
