@@ -17,53 +17,83 @@ struct LiveRdvLiveActivity: Widget {
             let phase = LiveRdvPhase(state: context.state)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: phase.symbolName)
-                        .foregroundStyle(Color("$accent"))
+                    BlyssLogoMark(height: LiveActivityLogoSize.dynamicIslandExpanded)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if context.state.showTime {
-                        Text(context.state.startAt, style: .time)
-                            .font(.caption)
-                            .foregroundStyle(.white)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(phase.headerLabel)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.6))
+                        if context.state.showTime {
+                            Text(context.state.startAt, style: .time)
+                                .font(.caption.weight(.semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(.white)
+                        }
                     }
                 }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(phase.headline(state: context.state))
+                        LiveRdvFocalName(phase: phase, clientFirstName: context.state.clientFirstName)
                             .font(.headline)
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                        if let prestation = context.state.prestationName {
-                            Text(prestation)
+                        if let detail = LiveRdvDetailText.make(
+                            prestationName: context.state.prestationName,
+                            durationMinutes: context.state.durationMinutes
+                        ) {
+                            Text(detail)
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.7))
                                 .lineLimit(1)
                         }
                     }
                 }
-                DynamicIslandExpandedRegion(.bottom) {
-                    if let name = context.state.clientFirstName {
-                        Text("Cliente : \(name)")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                }
             } compactLeading: {
-                Image(systemName: phase.symbolName)
-                    .foregroundStyle(Color("$accent"))
+                BlyssLogoMark(height: LiveActivityLogoSize.compact)
             } compactTrailing: {
                 LiveRdvCountdownText(state: context.state)
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundStyle(Color("$accent"))
             } minimal: {
-                Image(systemName: phase.symbolName)
-                    .foregroundStyle(Color("$accent"))
+                BlyssLogoMark(height: LiveActivityLogoSize.compact)
             }
             .keylineTint(Color("$accent"))
         }
     }
 }
+
+// ── Logo ─────────────────────────────────────────────────────────────────
+
+/// Every placement's logo height in one place, tuned by context: the lock
+/// screen header carries the most visual weight since it's the largest,
+/// least crowded moment; the Dynamic Island's expanded view sits close
+/// behind it; the compact/minimal pill is the smallest by necessity.
+/// Shared (not private) — LiveRdvHomeWidget.swift reuses the same sizing
+/// scale and logo view for its own header.
+enum LiveActivityLogoSize {
+    static let compact: CGFloat = 14
+    static let homeWidget: CGFloat = 16
+    static let lockScreenHeader: CGFloat = 20
+    static let dynamicIslandExpanded: CGFloat = 18
+}
+
+/// The official Blyss mark ("blyssLogo" — a full-color gradient asset, not a
+/// template glyph), scaled by height only so its native proportions are
+/// always preserved.
+struct BlyssLogoMark: View {
+    let height: CGFloat
+
+    var body: some View {
+        Image("blyssLogo")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(height: height)
+    }
+}
+
+// ── Phase ────────────────────────────────────────────────────────────────
 
 /// Single source of truth for which of the three (non-overlapping) states the
 /// activity is in, so the header label and the focal line never contradict
@@ -91,85 +121,102 @@ private enum LiveRdvPhase {
         case .ended: return "Terminé"
         }
     }
+}
 
-    var symbolName: String {
-        switch self {
-        case .upcoming: return "calendar"
-        case .inProgress: return "clock.fill"
-        case .ended: return "checkmark.circle.fill"
-        }
+extension LiveRdvPhase: Equatable {}
+
+extension LiveRdvAttributes.ContentState {
+    var durationMinutes: Int {
+        Int(endAt.timeIntervalSince(startAt) / 60)
     }
+}
 
-    func headline(state: LiveRdvAttributes.ContentState) -> String {
-        switch self {
-        case .upcoming, .inProgress:
-            return state.clientFirstName ?? "Rendez-vous"
-        case .ended:
-            return "Rendez-vous terminé"
+/// "Prestation · 45 min" — shared between the lock screen's secondary line
+/// and the Dynamic Island's expanded center, so the formatting never drifts
+/// between the two surfaces.
+private enum LiveRdvDetailText {
+    static func make(prestationName: String?, durationMinutes: Int) -> String? {
+        switch (prestationName, durationMinutes > 0) {
+        case let (name?, true): return "\(name) · \(durationMinutes) min"
+        case let (name?, false): return name
+        case (nil, true): return "\(durationMinutes) min"
+        case (nil, false): return nil
         }
     }
 }
+
+/// The client's name — or the phase-appropriate fallback once the
+/// appointment has ended — shared by the lock screen's primary line and the
+/// Dynamic Island's expanded center.
+private struct LiveRdvFocalName: View {
+    let phase: LiveRdvPhase
+    let clientFirstName: String?
+
+    var body: some View {
+        Text(phase == .ended ? "Rendez-vous terminé" : (clientFirstName ?? "Rendez-vous"))
+    }
+}
+
+// ── Lock screen ──────────────────────────────────────────────────────────
 
 private struct LiveRdvLockScreenView: View {
     let context: ActivityViewContext<LiveRdvAttributes>
 
     private var phase: LiveRdvPhase { LiveRdvPhase(state: context.state) }
 
-    private var durationMinutes: Int {
-        Int(context.state.endAt.timeIntervalSince(context.state.startAt) / 60)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Level 3 — header: logo + phase label, small, never the focal point.
-            HStack(spacing: 5) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color("$accent"))
-                Text("Blyss")
-                    .font(.system(.caption2, design: .serif).weight(.bold).italic())
-                Text("· \(phase.headerLabel)")
-                    .font(.caption2)
-            }
-            .foregroundStyle(.white.opacity(0.6))
-
-            // Level 1 — the single focal point: qui + quand.
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                if let name = context.state.clientFirstName, phase != .ended {
-                    Text(name)
-                } else if phase == .ended {
-                    Text("Rendez-vous terminé")
-                }
-                if context.state.showTime, phase != .ended {
-                    Text(context.state.startAt, style: .time)
-                }
-            }
-            .font(.title2.weight(.bold))
-            .foregroundStyle(Color("$accent"))
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-
-            // Level 2 — quoi: prestation + duration.
-            if phase != .ended, (context.state.prestationName != nil || durationMinutes > 0) {
-                HStack(spacing: 4) {
-                    if let prestation = context.state.prestationName {
-                        Text(prestation)
-                    }
-                    if durationMinutes > 0 {
-                        if context.state.prestationName != nil { Text("·") }
-                        Text("\(durationMinutes) min")
-                    }
-                }
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.85))
+            LiveRdvHeaderRow(
+                phase: phase,
+                startAt: context.state.startAt,
+                showTime: context.state.showTime
+            )
+            LiveRdvFocalName(phase: phase, clientFirstName: context.state.clientFirstName)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(Color("$accent"))
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            if phase != .ended,
+               let detail = LiveRdvDetailText.make(
+                   prestationName: context.state.prestationName,
+                   durationMinutes: context.state.durationMinutes
+               ) {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
             }
         }
         .padding(16)
     }
 }
 
-extension LiveRdvPhase: Equatable {}
+/// Level 3 — header: logo, phase status, and time. Small and quiet — never
+/// the focal point — but the logo here carries the most weight of any of its
+/// placements since this is the widest, least crowded row in the activity.
+private struct LiveRdvHeaderRow: View {
+    let phase: LiveRdvPhase
+    let startAt: Date
+    let showTime: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            BlyssLogoMark(height: LiveActivityLogoSize.lockScreenHeader)
+            Text(phase.headerLabel)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.6))
+            Spacer(minLength: 8)
+            if showTime, phase != .ended {
+                Text(startAt, style: .time)
+                    .font(.caption2.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+        }
+    }
+}
+
+// ── Countdown ────────────────────────────────────────────────────────────
 
 /// Native auto-updating countdown — no polling, the system re-renders this
 /// every second on its own via Text(timerInterval:).

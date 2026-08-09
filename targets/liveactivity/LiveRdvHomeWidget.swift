@@ -79,13 +79,11 @@ struct LiveRdvHomeWidgetView: View {
         Group {
             if let startAt = entry.startAt, startAt > Date() {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 9, weight: .semibold))
-                        Text("Blyss")
-                            .font(.system(.caption2, design: .serif).weight(.bold).italic())
-                    }
-                    .foregroundStyle(family == .accessoryRectangular ? .secondary : Color("blyssMuted"))
+                    // accessoryRectangular is always rendered by the system as a
+                    // flat template (no color), so the gradient mark reduces to a
+                    // plain glyph there — expected, matches every other accessory
+                    // widget on the Lock Screen.
+                    BlyssLogoMark(height: LiveActivityLogoSize.homeWidget)
                     Text(startAt, style: .relative)
                         .font(.headline)
                         .foregroundStyle(family == .accessoryRectangular ? .primary : Color("AccentColor"))
