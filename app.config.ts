@@ -127,16 +127,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        // No `image` on purpose: the OS-rendered splash (before the JS bundle
+        // 1x1 transparent pixel — the installed expo-splash-screen plugin
+        // crashes during prebuild if `image` is omitted entirely
+        // ([ios.splashScreenStoryboard]: Cannot read properties of
+        // undefined (reading '0')), so this satisfies the plugin while
+        // rendering nothing. The OS-rendered splash (before the JS bundle
         // runs) can only show a static, non-scaled image and there's no way
         // to make a single fixed-size asset look right across every device
-        // width/scale without either a tiny stray mark or an oversized one.
-        // Background-color-only avoids that entirely — the animated Blyss
-        // logo (app/_layout.tsx → LaunchSplash / BlyssLogoLoader) is the
-        // first logo the user actually sees, right after JS takes over.
+        // width/scale without either a tiny stray mark or an oversized one
+        // — background-color-only avoids that. The animated Blyss logo
+        // (app/_layout.tsx → LaunchSplash / BlyssLogoLoader) is the first
+        // logo the user actually sees, right after JS takes over.
         // Colors DOIVENT matcher constants/splash.ts pour éviter un flash.
+        image: "./assets/splash-blank.png",
+        imageWidth: 1,
         backgroundColor: "#FFF0F5",
         dark: {
+          image: "./assets/splash-blank.png",
           backgroundColor: "#0A0A0B",
         },
       },
