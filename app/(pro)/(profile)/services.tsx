@@ -213,7 +213,8 @@ export default function ServicesScreen() {
       return res;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pro-services"] }),
-    onError: () => showToast("Impossible de supprimer la prestation", "error"),
+    onError: (err) =>
+      showToast(err instanceof Error ? err.message : "Impossible de supprimer la prestation", "error"),
   });
 
   const services = (data?.data as Service[] | undefined) ?? [];
