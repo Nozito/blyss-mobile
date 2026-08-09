@@ -114,7 +114,7 @@ export default function ProSettingsScreen() {
     }
 
     if (addressPublic && (!data.address_line || !data.postal_code || !data.city)) {
-      setError("Adresse, code postal et ville requis pour publier votre adresse exacte.");
+      setError("Adresse, code postal et ville requis pour publier ton adresse exacte.");
       return;
     }
 
@@ -317,8 +317,8 @@ export default function ProSettingsScreen() {
               </Text>
               <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
                 {addressPublic
-                  ? "Votre adresse complète sera visible sur votre profil et sur la carte."
-                  : "Par défaut, votre adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
+                  ? "Ton adresse complète sera visible sur ton profil et sur la carte."
+                  : "Par défaut, ton adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
               </Text>
             </View>
             <Switch
@@ -338,10 +338,10 @@ export default function ProSettingsScreen() {
           {showAddressConfirm && (
             <View style={{ padding: 14, borderRadius: 14, backgroundColor: colors.warningLight, borderWidth: 1, borderColor: colors.warningBorder, gap: 10 }}>
               <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningTextDark }}>
-                Rendre votre adresse publique ?
+                Rendre ton adresse publique ?
               </Text>
               <Text style={{ fontSize: 12, color: colors.warningText, lineHeight: 17 }}>
-                Votre adresse exacte sera visible par tous les visiteurs de votre profil, y compris sur la carte. Vous pourrez la masquer à nouveau à tout moment.
+                Ton adresse exacte sera visible par tous les visiteurs de ton profil, y compris sur la carte. Tu pourras la masquer à nouveau à tout moment.
               </Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <AnimatedPressable
@@ -382,7 +382,7 @@ export default function ProSettingsScreen() {
               <View style={{ backgroundColor: colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} style={{ marginTop: 1 }} />
                 <Text style={{ fontSize: 12, color: colors.mutedForeground, flex: 1, lineHeight: 17 }}>
-                  Adresse non affichée publiquement — vos clientes verront une zone d'intervention à la place.
+                  Adresse non affichée publiquement — tes clientes verront une zone d'intervention à la place.
                 </Text>
               </View>
               <Controller

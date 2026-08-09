@@ -934,7 +934,7 @@ export default function ProDashboard() {
       {/* ── SLOTS MODAL ── */}
       <Modal visible={showSlotsModal} onClose={() => setShowSlotsModal(false)} title="Ajouter des créneaux" bottomSheet>
         <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 20, lineHeight: 18 }}>
-          Ouvrez de nouveaux créneaux depuis votre calendrier pour permettre à vos clientes de réserver.
+          Ouvre de nouveaux créneaux depuis ton calendrier pour permettre à tes clientes de réserver.
         </Text>
         <AnimatedPressable
           onPress={() => {

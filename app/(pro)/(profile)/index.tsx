@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, StyleSheet, Animated, Modal as RNModal } from "react-native";
+import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, StyleSheet, Animated, Modal as RNModal, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
@@ -152,6 +152,11 @@ export default function ProProfileScreen() {
     { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/(profile)/services" },
     { icon: "trending-up-outline", label: "Finance", route: "/(pro)/(profile)/finance" },
     { icon: "card-outline", label: "Encaissements", route: "/(pro)/(profile)/payments" },
+    // iOS only (Live Activities) — the screen itself also guards, but there's
+    // no reason to surface an entry point Android users can't act on.
+    ...(Platform.OS === "ios"
+      ? [{ icon: "lock-closed-outline" as const, label: "Rendez-vous en direct", route: "/(pro)/(profile)/live-activity-settings" }]
+      : []),
   ];
 
   // Groupe aide et données
@@ -693,7 +698,7 @@ export default function ProProfileScreen() {
       <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
         <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground, marginBottom: 6 }}>Déconnexion</Text>
-        <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 24 }}>Êtes-vous sûr de vouloir vous déconnecter ?</Text>
+        <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 24 }}>Es-tu sûr(e) de vouloir te déconnecter ?</Text>
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Pressable
             onPress={() => setShowLogoutConfirm(false)}

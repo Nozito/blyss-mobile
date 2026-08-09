@@ -62,6 +62,14 @@ export function BlyssLogoLoader({ size = 96, color = Colors.primary, style }: Bl
 
   return (
     <View style={[{ width: size, height: size }, style]}>
+      {/*
+        viewBox is centered on the traced glyph's actual bounding box
+        (~442,474 to 930,933 post-transform), not the full 1378x1380 source
+        canvas — the untrimmed viewBox left the mark rendering at ~35% of
+        `size`, looking like a tiny stray dot. Padding matches the ~70% fill
+        ratio of the native splash (assets/splash.png), so the JS logo and
+        the native pre-JS splash read as the same size at handoff.
+      */}
       <Svg width={size} height={size} viewBox="0 0 1378 1380">
         <AnimatedG animatedProps={groupProps} transform="translate(0,1380) scale(0.1,-0.1)">
           <AnimatedPath

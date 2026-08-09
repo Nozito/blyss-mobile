@@ -236,7 +236,7 @@ export default function BookingScreen() {
           );
         }
       } catch {
-        setBookingError("Impossible de charger les informations. Vérifiez votre connexion internet.");
+        setBookingError("Impossible de charger les informations. Vérifie ta connexion internet.");
       } finally {
         setIsLoading(false);
       }
@@ -368,7 +368,7 @@ export default function BookingScreen() {
         });
 
         if (!resaResult.success || !resaResult.data) {
-          throw new Error((resaResult as { message?: string }).message || "Erreur lors de la réservation");
+          throw new Error((resaResult as { error?: string }).error || "Erreur lors de la réservation");
         }
 
         const resaData = resaResult.data as {
@@ -402,7 +402,7 @@ export default function BookingScreen() {
       setDepositAmount(intentResult.data.amount);
       setStep(4);
     } catch (error: unknown) {
-      setBookingError(error instanceof Error ? error.message : "Erreur lors de la réservation. Vérifiez votre connexion internet.");
+      setBookingError(error instanceof Error ? error.message : "Erreur lors de la réservation. Vérifie ta connexion internet.");
     } finally {
       setIsSubmitting(false);
     }
@@ -531,7 +531,7 @@ export default function BookingScreen() {
             }}
             onError={(msg) => {
               const readable = msg.toLowerCase().includes("declined") || msg.toLowerCase().includes("refusé")
-                ? "Votre carte a été refusée. Vérifiez vos informations."
+                ? "Ta carte a été refusée. Vérifie tes informations."
                 : msg.toLowerCase().includes("network") || msg.toLowerCase().includes("réseau")
                 ? "Erreur de connexion. Votre carte n'a pas été débitée."
                 : "Le paiement a échoué. Réessayez ou changez de moyen de paiement.";

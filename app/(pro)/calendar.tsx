@@ -37,9 +37,10 @@ import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useToast } from "@/components/ui/Toast";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
+import { useLiveActivity } from "@/contexts/LiveActivityContext";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -385,6 +386,8 @@ export default function ProCalendarScreen() {
   const showActionSheet = useActionSheet();
   const { showToast } = useToast();
   const { activePlan } = useRevenueCat();
+  const { refreshNow: refreshLiveActivity } = useLiveActivity();
+  const deepLinkParams = useLocalSearchParams<{ appointmentId?: string; date?: string }>();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -507,6 +510,32 @@ export default function ProCalendarScreen() {
 
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
   useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
+
+  // Deep link from the Live Activity / push notification (blyss://calendar
+  // ?appointmentId=...&date=...) — jump to the right day, then flag if the
+  // appointment turns out to no longer exist (cancelled between the tap and
+  // the app opening) instead of failing silently.
+  const deepLinkNavigatedRef = useRef(false);
+  const deepLinkCheckedRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkNavigatedRef.current) return;
+    if (!deepLinkParams.date && !deepLinkParams.appointmentId) return;
+    deepLinkNavigatedRef.current = true;
+    if (deepLinkParams.date) {
+      const parsed = new Date(deepLinkParams.date);
+      if (!isNaN(parsed.getTime())) setSelectedDate(parsed);
+    }
+  }, [deepLinkParams.date, deepLinkParams.appointmentId]);
+
+  useEffect(() => {
+    if (!deepLinkParams.appointmentId || deepLinkCheckedRef.current || loading) return;
+    const id = parseInt(deepLinkParams.appointmentId, 10);
+    if (isNaN(id)) return;
+    deepLinkCheckedRef.current = true;
+    if (!appointments.some((a) => a.id === id)) {
+      showToast("Ce rendez-vous n'est plus disponible", "error");
+    }
+  }, [deepLinkParams.appointmentId, appointments, loading, showToast]);
 
   // Sync Apple Calendar — indépendant du mois affiché à l'écran : on regarde
   // toujours 180 jours devant aujourd'hui, pas la plage du calendrier visible.
@@ -699,6 +728,7 @@ export default function ProCalendarScreen() {
       const res = await proApi.updateReservationStatus(apt.id, "completed");
       if (!res.success) throw new Error(res.error);
       void runCalendarSync();
+      refreshLiveActivity();
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible de marquer ce rendez-vous comme terminé", "error");
@@ -713,6 +743,7 @@ export default function ProCalendarScreen() {
       const res = await proApi.updateReservationStatus(apt.id, "cancelled");
       if (!res.success) throw new Error(res.error);
       void runCalendarSync();
+      refreshLiveActivity();
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible d'annuler ce rendez-vous", "error");
@@ -727,6 +758,7 @@ export default function ProCalendarScreen() {
       const res = await nailTechApi.markNoShow(apt.id);
       if (!res.success) throw new Error(res.error);
       void runCalendarSync();
+      refreshLiveActivity();
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible de marquer cette absence", "error");

@@ -15,6 +15,7 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
+import { LiveActivityProvider } from "@/contexts/LiveActivityContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { queryClient } from "@/lib/queryClient";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
@@ -175,7 +176,9 @@ export default function RootLayout() {
                   <AuthProvider>
                     <RevenueCatProvider>
                       <NotificationProvider>
-                        <AppContent />
+                        <LiveActivityProvider>
+                          <AppContent />
+                        </LiveActivityProvider>
                       </NotificationProvider>
                     </RevenueCatProvider>
                   </AuthProvider>

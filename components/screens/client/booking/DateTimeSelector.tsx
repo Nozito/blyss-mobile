@@ -114,6 +114,11 @@ function CalendarGrid({
     return d < today;
   };
 
+  // Salon fermé le dimanche — non réservable côté cliente, quelle que soit
+  // la donnée renvoyée par l'API (même règle que le calendrier pro, qui
+  // exclut déjà le dimanche de sa propre grille).
+  const isSunday = (date: Date) => date.getDay() === 0;
+
   const days = getDays();
 
   return (
@@ -179,7 +184,8 @@ function CalendarGrid({
           }
 
           const past = isPast(date);
-          const available = availableDates.has(toLocalDateStr(date));
+          const sunday = isSunday(date);
+          const available = !sunday && availableDates.has(toLocalDateStr(date));
           const selected = isSelected(date);
           const today_ = isToday(date);
           const selectable = !past && available;

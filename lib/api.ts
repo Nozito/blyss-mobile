@@ -243,7 +243,7 @@ async function apiCall<T>(a: string, b?: RequestInit | string, c: RequestInit = 
       if (refreshed) {
         ({ response, json } = await rawApiCall<{ success?: boolean; data?: T; message?: string; error?: string }>(endpoint, options));
       } else {
-        return { success: false, error: "Session expirée, veuillez vous reconnecter" };
+        return { success: false, error: "Session expirée, reconnecte-toi" };
       }
     }
 
@@ -522,6 +522,37 @@ export const proApi = {
     apiCall("/api/users/payments", { method: "PUT", body: JSON.stringify({
       accept_online_payment: data.accept_online,
     }) }),
+
+  getLiveActivityNextAppointment: () =>
+    apiCall<{
+      appointmentId: number;
+      startAt: string;
+      endAt: string;
+      prestationName: string | null;
+      clientFirstName: string | null;
+      showTime: boolean;
+      privacyLevel: "full" | "time_only" | "countdown_only";
+    } | null>("/api/pro/live-activity/next-appointment"),
+
+  getLiveActivitySettings: () =>
+    apiCall<{ enabled: boolean; privacy: "full" | "time_only" | "countdown_only" }>(
+      "/api/pro/live-activity/settings"
+    ),
+
+  updateLiveActivitySettings: (data: { enabled?: boolean; privacy?: "full" | "time_only" | "countdown_only" }) =>
+    apiCall("/api/pro/live-activity/settings", { method: "PUT", body: JSON.stringify(data) }),
+
+  registerLiveActivityToken: (data: {
+    kind: "start" | "update";
+    token: string;
+    activityId?: string;
+    reservationId?: number;
+  }) => apiCall("/api/pro/live-activity/tokens", { method: "POST", body: JSON.stringify(data) }),
+
+  unregisterLiveActivityTokens: (activityId?: string) => {
+    const q = activityId ? `?activityId=${encodeURIComponent(activityId)}` : "";
+    return apiCall(`/api/pro/live-activity/tokens${q}`, { method: "DELETE" });
+  },
 
   getSlots: (params: { date: string }) =>
     apiCall<unknown[]>(`/api/pro/slots?date=${encodeURIComponent(params.date)}`),

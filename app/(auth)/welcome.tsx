@@ -1,10 +1,11 @@
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
   Image,
   Pressable,
   Animated,
+  Easing,
   StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,7 +28,10 @@ const ROW1 = [...ROW1_BASE, ...ROW1_BASE];
 const ROW2 = [...ROW2_BASE, ...ROW2_BASE];
 const ROW3 = [...ROW3_BASE, ...ROW3_BASE];
 
-const AVG_PILL_W = 160;
+// Constant scroll speed shared by all three rows (px/ms) — each row's loop
+// duration is derived from its own measured width so every row visibly
+// moves at the same rate despite having different label lengths.
+const PILLS_SPEED_PX_MS = 0.035;
 
 function pillVariant(index: number): "accent" | "outline" | "default" {
   if (index % 4 === 1) return "accent";
@@ -41,14 +45,25 @@ const PillRow = React.memo(function PillRow({
   items,
   translateX,
   styles,
+  onMeasureWidth,
 }: {
   items: string[];
   translateX: Animated.Value;
   styles: ReturnType<typeof createStyles>;
+  onMeasureWidth: (width: number) => void;
 }) {
   return (
     <View style={styles.pillRowClip}>
-      <Animated.View style={[styles.pillRowInner, { transform: [{ translateX }] }]}>
+      <Animated.View
+        style={[styles.pillRowInner, { transform: [{ translateX }] }]}
+        // `items` holds two back-to-back copies of the base labels (the
+        // seamless-marquee trick) — measuring the real laid-out width here
+        // and halving it gives the exact distance of one copy, instead of
+        // guessing from a fixed average pill width that never matches the
+        // actual text length. A mismatch there is what caused the visible
+        // snap/jump at the end of every loop.
+        onLayout={(e) => onMeasureWidth(e.nativeEvent.layout.width)}
+      >
         {items.map((label, i) => {
           const variant = pillVariant(i);
           return (
@@ -100,6 +115,13 @@ export default function WelcomeScreen() {
   const scroll1 = useRef(new Animated.Value(0)).current;
   const scroll2 = useRef(new Animated.Value(0)).current;
   const scroll3 = useRef(new Animated.Value(0)).current;
+  const rowWidths = useRef<[number, number, number]>([0, 0, 0]);
+  const [widthsReady, setWidthsReady] = useState(false);
+  const handleMeasureWidth = useCallback((idx: 0 | 1 | 2) => (width: number) => {
+    if (rowWidths.current[idx] === width) return;
+    rowWidths.current[idx] = width;
+    if (rowWidths.current.every((w) => w > 0)) setWidthsReady(true);
+  }, []);
 
   // — CTA press —
   const ctaScale = useRef(new Animated.Value(1)).current;
@@ -137,28 +159,58 @@ export default function WelcomeScreen() {
         Animated.spring(buttonsY, { toValue: 0, damping: 16, stiffness: 120, useNativeDriver: true }),
       ]),
     ]).start();
-
-    const t = setTimeout(() => {
-      const half1 = ROW1_BASE.length * AVG_PILL_W;
-      const half2 = ROW2_BASE.length * AVG_PILL_W;
-      const half3 = ROW3_BASE.length * AVG_PILL_W;
-
-      Animated.loop(
-        Animated.timing(scroll1, { toValue: -half1, duration: 28000, useNativeDriver: true })
-      ).start();
-
-      scroll2.setValue(-half2);
-      Animated.loop(
-        Animated.timing(scroll2, { toValue: 0, duration: 34000, useNativeDriver: true })
-      ).start();
-
-      Animated.loop(
-        Animated.timing(scroll3, { toValue: -half3, duration: 31000, useNativeDriver: true })
-      ).start();
-    }, 1200);
-
-    return () => clearTimeout(t);
   }, [reduceMotion]);
+
+  // Scroll animation starts only once every row has reported its real
+  // rendered width (via onLayout) — using a fixed guessed width here is what
+  // caused the loop to visibly jump/snap back instead of scrolling smoothly.
+  // All three rows share the same px/ms speed so they never look out of sync.
+  useEffect(() => {
+    if (reduceMotion || !widthsReady) return;
+
+    const [w1, w2, w3] = rowWidths.current;
+    const half1 = w1 / 2;
+    const half2 = w2 / 2;
+    const half3 = w3 / 2;
+
+    const anim1 = Animated.loop(
+      Animated.timing(scroll1, {
+        toValue: -half1,
+        duration: half1 / PILLS_SPEED_PX_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    scroll2.setValue(-half2);
+    const anim2 = Animated.loop(
+      Animated.timing(scroll2, {
+        toValue: 0,
+        duration: half2 / PILLS_SPEED_PX_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    const anim3 = Animated.loop(
+      Animated.timing(scroll3, {
+        toValue: -half3,
+        duration: half3 / PILLS_SPEED_PX_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    anim1.start();
+    anim2.start();
+    anim3.start();
+
+    return () => {
+      anim1.stop();
+      anim2.stop();
+      anim3.stop();
+    };
+  }, [reduceMotion, widthsReady]);
 
   const pressIn = () => {
     Animated.spring(ctaScale, { toValue: 0.96, damping: 15, stiffness: 300, useNativeDriver: true }).start();
@@ -188,8 +240,8 @@ export default function WelcomeScreen() {
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <View style={styles.heroWrapper}>
         <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleY }] }}>
-          <Text style={styles.heroLine1}>Faites briller</Text>
-          <Text style={styles.heroLine2}>vos ongles</Text>
+          <Text style={styles.heroLine1}>Fais briller</Text>
+          <Text style={styles.heroLine2}>tes ongles</Text>
         </Animated.View>
         <Animated.View style={{ opacity: subtitleOpacity }}>
           <Text style={styles.subtitle}>
@@ -200,9 +252,9 @@ export default function WelcomeScreen() {
 
       {/* ── Pills scrollantes ────────────────────────────────────────────────── */}
       <Animated.View style={[styles.pillsZone, { opacity: pillsOpacity }]}>
-        <PillRow items={ROW1} translateX={scroll1} styles={styles} />
-        <PillRow items={ROW2} translateX={scroll2} styles={styles} />
-        <PillRow items={ROW3} translateX={scroll3} styles={styles} />
+        <PillRow items={ROW1} translateX={scroll1} styles={styles} onMeasureWidth={handleMeasureWidth(0)} />
+        <PillRow items={ROW2} translateX={scroll2} styles={styles} onMeasureWidth={handleMeasureWidth(1)} />
+        <PillRow items={ROW3} translateX={scroll3} styles={styles} onMeasureWidth={handleMeasureWidth(2)} />
 
       </Animated.View>
 
@@ -302,6 +354,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       flexDirection: "row",
       paddingVertical: 2,
       paddingLeft: 16,
+      // Without this, the default cross-axis "stretch" from pillRowClip
+      // forces this row to the screen's width instead of letting it hug its
+      // (much wider, intentionally overflowing) content — which made the
+      // onLayout-measured width wrong and broke the loop.
+      alignSelf: "flex-start",
     },
     pill: {
       backgroundColor: colors.white,

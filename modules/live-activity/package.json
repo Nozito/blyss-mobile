@@ -1,0 +1,8 @@
+{
+  "name": "live-activity",
+  "version": "1.0.0",
+  "description": "iOS-only bridge to ActivityKit for the Live RDV lock-screen feature.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

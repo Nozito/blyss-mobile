@@ -16,6 +16,8 @@
     "create:admin": "node scripts/create-admin.mjs"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
+    "live-activity": "file:./modules/live-activity",
     "@eslint/js": "^9",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",

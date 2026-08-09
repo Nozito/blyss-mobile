@@ -37,7 +37,7 @@ const SLIDES = [
     id: "3",
     emoji: "📅",
     title: "Tu es\nprofessionnel ?",
-    subtitle: "Gérez votre agenda, vos clients et vos paiements depuis l'app.",
+    subtitle: "Gère ton agenda, tes clients et tes paiements depuis l'app.",
   },
 ] as const;
 

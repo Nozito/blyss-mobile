@@ -1,6 +1,8 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
 import withStoreKitConfig from "./plugins/withStoreKitConfig";
 
+const LIVE_ACTIVITY_APP_GROUP = "group.blyss.app";
+
 const EAS_PROJECT_ID = "0e3cae8f-7b87-4e19-9fea-e8a16fa399e4";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -30,11 +32,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     requireFullScreen: true,
     userInterfaceStyle: "automatic",
     associatedDomains: ["applinks:blyssapp.fr"],
+    // Apple Developer → Membership → Team ID. Required by @bacons/apple-targets
+    // to sign the Live Activity Widget Extension target during prebuild.
+    appleTeamId: "B92ST2GG54",
     entitlements: {
       "com.apple.developer.applesignin": ["Default"],
+      // Shared with the LiveRdvWidget target (targets/liveactivity) — lets the
+      // static home-screen widget read the next-appointment payload the app
+      // writes via the live-activity native module.
+      "com.apple.security.application-groups": [LIVE_ACTIVITY_APP_GROUP],
     },
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      // Required for the app to be authorized to start Live Activities at
+      // all (Live RDV feature) — without it, Activity.request() fails and
+      // the system logs "No record for <bundleId> found" for every attempt.
+      NSSupportsLiveActivities: true,
       NSCameraUsageDescription:
         "Blyss utilise votre caméra pour ajouter une photo de profil.",
       NSPhotoLibraryUsageDescription:
@@ -114,17 +127,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        // Image statique du "B" affichée par l'OS avant que le JS ne démarre.
-        // Le logo animé (dessin → remplissage) ne peut vivre qu'en JS — c'est
-        // ce même B qui prend le relais dès que le bundle est prêt (voir
-        // app/_layout.tsx → LaunchSplash). Les couleurs (light/dark) DOIVENT
-        // matcher constants/splash.ts pour éviter un flash au hand-off.
-        image: "./assets/splash.png",
-        imageWidth: 180,
-        resizeMode: "contain",
+        // No `image` on purpose: the OS-rendered splash (before the JS bundle
+        // runs) can only show a static, non-scaled image and there's no way
+        // to make a single fixed-size asset look right across every device
+        // width/scale without either a tiny stray mark or an oversized one.
+        // Background-color-only avoids that entirely — the animated Blyss
+        // logo (app/_layout.tsx → LaunchSplash / BlyssLogoLoader) is the
+        // first logo the user actually sees, right after JS takes over.
+        // Colors DOIVENT matcher constants/splash.ts pour éviter un flash.
         backgroundColor: "#FFF0F5",
         dark: {
-          image: "./assets/splash.png",
           backgroundColor: "#0A0A0B",
         },
       },
@@ -181,6 +193,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     withStoreKitConfig,
+    "@bacons/apple-targets",
   ] as ExpoConfig["plugins"],
 
   updates: {
