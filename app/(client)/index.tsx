@@ -58,10 +58,17 @@ interface Booking {
   id: number;
   status: string;
   start_datetime: string;
-  pro_first_name?: string;
-  pro_last_name?: string;
-  pro_activity_name?: string;
-  prestation_name?: string;
+  // clientApi.getMyBookings() nests these under pro{}/prestation{}, not as
+  // flat pro_*/prestation_* fields — reading them flat (as this screen used
+  // to) always returned undefined, so every card here showed a blank name
+  // and the generic "Prestation" fallback regardless of the real booking.
+  pro?: {
+    first_name?: string;
+    last_name?: string;
+    activity_name?: string | null;
+    profile_photo?: string | null;
+  };
+  prestation?: { name?: string };
   price?: number | string;
 }
 
@@ -314,8 +321,10 @@ function BookingItem({ booking }: { booking: Booking }) {
   const colors = useThemeColors();
   const scale = useRef(new Animated.Value(1)).current;
   const proName =
-    booking.pro_activity_name ??
-    `${booking.pro_first_name ?? ""} ${booking.pro_last_name ?? ""}`.trim();
+    booking.pro?.activity_name ||
+    `${booking.pro?.first_name ?? ""} ${booking.pro?.last_name ?? ""}`.trim() ||
+    "Professionnel";
+  const avatarUri = resolveMediaUrl(booking.pro?.profile_photo);
   const date = new Date(booking.start_datetime);
   const dateStr = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   const timeStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -336,15 +345,19 @@ function BookingItem({ booking }: { booking: Booking }) {
           Shadows.soft,
         ]}
       >
-        <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 18 }}>
-            {(proName[0] ?? "?").toUpperCase()}
-          </Text>
+        <View style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+          ) : (
+            <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 18 }}>
+              {(proName[0] ?? "?").toUpperCase()}
+            </Text>
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "700", fontSize: 15, color: colors.foreground }}>{proName}</Text>
           <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 2 }}>
-            {booking.prestation_name ?? "Prestation"}
+            {booking.prestation?.name ?? "Prestation"}
           </Text>
           <View style={{ flexDirection: "row", gap: 12, marginTop: 8, alignItems: "center" }}>
             <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
