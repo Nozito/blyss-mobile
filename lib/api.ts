@@ -864,7 +864,8 @@ export const paymentMethodsApi = {
   delete: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/payment-methods/${id}`, { method: "DELETE" }),
   setDefault: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/client/payment-methods/${id}/default`, { method: "PATCH" }),
+    // Backend only registers PUT for this route (app.put(...)) — PATCH 404'd.
+    apiCall(`/api/client/payment-methods/${id}/default`, { method: "PUT" }),
   // apiCall() ne rejette jamais sa promesse — ces deux fonctions lèvent
   // explicitement en cas d'échec pour que le try/catch de payments.tsx
   // (handleAddCard) réagisse réellement, au lieu de fermer la modale d'ajout
