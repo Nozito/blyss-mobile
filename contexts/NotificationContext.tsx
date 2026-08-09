@@ -12,9 +12,15 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { storage } from "@/lib/storage";
 import { notificationsApi } from "@/lib/api";
+
+// Notification types that mean "Mes avis" is now stale — a pro looking at
+// that screen when the admin acts should see the change without having to
+// pull-to-refresh herself.
+const REVIEW_MODERATION_TYPES = new Set(["review_deleted", "review_restored"]);
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -50,6 +56,7 @@ const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? "";
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,6 +107,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           const notif = msg.notification ?? msg.data;
           if ((msg.type === "notification" || msg.type === "new_notification") && notif) {
             addNotification(notif);
+            if (REVIEW_MODERATION_TYPES.has(notif.type)) {
+              void queryClient.invalidateQueries({ queryKey: ["pro-reviews"] });
+            }
             void Notifications.scheduleNotificationAsync({
               content: {
                 title: (notif as { title?: string }).title ?? "Blyss",
@@ -169,15 +179,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Notif reçue en foreground via APNs (hors WS) → resync la liste depuis le serveur
   useEffect(() => {
     if (!isAuthenticated || Platform.OS === "web") return;
-    const sub = Notifications.addNotificationReceivedListener(() => {
+    const sub = Notifications.addNotificationReceivedListener((event) => {
       notificationsApi.getAll().then((res) => {
         if (res.success && Array.isArray(res.data)) {
           setNotifications(res.data as NotificationItem[]);
         }
       }).catch(() => {});
+      const notifType = event.request.content.data?.type as string | undefined;
+      if (notifType && REVIEW_MODERATION_TYPES.has(notifType)) {
+        void queryClient.invalidateQueries({ queryKey: ["pro-reviews"] });
+      }
     });
     return () => sub.remove();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, queryClient]);
 
   // Fix #5 — [user?.role] au lieu de [user, router] : seul le rôle détermine la
   // destination ; router est un singleton stable dans Expo Router

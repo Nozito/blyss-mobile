@@ -8,7 +8,7 @@ import * as Haptics from "expo-haptics";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useActionSheet } from "@/components/ui/ActionSheet";
 import { useToast } from "@/components/ui/Toast";
@@ -64,7 +64,7 @@ function ReviewCard({ review, onFlag }: { review: ProReview; onFlag: (review: Pr
           <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "700", color: colors.warningText }}>Signalé, en cours d'examen</Text>
         </View>
       ) : (
-        <AnimatedIconButton
+        <AnimatedPressable
           onPress={() => onFlag(review)}
           accessibilityLabel="Signaler cet avis"
           style={{
@@ -75,7 +75,7 @@ function ReviewCard({ review, onFlag }: { review: ProReview; onFlag: (review: Pr
         >
           <Ionicons name="flag-outline" size={13} color={colors.mutedForeground} />
           <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>Signaler</Text>
-        </AnimatedIconButton>
+        </AnimatedPressable>
       )}
     </View>
   );
