@@ -5,6 +5,7 @@ import { Shadows } from "@/constants/shadows";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { formatDuration } from "@/lib/dateUtils";
 
 export interface Prestation {
   id: number;
@@ -26,14 +27,6 @@ interface Props {
   proName: string;
   proCity: string | null;
   conditions: ConditionItem[] | null;
-}
-
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0 && mins > 0) return `${hours}h${mins}`;
-  if (hours > 0) return `${hours}h`;
-  return `${mins}min`;
 }
 
 export function ServiceSelector({

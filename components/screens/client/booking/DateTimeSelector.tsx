@@ -12,6 +12,7 @@ import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { toLocalDateStr } from "@/lib/bookingUtils";
+import { formatDuration } from "@/lib/dateUtils";
 
 const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -37,13 +38,6 @@ interface Props {
   onMonthChange: (date: Date) => void;
 }
 
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0 && mins > 0) return `${hours}h${mins}`;
-  if (hours > 0) return `${hours}h`;
-  return `${mins}min`;
-}
 
 function CalendarGrid({
   selectedDate,

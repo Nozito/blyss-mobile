@@ -17,19 +17,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const SpecialistsMapView = React.lazy(
   () => import("@/components/screens/client/specialists/MapView") as Promise<{ default: React.ComponentType<{ specialists: Specialist[] }> }>
 );
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [d, setD] = React.useState(value);
-  React.useEffect(() => {
-    const t = setTimeout(() => setD(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return d;
-}
 
 export default function SpecialistsScreen() {
   const router = useRouter();

@@ -26,6 +26,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { resolveMediaUrl } from "@/lib/media";
+import { formatDuration } from "@/lib/dateUtils";
 import { computeRemainingBalance } from "@/lib/bookingUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,13 +70,6 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}min`;
-  if (m === 0) return `${h}h`;
-  return `${h}h${String(m).padStart(2, "0")}`;
-}
 
 // ─── Animated Card ────────────────────────────────────────────────────────────
 function FadeCard({ delay, style, children }: { delay: number; style?: object; children: React.ReactNode }) {

@@ -28,14 +28,7 @@ import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 import { LocationSection, type ConditionItem } from "@/components/screens/client/specialist/LocationSection";
 import { resolveMediaUrl } from "@/lib/media";
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}min`;
-  if (m === 0) return `${h}h`;
-  return `${h}h${String(m).padStart(2, "0")}`;
-}
+import { formatDuration } from "@/lib/dateUtils";
 
 function getRelativeDate(dateStr: string): string {
   const now = Date.now();

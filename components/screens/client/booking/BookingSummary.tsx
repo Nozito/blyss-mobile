@@ -5,6 +5,7 @@ import { Shadows } from "@/constants/shadows";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { formatDuration } from "@/lib/dateUtils";
 
 interface Props {
   prestationName: string;
@@ -17,14 +18,6 @@ interface Props {
   paymentMethod: "online" | "on_site" | null;
   onSelectPayment: (method: "online" | "on_site") => void;
   canPayOnline: boolean;
-}
-
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0 && mins > 0) return `${hours}h${mins}`;
-  if (hours > 0) return `${hours}h`;
-  return `${mins}min`;
 }
 
 function PaymentChoice({
