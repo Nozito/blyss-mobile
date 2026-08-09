@@ -98,6 +98,7 @@ export default function ProFinanceScreen() {
         week:        n(rawStats.week),
         month:       n(rawStats.month),
         lastMonth:   n(rawStats.lastMonth),
+        year:        n(rawStats.year),
         objective:   n(rawStats.objective),
         forecast:    rawStats.forecast !== undefined ? n(rawStats.forecast) : undefined,
         trend:       rawStats.trend as string | undefined,
@@ -112,7 +113,7 @@ export default function ProFinanceScreen() {
     ? selectedPeriod === "week"
       ? stats.week
       : selectedPeriod === "year"
-      ? stats.month * 12
+      ? stats.year
       : stats.month
     : 0;
 
