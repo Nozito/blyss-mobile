@@ -8,6 +8,10 @@ private let homeWidgetKind = "LiveRdvHomeWidget"
 
 // Mirrors LiveRdvHomeProvider's private decode shape in
 // targets/liveactivity/LiveRdvHomeWidget.swift — keep in sync.
+// Duplicate of targets/liveactivity/LiveRdvHomeWidget.swift's SharedNextAppointment
+// — this struct is decoded/encoded across the app target and the Widget
+// Extension target, and @bacons/apple-targets has no shared-file mechanism
+// across targets (same constraint as LiveRdvAttributes). Keep these in sync.
 private struct SharedNextAppointment: Codable {
     let startAt: Date
     let endAt: Date

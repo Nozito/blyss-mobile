@@ -10,6 +10,11 @@ import SwiftUI
 private let appGroupId = "group.blyss.app"
 private let sharedDefaultsKey = "nextAppointment"
 
+// Duplicate of modules/live-activity/ios/LiveActivityModule.swift's
+// SharedNextAppointment — this struct is decoded/encoded across the app
+// target and the Widget Extension target, and @bacons/apple-targets has no
+// shared-file mechanism across targets (same constraint as LiveRdvAttributes).
+// Keep these in sync.
 private struct SharedNextAppointment: Codable {
     let startAt: Date
     let endAt: Date
