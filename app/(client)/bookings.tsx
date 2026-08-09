@@ -23,6 +23,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { resolveMediaUrl } from "@/lib/media";
 
 
 interface Booking {
@@ -197,6 +198,45 @@ function RescheduleModal({
   );
 }
 
+// ── Status badge ─────────────────────────────────────────────────────────────
+// One label per status, shown identically on every tab — a booking's state
+// used to be legible on "Passé"/"Annulé" cards (a text badge) but only
+// implied by a tiny colored dot on "À venir" cards, so upcoming reservations
+// never actually said "Confirmé" or "En attente" anywhere on the card.
+function getStatusBadge(status: Booking["status"], colors: ReturnType<typeof useThemeColors>) {
+  switch (status) {
+    case "pending":
+      return { label: "En attente", color: colors.warningText, bg: colors.warningLight };
+    case "confirmed":
+      return { label: "Confirmé", color: colors.successText, bg: colors.successLight };
+    case "completed":
+      return { label: "Terminé", color: colors.successText, bg: colors.successLight };
+    case "no_show":
+      return { label: "Non honoré", color: colors.destructiveText, bg: colors.destructiveLight };
+    case "cancelled":
+      return { label: "Annulé", color: colors.destructiveText, bg: colors.destructiveLight };
+  }
+}
+
+// ── Pro avatar ───────────────────────────────────────────────────────────────
+// Shared by every card (and the waiting list) so the relative→absolute photo
+// URL resolution happens exactly once: `profile_photo` isn't always stored
+// as a full URL, and rendering the raw path directly (as this screen used to
+// for every status) silently breaks the image for any row still on the old
+// relative-path format — regardless of the booking's status.
+function ProAvatar({ photo, initial, size, colors }: { photo: string | null | undefined; initial: string; size: number; colors: ReturnType<typeof useThemeColors> }) {
+  const uri = resolveMediaUrl(photo);
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.27, overflow: "hidden", backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center" }}>
+      {uri ? (
+        <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+      ) : (
+        <Text style={{ fontSize: size * 0.37, fontWeight: "800", color: colors.primary }}>{initial}</Text>
+      )}
+    </View>
+  );
+}
+
 // ── Booking Card ──────────────────────────────────────────────────────────────
 
 function BookingCard({
@@ -213,33 +253,25 @@ function BookingCard({
   const router = useRouter();
   const colors = useThemeColors();
   const proName = booking.activity_name || `${booking.pro_first_name} ${booking.pro_last_name}`.trim() || "Professionnel";
+  const badge = getStatusBadge(booking.status, colors);
+  const isCompleted = booking.status === "completed";
 
   if (isUpcoming) {
     const relativeDay = fmtRelativeDay(booking.start_datetime);
     return (
       <AnimatedPressable
         onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })}
-        accessibilityLabel={`Réservation avec ${proName}, ${booking.prestation_name}, ${fmtDate(booking.start_datetime)} à ${fmtTime(booking.start_datetime)}`}
+        accessibilityLabel={`Réservation avec ${proName}, ${booking.prestation_name}, ${fmtDate(booking.start_datetime)} à ${fmtTime(booking.start_datetime)}, ${badge.label}`}
         style={{ backgroundColor: colors.white, borderRadius: 20, overflow: "hidden", borderWidth: 2, borderColor: `${colors.primary}33`, marginBottom: 12, ...Shadows.card }}
       >
         <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <View style={{ position: "relative" }}>
-            <View style={{ width: 60, height: 60, borderRadius: 16, overflow: "hidden", backgroundColor: colors.primaryLight }}>
-              {booking.profile_photo ? (
-                <Image source={{ uri: booking.profile_photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-              ) : (
-                <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22, fontWeight: "800", color: colors.primary }}>{proName[0]}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ position: "absolute", top: -3, right: -3, width: 18, height: 18, borderRadius: 9, backgroundColor: booking.status === "pending" ? colors.warning : colors.success, borderWidth: 2, borderColor: colors.white, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name={booking.status === "pending" ? "time" : "checkmark"} size={10} color={colors.onColor} />
-            </View>
-          </View>
+          <ProAvatar photo={booking.profile_photo} initial={proName[0]} size={60} colors={colors} />
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2, gap: 8 }}>
               <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground, flexShrink: 1 }} numberOfLines={1}>{proName}</Text>
+              <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: badge.bg }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: badge.color }}>{badge.label}</Text>
+              </View>
               <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
@@ -261,12 +293,6 @@ function BookingCard({
                 <Ionicons name="time-outline" size={11} color={colors.primary} />
                 <Text style={{ fontSize: 11, fontWeight: "700", color: colors.primary }}>{fmtTime(booking.start_datetime)}</Text>
               </View>
-              {booking.status === "pending" && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.warningLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                  <Ionicons name="time-outline" size={11} color={colors.warningText} />
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.warningText }}>En attente de confirmation</Text>
-                </View>
-              )}
             </View>
           </View>
         </View>
@@ -297,13 +323,11 @@ function BookingCard({
     );
   }
 
-  const isCompleted = booking.status === "completed";
-  const isNoShow = booking.status === "no_show";
   const isCancelled = booking.status === "cancelled";
   return (
     <AnimatedPressable
       onPress={() => router.push({ pathname: "/booking/[id]", params: { id: booking.id } })}
-      accessibilityLabel={`Réservation avec ${proName}, ${booking.prestation_name}, ${fmtDate(booking.start_datetime)}, ${isCompleted ? "terminé" : isNoShow ? "non honoré" : "annulé"}`}
+      accessibilityLabel={`Réservation avec ${proName}, ${booking.prestation_name}, ${fmtDate(booking.start_datetime)}, ${badge.label}`}
       style={{
         backgroundColor: colors.white,
         borderRadius: 18,
@@ -315,22 +339,12 @@ function BookingCard({
       }}
     >
       <View style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", backgroundColor: colors.muted, opacity: 0.75 }}>
-          {booking.profile_photo ? (
-            <Image source={{ uri: booking.profile_photo }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-          ) : (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}>{proName[0]}</Text>
-            </View>
-          )}
-        </View>
+        <ProAvatar photo={booking.profile_photo} initial={proName[0]} size={48} colors={colors} />
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
             <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>{proName}</Text>
-            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: isCompleted ? colors.successLight : colors.destructiveLight }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: isCompleted ? colors.successText : colors.destructiveText }}>
-                {isCompleted ? "✓ Terminé" : isNoShow ? "Non honoré" : "✕ Annulé"}
-              </Text>
+            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: badge.bg }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: badge.color }}>{badge.label}</Text>
             </View>
           </View>
           <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 4 }} numberOfLines={1}>{booking.prestation_name} · {Number(booking.price).toFixed(2)}€</Text>
@@ -405,13 +419,7 @@ function WaitingListSection() {
       </View>
       {entries.map((entry) => (
         <View key={entry.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, marginBottom: 8, ...Shadows.card }}>
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
-            {entry.pro_photo ? (
-              <Image source={{ uri: entry.pro_photo }} style={{ width: 40, height: 40 }} contentFit="cover" />
-            ) : (
-              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primary }}>{entry.pro_name.charAt(0)}</Text>
-            )}
-          </View>
+          <ProAvatar photo={entry.pro_photo} initial={entry.pro_name.charAt(0)} size={40} colors={colors} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>{entry.pro_name}</Text>
             {entry.prestation_name && <Text style={{ fontSize: 11, color: colors.mutedForeground }}>{entry.prestation_name}</Text>}

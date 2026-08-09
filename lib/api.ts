@@ -697,8 +697,6 @@ export const clientApi = {
   getMyBookings: (): Promise<ApiResponse<unknown[]>> => apiCall("/api/client/my-booking"),
   getBookingDetail: (id: number): Promise<ApiResponse<unknown>> =>
     apiCall(`/api/client/booking-detail/${id}`),
-  cancelBooking: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/client/my-booking/${id}/cancel`, { method: "PATCH" }),
   cancelReservationWithPolicy: (reservationId: number): Promise<ApiResponse<{ reservation_id: number; deadline?: string }>> =>
     apiCall(`/api/reservations/${reservationId}/cancel`, { method: "POST" }),
   rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id: number }): Promise<ApiResponse<void>> =>
