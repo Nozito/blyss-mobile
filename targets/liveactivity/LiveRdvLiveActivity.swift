@@ -47,10 +47,11 @@ struct LiveRdvLiveActivity: Widget {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                        if let detail = LiveRdvDetailText.make(
-                            prestationName: context.state.prestationName,
-                            durationMinutes: context.state.durationMinutes
-                        ) {
+                        if context.state.privacyLevel == "full",
+                           let detail = LiveRdvDetailText.make(
+                               prestationName: context.state.prestationName,
+                               durationMinutes: context.state.durationMinutes
+                           ) {
                             Text(detail)
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.7))
@@ -186,6 +187,7 @@ private struct LiveRdvLockScreenView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             if phase != .ended,
+               context.state.privacyLevel == "full",
                let detail = LiveRdvDetailText.make(
                    prestationName: context.state.prestationName,
                    durationMinutes: context.state.durationMinutes
