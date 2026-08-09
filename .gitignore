@@ -10,11 +10,13 @@ node_modules
 .env.local
 .env.*.local
 
-# Build outputs
+# Build outputs (top-level only — custom Expo modules under modules/*/ios
+# ship real, must-commit native source and would otherwise be silently
+# excluded from every build since "ios/" matches at any depth)
 dist/
 .expo/
-ios/
-android/
+/ios/
+/android/
 
 # OS
 .DS_Store
