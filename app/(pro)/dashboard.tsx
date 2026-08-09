@@ -33,8 +33,7 @@ type Unavailability = { id: number; start_date: string; end_date: string; reason
 
 type UpcomingClient = {
   id: number;
-  // BLYSS-FIX: 1.1 — id is the booking ID; client_user_id is the actual user to navigate to
-  // BACKEND TODO: ensure GET /api/pro/dashboard returns client_user_id in upcomingClients items
+  // id is the booking ID; client_user_id is the actual user to navigate to.
   client_user_id: number;
   name: string;
   service: string;
@@ -92,7 +91,7 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
       }}
     >
       <Pressable
-        onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.client_user_id}`)} // BLYSS-FIX: 1.1
+        onPress={() => router.push(`/(pro)/(clients)/client-detail?clientId=${client.client_user_id}`)}
         onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start()}
         onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start()}
         style={{
