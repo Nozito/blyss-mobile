@@ -7,17 +7,26 @@ struct LiveRdvLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: LiveRdvAttributes.self) { context in
             LiveRdvLockScreenView(context: context)
-                // Fixed black, regardless of system light/dark — per design spec
-                // the card must always read as a black Live Activity, unlike the
-                // Home Screen widget which follows the app's theme.
-                .activityBackgroundTint(.black)
-                .activitySystemActionForegroundColor(.white)
+                // Follows the system appearance like the rest of the app:
+                // "blyssBackground" is light in light mode, near-black in dark
+                // mode — so this only ever reads as a solid black card when the
+                // phone itself is in dark mode, not unconditionally.
+                .activityBackgroundTint(Color("blyssBackground"))
+                .activitySystemActionForegroundColor(Color("blyssForeground"))
                 .widgetURL(LiveRdvDeepLink.url(reservationId: context.attributes.reservationId, startAt: context.state.startAt))
         } dynamicIsland: { context in
             let phase = LiveRdvPhase(state: context.state)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    BlyssLogoMark(height: LiveActivityLogoSize.dynamicIslandExpanded)
+                    // Symmetric spacers, not an alignment modifier: the region
+                    // sizes to its tallest sibling (the two-line trailing/center
+                    // content), so the logo needs to be centered *within that
+                    // height* — without shifting off the region's leading edge.
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        BlyssLogoMark(height: LiveActivityLogoSize.dynamicIslandExpanded)
+                        Spacer(minLength: 0)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 2) {
@@ -75,7 +84,7 @@ struct LiveRdvLiveActivity: Widget {
 enum LiveActivityLogoSize {
     static let compact: CGFloat = 14
     static let homeWidget: CGFloat = 16
-    static let lockScreenHeader: CGFloat = 20
+    static let lockScreenHeader: CGFloat = 19
     static let dynamicIslandExpanded: CGFloat = 18
 }
 
@@ -183,7 +192,7 @@ private struct LiveRdvLockScreenView: View {
                ) {
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Color("blyssForeground").opacity(0.85))
                     .lineLimit(1)
             }
         }
@@ -204,13 +213,13 @@ private struct LiveRdvHeaderRow: View {
             BlyssLogoMark(height: LiveActivityLogoSize.lockScreenHeader)
             Text(phase.headerLabel)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Color("blyssMuted"))
             Spacer(minLength: 8)
             if showTime, phase != .ended {
                 Text(startAt, style: .time)
                     .font(.caption2.weight(.semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(Color("blyssMuted"))
             }
         }
     }
