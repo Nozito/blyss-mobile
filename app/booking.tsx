@@ -29,7 +29,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useAppTransition } from "@/contexts/TransitionContext";
-import { toLocalDateStr, calculateEndDateTime, canPayOnline as computeCanPayOnline } from "@/lib/bookingUtils";
+import { toLocalDateStr, calculateEndDateTime, canPayOnline as computeCanPayOnline, resolvePaymentType } from "@/lib/bookingUtils";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -388,7 +388,7 @@ export default function BookingScreen() {
         return;
       }
 
-      const paymentType = depositPct === 100 ? "full" : "deposit";
+      const paymentType = resolvePaymentType(depositPct);
       const intentResult = await stripePaymentsApi.createPaymentIntent({
         reservation_id: reservationId,
         type: paymentType,

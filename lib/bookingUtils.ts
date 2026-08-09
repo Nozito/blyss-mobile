@@ -20,6 +20,10 @@ export function resolvePaymentType(depositPercentage: number): "full" | "deposit
   return depositPercentage === 100 ? "full" : "deposit";
 }
 
+// Not called from any screen (the server always returns deposit_amount
+// directly, see backend/server.ts's reservation-creation endpoint) but
+// covered by __tests__/payments/booking-calculations.test.ts — kept as the
+// documented reference implementation that test asserts against.
 export function computeDepositAmount(price: number, depositPercentage: number): number {
   return Math.round((price * depositPercentage) / 100 * 100) / 100;
 }
