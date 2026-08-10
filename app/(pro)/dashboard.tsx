@@ -12,7 +12,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
-import { toLocalDate } from "@/lib/dateUtils";
+import { toLocalDate, formatRelativeDayTime } from "@/lib/dateUtils";
 import { toNumber as n } from "@/lib/bookingUtils";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -40,6 +40,7 @@ type UpcomingClient = {
   name: string;
   service: string;
   time: string;
+  startDatetime: string;
   price: number;
   status: "ongoing" | "upcoming" | "completed";
   avatar: string;
@@ -161,8 +162,8 @@ function UpcomingClientRow({ client, index }: { client: UpcomingClient; index: n
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, fontWeight: "600" }}>
-                  {client.time}
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, fontWeight: "600" }} numberOfLines={1}>
+                  {formatRelativeDayTime(client.startDatetime, client.time)}
                 </Text>
               </View>
               <Text style={{ fontSize: 14, fontWeight: "900", color: colors.primary }}>

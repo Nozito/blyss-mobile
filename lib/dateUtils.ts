@@ -16,6 +16,28 @@ export const toLocalDate = (d: Date): string => {
   return `${y}-${m}-${day}`;
 };
 
+const SHORT_MONTHS = [
+  "janv.", "févr.", "mars", "avr.", "mai", "juin",
+  "juil.", "août", "sept.", "oct.", "nov.", "déc.",
+] as const;
+
+/** "Aujourd'hui à 14h30", "Demain à 9h00", "12 août à 11h00" — used wherever
+ * a reservation's day isn't otherwise obvious from context (e.g. the pro
+ * dashboard's "prochaines clientes", which can span several days).
+ * `time` is "HH:MM" (backend TO_CHAR) — reformatted to "14h30". */
+export function formatRelativeDayTime(isoDatetime: string, time: string): string {
+  const date = new Date(isoDatetime);
+  const hhmm = time.replace(":", "h");
+  if (Number.isNaN(date.getTime())) return hhmm;
+
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(date) - startOfDay(new Date())) / 86_400_000);
+
+  if (dayDiff === 0) return `Aujourd'hui à ${hhmm}`;
+  if (dayDiff === 1) return `Demain à ${hhmm}`;
+  return `${date.getDate()} ${SHORT_MONTHS[date.getMonth()]} à ${hhmm}`;
+}
+
 /** "1h05", "45min", "2h" — was reimplemented in 5 places, two slightly
  * differently (one never zero-padded minutes, e.g. "1h5" for 65 min). */
 export function formatDuration(minutes: number): string {
