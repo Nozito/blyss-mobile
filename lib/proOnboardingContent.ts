@@ -32,6 +32,7 @@ function getBaseSlides(colors: ThemeColors): OnboardingSlide[] {
         "Crée tes créneaux, accepte les réservations en ligne. Fini les allers-retours par messages.",
       color: colors.primary,
       bg: colors.primaryLight,
+      image: require("@/assets/onboarding/agenda.png"),
     },
     {
       icon: "people-outline",
@@ -40,6 +41,7 @@ function getBaseSlides(colors: ThemeColors): OnboardingSlide[] {
         "Retrouve l'historique de chaque cliente, ses préférences et tes notes en un seul endroit.",
       color: colors.primary,
       bg: colors.primaryLight,
+      image: require("@/assets/onboarding/clients.png"),
     },
     {
       icon: "card-outline",
@@ -66,6 +68,7 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
           "Un portfolio photo pour attirer de nouvelles clientes et des rappels post-prestation pour les fidéliser.",
         color: colors.pro,
         bg: withAlpha(colors.pro, 0.12),
+        image: require("@/assets/onboarding/portfolio.png"),
       },
       {
         icon: "stats-chart-outline",
@@ -73,6 +76,7 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
         description: "Suis la performance de ton activité, semaine après semaine.",
         color: colors.pro,
         bg: withAlpha(colors.pro, 0.12),
+        image: require("@/assets/onboarding/stats.png"),
       },
     ],
     signature: [
@@ -83,6 +87,7 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
           "Prévision de ton chiffre d'affaires, rapports automatiques chaque semaine et synchronisation avec ton Apple Calendar.",
         color: colors.secondary,
         bg: colors.secondaryLight,
+        image: require("@/assets/onboarding/finance.png"),
       },
       {
         icon: "pulse-outline",
@@ -90,6 +95,7 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
         description: "Comprends ce qui marche dans ton activité pour progresser plus vite.",
         color: colors.secondary,
         bg: colors.secondaryLight,
+        image: require("@/assets/onboarding/analytics.png"),
       },
     ],
   };
@@ -111,6 +117,7 @@ function closingSlide(isUpgrade: boolean, colors: ThemeColors): OnboardingSlide 
           "Commence à recevoir des réservations dès aujourd'hui. 1 rendez-vous rembourse ton abonnement.",
         color: colors.primary,
         bg: colors.primaryLight,
+        image: require("@/assets/onboarding/ready.png"),
       };
 }
 

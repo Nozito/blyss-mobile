@@ -4,6 +4,7 @@ import {
   Text,
   Image,
   StyleSheet,
+  Dimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +18,14 @@ import { useAppTransition } from "@/contexts/TransitionContext";
 import { buildOnboardingSlides } from "@/lib/proOnboardingContent";
 
 const STORAGE_KEY = "pro_onboarding_done";
+
+// The device-mockup PNGs are tall (~0.49 aspect ratio) — sizing them by
+// *width* let their height balloon past the caption's share of the screen,
+// pushing the description text under the progress dots on smaller phones.
+// Capping by a fraction of screen height instead keeps a fixed, predictable
+// budget for the caption regardless of device size or description length.
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+const MOCKUP_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
 
 function isRCPlan(value: string | undefined): value is RCPlan {
   return value === "start" || value === "serenite" || value === "signature";
@@ -118,17 +127,21 @@ export default function ProOnboardingScreen() {
 
       {/* Slide content */}
       <View style={styles.slideContent}>
-        <View style={styles.mockupFrame}>
-          {slide.image ? (
-            <Image source={slide.image} style={styles.mockupImage} resizeMode="cover" />
-          ) : (
+        {slide.image ? (
+          // Mockups already bake in their own phone frame + drop shadow —
+          // no card chrome here, or we'd get a screenshot-inside-a-screenshot.
+          <View style={styles.mockupImageWrap}>
+            <Image source={slide.image} style={styles.mockupImage} resizeMode="contain" />
+          </View>
+        ) : (
+          <View style={styles.mockupFrame}>
             <View style={[styles.mockupPlaceholder, { backgroundColor: `${slide.color}0C` }]}>
               <View style={[styles.mockupIconWrap, { backgroundColor: `${slide.color}18` }]}>
                 <Ionicons name={slide.icon} size={44} color={slide.color} />
               </View>
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
         <View style={styles.caption}>
           <Text style={[styles.title, { color: colors.foreground }]}>{slide.title}</Text>
@@ -226,7 +239,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 28,
-      gap: 28,
+      gap: 20,
     },
     mockupFrame: {
       width: "82%",
@@ -241,6 +254,14 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       shadowOpacity: 0.1,
       shadowRadius: 24,
       elevation: 6,
+    },
+    mockupImageWrap: {
+      height: MOCKUP_IMAGE_HEIGHT,
+      // Matches the trimmed device-mockup PNGs' own aspect ratio (~606×1226)
+      // — width derives from height so it never eats into the caption's
+      // vertical space, unlike sizing by width did.
+      aspectRatio: 0.494,
+      alignSelf: "center",
     },
     mockupImage: {
       width: "100%",
