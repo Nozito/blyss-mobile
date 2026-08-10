@@ -82,6 +82,62 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       ],
     },
+    // Doit rester en phase avec le questionnaire "Privacy Nutrition Label"
+    // rempli dans App Store Connect — sinon Apple peut rejeter le build pour
+    // incohérence entre le manifeste et la fiche du store.
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      NSPrivacyCollectedDataTypes: [
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeEmailAddress",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeName",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypePhoneNumber",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypePhotosorVideos",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypePaymentInfo",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypePreciseLocation",
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+          ],
+        },
+      ],
+    },
   },
 
   android: {
@@ -201,6 +257,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     withStoreKitConfig,
     "@bacons/apple-targets",
+    // Pas le plugin "@sentry/react-native" ici : il injecte une phase de
+    // build Xcode qui tente d'uploader les dSYM/sourcemaps et échoue tout
+    // le build (local ET EAS) tant que SENTRY_ORG/SENTRY_PROJECT/
+    // SENTRY_AUTH_TOKEN ne sont pas configurés. Sentry.init() (app/_layout.tsx)
+    // suffit pour le crash reporting — l'upload de symboles est une
+    // amélioration à activer plus tard, une fois les secrets en place.
   ] as ExpoConfig["plugins"],
 
   updates: {

@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StripeProvider } from "@stripe/stripe-react-native";
+import * as Sentry from "@sentry/react-native";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
@@ -27,6 +28,17 @@ import { markStartup, logStartupReport } from "@/lib/startupMetrics";
 
 validateEnv();
 markStartup("module_eval");
+
+// Pas de crash reporting sans DSN (dev local sans variable, ou build sans
+// secret configuré) — évite un throw silencieux au démarrage.
+if (ENV.SENTRY_DSN) {
+  Sentry.init({
+    dsn: ENV.SENTRY_DSN,
+    tracesSampleRate: 0.2,
+    enableNativeCrashHandling: true,
+    debug: __DEV__,
+  });
+}
 
 const STRIPE_PK = ENV.STRIPE_PK;
 
@@ -163,7 +175,7 @@ function AppContent() {
 }
 
 // ── Root layout ───────────────────────────────────────────────────────────────
-export default function RootLayout() {
+function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -191,6 +203,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default ENV.SENTRY_DSN ? Sentry.wrap(RootLayout) : RootLayout;
 
 const styles = StyleSheet.create({
   splash: {
