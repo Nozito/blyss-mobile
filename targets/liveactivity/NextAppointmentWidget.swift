@@ -29,7 +29,7 @@ struct NextAppointmentWidgetView: View {
                 )
             }
         }
-        .background(family == .accessoryCircular || family == .accessoryRectangular ? Color.clear : BlyssWidgetPalette.background)
+        .blyssContainerBackground(family == .accessoryCircular || family == .accessoryRectangular ? Color.clear : BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://calendar"))
     }
 
@@ -124,7 +124,14 @@ struct NextAppointmentWidget: Widget {
             // type rather than a second parallel Widget declaration.
             provider: BlyssWidgetProvider<NextAppointmentPayload?>(
                 placeholderPayload: BlyssWidgetMock.nextAppointment,
-                currentPayload: { BlyssWidgetMock.nextAppointment },
+                // `nil` is a real, meaningful state here ("no upcoming RDV"),
+                // not a stand-in for "no data yet" — only fall back to mock
+                // when the snapshot has never been written at all, not just
+                // when its `nextAppointment` field happens to be nil.
+                currentPayload: {
+                    guard let snapshot = WidgetSnapshotStore.read() else { return BlyssWidgetMock.nextAppointment }
+                    return snapshot.nextAppointment
+                },
                 refreshMinutes: 15
             )
         ) { entry in

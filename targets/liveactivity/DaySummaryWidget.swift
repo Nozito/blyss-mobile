@@ -16,7 +16,7 @@ struct DaySummaryWidgetView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(BlyssWidgetPalette.background)
+        .blyssContainerBackground(BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://calendar"))
     }
 
@@ -101,7 +101,9 @@ struct DaySummaryWidget: Widget {
             kind: kind,
             provider: BlyssWidgetProvider(
                 placeholderPayload: BlyssWidgetMock.daySummaryScheduled,
-                currentPayload: { BlyssWidgetMock.daySummaryScheduled },
+                currentPayload: {
+                    WidgetSnapshotStore.read()?.daySummary?.payload ?? BlyssWidgetMock.daySummaryScheduled
+                },
                 refreshMinutes: 15
             )
         ) { entry in

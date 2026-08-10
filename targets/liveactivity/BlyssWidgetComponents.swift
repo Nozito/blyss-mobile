@@ -1,5 +1,21 @@
 import SwiftUI
 
+/// `.containerBackground(_:for:)` is required from iOS 17 so the widget's
+/// background fills to the system-drawn corners/edges — a plain `.background()`
+/// leaves WidgetKit's own default (white) background showing as a margin
+/// around it. Deployment target here is 16.2 (for the Live Activity's
+/// `Text(timerInterval:)`), so pre-17 falls back to `.background()`.
+extension View {
+    @ViewBuilder
+    func blyssContainerBackground<S: ShapeStyle>(_ style: S) -> some View {
+        if #available(iOS 17.0, *) {
+            containerBackground(style, for: .widget)
+        } else {
+            background(style)
+        }
+    }
+}
+
 /// Small-caps-style eyebrow label ("PROCHAIN RENDEZ-VOUS", "MA JOURNÉE"...)
 /// shared by every widget so the label treatment never drifts between them.
 struct WidgetHeaderView: View {

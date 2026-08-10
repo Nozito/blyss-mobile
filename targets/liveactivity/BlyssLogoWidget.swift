@@ -38,7 +38,7 @@ struct BlyssLogoWidgetView: View {
         BlyssLogoView(height: family == .accessoryCircular ? 22 : 30)
             .padding(family == .accessoryCircular ? 10 : 22)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(family == .accessoryCircular ? Color.clear : BlyssWidgetPalette.background)
+            .blyssContainerBackground(family == .accessoryCircular ? Color.clear : BlyssWidgetPalette.background)
             .widgetURL(URL(string: "blyss://"))
     }
 }

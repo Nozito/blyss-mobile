@@ -27,7 +27,7 @@ struct AlertsWidgetView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(BlyssWidgetPalette.background)
+        .blyssContainerBackground(BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://(admin)/dashboard"))
     }
 
@@ -83,7 +83,7 @@ struct AlertsWidget: Widget {
             kind: kind,
             provider: BlyssWidgetProvider(
                 placeholderPayload: BlyssWidgetMock.alertsPending,
-                currentPayload: { BlyssWidgetMock.alertsPending },
+                currentPayload: { WidgetSnapshotStore.read()?.alerts ?? BlyssWidgetMock.alertsPending },
                 refreshMinutes: 15
             )
         ) { entry in

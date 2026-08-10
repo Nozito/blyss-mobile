@@ -14,6 +14,7 @@ import {
   addPushToStartTokenListener,
   type LiveRdvStartPayload,
 } from "live-activity";
+import { syncNextAppointmentWidget } from "@/lib/widgetSync";
 
 // Live Activity starts this far before the appointment — aligned with the
 // existing H-2 reminder window (backend/lib/reminders.ts) but wider, since
@@ -62,6 +63,7 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
 
     if (!next) {
       writeSharedNextAppointment(null);
+      syncNextAppointmentWidget(null);
       if (activeActivityIdRef.current) {
         await endLiveActivity();
         await proApi.unregisterLiveActivityTokens(activeActivityIdRef.current);
@@ -84,6 +86,7 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
     // Feed the static Home Screen widget regardless of the trigger window —
     // it's meant to be useful even for "demain à 10h30".
     writeSharedNextAppointment(payload);
+    syncNextAppointmentWidget(next);
 
     const msUntilStart = new Date(next.startAt).getTime() - Date.now();
     const inWindow = msUntilStart <= TRIGGER_WINDOW_MS;
@@ -167,6 +170,7 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
     if (isEligiblePro) return;
     endLiveActivity().catch(() => {});
     writeSharedNextAppointment(null);
+    syncNextAppointmentWidget(null);
     if (isAuthenticated) {
       // Still logged in (e.g. subscription lost) — best-effort server cleanup.
       proApi.unregisterLiveActivityTokens().catch(() => {});

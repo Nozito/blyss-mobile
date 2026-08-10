@@ -29,6 +29,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox"; // BLYSS-FIX: 2.3
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { syncProDashboardWidgets } from "@/lib/widgetSync";
 
 type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
@@ -243,6 +244,10 @@ export default function ProDashboard() {
   const clientsThisWeek = n(raw?.clientsThisWeek);
   const topServices  = raw?.topServices  ?? [];
   const weeklyRevenue = raw?.weeklyRevenue ?? [];
+
+  useEffect(() => {
+    syncProDashboardWidgets(raw);
+  }, [raw]);
 
   const maxRevenue = useMemo(
     () => Math.max(1, ...weeklyRevenue.map((d) => n(d.amount))),

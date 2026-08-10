@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useMemo } from "react";
+import React, { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import { View, Text, ScrollView, RefreshControl } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -16,6 +16,7 @@ import { SectionLabel } from "@/components/admin/SectionLabel";
 import { Card } from "@/components/admin/Card";
 import { useScrollToTop } from "@react-navigation/native";
 import { toNumber as n } from "@/lib/bookingUtils";
+import { syncAdminDashboardWidgets } from "@/lib/widgetSync";
 
 function DashboardSkeleton({ top }: { top: number }) {
   return (
@@ -83,6 +84,17 @@ export default function AdminDashboard() {
   const totalSparkRevenue = useMemo(() => sparkData.reduce((s, v) => s + v, 0), [sparkData]);
   const todayRevenue = sparkData.length > 0 ? sparkData[sparkData.length - 1] : 0;
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+  useEffect(() => {
+    if (!stats) return;
+    syncAdminDashboardWidgets({
+      todayRevenue,
+      weekRevenue: totalSparkRevenue,
+      revenueChange: stats.revenueChange,
+      pendingBookings,
+      flaggedReviews,
+    });
+  }, [stats, todayRevenue, totalSparkRevenue, pendingBookings, flaggedReviews]);
 
   const byStatus = stats?.bookingsByStatus ?? {};
   const totalBookingsToday = useMemo(() => Object.values(byStatus).reduce((s, v) => s + Number(v), 0), [byStatus]);

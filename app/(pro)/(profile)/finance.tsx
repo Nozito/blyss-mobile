@@ -29,6 +29,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { toNumber as n } from "@/lib/bookingUtils";
+import { syncProFinanceWidgets } from "@/lib/widgetSync";
 
 type Period = "week" | "month" | "year";
 
@@ -102,6 +103,10 @@ export default function ProFinanceScreen() {
 
   const hasDetailedStats = hasPlanAtLeast(stats?.plan ?? null, "serenite");
   const hasForecast = hasPlanAtLeast(stats?.plan ?? null, "signature");
+
+  useEffect(() => {
+    syncProFinanceWidgets(stats);
+  }, [stats]);
 
   const periodValue = stats
     ? selectedPeriod === "week"

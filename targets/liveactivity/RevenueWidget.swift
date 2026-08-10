@@ -20,7 +20,7 @@ struct RevenueWidgetView: View {
                 small
             }
         }
-        .background(BlyssWidgetPalette.background)
+        .blyssContainerBackground(BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://finance"))
     }
 
@@ -96,7 +96,7 @@ struct RevenueWidget: Widget {
             kind: kind,
             provider: BlyssWidgetProvider(
                 placeholderPayload: BlyssWidgetMock.revenue,
-                currentPayload: { BlyssWidgetMock.revenue },
+                currentPayload: { WidgetSnapshotStore.read()?.revenue ?? BlyssWidgetMock.revenue },
                 refreshMinutes: 30
             )
         ) { entry in

@@ -43,7 +43,7 @@ struct BlyssWidgetProvider<Payload>: TimelineProvider {
 
 // MARK: - Pro payloads
 
-struct NextAppointmentPayload {
+struct NextAppointmentPayload: Codable {
     let clientFullName: String
     let prestationName: String
     let durationMinutes: Int
@@ -60,7 +60,7 @@ struct DaySummaryPayload {
     let state: DaySummaryState
 }
 
-struct RevenuePayload {
+struct RevenuePayload: Codable {
     let monthAmountEuros: Int
     let growthPercent: Double
     let objectiveAmountEuros: Int?
@@ -72,13 +72,13 @@ struct RevenuePayload {
 // aggregate-only by design (see PlatformOverviewWidgetView / AlertsWidgetView
 // / GrowthWidgetView: every field below is a count, an amount, or a rate).
 
-struct PlatformOverviewPayload {
+struct PlatformOverviewPayload: Codable {
     let activePros: Int
     let reservations: Int
     let growthPercent: Double
 }
 
-struct AlertsPayload {
+struct AlertsPayload: Codable {
     let paymentsToVerify: Int
     let accountsToReview: Int
     let criticalIncidents: Int
@@ -88,10 +88,82 @@ struct AlertsPayload {
     }
 }
 
-struct GrowthPayload {
+struct GrowthPayload: Codable {
     let todayAmountEuros: Int
     let weekAmountEuros: Int
     let growthPercent: Double
+}
+
+// MARK: - Live data (shared App Group)
+//
+// Same App Group + UserDefaults pattern LiveRdvHomeWidget.swift already uses
+// for the Live Activity's next appointment (group.blyss.app), extended to
+// carry a snapshot for all 6 Pro/Admin widgets. The app writes this blob
+// (merging in whichever piece it just fetched — dashboard, finance stats,
+// admin analytics...) via LiveActivityModule.writeWidgetSnapshot, then
+// reloads the relevant widget kind's timeline. `DaySummaryPayload` isn't
+// Codable itself (its `state` is an enum with associated values), so it
+// round-trips through `DaySummarySnapshot` instead.
+private let widgetSnapshotAppGroupId = "group.blyss.app"
+private let widgetSnapshotKey = "widgetSnapshot"
+
+struct DaySummarySnapshot: Codable {
+    let state: String // "scheduled" | "free" | "finished"
+    let count: Int?
+    let nextTime: Date?
+    let inProgressCount: Int?
+    let completedCount: Int?
+
+    var payload: DaySummaryPayload? {
+        switch state {
+        case "scheduled":
+            guard let count, let nextTime, let inProgressCount else { return nil }
+            return DaySummaryPayload(state: .scheduled(count: count, nextTime: nextTime, inProgressCount: inProgressCount))
+        case "free":
+            return DaySummaryPayload(state: .free)
+        case "finished":
+            guard let completedCount else { return nil }
+            return DaySummaryPayload(state: .finished(completedCount: completedCount))
+        default:
+            return nil
+        }
+    }
+}
+
+struct WidgetSnapshot: Codable {
+    let nextAppointment: NextAppointmentPayload?
+    let daySummary: DaySummarySnapshot?
+    let revenue: RevenuePayload?
+    let platformOverview: PlatformOverviewPayload?
+    let alerts: AlertsPayload?
+    let growth: GrowthPayload?
+}
+
+enum WidgetSnapshotStore {
+    // Mirrors LiveActivityModule.swift's isoFormatter() — the JS side writes
+    // dates via `Date.toISOString()`, which always includes milliseconds.
+    private static func isoFormatter() -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }
+
+    static func read() -> WidgetSnapshot? {
+        guard
+            let defaults = UserDefaults(suiteName: widgetSnapshotAppGroupId),
+            let data = defaults.data(forKey: widgetSnapshotKey)
+        else { return nil }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+            if let date = isoFormatter().date(from: string) { return date }
+            if let date = ISO8601DateFormatter().date(from: string) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO 8601 date: \(string)")
+        }
+        return try? decoder.decode(WidgetSnapshot.self, from: data)
+    }
 }
 
 // MARK: - Mock data (v1) — also the source for every #Preview below

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, ScrollView, Pressable, useWindowDimensions,
   Animated,
@@ -18,6 +18,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { syncAdminAnalyticsWidgets } from "@/lib/widgetSync";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -263,6 +264,10 @@ export default function AdminAnalyticsScreen() {
   const bookingsPoints = (bookingsData?.data  ?? []).map((r) => Number(r.total));
 
   const growth = (a as any)?.revenue?.growth as number | null | undefined;
+
+  useEffect(() => {
+    syncAdminAnalyticsWidgets(a as any);
+  }, [a]);
 
   const today = new Date().toLocaleDateString("fr-FR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",

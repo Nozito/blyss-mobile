@@ -15,7 +15,7 @@ struct PlatformOverviewWidgetView: View {
                 medium
             }
         }
-        .background(BlyssWidgetPalette.background)
+        .blyssContainerBackground(BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://(admin)/dashboard"))
     }
 
@@ -88,7 +88,7 @@ struct PlatformOverviewWidget: Widget {
             kind: kind,
             provider: BlyssWidgetProvider(
                 placeholderPayload: BlyssWidgetMock.platformOverview,
-                currentPayload: { BlyssWidgetMock.platformOverview },
+                currentPayload: { WidgetSnapshotStore.read()?.platformOverview ?? BlyssWidgetMock.platformOverview },
                 refreshMinutes: 30
             )
         ) { entry in

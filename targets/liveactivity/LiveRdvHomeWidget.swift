@@ -119,7 +119,7 @@ struct LiveRdvHomeWidgetView: View {
                 .padding(family == .accessoryRectangular ? 0 : 16)
             }
         }
-        .background(family == .accessoryRectangular ? Color.clear : Color("blyssCard"))
+        .blyssContainerBackground(family == .accessoryRectangular ? Color.clear : Color("blyssCard"))
     }
 }
 

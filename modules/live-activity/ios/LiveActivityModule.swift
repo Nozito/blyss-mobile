@@ -6,6 +6,18 @@ private let appGroupId = "group.blyss.app"
 private let sharedDefaultsKey = "nextAppointment"
 private let homeWidgetKind = "LiveRdvHomeWidget"
 
+// Mirrors targets/liveactivity/BlyssWidgetModels.swift's WidgetSnapshot key —
+// same cross-target duplication constraint as SharedNextAppointment above.
+// Unlike `sharedDefaultsKey`, this blob is written incrementally (each
+// screen only knows its own slice — dashboard, finance stats, admin
+// analytics...), so writes merge into whatever's already stored rather than
+// overwrite it wholesale.
+private let widgetSnapshotKey = "widgetSnapshot"
+private let widgetKinds = [
+    "RevenueWidget", "GrowthWidget", "AlertsWidget",
+    "DaySummaryWidget", "PlatformOverviewWidget", "NextAppointmentWidget",
+]
+
 // Mirrors LiveRdvHomeProvider's private decode shape in
 // targets/liveactivity/LiveRdvHomeWidget.swift — keep in sync.
 // Duplicate of targets/liveactivity/LiveRdvHomeWidget.swift's SharedNextAppointment
@@ -99,6 +111,18 @@ public class LiveActivityModule: Module {
             Self.writeSharedDefaults(payload)
             WidgetCenter.shared.reloadTimelines(ofKind: homeWidgetKind)
         }
+
+        // Merges a partial snapshot (one or more of nextAppointment,
+        // daySummary, revenue, platformOverview, alerts, growth) into the
+        // shared blob the Pro/Admin widget suite reads. Each screen only
+        // ever sends the piece it just fetched — the merge keeps every
+        // other widget's last-known data intact instead of clobbering it.
+        Function("writeWidgetSnapshot") { (payload: [String: Any]) in
+            Self.mergeAndWriteWidgetSnapshot(payload)
+            for kind in widgetKinds {
+                WidgetCenter.shared.reloadTimelines(ofKind: kind)
+            }
+        }
     }
 
     @available(iOS 17.2, *)
@@ -168,5 +192,23 @@ public class LiveActivityModule: Module {
         if let data = try? encoder.encode(shared) {
             defaults.set(data, forKey: sharedDefaultsKey)
         }
+    }
+
+    private static func mergeAndWriteWidgetSnapshot(_ incoming: [String: Any]) {
+        guard let defaults = UserDefaults(suiteName: appGroupId) else { return }
+
+        var merged: [String: Any] = [:]
+        if
+            let data = defaults.data(forKey: widgetSnapshotKey),
+            let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        {
+            merged = existing
+        }
+        for (key, value) in incoming {
+            merged[key] = value
+        }
+
+        guard let data = try? JSONSerialization.data(withJSONObject: merged) else { return }
+        defaults.set(data, forKey: widgetSnapshotKey)
     }
 }
