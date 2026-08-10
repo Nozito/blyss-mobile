@@ -16,6 +16,7 @@ struct DaySummaryWidgetView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://calendar"))
     }
 
@@ -51,7 +52,7 @@ struct DaySummaryWidgetView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(count)")
                     .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                    .foregroundStyle(BlyssWidgetPalette.accent)
                 Text("rendez-vous")
                     .font(.system(size: 12))
                     .foregroundStyle(BlyssWidgetPalette.textSecondary)
@@ -62,27 +63,31 @@ struct DaySummaryWidgetView: View {
                     .padding(.top, 2)
             }
         } else {
-            HStack(alignment: .top, spacing: 16) {
+            HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(count)")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(BlyssWidgetPalette.textPrimary)
-                    Text("rendez-vous")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(BlyssWidgetPalette.accent)
+                    Text("rendez-vous aujourd'hui")
                         .font(.system(size: 12))
                         .foregroundStyle(BlyssWidgetPalette.textSecondary)
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Prochain · \(nextTime.formatted(date: .omitted, time: .shortened))")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(BlyssWidgetPalette.textPrimary)
-                        .lineLimit(1)
-                    if inProgressCount > 0 {
-                        Text("\(inProgressCount) en cours")
-                            .font(.system(size: 12))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                WidgetVerticalDivider().padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Prochain")
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(BlyssWidgetPalette.textSecondary)
+                        Text(nextTime.formatted(date: .omitted, time: .shortened))
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                    }
+                    if inProgressCount > 0 {
+                        WidgetPercentPill(text: "\(inProgressCount) en cours")
                     }
                 }
+                .padding(.leading, 16)
             }
         }
     }

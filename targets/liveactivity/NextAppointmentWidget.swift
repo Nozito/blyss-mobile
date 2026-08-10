@@ -29,6 +29,7 @@ struct NextAppointmentWidgetView: View {
                 )
             }
         }
+        .background(family == .accessoryCircular || family == .accessoryRectangular ? Color.clear : BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://calendar"))
     }
 
@@ -49,7 +50,7 @@ struct NextAppointmentWidgetView: View {
             Spacer(minLength: 2)
             Text(p.startAt, style: .time)
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                .foregroundStyle(BlyssWidgetPalette.accent)
                 .lineLimit(1)
         }
         .padding(16)
@@ -57,8 +58,8 @@ struct NextAppointmentWidgetView: View {
     }
 
     private func medium(_ p: NextAppointmentPayload) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .center, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
                 WidgetHeaderView(label: "Prochain rendez-vous")
                 Text(p.clientFullName)
                     .font(.system(size: 19, weight: .bold))
@@ -70,12 +71,20 @@ struct NextAppointmentWidgetView: View {
                     .foregroundStyle(BlyssWidgetPalette.textSecondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: 8)
-            Text(p.startAt, style: .time)
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(BlyssWidgetPalette.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            WidgetVerticalDivider().padding(.vertical, 4)
+            VStack(spacing: 3) {
+                Text(p.startAt, style: .time)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(BlyssWidgetPalette.accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(BlyssRelativeTime.until(p.startAt))
+                    .font(.system(size: 11))
+                    .foregroundStyle(BlyssWidgetPalette.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.leading, 16)
         }
         .padding(16)
     }

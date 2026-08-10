@@ -7,33 +7,84 @@ struct RevenueWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let payload: RevenuePayload
 
+    private var objectiveProgress: Double? {
+        guard let objective = payload.objectiveAmountEuros, objective > 0 else { return nil }
+        return Double(payload.monthAmountEuros) / Double(objective)
+    }
+
     var body: some View {
+        Group {
+            if family == .systemMedium, let objective = payload.objectiveAmountEuros {
+                mediumWithObjective(objective)
+            } else {
+                small
+            }
+        }
+        .background(BlyssWidgetPalette.background)
+        .widgetURL(URL(string: "blyss://finance"))
+    }
+
+    private var small: some View {
         VStack(alignment: .leading, spacing: 8) {
             WidgetHeaderView(label: "Chiffre d'affaires")
             Spacer(minLength: 2)
             Text(BlyssEuroFormat.string(from: payload.monthAmountEuros))
                 .font(.system(size: family == .systemSmall ? 24 : 30, weight: .bold))
-                .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                .foregroundStyle(BlyssWidgetPalette.accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text("\(BlyssPercentFormat.string(from: payload.growthPercent)) vs mois dernier")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(BlyssWidgetPalette.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            // Compact formats show less — the objective line only earns its
-            // place once there's room for it (systemMedium and up).
-            if family != .systemSmall, let objective = payload.objectiveAmountEuros {
-                Text("Objectif · \(BlyssEuroFormat.string(from: objective))")
-                    .font(.system(size: 12))
-                    .foregroundStyle(BlyssWidgetPalette.textSecondary)
-                    .lineLimit(1)
-            }
+            growthLine
             Spacer(minLength: 2)
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .widgetURL(URL(string: "blyss://finance"))
+    }
+
+    private func mediumWithObjective(_ objective: Int) -> some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                WidgetHeaderView(label: "Chiffre d'affaires")
+                Text(BlyssEuroFormat.string(from: payload.monthAmountEuros))
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(BlyssWidgetPalette.accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                growthLine
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            WidgetVerticalDivider().padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Objectif")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(BlyssWidgetPalette.textSecondary)
+                Text(BlyssEuroFormat.string(from: objective))
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                WidgetProgressBar(progress: objectiveProgress ?? 0)
+                Text("\(Int(((objectiveProgress ?? 0) * 100).rounded()))% atteint")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(BlyssWidgetPalette.textSecondary)
+            }
+            .frame(width: 128, alignment: .leading)
+            .padding(.leading, 16)
+        }
+        .padding(16)
+    }
+
+    private var growthLine: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 10, weight: .bold))
+            Text("\(BlyssPercentFormat.string(from: payload.growthPercent)) vs mois dernier")
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(BlyssWidgetPalette.textSecondary)
     }
 }
 

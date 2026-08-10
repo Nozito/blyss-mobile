@@ -8,51 +8,75 @@ struct PlatformOverviewWidgetView: View {
     let payload: PlatformOverviewPayload
 
     var body: some View {
+        Group {
+            if family == .systemSmall {
+                small
+            } else {
+                medium
+            }
+        }
+        .background(BlyssWidgetPalette.background)
+        .widgetURL(URL(string: "blyss://(admin)/dashboard"))
+    }
+
+    private var small: some View {
         VStack(alignment: .leading, spacing: 8) {
             WidgetHeaderView(label: "Vue plateforme")
             Spacer(minLength: 2)
-            if family == .systemSmall {
-                VStack(alignment: .leading, spacing: 4) {
-                    metric(value: "\(payload.activePros)", label: "pros actives")
-                    metric(value: "\(payload.reservations)", label: "réservations")
-                }
-                Spacer(minLength: 2)
-                growthLine
-            } else {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        metric(value: "\(payload.activePros)", label: "pros actives")
-                        metric(value: "\(payload.reservations)", label: "réservations")
-                    }
-                    Spacer()
-                    growthLine
-                }
-            }
+            metric(value: "\(payload.activePros)", label: "pros actives")
+            metric(value: "\(payload.reservations)", label: "réservations")
+            Spacer(minLength: 2)
+            Text("\(BlyssPercentFormat.string(from: payload.growthPercent)) cette semaine")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(BlyssWidgetPalette.textSecondary)
+                .lineLimit(1)
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .widgetURL(URL(string: "blyss://(admin)/dashboard"))
+    }
+
+    private var medium: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            WidgetHeaderView(label: "Vue plateforme")
+            HStack(spacing: 0) {
+                column(value: "\(payload.activePros)", label: "pros actives", rose: true)
+                WidgetVerticalDivider().padding(.vertical, 2)
+                column(value: "\(payload.reservations)", label: "réservations", rose: true)
+                WidgetVerticalDivider().padding(.vertical, 2)
+                column(value: BlyssPercentFormat.string(from: payload.growthPercent), label: "cette semaine", rose: false)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(16)
+    }
+
+    private func column(value: String, label: String, rose: Bool) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(rose ? BlyssWidgetPalette.accent : BlyssWidgetPalette.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(BlyssWidgetPalette.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func metric(value: String, label: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(value)
                 .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                .foregroundStyle(BlyssWidgetPalette.accent)
             Text(label)
                 .font(.system(size: 12))
                 .foregroundStyle(BlyssWidgetPalette.textSecondary)
         }
         .lineLimit(1)
         .minimumScaleFactor(0.85)
-    }
-
-    private var growthLine: some View {
-        Text("\(BlyssPercentFormat.string(from: payload.growthPercent)) cette semaine")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(BlyssWidgetPalette.textSecondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
     }
 }
 

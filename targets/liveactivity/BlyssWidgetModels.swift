@@ -119,6 +119,7 @@ enum BlyssWidgetMock {
     static let platformOverview = PlatformOverviewPayload(activePros: 128, reservations: 486, growthPercent: 8.4)
 
     static let alertsPending = AlertsPayload(paymentsToVerify: 2, accountsToReview: 1, criticalIncidents: 0)
+    static let alertsCritical = AlertsPayload(paymentsToVerify: 0, accountsToReview: 0, criticalIncidents: 1)
     static let alertsClear = AlertsPayload(paymentsToVerify: 0, accountsToReview: 0, criticalIncidents: 0)
 
     static let growth = GrowthPayload(todayAmountEuros: 12_480, weekAmountEuros: 76_420, growthPercent: 9.2)

@@ -8,34 +8,58 @@ struct GrowthWidgetView: View {
     let payload: GrowthPayload
 
     var body: some View {
-        VStack(alignment: .leading, spacing: family == .systemSmall ? 6 : 10) {
-            WidgetHeaderView(label: "Revenus Blyss")
-            Spacer(minLength: 2)
-            amount(value: BlyssEuroFormat.string(from: payload.todayAmountEuros), caption: "Aujourd'hui", emphasized: true)
-            if family != .systemSmall {
-                amount(value: BlyssEuroFormat.string(from: payload.weekAmountEuros), caption: "Cette semaine", emphasized: false)
+        Group {
+            if family == .systemSmall {
+                small
+            } else {
+                medium
             }
-            Spacer(minLength: 2)
-            Text(BlyssPercentFormat.string(from: payload.growthPercent))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(BlyssWidgetPalette.textSecondary)
-                .lineLimit(1)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(BlyssWidgetPalette.background)
         .widgetURL(URL(string: "blyss://(admin)/dashboard"))
     }
 
-    private func amount(value: String, caption: String, emphasized: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value)
-                .font(.system(size: emphasized ? 22 : 16, weight: .bold))
-                .foregroundStyle(BlyssWidgetPalette.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+    private var small: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            WidgetHeaderView(label: "Revenus Blyss")
+            Spacer(minLength: 2)
+            amount(value: BlyssEuroFormat.string(from: payload.todayAmountEuros), caption: "Aujourd'hui", size: 24)
+            // Same pill size as the medium layout below — the badge reads as
+            // the same UI element regardless of which family it's shown in.
+            WidgetPercentPill(text: BlyssPercentFormat.string(from: payload.growthPercent), size: .large)
+                .padding(.top, 2)
+            Spacer(minLength: 2)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private var medium: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            WidgetHeaderView(label: "Revenus Blyss")
+            HStack(spacing: 0) {
+                amount(value: BlyssEuroFormat.string(from: payload.todayAmountEuros), caption: "Aujourd'hui", size: 26)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                WidgetVerticalDivider().padding(.vertical, 2)
+                amount(value: BlyssEuroFormat.string(from: payload.weekAmountEuros), caption: "Cette semaine", size: 26, rose: false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+            }
+            WidgetPercentPill(text: BlyssPercentFormat.string(from: payload.growthPercent), size: .large)
+        }
+        .padding(16)
+    }
+
+    private func amount(value: String, caption: String, size: CGFloat, rose: Bool = true) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
             Text(caption)
                 .font(.system(size: 11))
                 .foregroundStyle(BlyssWidgetPalette.textSecondary)
+            Text(value)
+                .font(.system(size: size, weight: .bold))
+                .foregroundStyle(rose ? BlyssWidgetPalette.accent : BlyssWidgetPalette.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 }
