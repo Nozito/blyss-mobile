@@ -132,9 +132,20 @@ export default function ProPublicProfileScreen() {
   const [conditions, setConditions] = useState<{ text: string; accepted: boolean }[]>([]);
   const [newConditionText, setNewConditionText] = useState("");
 
+  // Confidentialité de l'adresse — déplacée depuis (pro)/(profile)/settings.tsx :
+  // même endroit que le reste du profil visible par les clientes, plutôt
+  // qu'un écran de réglages séparé.
+  const [addressPublic, setAddressPublic] = useState(false);
+  const [showAddressConfirm, setShowAddressConfirm] = useState(false);
+  const [addressLine, setAddressLine] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [serviceRadiusKm, setServiceRadiusKm] = useState("5");
+  const [serviceAreaLabel, setServiceAreaLabel] = useState("");
+
   const [initial, setInitial] = useState({
     activityName: "", city: "", bio: "", instagram: "", isPublic: true,
     conditions: [] as { text: string; accepted: boolean }[],
+    addressPublic: false, addressLine: "", postalCode: "", serviceRadiusKm: "5", serviceAreaLabel: "",
   });
 
   const { data: servicesData } = useQuery({
@@ -161,6 +172,12 @@ export default function ProPublicProfileScreen() {
       instagram: profileData.instagram_account || "",
       isPublic: profileData.profile_visibility !== "private",
       conditions: profileData.acceptance_conditions ?? [],
+      // OFF (masquée) reste le défaut sûr même si le compte n'a encore aucun geo_precision.
+      addressPublic: profileData.geo_precision === "address",
+      addressLine: profileData.address_line || "",
+      postalCode: profileData.postal_code || "",
+      serviceRadiusKm: String(profileData.service_radius_km ?? 5),
+      serviceAreaLabel: profileData.service_area_label || "",
     };
     setActivityName(vals.activityName);
     setCity(vals.city);
@@ -168,6 +185,11 @@ export default function ProPublicProfileScreen() {
     setInstagram(vals.instagram);
     setIsPublic(vals.isPublic);
     setConditions(vals.conditions);
+    setAddressPublic(vals.addressPublic);
+    setAddressLine(vals.addressLine);
+    setPostalCode(vals.postalCode);
+    setServiceRadiusKm(vals.serviceRadiusKm);
+    setServiceAreaLabel(vals.serviceAreaLabel);
     setInitial(vals);
   }, [profileData]);
 
@@ -178,9 +200,14 @@ export default function ProPublicProfileScreen() {
       bio !== initial.bio ||
       instagram !== initial.instagram ||
       isPublic !== initial.isPublic ||
-      JSON.stringify(conditions) !== JSON.stringify(initial.conditions);
+      JSON.stringify(conditions) !== JSON.stringify(initial.conditions) ||
+      addressPublic !== initial.addressPublic ||
+      addressLine !== initial.addressLine ||
+      postalCode !== initial.postalCode ||
+      serviceRadiusKm !== initial.serviceRadiusKm ||
+      serviceAreaLabel !== initial.serviceAreaLabel;
     setHasChanges(changed);
-  }, [activityName, city, bio, instagram, isPublic, conditions, initial]);
+  }, [activityName, city, bio, instagram, isPublic, conditions, addressPublic, addressLine, postalCode, serviceRadiusKm, serviceAreaLabel, initial]);
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -194,20 +221,32 @@ export default function ProPublicProfileScreen() {
       return;
     }
     if (instagram && instagramError) { setSaveError(instagramError ?? "Handle Instagram invalide."); return; }
+    if (addressPublic && (!addressLine || !postalCode || !city)) {
+      setSaveError("Adresse, code postal et ville requis pour publier ton adresse exacte.");
+      return;
+    }
 
     setIsSaving(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await proApi.updateProfile({
+      const payload: Record<string, unknown> = {
         activity_name: activityName,
         city,
         bio,
         instagram_account: instagram,
         profile_visibility: isPublic ? "public" : "private",
         acceptance_conditions: conditions,
-      });
+        geo_precision: addressPublic ? "address" : "city",
+        service_radius_km: Math.min(30, Math.max(1, parseFloat(serviceRadiusKm) || 5)),
+        service_area_label: serviceAreaLabel,
+      };
+      if (addressPublic) {
+        payload.address_line = addressLine;
+        payload.postal_code = postalCode;
+      }
+      await proApi.updateProfile(payload);
       qc.invalidateQueries({ queryKey: ["pro-public-profile"] });
-      setInitial({ activityName, city, bio, instagram, isPublic, conditions });
+      setInitial({ activityName, city, bio, instagram, isPublic, conditions, addressPublic, addressLine, postalCode, serviceRadiusKm, serviceAreaLabel });
       setHasChanges(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
@@ -382,6 +421,95 @@ export default function ProPublicProfileScreen() {
             />
           </View>
         </View>
+
+        {/* Section: Confidentialité de l'adresse */}
+        <View className="mb-6">
+          <SectionTitle title="Confidentialité de l'adresse" />
+          <View className="rounded-2xl p-5 border" style={{ gap: 16, backgroundColor: colors.card, borderColor: colors.border }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>
+                  Rendre mon adresse visible publiquement
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
+                  {addressPublic
+                    ? "Ton adresse complète sera visible sur ton profil et sur la carte."
+                    : "Par défaut, ton adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
+                </Text>
+              </View>
+              <Switch
+                value={addressPublic}
+                onValueChange={(next) => {
+                  if (next) {
+                    setShowAddressConfirm(true);
+                  } else {
+                    setAddressPublic(false);
+                  }
+                }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.onColor}
+              />
+            </View>
+
+            {showAddressConfirm && (
+              <View style={{ padding: 14, borderRadius: 14, backgroundColor: colors.warningLight, borderWidth: 1, borderColor: colors.warningBorder, gap: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningTextDark }}>
+                  Rendre ton adresse publique ?
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.warningText, lineHeight: 17 }}>
+                  Ton adresse exacte sera visible par tous les visiteurs de ton profil, y compris sur la carte. Tu pourras la masquer à nouveau à tout moment.
+                </Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <AnimatedPressable
+                    onPress={() => setShowAddressConfirm(false)}
+                    style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    onPress={() => { setAddressPublic(true); setShowAddressConfirm(false); }}
+                    style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: colors.warning, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningForeground }}>Oui, rendre publique</Text>
+                  </AnimatedPressable>
+                </View>
+              </View>
+            )}
+
+            {addressPublic ? (
+              <>
+                <Input label="Adresse" value={addressLine} onChangeText={setAddressLine} leftIcon="pin-outline" />
+                <Input label="Code postal" value={postalCode} onChangeText={setPostalCode} keyboardType="number-pad" leftIcon="mail-outline" />
+              </>
+            ) : (
+              <>
+                <View style={{ backgroundColor: colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} style={{ marginTop: 1 }} />
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, flex: 1, lineHeight: 17 }}>
+                    Adresse non affichée publiquement — tes clientes verront une zone d'intervention à la place.
+                  </Text>
+                </View>
+                <Input
+                  label="Rayon d'intervention (km)"
+                  value={serviceRadiusKm}
+                  onChangeText={setServiceRadiusKm}
+                  keyboardType="number-pad"
+                  leftIcon="navigate-outline"
+                />
+                <Input
+                  label="Libellé de zone (optionnel)"
+                  value={serviceAreaLabel}
+                  onChangeText={setServiceAreaLabel}
+                  leftIcon="map-outline"
+                  placeholder="Ex : Nantes centre et périphérie"
+                />
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Section: Politique d'annulation */}
+        <CancellationPolicySection />
 
         {/* Section: Bio */}
         <View className="mb-6">
@@ -832,6 +960,110 @@ export default function ProPublicProfileScreen() {
           </ScrollView>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+const ALLOWED_NOTICE_HOURS = [0, 2, 4, 6, 12, 24, 48, 72] as const;
+
+// Délai d'annulation — table `users`, mais endpoint dédié (PATCH
+// /api/pro/settings/cancellation-policy) plutôt que proApi.updateProfile,
+// donc sauvegardé immédiatement au tap plutôt que via le bouton "Enregistrer"
+// du reste de l'écran. Composant séparé pour garder son propre état de
+// chargement/erreur isolé du formulaire principal.
+function CancellationPolicySection() {
+  const colors = useThemeColors();
+  const [noticeHours, setNoticeHours] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+
+  const load = () => {
+    setLoadError(false);
+    proApi.getCancellationPolicy().then((res) => {
+      if (res.success && res.data) setNoticeHours(res.data.cancellation_notice_hours);
+      else setLoadError(true);
+    }).catch(() => setLoadError(true));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSelect = async (hours: number) => {
+    if (saving || hours === noticeHours) return;
+    const previous = noticeHours;
+    setNoticeHours(hours);
+    setSaving(true);
+    setSaveSuccess(false);
+    setSaveError(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const res = await proApi.updateCancellationPolicy(hours);
+    setSaving(false);
+    if (res.success) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } else {
+      setNoticeHours(previous);
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 3000);
+    }
+  };
+
+  return (
+    <View className="mb-6">
+      <SectionTitle title="Politique d'annulation" />
+      <View className="rounded-2xl p-5 border" style={{ gap: 14, backgroundColor: colors.card, borderColor: colors.border }}>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
+          Délai minimum avant lequel une cliente peut annuler son rendez-vous sans que tu perdes le créneau à la dernière minute. Passé ce délai, elle ne peut plus annuler depuis l'app.
+        </Text>
+
+        {noticeHours === null ? (
+          loadError ? (
+            <Pressable
+              onPress={load}
+              accessibilityRole="button"
+              accessibilityLabel="Réessayer de charger la politique d'annulation"
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" }}
+            >
+              <Ionicons name="refresh-outline" size={16} color={colors.destructive} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: colors.destructive }}>
+                Impossible de charger — réessayer
+              </Text>
+            </Pressable>
+          ) : (
+            <ActivityIndicator color={colors.primary} />
+          )
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {ALLOWED_NOTICE_HOURS.map((h) => {
+              const selected = h === noticeHours;
+              return (
+                <AnimatedPressable
+                  key={h}
+                  onPress={() => handleSelect(h)}
+                  disabled={saving}
+                  style={{
+                    paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12,
+                    backgroundColor: selected ? colors.primary : colors.cream,
+                    opacity: saving && !selected ? 0.5 : 1,
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: selected ? colors.onColor : colors.foreground }}>
+                    {h === 0 ? "Aucun délai" : `${h}h avant`}
+                  </Text>
+                </AnimatedPressable>
+              );
+            })}
+          </View>
+        )}
+
+        {saveSuccess && (
+          <Text style={{ fontSize: 12, color: colors.success, fontWeight: "600" }}>Délai mis à jour ✓</Text>
+        )}
+        {saveError && (
+          <Text style={{ fontSize: 12, color: colors.destructive, fontWeight: "600" }}>Impossible de mettre à jour — réessaie</Text>
+        )}
+      </View>
     </View>
   );
 }

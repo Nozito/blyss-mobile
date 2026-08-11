@@ -7,7 +7,6 @@ import {
   Animated,
   ActivityIndicator,
   Linking,
-  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -71,47 +70,7 @@ export default function ProSettingsScreen() {
   const [error, setError]   = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Address privacy — OFF (masquée) is always the safe default, even if the
-  // account somehow has no geo_precision set yet.
-  const [addressPublic, setAddressPublic] = useState(user?.geo_precision === "address");
-  const [showAddressConfirm, setShowAddressConfirm] = useState(false);
-
-  // Politique d'annulation — table `users`, mais un endpoint séparé
-  // (PATCH /api/pro/settings/cancellation-policy) plutôt que usersApi.update,
-  // donc sauvegardée immédiatement au tap plutôt que via le bouton du bas.
-  const ALLOWED_NOTICE_HOURS = [0, 2, 4, 6, 12, 24, 48, 72] as const;
-  const [noticeHours, setNoticeHours] = useState<number | null>(null);
-  const [noticeSaving, setNoticeSaving] = useState(false);
-  const [noticeSuccess, setNoticeSuccess] = useState(false);
-  const [noticeError, setNoticeError] = useState(false);
-
-  useEffect(() => {
-    proApi.getCancellationPolicy().then((res) => {
-      if (res.success && res.data) setNoticeHours(res.data.cancellation_notice_hours);
-    }).catch(() => {});
-  }, []);
-
-  const handleSelectNoticeHours = async (hours: number) => {
-    if (noticeSaving || hours === noticeHours) return;
-    const previous = noticeHours;
-    setNoticeHours(hours);
-    setNoticeSaving(true);
-    setNoticeSuccess(false);
-    setNoticeError(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const res = await proApi.updateCancellationPolicy(hours);
-    setNoticeSaving(false);
-    if (res.success) {
-      setNoticeSuccess(true);
-      setTimeout(() => setNoticeSuccess(false), 2500);
-    } else {
-      setNoticeHours(previous);
-      setNoticeError(true);
-      setTimeout(() => setNoticeError(false), 3000);
-    }
-  };
-
-  type FormValues = Partial<Omit<User, "service_radius_km">> & { service_radius_km?: string };
+  type FormValues = Partial<User>;
 
   const { control, handleSubmit } = useForm<FormValues>({
     defaultValues: {
@@ -122,10 +81,6 @@ export default function ProSettingsScreen() {
       city:              user?.city ?? "",
       bio:               user?.bio ?? "",
       instagram_account: user?.instagram_account ?? "",
-      address_line:      user?.address_line ?? "",
-      postal_code:       user?.postal_code ?? "",
-      service_radius_km: String(user?.service_radius_km ?? 5),
-      service_area_label: user?.service_area_label ?? "",
     },
   });
 
@@ -148,11 +103,6 @@ export default function ProSettingsScreen() {
       if (bioErr) { setError(bioErr); return; }
     }
 
-    if (addressPublic && (!data.address_line || !data.postal_code || !data.city)) {
-      setError("Adresse, code postal et ville requis pour publier ton adresse exacte.");
-      return;
-    }
-
     const changingPassword = !!(currentPassword || newPassword || newPasswordConfirm);
     if (changingPassword) {
       if (!currentPassword) { setError("Renseigne ton ancien mot de passe pour le modifier."); return; }
@@ -163,17 +113,7 @@ export default function ProSettingsScreen() {
 
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        ...data,
-        geo_precision: addressPublic ? "address" : "city",
-        service_radius_km: Math.min(30, Math.max(1, parseFloat(data.service_radius_km ?? "5") || 5)),
-      };
-      if (!addressPublic) {
-        // Don't submit stale address text while switched off — the pro may have typed
-        // something and changed her mind before saving; keep it out of the request.
-        delete payload.address_line;
-        delete payload.postal_code;
-      }
+      const payload: Record<string, unknown> = { ...data };
       if (changingPassword) {
         payload.currentPassword = currentPassword;
         payload.newPassword = newPassword;
@@ -338,159 +278,6 @@ export default function ProSettingsScreen() {
               <Input label="Instagram" value={value ?? ""} onChangeText={onChange} leftIcon="logo-instagram" placeholder="@moncompte" />
             )}
           />
-        </View>
-      </View>
-
-      {/* ── CONFIDENTIALITÉ DE L'ADRESSE ── */}
-      <View>
-        <SectionHeader icon="lock-closed-outline" label="Confidentialité de l'adresse" />
-        <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>
-                Rendre mon adresse visible publiquement
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
-                {addressPublic
-                  ? "Ton adresse complète sera visible sur ton profil et sur la carte."
-                  : "Par défaut, ton adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
-              </Text>
-            </View>
-            <Switch
-              value={addressPublic}
-              onValueChange={(next) => {
-                if (next) {
-                  setShowAddressConfirm(true);
-                } else {
-                  setAddressPublic(false);
-                }
-              }}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.onColor}
-            />
-          </View>
-
-          {showAddressConfirm && (
-            <View style={{ padding: 14, borderRadius: 14, backgroundColor: colors.warningLight, borderWidth: 1, borderColor: colors.warningBorder, gap: 10 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningTextDark }}>
-                Rendre ton adresse publique ?
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.warningText, lineHeight: 17 }}>
-                Ton adresse exacte sera visible par tous les visiteurs de ton profil, y compris sur la carte. Tu pourras la masquer à nouveau à tout moment.
-              </Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <AnimatedPressable
-                  onPress={() => setShowAddressConfirm(false)}
-                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
-                </AnimatedPressable>
-                <AnimatedPressable
-                  onPress={() => { setAddressPublic(true); setShowAddressConfirm(false); }}
-                  style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: colors.warning, alignItems: "center", justifyContent: "center" }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningForeground }}>Oui, rendre publique</Text>
-                </AnimatedPressable>
-              </View>
-            </View>
-          )}
-
-          {addressPublic ? (
-            <>
-              <Controller
-                control={control}
-                name="address_line"
-                render={({ field: { onChange, value } }) => (
-                  <Input label="Adresse" value={value ?? ""} onChangeText={onChange} leftIcon="pin-outline" />
-                )}
-              />
-              <Controller
-                control={control}
-                name="postal_code"
-                render={({ field: { onChange, value } }) => (
-                  <Input label="Code postal" value={value ?? ""} onChangeText={onChange} keyboardType="number-pad" leftIcon="mail-outline" />
-                )}
-              />
-            </>
-          ) : (
-            <>
-              <View style={{ backgroundColor: colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-                <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} style={{ marginTop: 1 }} />
-                <Text style={{ fontSize: 12, color: colors.mutedForeground, flex: 1, lineHeight: 17 }}>
-                  Adresse non affichée publiquement — tes clientes verront une zone d'intervention à la place.
-                </Text>
-              </View>
-              <Controller
-                control={control}
-                name="service_radius_km"
-                render={({ field: { onChange, value } }) => (
-                  <Input
-                    label="Rayon d'intervention (km)"
-                    value={value ?? "5"}
-                    onChangeText={onChange}
-                    keyboardType="number-pad"
-                    leftIcon="navigate-outline"
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name="service_area_label"
-                render={({ field: { onChange, value } }) => (
-                  <Input
-                    label="Libellé de zone (optionnel)"
-                    value={value ?? ""}
-                    onChangeText={onChange}
-                    leftIcon="map-outline"
-                    placeholder="Ex : Nantes centre et périphérie"
-                  />
-                )}
-              />
-            </>
-          )}
-        </View>
-      </View>
-
-      {/* ── POLITIQUE D'ANNULATION ── */}
-      <View>
-        <SectionHeader icon="time-outline" label="Politique d'annulation" />
-        <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 14, ...Shadows.card }}>
-          <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
-            Délai minimum avant lequel une cliente peut annuler son rendez-vous sans que tu perdes le créneau à la dernière minute. Passé ce délai, elle ne peut plus annuler depuis l'app.
-          </Text>
-
-          {noticeHours === null ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {ALLOWED_NOTICE_HOURS.map((h) => {
-                const selected = h === noticeHours;
-                return (
-                  <AnimatedPressable
-                    key={h}
-                    onPress={() => handleSelectNoticeHours(h)}
-                    disabled={noticeSaving}
-                    style={{
-                      paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12,
-                      backgroundColor: selected ? colors.primary : colors.cream,
-                      opacity: noticeSaving && !selected ? 0.5 : 1,
-                    }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: selected ? colors.onColor : colors.foreground }}>
-                      {h === 0 ? "Aucun délai" : `${h}h avant`}
-                    </Text>
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
-          )}
-
-          {noticeSuccess && (
-            <Text style={{ fontSize: 12, color: colors.success, fontWeight: "600" }}>Délai mis à jour ✓</Text>
-          )}
-          {noticeError && (
-            <Text style={{ fontSize: 12, color: colors.destructive, fontWeight: "600" }}>Impossible de mettre à jour — réessaie</Text>
-          )}
         </View>
       </View>
 
