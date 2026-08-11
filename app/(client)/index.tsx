@@ -418,12 +418,10 @@ export default function ClientHome() {
 
   // ── Entrance animation ──────────────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const slideAnim = useRef(new Animated.Value(reduceMotion ? 0 : 30)).current;
   const nameSlide = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
       Animated.timing(nameSlide, { toValue: 0, duration: 380, delay: 80, useNativeDriver: true }),
     ]).start();
   }, []);
@@ -553,7 +551,7 @@ export default function ClientHome() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <Animated.View
-        style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+        style={{ flex: 1, opacity: fadeAnim }}
       >
       <FlatList
         ref={flatListRef}

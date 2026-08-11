@@ -29,13 +29,9 @@ export default function FavoritesScreen() {
 
   // ── Entrance animation ────────────────────────────────────────────────────
   const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
   // ── Empty state animations ────────────────────────────────────────────────
@@ -175,31 +171,35 @@ export default function FavoritesScreen() {
   );
 
   // ── Main render ───────────────────────────────────────────────────────────
+  const listHeader = (
+    <View style={{ paddingTop: 16, paddingBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <View>
+        <Text style={{ fontSize: 28, fontWeight: "800", color: colors.foreground }}>
+          Mes favoris
+        </Text>
+        <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 4 }}>
+          {favorites.length > 0
+            ? `${favorites.length} experte${favorites.length > 1 ? "s" : ""} sauvegardée${favorites.length > 1 ? "s" : ""}`
+            : "Retrouve ici tes expertes préférées"}
+        </Text>
+      </View>
+      {isToggling && (
+        <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 4 }} />
+      )}
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
-      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-
-        {/* Header */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View>
-            <Text style={{ fontSize: 28, fontWeight: "800", color: colors.foreground }}>
-              Mes favoris
-            </Text>
-            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 4 }}>
-              {favorites.length > 0
-                ? `${favorites.length} experte${favorites.length > 1 ? "s" : ""} sauvegardée${favorites.length > 1 ? "s" : ""}`
-                : "Retrouve ici tes expertes préférées"}
-            </Text>
-          </View>
-          {isToggling && (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 4 }} />
-          )}
-        </View>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
 
         {/* Body */}
         {isLoading && favorites.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+          <View style={{ paddingHorizontal: 20, flex: 1 }}>
+            {listHeader}
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
           </View>
         ) : favorites.length > 0 ? (
           <FlatList
@@ -213,9 +213,13 @@ export default function FavoritesScreen() {
               <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
             }
             removeClippedSubviews
+            ListHeaderComponent={listHeader}
           />
         ) : (
-          renderEmpty()
+          <View style={{ paddingHorizontal: 20, flex: 1 }}>
+            {listHeader}
+            {renderEmpty()}
+          </View>
         )}
 
       </Animated.View>

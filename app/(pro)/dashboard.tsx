@@ -195,7 +195,6 @@ export default function ProDashboard() {
   useScrollToTop(scrollRef);
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const contentTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockDate, setBlockDate] = useState<Date>(new Date());
@@ -229,11 +228,8 @@ export default function ProDashboard() {
 
   useEffect(() => {
     if (isLoading || reduceMotion) return;
-    Animated.parallel([
-      Animated.timing(contentOpacity, { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(contentTranslateY, { toValue: 0, duration: 360, useNativeDriver: true }),
-    ]).start();
-  }, [isLoading, reduceMotion, contentOpacity, contentTranslateY]);
+    Animated.timing(contentOpacity, { toValue: 1, duration: 360, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, contentOpacity]);
 
   const raw = data?.data as DashData | undefined;
 
@@ -363,7 +359,7 @@ export default function ProDashboard() {
   }
 
   return (
-    <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }}>
+    <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: colors.background }}
