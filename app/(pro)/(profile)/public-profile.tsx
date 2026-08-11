@@ -433,8 +433,8 @@ export default function ProPublicProfileScreen() {
                 </Text>
                 <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, lineHeight: 17 }}>
                   {addressPublic
-                    ? "Ton adresse complète sera visible sur ton profil et sur la carte."
-                    : "Par défaut, ton adresse exacte reste privée. Seule une zone approximative est affichée aux clientes."}
+                    ? "Ton adresse complète est visible par tout le monde, sur ton profil et sur la carte — même sans avoir réservé."
+                    : "Ton adresse exacte n'apparaît pas sur ton profil public ni sur la carte — seule une zone approximative y est visible. Une cliente qui a réservé chez toi la reçoit dès la confirmation de son rendez-vous."}
                 </Text>
               </View>
               <Switch
@@ -486,7 +486,7 @@ export default function ProPublicProfileScreen() {
                 <View style={{ backgroundColor: colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
                   <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} style={{ marginTop: 1 }} />
                   <Text style={{ fontSize: 12, color: colors.mutedForeground, flex: 1, lineHeight: 17 }}>
-                    Adresse non affichée publiquement — tes clientes verront une zone d'intervention à la place.
+                    Adresse non affichée sur ton profil public — tes clientes verront une zone d'intervention avant de réserver, puis l'adresse exacte une fois leur rendez-vous confirmé.
                   </Text>
                 </View>
                 <Input
