@@ -26,8 +26,18 @@ import { resolveMediaUrl } from "@/lib/media";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
-const QUICK_REPLIES_BEFORE = ["Confirmer l'adresse", "Je suis disponible plus tôt ?", "Quel est le prix exact ?"];
-const QUICK_REPLIES_AFTER = ["Je serai en retard", "Confirmer l'adresse", "J'ai une allergie à signaler"];
+type QuickReply = { label: string; icon: React.ComponentProps<typeof Ionicons>["name"] };
+
+const QUICK_REPLIES_BEFORE: QuickReply[] = [
+  { label: "Confirmer l'adresse", icon: "location-outline" },
+  { label: "Je suis disponible plus tôt ?", icon: "time-outline" },
+  { label: "Quel est le prix exact ?", icon: "pricetag-outline" },
+];
+const QUICK_REPLIES_AFTER: QuickReply[] = [
+  { label: "Je serai en retard", icon: "time-outline" },
+  { label: "Confirmer l'adresse", icon: "location-outline" },
+  { label: "J'ai une allergie à signaler", icon: "alert-circle-outline" },
+];
 
 function formatMessageTime(dateString: string): string {
   return new Date(dateString).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -89,6 +99,13 @@ export default function MessageThreadScreen() {
   }, [queryClient]);
 
   const quickReplies = thread?.reservationStatus ? QUICK_REPLIES_AFTER : QUICK_REPLIES_BEFORE;
+  // Sous-titre du header — dérivé du statut réel de la réservation épinglée,
+  // jamais inventé (pas de "répond généralement vite" sans donnée derrière).
+  const headerSubtitle = thread?.reservationStatus === "completed"
+    ? "Rendez-vous terminé"
+    : thread?.reservationStatus
+    ? "Rendez-vous à venir"
+    : null;
 
   const handlePickPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -152,18 +169,35 @@ export default function MessageThreadScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={8}>
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <AnimatedIconButton onPress={() => safeBack(router, user?.role === "pro" ? "/(pro)/dashboard" : "/(client)")} style={{ padding: 6 }}>
+          <AnimatedIconButton
+            onPress={() => safeBack(router, user?.role === "pro" ? "/(pro)/dashboard" : "/(client)")}
+            style={{ padding: 6 }}
+            accessibilityLabel="Retour"
+            accessibilityRole="button"
+          >
             <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </AnimatedIconButton>
           <Avatar uri={thread.otherPhoto} name={thread.otherName} />
-          <Text style={{ flex: 1, fontSize: 16, fontWeight: "700", color: colors.foreground }} numberOfLines={1}>
-            {thread.otherName}
-          </Text>
-          <AnimatedIconButton onPress={handleReport} style={{ padding: 6 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }} numberOfLines={1}>
+              {thread.otherName}
+            </Text>
+            {!!headerSubtitle && (
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }} numberOfLines={1}>
+                {headerSubtitle}
+              </Text>
+            )}
+          </View>
+          <AnimatedIconButton
+            onPress={handleReport}
+            style={{ padding: 6 }}
+            accessibilityLabel="Signaler cette conversation"
+            accessibilityRole="button"
+          >
             <Ionicons name="flag-outline" size={20} color={colors.mutedForeground} />
           </AnimatedIconButton>
         </View>
@@ -172,13 +206,18 @@ export default function MessageThreadScreen() {
         {thread.lastReservationId && (
           <Pressable
             onPress={() => router.push(`/booking/${thread.lastReservationId}` as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Voir le rendez-vous"
             style={{
               flexDirection: "row", alignItems: "center", justifyContent: "space-between",
               marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 14,
               backgroundColor: colors.primaryLight,
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>Voir le rendez-vous</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="calendar-outline" size={15} color={colors.primary} />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>Voir le rendez-vous</Text>
+            </View>
             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </Pressable>
         )}
@@ -223,9 +262,23 @@ export default function MessageThreadScreen() {
             );
           }}
           ListEmptyComponent={
-            <View style={{ alignItems: "center", paddingTop: 60, gap: 8 }}>
-              <Ionicons name="chatbubble-ellipses-outline" size={28} color={colors.mutedForeground} />
-              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>Dis bonjour à {thread.otherName} 👋</Text>
+            <View style={{ alignItems: "center", paddingTop: 72, paddingHorizontal: 40 }}>
+              <View
+                style={{
+                  width: 60, height: 60, borderRadius: 30,
+                  backgroundColor: colors.primaryLight,
+                  alignItems: "center", justifyContent: "center",
+                  marginBottom: 14,
+                }}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={26} color={colors.primary} />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground, marginBottom: 4, textAlign: "center" }}>
+                Commence la conversation
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center", lineHeight: 18 }}>
+                Pose une question ou envoie un message à {thread.otherName}.
+              </Text>
             </View>
           }
         />
@@ -235,11 +288,18 @@ export default function MessageThreadScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
             {quickReplies.map((q) => (
               <Pressable
-                key={q}
-                onPress={() => setDraft(q)}
-                style={{ borderWidth: 1.2, borderColor: colors.primary, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 }}
+                key={q.label}
+                onPress={() => setDraft(q.label)}
+                accessibilityRole="button"
+                accessibilityLabel={q.label}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                  borderWidth: 1.2, borderColor: colors.primary, borderRadius: 20,
+                  paddingVertical: 6, paddingHorizontal: 12,
+                }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>{q}</Text>
+                <Ionicons name={q.icon} size={13} color={colors.primary} />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>{q.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -252,6 +312,8 @@ export default function MessageThreadScreen() {
               <RNImage source={{ uri: pickedPhoto }} style={{ width: 60, height: 60, borderRadius: 12 }} />
               <Pressable
                 onPress={() => setPickedPhoto(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Retirer la photo"
                 style={{ position: "absolute", top: -6, right: -6, backgroundColor: colors.foreground, borderRadius: 10, width: 20, height: 20, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="close" size={12} color={colors.background} />
@@ -262,7 +324,12 @@ export default function MessageThreadScreen() {
 
         {/* Composer */}
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-          <Pressable onPress={handlePickPhoto} style={{ padding: 8 }}>
+          <Pressable
+            onPress={handlePickPhoto}
+            accessibilityRole="button"
+            accessibilityLabel="Ajouter une photo"
+            style={{ padding: 8 }}
+          >
             <Ionicons name="camera-outline" size={22} color={colors.mutedForeground} />
           </Pressable>
           <TextInput
@@ -279,6 +346,9 @@ export default function MessageThreadScreen() {
           <AnimatedPressable
             onPress={handleSend}
             disabled={sending || (!draft.trim() && !pickedPhoto)}
+            accessibilityRole="button"
+            accessibilityLabel="Envoyer le message"
+            accessibilityState={{ disabled: sending || (!draft.trim() && !pickedPhoto) }}
             style={{
               width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
               backgroundColor: (draft.trim() || pickedPhoto) ? colors.primary : colors.disabled,
