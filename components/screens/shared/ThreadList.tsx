@@ -9,6 +9,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { resolveMediaUrl } from "@/lib/media";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Shadows } from "@/constants/shadows";
 
 function formatThreadTime(dateString: string | null): string {
   if (!dateString) return "";
@@ -56,7 +57,7 @@ export function ThreadList() {
       data={threads}
       keyExtractor={(t) => String(t.id)}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100, gap: 4 }}
+      contentContainerStyle={{ paddingBottom: 100, gap: 10 }}
       renderItem={({ item }) => {
         const photo = resolveMediaUrl(item.other_photo);
         const unread = item.unread_count > 0;
@@ -64,39 +65,53 @@ export function ThreadList() {
           <AnimatedPressable
             onPress={() => router.push({ pathname: "/message-thread/[id]", params: { id: String(item.id) } })}
             style={{
-              flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 16,
-              backgroundColor: unread ? colors.primaryLight : "transparent",
+              flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 18,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: unread ? colors.primary : colors.border,
+              ...Shadows.card,
             }}
           >
-            {photo ? (
-              <Image source={{ uri: photo }} style={{ width: 44, height: 44, borderRadius: 22 }} />
-            ) : (
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: colors.mutedForeground }}>
-                  {item.other_name.trim().charAt(0).toUpperCase() || "?"}
-                </Text>
-              </View>
-            )}
+            <View>
+              {photo ? (
+                <Image source={{ uri: photo }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+              ) : (
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 17, fontWeight: "700", color: colors.mutedForeground }}>
+                    {item.other_name.trim().charAt(0).toUpperCase() || "?"}
+                  </Text>
+                </View>
+              )}
+              {unread && (
+                <View style={{
+                  position: "absolute", top: -2, right: -2,
+                  minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+                  backgroundColor: colors.primary, borderWidth: 2, borderColor: colors.card,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: colors.onColor }}>
+                    {item.unread_count > 9 ? "9+" : item.unread_count}
+                  </Text>
+                </View>
+              )}
+            </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: unread ? "700" : "600", color: colors.foreground, flexShrink: 1 }} numberOfLines={1}>
+                <Text style={{ fontSize: 14.5, fontWeight: unread ? "700" : "600", color: colors.foreground, flexShrink: 1 }} numberOfLines={1}>
                   {item.other_name}
                 </Text>
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, flexShrink: 0 }}>
+                <Text style={{ fontSize: 11, color: unread ? colors.primary : colors.mutedForeground, fontWeight: unread ? "700" : "400", flexShrink: 0 }}>
                   {formatThreadTime(item.last_message_at)}
                 </Text>
               </View>
               <Text
-                style={{ fontSize: 12.5, color: unread ? colors.foreground : colors.mutedForeground, marginTop: 2 }}
+                style={{ fontSize: 12.5, color: unread ? colors.foreground : colors.mutedForeground, marginTop: 3 }}
                 numberOfLines={1}
               >
                 {item.last_message_preview || "Nouvelle conversation"}
               </Text>
             </View>
-            {unread && (
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, flexShrink: 0 }} />
-            )}
-            {!unread && <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />}
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </AnimatedPressable>
         );
       }}
