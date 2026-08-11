@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  Share,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -277,6 +279,29 @@ export default function ProPublicProfileScreen() {
     Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
   }, [isLoading, reduceMotion, contentOpacity]);
 
+  const handleShare = async () => {
+    if (!user?.id) return;
+    if (!isPublic) {
+      setShowPreview(false);
+      Alert.alert(
+        "Profil privé",
+        "Passe ton profil en public pour pouvoir le partager à tes clientes.",
+      );
+      return;
+    }
+    const url = `https://blyssapp.fr/s/${user.id}`;
+    const name = activityName || "mon activité";
+    try {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await Share.share({
+        message: `Réserve directement chez moi sur Blyss — ${name} : ${url}`,
+        url,
+      });
+    } catch {
+      // partage annulé ou indisponible, rien à faire
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
@@ -308,6 +333,15 @@ export default function ProPublicProfileScreen() {
               <Ionicons name="chevron-back" size={20} color={colors.foreground} />
             </AnimatedIconButton>
             <Text className="text-2xl font-bold flex-1" style={{ color: colors.foreground }}>Profil public</Text>
+            <Pressable
+              onPress={handleShare}
+              className="w-10 h-10 rounded-xl items-center justify-center mr-2"
+              style={{ backgroundColor: `${colors.primary}15` }}
+              accessibilityRole="button"
+              accessibilityLabel="Partager mon profil"
+            >
+              <Ionicons name="share-outline" size={20} color={colors.primary} />
+            </Pressable>
             <Pressable
               onPress={() => setShowPreview(true)}
               className="w-10 h-10 rounded-xl items-center justify-center"
@@ -848,15 +882,26 @@ export default function ProPublicProfileScreen() {
             style={{ paddingTop: insets.top + 12, paddingBottom: 12, borderBottomColor: colors.border }}
           >
             <Text className="font-bold text-base" style={{ color: colors.foreground }}>Aperçu profil public</Text>
-            <Pressable
-              onPress={() => setShowPreview(false)}
-              className="w-8 h-8 rounded-full items-center justify-center"
-              style={{ backgroundColor: colors.muted }}
-              accessibilityRole="button"
-              accessibilityLabel="Fermer l'aperçu"
-            >
-              <Ionicons name="close" size={18} color={colors.foreground} />
-            </Pressable>
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={handleShare}
+                className="w-8 h-8 rounded-full items-center justify-center"
+                style={{ backgroundColor: colors.muted }}
+                accessibilityRole="button"
+                accessibilityLabel="Partager mon profil"
+              >
+                <Ionicons name="share-outline" size={16} color={colors.foreground} />
+              </Pressable>
+              <Pressable
+                onPress={() => setShowPreview(false)}
+                className="w-8 h-8 rounded-full items-center justify-center"
+                style={{ backgroundColor: colors.muted }}
+                accessibilityRole="button"
+                accessibilityLabel="Fermer l'aperçu"
+              >
+                <Ionicons name="close" size={18} color={colors.foreground} />
+              </Pressable>
+            </View>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
             {/* Profile preview */}
