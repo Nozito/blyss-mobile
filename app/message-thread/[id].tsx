@@ -8,10 +8,13 @@ import {
   Image as RNImage,
   ActivityIndicator,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
+  StyleSheet,
 } from "react-native";
 import { Image } from "expo-image";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,19 +24,37 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { useActionSheet } from "@/components/ui/ActionSheet";
 import { messagesApi, type ChatMessage } from "@/lib/api";
-import { useThemeColors } from "@/hooks/useThemeColors";
+import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
+import { withAlpha } from "@/constants/colors";
 import { resolveMediaUrl } from "@/lib/media";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
-const QUICK_REPLIES_BEFORE = ["Confirmer l'adresse", "Je suis disponible plus tôt ?", "Quel est le prix exact ?"];
+const QUICK_REPLIES_BEFORE = ["Confirmer l'adresse", "Disponible plus tôt ?", "Quel est le prix exact ?"];
 const QUICK_REPLIES_AFTER = ["Je serai en retard", "Confirmer l'adresse", "J'ai une allergie à signaler"];
 
-function formatMessageTime(dateString: string): string {
+// Regroupe les bulles comme iMessage : un nouveau "groupe" démarre quand
+// l'émetteur change ou quand plus de 5 minutes séparent deux messages —
+// c'est ce même écart qui déclenche l'horodatage centré au-dessus.
+const GROUP_GAP_MS = 5 * 60 * 1000;
+
+function formatBubbleTime(dateString: string): string {
   return new Date(dateString).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function Avatar({ uri, name, size = 34 }: { uri?: string | null; name: string; size?: number }) {
+function formatDividerLabel(dateString: string): string {
+  const d = new Date(dateString);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (isToday) return `Aujourd'hui ${time}`;
+  if (isYesterday) return `Hier ${time}`;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function Avatar({ uri, name, size = 32 }: { uri?: string | null; name: string; size?: number }) {
   const colors = useThemeColors();
   const resolved = resolveMediaUrl(uri);
   if (resolved) {
@@ -47,7 +68,7 @@ function Avatar({ uri, name, size = 34 }: { uri?: string | null; name: string; s
         backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center",
       }}
     >
-      <Text style={{ fontSize: size * 0.4, fontWeight: "700", color: colors.primary }}>{initial}</Text>
+      <Text style={{ fontSize: size * 0.42, fontWeight: "700", color: colors.primary }}>{initial}</Text>
     </View>
   );
 }
@@ -57,6 +78,8 @@ export default function MessageThreadScreen() {
   const threadId = Number(id);
   const router = useRouter();
   const colors = useThemeColors();
+  const isDark = useIsDarkMode();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { showToast } = useToast();
   const showActionSheet = useActionSheet();
@@ -95,6 +118,7 @@ export default function MessageThreadScreen() {
     if (perm.status !== "granted") return;
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
     if (result.canceled || !result.assets[0]) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPickedPhoto(result.assets[0].uri);
   };
 
@@ -151,74 +175,130 @@ export default function MessageThreadScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={8}>
-        {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <AnimatedIconButton onPress={() => safeBack(router, user?.role === "pro" ? "/(pro)/dashboard" : "/(client)")} style={{ padding: 6 }}>
-            <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          </AnimatedIconButton>
-          <Avatar uri={thread.otherPhoto} name={thread.otherName} />
-          <Text style={{ flex: 1, fontSize: 16, fontWeight: "700", color: colors.foreground }} numberOfLines={1}>
-            {thread.otherName}
-          </Text>
-          <AnimatedIconButton onPress={handleReport} style={{ padding: 6 }}>
-            <Ionicons name="flag-outline" size={20} color={colors.mutedForeground} />
-          </AnimatedIconButton>
-        </View>
+  const subtitle = thread.reservationStatus === "completed"
+    ? "Rendez-vous terminé"
+    : thread.reservationStatus
+    ? "Rendez-vous à venir"
+    : "";
 
-        {/* Reservation pin */}
-        {thread.lastReservationId && (
-          <Pressable
-            onPress={() => router.push(`/booking/${thread.lastReservationId}` as never)}
-            style={{
-              flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-              marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 14,
-              backgroundColor: colors.primaryLight,
-            }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>Voir le rendez-vous</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-          </Pressable>
-        )}
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={insets.top}>
+        {/* Header — barre translucide façon Messages, avatar+nom centrés */}
+        <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={{ paddingTop: insets.top }}>
+          <View style={[styles.headerRow, { borderBottomColor: withAlpha(colors.border, 0.7) }]}>
+            <AnimatedIconButton
+              onPress={() => safeBack(router, user?.role === "pro" ? "/(pro)/dashboard" : "/(client)")}
+              style={styles.headerSideButton}
+            >
+              <Ionicons name="chevron-back" size={26} color={colors.primary} />
+            </AnimatedIconButton>
+
+            <View style={styles.headerCenter}>
+              <Avatar uri={thread.otherPhoto} name={thread.otherName} size={30} />
+              <Text style={[styles.headerName, { color: colors.foreground }]} numberOfLines={1}>
+                {thread.otherName}
+              </Text>
+              {!!subtitle && (
+                <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              )}
+            </View>
+
+            <AnimatedIconButton onPress={handleReport} style={styles.headerSideButton} accessibilityLabel="Signaler">
+              <Ionicons name="flag-outline" size={19} color={colors.mutedForeground} />
+            </AnimatedIconButton>
+          </View>
+
+          {/* Rendez-vous épinglé — carte façon "shared content" iMessage */}
+          {thread.lastReservationId && (
+            <Pressable
+              onPress={() => router.push(`/booking/${thread.lastReservationId}` as never)}
+              style={({ pressed }) => [
+                styles.pinCard,
+                { backgroundColor: withAlpha(colors.primary, isDark ? 0.16 : 0.09), opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+              <Text style={[styles.pinText, { color: colors.primary }]}>Voir le rendez-vous</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+            </Pressable>
+          )}
+        </BlurView>
 
         {/* Messages */}
         <FlatList
           ref={listRef}
           data={messages}
           keyExtractor={(m) => String(m.id)}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 }}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isMine = item.sender_id === user?.id;
+            const prev = messages[index - 1];
+            const next = messages[index + 1];
+            const gapBefore = !prev || (new Date(item.created_at).getTime() - new Date(prev.created_at).getTime()) > GROUP_GAP_MS;
+            const showDivider = !prev || gapBefore;
+            const isGroupStart = showDivider || prev.sender_id !== item.sender_id;
+            const gapAfter = !next || (new Date(next.created_at).getTime() - new Date(item.created_at).getTime()) > GROUP_GAP_MS;
+            const isGroupEnd = gapAfter || next.sender_id !== item.sender_id;
             const photoUri = resolveMediaUrl(item.attachment_url);
+
             return (
-              <View style={{ alignSelf: isMine ? "flex-end" : "flex-start", maxWidth: "80%", gap: 2 }}>
+              <View>
+                {showDivider && (
+                  <Text style={[styles.divider, { color: colors.mutedForeground }]}>
+                    {formatDividerLabel(item.created_at)}
+                  </Text>
+                )}
                 <View
                   style={{
-                    backgroundColor: isMine ? colors.primary : colors.card,
-                    borderWidth: isMine ? 0 : 1,
-                    borderColor: colors.border,
-                    borderRadius: 18,
-                    borderBottomRightRadius: isMine ? 5 : 18,
-                    borderBottomLeftRadius: isMine ? 18 : 5,
-                    padding: photoUri ? 6 : 12,
-                    gap: 6,
+                    alignSelf: isMine ? "flex-end" : "flex-start",
+                    maxWidth: "78%",
+                    marginTop: isGroupStart ? 10 : 2,
                   }}
                 >
-                  {photoUri && (
-                    <RNImage source={{ uri: photoUri }} style={{ width: 200, height: 200, borderRadius: 13 }} resizeMode="cover" />
-                  )}
-                  {item.body && (
-                    <Text style={{ fontSize: 14, lineHeight: 19, color: isMine ? colors.onColor : colors.foreground, paddingHorizontal: photoUri ? 6 : 0, paddingBottom: photoUri ? 4 : 0 }}>
-                      {item.body}
+                  <View
+                    style={[
+                      styles.bubble,
+                      {
+                        backgroundColor: isMine ? colors.primary : colors.card,
+                        borderWidth: isMine ? 0 : StyleSheet.hairlineWidth,
+                        borderColor: colors.border,
+                        padding: photoUri ? 5 : 11,
+                        borderBottomRightRadius: isMine ? (isGroupEnd ? 5 : 18) : 18,
+                        borderBottomLeftRadius: isMine ? 18 : (isGroupEnd ? 5 : 18),
+                      },
+                      isMine ? styles.bubbleShadowMine : styles.bubbleShadowTheirs,
+                    ]}
+                  >
+                    {photoUri && (
+                      <RNImage source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+                    )}
+                    {item.body && (
+                      <Text
+                        style={[
+                          styles.bubbleText,
+                          { color: isMine ? colors.onColor : colors.foreground },
+                          photoUri ? { paddingHorizontal: 6, paddingTop: 6, paddingBottom: 2 } : null,
+                        ]}
+                      >
+                        {item.body}
+                      </Text>
+                    )}
+                  </View>
+                  {isGroupEnd && (
+                    <Text
+                      style={[
+                        styles.bubbleTime,
+                        { color: colors.mutedForeground, alignSelf: isMine ? "flex-end" : "flex-start" },
+                      ]}
+                    >
+                      {formatBubbleTime(item.created_at)}
                     </Text>
                   )}
                 </View>
-                <Text style={{ fontSize: 10, color: colors.mutedForeground, alignSelf: isMine ? "flex-end" : "flex-start", marginHorizontal: 4 }}>
-                  {formatMessageTime(item.created_at)}
-                </Text>
               </View>
             );
           }}
@@ -230,29 +310,40 @@ export default function MessageThreadScreen() {
           }
         />
 
-        {/* Quick replies */}
+        {/* Suggestions — bande de réponses rapides façon iMessage */}
         {messages.length < 6 && (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}
+          >
             {quickReplies.map((q) => (
               <Pressable
                 key={q}
-                onPress={() => setDraft(q)}
-                style={{ borderWidth: 1.2, borderColor: colors.primary, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 }}
+                onPress={() => { void Haptics.selectionAsync(); setDraft(q); }}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.6 : 1,
+                  },
+                ]}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary }}>{q}</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primary }}>{q}</Text>
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         {/* Picked photo preview */}
         {pickedPhoto && (
-          <View style={{ paddingHorizontal: 16, paddingBottom: 8, flexDirection: "row" }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: "row" }}>
             <View style={{ position: "relative" }}>
-              <RNImage source={{ uri: pickedPhoto }} style={{ width: 60, height: 60, borderRadius: 12 }} />
+              <RNImage source={{ uri: pickedPhoto }} style={{ width: 56, height: 56, borderRadius: 12 }} />
               <Pressable
                 onPress={() => setPickedPhoto(null)}
-                style={{ position: "absolute", top: -6, right: -6, backgroundColor: colors.foreground, borderRadius: 10, width: 20, height: 20, alignItems: "center", justifyContent: "center" }}
+                style={[styles.photoRemove, { backgroundColor: colors.foreground }]}
               >
                 <Ionicons name="close" size={12} color={colors.background} />
               </Pressable>
@@ -260,34 +351,134 @@ export default function MessageThreadScreen() {
           </View>
         )}
 
-        {/* Composer */}
-        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-          <Pressable onPress={handlePickPhoto} style={{ padding: 8 }}>
-            <Ionicons name="camera-outline" size={22} color={colors.mutedForeground} />
-          </Pressable>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Écrire un message…"
-            placeholderTextColor={colors.mutedForeground}
-            multiline
-            style={{
-              flex: 1, maxHeight: 100, fontSize: 14, color: colors.foreground,
-              backgroundColor: colors.muted, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10,
-            }}
-          />
-          <AnimatedPressable
-            onPress={handleSend}
-            disabled={sending || (!draft.trim() && !pickedPhoto)}
-            style={{
-              width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
-              backgroundColor: (draft.trim() || pickedPhoto) ? colors.primary : colors.disabled,
-            }}
-          >
-            {sending ? <ActivityIndicator size="small" color={colors.onColor} /> : <Ionicons name="arrow-up" size={18} color={colors.onColor} />}
-          </AnimatedPressable>
-        </View>
+        {/* Composer — barre translucide, champ pilule, flèche façon iMessage */}
+        <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={{ paddingBottom: insets.bottom }}>
+          <View style={[styles.composerRow, { borderTopColor: withAlpha(colors.border, 0.7) }]}>
+            <Pressable onPress={handlePickPhoto} hitSlop={8} style={styles.cameraButton}>
+              <Ionicons name="camera-outline" size={21} color={colors.mutedForeground} />
+            </Pressable>
+            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Message"
+                placeholderTextColor={colors.mutedForeground}
+                multiline
+                style={[styles.input, { color: colors.foreground }]}
+              />
+            </View>
+            <AnimatedPressable
+              onPress={handleSend}
+              disabled={sending || (!draft.trim() && !pickedPhoto)}
+              style={[
+                styles.sendButton,
+                { backgroundColor: (draft.trim() || pickedPhoto) ? colors.primary : colors.disabled },
+              ]}
+            >
+              {sending ? <ActivityIndicator size="small" color={colors.onColor} /> : <Ionicons name="arrow-up" size={17} color={colors.onColor} />}
+            </AnimatedPressable>
+          </View>
+        </BlurView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerSideButton: { width: 44, height: 40, alignItems: "center", justifyContent: "center" },
+  headerCenter: { flex: 1, alignItems: "center", gap: 2 },
+  headerName: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
+  headerSubtitle: { fontSize: 11, fontWeight: "500" },
+
+  pinCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  pinText: { fontSize: 12, fontWeight: "700" },
+
+  divider: {
+    alignSelf: "center",
+    fontSize: 11,
+    fontWeight: "600",
+    marginVertical: 10,
+  },
+
+  bubble: {
+    borderRadius: 18,
+  },
+  bubbleShadowMine: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+  bubbleShadowTheirs: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 1,
+  },
+  bubbleText: { fontSize: 15.5, lineHeight: 20 },
+  bubbleTime: { fontSize: 10.5, marginTop: 3, marginHorizontal: 4 },
+  photo: { width: 208, height: 208, borderRadius: 14 },
+
+  chipsRow: { gap: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  chip: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  photoRemove: {
+    position: "absolute", top: -6, right: -6, borderRadius: 10,
+    width: 20, height: 20, alignItems: "center", justifyContent: "center",
+  },
+
+  composerRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  cameraButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  inputWrap: {
+    flex: 1,
+    borderRadius: 20,
+    minHeight: 36,
+    maxHeight: 110,
+    justifyContent: "center",
+  },
+  input: {
+    fontSize: 16,
+    lineHeight: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  sendButton: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: 2,
+  },
+});
