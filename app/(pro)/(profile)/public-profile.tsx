@@ -154,6 +154,15 @@ export default function ProPublicProfileScreen() {
   });
   const services = ((servicesData?.data as Service[] | undefined) ?? []).filter((s) => s.active !== false);
 
+  // Même règle que le serveur (backend/server.ts, PUT /api/users/update) —
+  // un profil vide ne doit pas pouvoir passer public, mais on le vérifie
+  // aussi ici pour donner un retour immédiat plutôt qu'une erreur au save.
+  const missingForPublic: string[] = [];
+  if (!activityName.trim()) missingForPublic.push("le nom de ton activité");
+  if (!city.trim()) missingForPublic.push("ta ville");
+  if (services.length === 0) missingForPublic.push("au moins une prestation active");
+  const canGoPublic = missingForPublic.length === 0;
+
   const { data: profileData, isLoading } = useQuery({
     queryKey: ["pro-public-profile"],
     queryFn: async () => {
@@ -244,7 +253,12 @@ export default function ProPublicProfileScreen() {
         payload.address_line = addressLine;
         payload.postal_code = postalCode;
       }
-      await proApi.updateProfile(payload);
+      const res = await proApi.updateProfile(payload);
+      if (!res.success) {
+        setSaveError(res.error ?? "Impossible de mettre à jour le profil.");
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["pro-public-profile"] });
       setInitial({ activityName, city, bio, instagram, isPublic, conditions, addressPublic, addressLine, postalCode, serviceRadiusKm, serviceAreaLabel });
       setHasChanges(false);
@@ -740,11 +754,26 @@ export default function ProPublicProfileScreen() {
               </View>
               <Switch
                 value={isPublic}
-                onValueChange={setIsPublic}
+                onValueChange={(next) => {
+                  if (next && !canGoPublic) {
+                    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    return;
+                  }
+                  setIsPublic(next);
+                }}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={colors.onColor}
               />
             </View>
+
+            {!canGoPublic && (
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: colors.warningLight }}>
+                <Ionicons name="alert-circle-outline" size={16} color={colors.warningTextDark} style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, fontSize: 12, color: colors.warningTextDark, lineHeight: 17 }}>
+                  Il manque {missingForPublic.join(", ")} pour pouvoir passer ton profil en public.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
