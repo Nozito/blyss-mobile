@@ -555,78 +555,85 @@ export default function MyBookingsScreen() {
     />
   ), [activeTab, handleCancel]);
 
+  const listHeader = (
+    <View>
+      <Text style={{ fontSize: 28, fontWeight: "800", color: colors.foreground, marginBottom: 20 }}>
+        Mes réservations
+      </Text>
+      {/* Segmented control */}
+      <View
+        onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
+        style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4 }}
+      >
+        {segmentWidth > 0 && (
+          <Animated.View
+            style={{
+              position: "absolute",
+              top: 4,
+              bottom: 4,
+              left: 4,
+              width: segmentWidth,
+              borderRadius: 10,
+              backgroundColor: colors.white,
+              transform: [{ translateX: tabIndicatorX }],
+              shadowColor: colors.black,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.08,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+          />
+        )}
+        {TABS.map((tab) => (
+          <Pressable
+            key={tab}
+            onPress={() => handleTabChange(tab)}
+            style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center" }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: "600", color: activeTab === tab ? colors.foreground : colors.mutedForeground }}>
+              {TAB_LABELS[tab]}{tab === "upcoming" && upcoming.length > 0 ? ` (${upcoming.length})` : ""}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Promo banner */}
+      {hasOnlyPastBookings && activeTab === "upcoming" && (
+        <View style={{ marginTop: 12 }}>
+          <LinearGradient colors={[colors.primaryLight, colors.background]} style={{ padding: 20, borderWidth: 2, borderColor: `${colors.primary}33`, borderRadius: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground, marginBottom: 6 }}>Prête pour un nouveau soin ?</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 12, lineHeight: 18 }}>Retrouve nos expertes et réserve ta prochaine prestation !</Text>
+            <AnimatedPressable onPress={() => router.push("/specialists")} style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 13 }}>Réserve dès maintenant</Text>
+            </AnimatedPressable>
+          </LinearGradient>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12 }}>
-          <Text style={{ fontSize: 28, fontWeight: "800", color: colors.foreground, marginBottom: 20 }}>
-            Mes réservations
-          </Text>
-          {/* Segmented control */}
-          <View
-            onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
-            style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4 }}
-          >
-            {segmentWidth > 0 && (
-              <Animated.View
-                style={{
-                  position: "absolute",
-                  top: 4,
-                  bottom: 4,
-                  left: 4,
-                  width: segmentWidth,
-                  borderRadius: 10,
-                  backgroundColor: colors.white,
-                  transform: [{ translateX: tabIndicatorX }],
-                  shadowColor: colors.black,
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              />
-            )}
-            {TABS.map((tab) => (
-              <Pressable
-                key={tab}
-                onPress={() => handleTabChange(tab)}
-                style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center" }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: activeTab === tab ? colors.foreground : colors.mutedForeground }}>
-                  {TAB_LABELS[tab]}{tab === "upcoming" && upcoming.length > 0 ? ` (${upcoming.length})` : ""}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Promo banner */}
-        {hasOnlyPastBookings && activeTab === "upcoming" && (
-          <View style={{ marginHorizontal: 20, marginBottom: 12 }}>
-            <LinearGradient colors={[colors.primaryLight, colors.background]} style={{ padding: 20, borderWidth: 2, borderColor: `${colors.primary}33`, borderRadius: 20 }}>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground, marginBottom: 6 }}>Prête pour un nouveau soin ?</Text>
-              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 12, lineHeight: 18 }}>Retrouve nos expertes et réserve ta prochaine prestation !</Text>
-              <AnimatedPressable onPress={() => router.push("/specialists")} style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
-                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 13 }}>Réserve dès maintenant</Text>
-              </AnimatedPressable>
-            </LinearGradient>
-          </View>
-        )}
-
         {isLoading ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator size="large" color={colors.primary} />
+          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}>
+            {listHeader}
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
           </View>
         ) : isError ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
-            <ErrorMessage message="Impossible de charger tes réservations. Vérifie ta connexion." />
-            <AnimatedPressable
-              onPress={() => refetch()}
-              style={{ backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 }}
-            >
-              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
-            </AnimatedPressable>
+          <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}>
+            {listHeader}
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
+              <ErrorMessage message="Impossible de charger tes réservations. Vérifie ta connexion." />
+              <AnimatedPressable
+                onPress={() => refetch()}
+                style={{ backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 }}
+              >
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>Réessayer</Text>
+              </AnimatedPressable>
+            </View>
           </View>
         ) : (
           <Animated.View style={{ flex: 1, opacity: listOpacity }}>
@@ -634,11 +641,12 @@ export default function MyBookingsScreen() {
             data={activeList}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 100 }}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
             removeClippedSubviews // BLYSS-FIX: 2.5
             maxToRenderPerBatch={8} // BLYSS-FIX: 2.5
+            ListHeaderComponent={<View style={{ marginBottom: 12 }}>{listHeader}</View>}
             ListFooterComponent={activeTab === "upcoming" && (bookings?.length ?? 0) > 0 ? <WaitingListSection /> : null}
             ListEmptyComponent={
               <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>

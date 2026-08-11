@@ -196,71 +196,76 @@ export default function ProClientsScreen() {
     </AnimatedPressable>
   ), [router, colors]);
 
-  return (
-    <Animated.View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, opacity: contentOpacity }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5, marginBottom: clientError ? 8 : 16 }}>
-          Mes clientes
-        </Text>
-        {clientError && <View style={{ marginBottom: 12 }}><ErrorMessage message={clientError} /></View>}
+  const listHeader = (
+    <View style={{ paddingTop: 16, paddingBottom: 12 }}>
+      <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5, marginBottom: clientError ? 8 : 16 }}>
+        Mes clientes
+      </Text>
+      {clientError && <View style={{ marginBottom: 12 }}><ErrorMessage message={clientError} /></View>}
 
-        {/* Tabs */}
-        <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 16, padding: 4, gap: 4, marginBottom: 12 }}>
-          {TABS.map(({ key, label, icon }) => (
-            <Pressable
-              key={key}
-              onPress={() => handleTabChange(key)}
-              style={{
-                flex: 1, paddingVertical: 8, borderRadius: 12,
-                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                backgroundColor: tab === key ? colors.primary : "transparent",
-              }}
-            >
-              <Ionicons name={icon} size={15} color={tab === key ? colors.onColor : colors.mutedForeground} />
-              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? colors.onColor : colors.mutedForeground }}>
-                {label}
-              </Text>
-              {key === "blocked" && blocked.length > 0 && (
-                <View style={{
-                  width: 16, height: 16, borderRadius: 8,
-                  backgroundColor: tab === key ? "rgba(255,255,255,0.3)" : colors.destructive,
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <Text style={{ fontSize: 9, fontWeight: "700", color: colors.onColor }}>{blocked.length}</Text>
-                </View>
-              )}
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Barre de recherche */}
-        {tab === "clients" && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.cream, paddingHorizontal: 14 }}>
-            <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Rechercher par nom ou téléphone..."
-              placeholderTextColor={colors.inputPlaceholder}
-              style={{ flex: 1, fontSize: 14.5, color: colors.foreground, padding: 0 }}
-              autoCorrect={false}
-            />
-            {search.length > 0 && (
-              <Pressable
-                onPress={() => setSearch("")}
-                accessibilityRole="button"
-                accessibilityLabel="Effacer la recherche"
-              >
-                <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
-              </Pressable>
+      {/* Tabs */}
+      <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 16, padding: 4, gap: 4, marginBottom: 12 }}>
+        {TABS.map(({ key, label, icon }) => (
+          <Pressable
+            key={key}
+            onPress={() => handleTabChange(key)}
+            style={{
+              flex: 1, paddingVertical: 8, borderRadius: 12,
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+              backgroundColor: tab === key ? colors.primary : "transparent",
+            }}
+          >
+            <Ionicons name={icon} size={15} color={tab === key ? colors.onColor : colors.mutedForeground} />
+            <Text style={{ fontSize: 13, fontWeight: "600", color: tab === key ? colors.onColor : colors.mutedForeground }}>
+              {label}
+            </Text>
+            {key === "blocked" && blocked.length > 0 && (
+              <View style={{
+                width: 16, height: 16, borderRadius: 8,
+                backgroundColor: tab === key ? "rgba(255,255,255,0.3)" : colors.destructive,
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Text style={{ fontSize: 9, fontWeight: "700", color: colors.onColor }}>{blocked.length}</Text>
+              </View>
             )}
-          </View>
-        )}
+          </Pressable>
+        ))}
       </View>
 
+      {/* Barre de recherche */}
+      {tab === "clients" && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.cream, paddingHorizontal: 14 }}>
+          <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Rechercher par nom ou téléphone..."
+            placeholderTextColor={colors.inputPlaceholder}
+            style={{ flex: 1, fontSize: 14.5, color: colors.foreground, padding: 0 }}
+            autoCorrect={false}
+          />
+          {search.length > 0 && (
+            <Pressable
+              onPress={() => setSearch("")}
+              accessibilityRole="button"
+              accessibilityLabel="Effacer la recherche"
+            >
+              <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+            </Pressable>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  return (
+    <Animated.View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, opacity: contentOpacity }}>
       {tab === "clients" ? (
         loadingClients ? (
-          <LoadingSpinner />
+          <View style={{ paddingHorizontal: 20, flex: 1 }}>
+            {listHeader}
+            <LoadingSpinner />
+          </View>
         ) : (
           <FlatList
             ref={listRef}
@@ -270,6 +275,7 @@ export default function ProClientsScreen() {
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View>
+                {listHeader}
                 {/* Stats */}
                 <View style={{
                   flexDirection: "row", backgroundColor: colors.card,
@@ -309,7 +315,10 @@ export default function ProClientsScreen() {
           />
         )
       ) : loadingBlocked ? (
-        <LoadingSpinner />
+        <View style={{ paddingHorizontal: 20, flex: 1 }}>
+          {listHeader}
+          <LoadingSpinner />
+        </View>
       ) : (
         <FlatList
           ref={listRef}
@@ -317,6 +326,7 @@ export default function ProClientsScreen() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={clientsContentStyle}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 48, gap: 8 }}>
               <Ionicons name="shield-checkmark-outline" size={48} color={colors.border} />

@@ -161,57 +161,64 @@ export default function ClientNotificationsScreen() {
 
   const grouped = useMemo(() => groupByDay(notifications), [notifications]);
 
+  const listHeader = (
+    <View>
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 0, paddingBottom: 16 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
+        {tab === "activity" && unreadCount > 0 && (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              markAllAsRead();
+            }}
+            hitSlop={8}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Tout marquer comme lu</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Segmented control */}
+      <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
+        {([["activity", "Activité"], ["messages", "Messages"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
+          <AnimatedPressable
+            key={id}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setTab(id);
+            }}
+            style={{
+              flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
+              backgroundColor: tab === id ? colors.white : "transparent",
+              shadowColor: colors.black, shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: tab === id ? 0.08 : 0, shadowRadius: 4,
+              elevation: tab === id ? 2 : 0,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? colors.foreground : colors.mutedForeground }}>
+              {label}
+            </Text>
+          </AnimatedPressable>
+        ))}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
-        {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 0, paddingBottom: 16 }}>
-          <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
-          {tab === "activity" && unreadCount > 0 && (
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                markAllAsRead();
-              }}
-              hitSlop={8}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Tout marquer comme lu</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Segmented control */}
-        <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
-          {([["activity", "Activité"], ["messages", "Messages"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
-            <AnimatedPressable
-              key={id}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setTab(id);
-              }}
-              style={{
-                flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
-                backgroundColor: tab === id ? colors.white : "transparent",
-                shadowColor: colors.black, shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: tab === id ? 0.08 : 0, shadowRadius: 4,
-                elevation: tab === id ? 2 : 0,
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? colors.foreground : colors.mutedForeground }}>
-                {label}
-              </Text>
-            </AnimatedPressable>
-          ))}
-        </View>
-
         {tab === "activity" ? (
           notifications.length === 0 ? (
-            <EmptyState
-              icon="notifications-outline"
-              title="Aucune notification"
-              description="Tes notifications apparaîtront ici en temps réel."
-            />
+            <View style={{ flex: 1 }}>
+              {listHeader}
+              <EmptyState
+                icon="notifications-outline"
+                title="Aucune notification"
+                description="Tes notifications apparaîtront ici en temps réel."
+              />
+            </View>
           ) : (
             <FlatList
               ref={listRef}
@@ -219,6 +226,7 @@ export default function ClientNotificationsScreen() {
               keyExtractor={(item) => item.label}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
+              ListHeaderComponent={listHeader}
               renderItem={({ item: group }) => (
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
@@ -280,17 +288,26 @@ export default function ClientNotificationsScreen() {
             />
           )
         ) : tab === "messages" ? (
-          <ThreadList />
+          <>
+            {listHeader}
+            <ThreadList />
+          </>
         ) : prefsLoading ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            {listHeader}
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
           </View>
         ) : prefsError ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <Ionicons name="wifi-outline" size={32} color={colors.mutedForeground} />
-            <Text style={{ fontSize: 14, color: colors.mutedForeground, textAlign: "center" }}>
-              Impossible de charger les préférences.
-            </Text>
+          <View style={{ flex: 1 }}>
+            {listHeader}
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Ionicons name="wifi-outline" size={32} color={colors.mutedForeground} />
+              <Text style={{ fontSize: 14, color: colors.mutedForeground, textAlign: "center" }}>
+                Impossible de charger les préférences.
+              </Text>
+            </View>
           </View>
         ) : (
           <FlatList
@@ -299,6 +316,7 @@ export default function ClientNotificationsScreen() {
             keyExtractor={() => "prefs"}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
+            ListHeaderComponent={listHeader}
             renderItem={() => (
               <View>
                 {/* Bandeau info */}

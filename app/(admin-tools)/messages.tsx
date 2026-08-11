@@ -133,57 +133,61 @@ export default function AdminMessagesScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  return (
-    <View style={{ flex: 1, backgroundColor: BG }}>
-      {/* Header */}
-      <View style={{ paddingTop: insets.top, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 }}>
-          <AnimatedIconButton
-            onPress={() => safeBack(router)}
-            accessibilityLabel="Retour"
-            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
-          >
-            <Ionicons name="arrow-back" size={18} color={TEXT1} />
-          </AnimatedIconButton>
-          <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.6 }}>Messages</Text>
-          {!isLoading && threads.length > 0 && (
-            <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{threads.length}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={{ fontSize: 12, color: TEXT3, marginBottom: 2 }}>
-          Modération sur signalement uniquement — aucune conversation n'est lue par défaut.
-        </Text>
+  const listHeader = (
+    <View style={{ paddingTop: insets.top, paddingBottom: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 }}>
+        <AnimatedIconButton
+          onPress={() => safeBack(router)}
+          accessibilityLabel="Retour"
+          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+        >
+          <Ionicons name="arrow-back" size={18} color={TEXT1} />
+        </AnimatedIconButton>
+        <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.6 }}>Messages</Text>
+        {!isLoading && threads.length > 0 && (
+          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{threads.length}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={{ fontSize: 12, color: TEXT3, marginBottom: 2 }}>
+        Modération sur signalement uniquement — aucune conversation n'est lue par défaut.
+      </Text>
 
-        {/* Tabs */}
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
-          {([
-            { key: "flagged" as const, label: "Signalées" },
-            { key: "deleted" as const, label: "Modérées" },
-          ]).map((t) => {
-            const active = tab === t.key;
-            return (
-              <AnimatedPressable
-                key={t.key}
-                onPress={() => setTab(t.key)}
-                style={{
-                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-                  backgroundColor: active ? ADMIN.accent : ADMIN.surfaceHover,
-                  borderWidth: 1, borderColor: active ? ADMIN.accent : ADMIN.border,
-                }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : TEXT2 }}>{t.label}</Text>
-              </AnimatedPressable>
-            );
-          })}
-        </View>
-
-        {actionError && <View style={{ marginTop: 8 }}><ErrorMessage message={actionError} /></View>}
+      {/* Tabs */}
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+        {([
+          { key: "flagged" as const, label: "Signalées" },
+          { key: "deleted" as const, label: "Modérées" },
+        ]).map((t) => {
+          const active = tab === t.key;
+          return (
+            <AnimatedPressable
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              style={{
+                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                backgroundColor: active ? ADMIN.accent : ADMIN.surfaceHover,
+                borderWidth: 1, borderColor: active ? ADMIN.accent : ADMIN.border,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : TEXT2 }}>{t.label}</Text>
+            </AnimatedPressable>
+          );
+        })}
       </View>
 
+      {actionError && <View style={{ marginTop: 8 }}><ErrorMessage message={actionError} /></View>}
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: BG }}>
       {isLoading ? (
-        <ThreadSkeleton />
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
+          {listHeader}
+          <ThreadSkeleton />
+        </View>
       ) : (
         <FlatList
           data={threads}
@@ -193,6 +197,7 @@ export default function AdminMessagesScreen() {
           maxToRenderPerBatch={10}
           windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
+          ListHeaderComponent={<View style={{ paddingHorizontal: 4 }}>{listHeader}</View>}
           ListEmptyComponent={
             tab === "flagged" ? (
               <EmptyState

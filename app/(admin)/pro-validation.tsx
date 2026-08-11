@@ -313,21 +313,25 @@ export default function ProValidationScreen() {
     setRefreshing(false);
   }, [refetch]);
 
+  const listHeader = (
+    <View style={{ paddingTop: insets.top, paddingHorizontal: 4, paddingBottom: 14 }}>
+      <Text style={{ fontSize: 30, fontWeight: "700", color: TEXT1, letterSpacing: -0.8, marginBottom: 4 }}>Validation Pros</Text>
+      {!isLoading && (
+        <Text style={{ fontSize: 12, color: TEXT2 }}>
+          {pros.length} profil{pros.length !== 1 ? "s" : ""} en attente
+        </Text>
+      )}
+      {actionError && <View style={{ marginTop: 10 }}><ErrorMessage message={actionError} /></View>}
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
-      {/* Header */}
-      <View style={{ paddingTop: insets.top, paddingHorizontal: 20, paddingBottom: 14, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
-        <Text style={{ fontSize: 30, fontWeight: "700", color: TEXT1, letterSpacing: -0.8, marginBottom: 4 }}>Validation Pros</Text>
-        {!isLoading && (
-          <Text style={{ fontSize: 12, color: TEXT2 }}>
-            {pros.length} profil{pros.length !== 1 ? "s" : ""} en attente
-          </Text>
-        )}
-        {actionError && <View style={{ marginTop: 10 }}><ErrorMessage message={actionError} /></View>}
-      </View>
-
       {isLoading ? (
-        <ProSkeleton />
+        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+          {listHeader}
+          <ProSkeleton />
+        </View>
       ) : (
         <FlatList
           data={pros}
@@ -337,6 +341,7 @@ export default function ProValidationScreen() {
           maxToRenderPerBatch={10}
           windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} />}
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <EmptyState
               icon="checkmark-circle-outline"

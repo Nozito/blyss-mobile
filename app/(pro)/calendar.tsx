@@ -963,9 +963,15 @@ export default function ProCalendarScreen() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: insets.top, paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
       {/* ── HEADER ── */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+      <View style={{ paddingTop: 16, paddingBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <View>
             <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
@@ -1037,12 +1043,6 @@ export default function ProCalendarScreen() {
         )}
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
         {/* ── CALENDAR GRID ── */}
         {viewMode === "month" && (
           <CalendarGrid

@@ -122,31 +122,29 @@ export default function ClientRGPDScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Sticky header */}
-      <View
-        style={{ backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20 }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <AnimatedIconButton
-            onPress={() => safeBack(router)}
-            style={{ padding: 8, marginLeft: -8, borderRadius: 14, backgroundColor: colors.muted }}
-            accessibilityLabel="Retour"
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
-          </AnimatedIconButton>
-          <View>
-            <Text style={{ fontWeight: "600", color: colors.foreground, fontSize: 15 }}>Mes données personnelles</Text>
-            <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Confidentialité & compte</Text>
-          </View>
-        </View>
-        {rgpdError && !showDeleteModal && <View style={{ marginTop: 8 }}><ErrorMessage message={rgpdError} /></View>}
-      </View>
-
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
+        <View style={{ paddingBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <AnimatedIconButton
+              onPress={() => safeBack(router)}
+              style={{ padding: 8, marginLeft: -8, borderRadius: 14, backgroundColor: colors.muted }}
+              accessibilityLabel="Retour"
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.foreground} />
+            </AnimatedIconButton>
+            <View>
+              <Text style={{ fontWeight: "600", color: colors.foreground, fontSize: 15 }}>Mes données personnelles</Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Confidentialité & compte</Text>
+            </View>
+          </View>
+          {rgpdError && !showDeleteModal && <View style={{ marginTop: 8 }}><ErrorMessage message={rgpdError} /></View>}
+        </View>
+
         {/* Intro */}
         <View
           style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 16, marginBottom: 24, backgroundColor: `${colors.primary}0D`, borderWidth: 1, borderColor: `${colors.primary}26` }}

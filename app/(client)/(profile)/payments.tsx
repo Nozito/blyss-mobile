@@ -228,11 +228,10 @@ export default function PaymentsScreen() {
   }, [deleteMutation, setDefaultMutation, confirmDelete]);
 
   // ── Rendu principal ───────────────────────────────────────────────────────
-  return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-
+  const listHeader = (
+    <View>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingHorizontal: 0 }]}>
         <AnimatedIconButton onPress={() => safeBack(router)} style={styles.backBtn} accessibilityLabel="Retour">
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </AnimatedIconButton>
@@ -243,20 +242,29 @@ export default function PaymentsScreen() {
       </View>
 
       {(listError || listLoadError) && (
-        <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+        <View style={{ paddingBottom: 8 }}>
           <ErrorMessage message={listError ?? "Impossible de charger tes cartes. Tire vers le bas pour réessayer."} />
         </View>
       )}
+    </View>
+  );
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
 
       {/* Liste */}
       {isLoading ? (
-        <LoadingSpinner />
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
+          {listHeader}
+          <LoadingSpinner />
+        </View>
       ) : (
         <FlatList
           data={cards}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 40 }}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="card-outline" size={56} color={colors.border} />

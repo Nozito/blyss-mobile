@@ -537,6 +537,35 @@ export default function AdminBookingsScreen() {
   // shares the list's own horizontal padding instead of adding its own.
   const ListHeader = useMemo(() => (
     <View style={{ paddingBottom: ADMIN.space.md }}>
+      <View style={{ marginHorizontal: -ADMIN.space.xl }}>
+        <AdminHeader
+          title="Réservations"
+          subtitle={!isLoading ? `${filteredBookings.length} réservation${filteredBookings.length > 1 ? "s" : ""}` : undefined}
+          action={
+            (confirmMut.isPending || cancelMut.isPending) ? (
+              <ActivityIndicator size="small" color={ACCENT} />
+            ) : (
+              <AnimatedIconButton
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowFilters(true); }}
+                accessibilityLabel={`Filtres avancés${activeAdvancedFilters > 0 ? ` (${activeAdvancedFilters} actifs)` : ""}`}
+                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: activeAdvancedFilters > 0 ? ADMIN.accentBg : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="options-outline" size={18} color={activeAdvancedFilters > 0 ? ACCENT : TEXT2} />
+                {activeAdvancedFilters > 0 && (
+                  <View style={{ position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3, backgroundColor: ACCENT, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{activeAdvancedFilters}</Text>
+                  </View>
+                )}
+              </AnimatedIconButton>
+            )
+          }
+        />
+      </View>
+      {bookingError && (
+        <View style={{ marginBottom: ADMIN.space.md }}>
+          <ErrorMessage message={bookingError} />
+        </View>
+      )}
       {/* Search — client-side, mirrors the Users search bar */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, height: 44, paddingHorizontal: 14, marginBottom: ADMIN.space.md }}>
         <Ionicons name="search-outline" size={16} color={TEXT3} />
@@ -610,41 +639,17 @@ export default function AdminBookingsScreen() {
         <StatsBar bookings={filteredBookings} />
       )}
     </View>
-  ), [search, filteredBookings, statusFilter, isLoading, activeAdvancedFilters, dateFilter, clientFilter]);
+  ), [search, filteredBookings, statusFilter, isLoading, activeAdvancedFilters, dateFilter, clientFilter, confirmMut.isPending, cancelMut.isPending, bookingError]);
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
-      <AdminHeader
-        title="Réservations"
-        subtitle={!isLoading ? `${filteredBookings.length} réservation${filteredBookings.length > 1 ? "s" : ""}` : undefined}
-        action={
-          (confirmMut.isPending || cancelMut.isPending) ? (
-            <ActivityIndicator size="small" color={ACCENT} />
-          ) : (
-            <AnimatedIconButton
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowFilters(true); }}
-              accessibilityLabel={`Filtres avancés${activeAdvancedFilters > 0 ? ` (${activeAdvancedFilters} actifs)` : ""}`}
-              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: activeAdvancedFilters > 0 ? ADMIN.accentBg : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
-            >
-              <Ionicons name="options-outline" size={18} color={activeAdvancedFilters > 0 ? ACCENT : TEXT2} />
-              {activeAdvancedFilters > 0 && (
-                <View style={{ position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3, backgroundColor: ACCENT, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{activeAdvancedFilters}</Text>
-                </View>
-              )}
-            </AnimatedIconButton>
-          )
-        }
-      />
-      {bookingError && (
-        <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.md }}>
-          <ErrorMessage message={bookingError} />
-        </View>
-      )}
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
-          <ActivityIndicator size="large" color={ACCENT} />
-          <Text style={{ fontSize: 13, color: TEXT2 }}>Chargement…</Text>
+        <View style={{ flex: 1 }}>
+          <AdminHeader title="Réservations" />
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
+            <ActivityIndicator size="large" color={ACCENT} />
+            <Text style={{ fontSize: 13, color: TEXT2 }}>Chargement…</Text>
+          </View>
         </View>
       ) : (
         <SectionList

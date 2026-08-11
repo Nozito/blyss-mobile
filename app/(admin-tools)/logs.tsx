@@ -155,10 +155,8 @@ export default function AdminLogsScreen() {
     error:   logs.filter((l) => l.type === "error").length,
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: BG }}>
-      {/* ── Header ── */}
-      <View style={{ backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER, paddingTop: insets.top, paddingHorizontal: 16, paddingBottom: 16 }}>
+  const listHeader = (
+    <View style={{ paddingTop: insets.top, paddingBottom: 16 }}>
         <AnimatedPressable
           onPress={() => safeBack(router)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
@@ -228,8 +226,11 @@ export default function AdminLogsScreen() {
             );
           })}
         </ScrollView>
-      </View>
+    </View>
+  );
 
+  return (
+    <View style={{ flex: 1, backgroundColor: BG }}>
       <FlatList
         data={loading || loadError ? [] : filtered}
         keyExtractor={(log) => String(log.id)}
@@ -241,13 +242,16 @@ export default function AdminLogsScreen() {
         maxToRenderPerBatch={12}
         windowSize={9}
         ListHeaderComponent={
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
-            <StatChip label="Total"     value={stats.total}   color={TEXT1}              bg={CARD} />
-            <StatChip label="Info"      value={stats.info}    color={Colors.info}        bg={ADMIN.infoBg} />
-            <StatChip label="Succès"    value={stats.success} color={Colors.success}     bg={ADMIN.successBg} />
-            <StatChip label="Attention" value={stats.warning} color={Colors.warning}     bg={ADMIN.warningBg} />
-            <StatChip label="Erreurs"   value={stats.error}   color={Colors.destructive} bg={ADMIN.dangerBg} />
-          </ScrollView>
+          <View>
+            {listHeader}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
+              <StatChip label="Total"     value={stats.total}   color={TEXT1}              bg={CARD} />
+              <StatChip label="Info"      value={stats.info}    color={Colors.info}        bg={ADMIN.infoBg} />
+              <StatChip label="Succès"    value={stats.success} color={Colors.success}     bg={ADMIN.successBg} />
+              <StatChip label="Attention" value={stats.warning} color={Colors.warning}     bg={ADMIN.warningBg} />
+              <StatChip label="Erreurs"   value={stats.error}   color={Colors.destructive} bg={ADMIN.dangerBg} />
+            </ScrollView>
+          </View>
         }
         ListEmptyComponent={
           loading ? (

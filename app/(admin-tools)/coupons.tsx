@@ -426,38 +426,42 @@ export default function AdminCouponsScreen() {
     { key: "disabled" as const, label: "Désactivés", color: Colors.destructive },
   ];
 
+  const listHeader = (
+    <View style={{ paddingTop: insets.top, paddingBottom: 12 }}>
+      <AnimatedPressable
+        onPress={() => safeBack(router)}
+        style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
+      >
+        <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
+        <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+      </AnimatedPressable>
+      <Text style={{ fontSize: 28, fontWeight: "700", color: TEXT1, letterSpacing: -0.5, marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
+      {couponError && <View style={{ marginBottom: 8 }}><ErrorMessage message={couponError} /></View>}
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        {STATUS_FILTERS.map((f) => {
+          const active = statusFilter === f.key;
+          return (
+            <AnimatedPressable key={f.key}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f.key); }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                backgroundColor: active ? withAlpha(f.color, 0.16) : MUTED, borderColor: active ? f.color : BORDER }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? f.color : TEXT2 }}>{f.label}</Text>
+            </AnimatedPressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
-      {/* ── Header ── */}
-      <View style={{ paddingTop: insets.top, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: BG, borderBottomWidth: 1, borderBottomColor: BORDER }}>
-        <AnimatedPressable
-          onPress={() => safeBack(router)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
-        >
-          <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
-          <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
-        </AnimatedPressable>
-        <Text style={{ fontSize: 28, fontWeight: "700", color: TEXT1, letterSpacing: -0.5, marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
-        {couponError && <View style={{ marginBottom: 8 }}><ErrorMessage message={couponError} /></View>}
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {STATUS_FILTERS.map((f) => {
-            const active = statusFilter === f.key;
-            return (
-              <AnimatedPressable key={f.key}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f.key); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-                  backgroundColor: active ? withAlpha(f.color, 0.16) : MUTED, borderColor: active ? f.color : BORDER }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? f.color : TEXT2 }}>{f.label}</Text>
-              </AnimatedPressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={ADMIN.accent} />
+        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+          {listHeader}
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size="large" color={ADMIN.accent} />
+          </View>
         </View>
       ) : (
         <FlatList
@@ -466,6 +470,7 @@ export default function AdminCouponsScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: insets.bottom + 110 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
+          ListHeaderComponent={listHeader}
           renderItem={({ item, index }) => (
             <CouponCard coupon={item} index={index}
               onToggle={(id, active) => toggleMut.mutate({ id, active })}

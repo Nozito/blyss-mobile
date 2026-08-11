@@ -265,50 +265,54 @@ export default function ServicesScreen() {
     [handleToggleActive, handleDuplicate, handleEdit, handleDelete]
   );
 
+  const listHeader = (
+    <View style={{
+      flexDirection: "row", alignItems: "center", gap: 12,
+      paddingTop: 16, paddingBottom: 16,
+    }}>
+      <AnimatedIconButton
+        onPress={() => safeBack(router)}
+        accessibilityLabel="Retour"
+        style={{
+          width: 40, height: 40, borderRadius: 12,
+          backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+          alignItems: "center", justifyContent: "center",
+        }}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.foreground} />
+      </AnimatedIconButton>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
+          Prestations
+        </Text>
+        <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
+          {activeCount} active{activeCount !== 1 ? "s" : ""} sur {services.length}
+        </Text>
+      </View>
+      <Pressable
+        onPress={() => router.push("/(pro)/(profile)/service-form")}
+        accessibilityLabel="Ajouter une prestation"
+        accessibilityRole="button"
+        style={{
+          width: 40, height: 40, borderRadius: 14,
+          backgroundColor: colors.primary,
+          alignItems: "center", justifyContent: "center",
+          shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+        }}
+      >
+        <Ionicons name="add" size={22} color={colors.onColor} />
+      </Pressable>
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
-      {/* Header */}
-      <View style={{
-        flexDirection: "row", alignItems: "center", gap: 12,
-        paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16,
-      }}>
-        <AnimatedIconButton
-          onPress={() => safeBack(router)}
-          accessibilityLabel="Retour"
-          style={{
-            width: 40, height: 40, borderRadius: 12,
-            backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-            alignItems: "center", justifyContent: "center",
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.foreground} />
-        </AnimatedIconButton>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
-            Prestations
-          </Text>
-          <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
-            {activeCount} active{activeCount !== 1 ? "s" : ""} sur {services.length}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.push("/(pro)/(profile)/service-form")}
-          accessibilityLabel="Ajouter une prestation"
-          accessibilityRole="button"
-          style={{
-            width: 40, height: 40, borderRadius: 14,
-            backgroundColor: colors.primary,
-            alignItems: "center", justifyContent: "center",
-            shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
-          }}
-        >
-          <Ionicons name="add" size={22} color={colors.onColor} />
-        </Pressable>
-      </View>
-
       {isLoading ? (
-        <LoadingSpinner />
+        <View style={{ paddingHorizontal: 20, flex: 1 }}>
+          {listHeader}
+          <LoadingSpinner />
+        </View>
       ) : (
         <FlatList
           data={services}
@@ -317,6 +321,7 @@ export default function ServicesScreen() {
           showsVerticalScrollIndicator={false}
           refreshing={false}
           onRefresh={refetch}
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 64, gap: 12 }}>
               <View style={{

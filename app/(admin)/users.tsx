@@ -587,11 +587,13 @@ export default function AdminUsersScreen() {
 
   const msg = EMPTY[roleFilter];
 
-  return (
-    <View style={{ flex: 1, backgroundColor: ADMIN.bg }}>
-      <AdminHeader title="Utilisateurs" />
+  const listHeader = (
+    <View>
+      <View style={{ marginHorizontal: -ADMIN.space.xl }}>
+        <AdminHeader title="Utilisateurs" />
+      </View>
 
-      <View style={{ paddingHorizontal: ADMIN.space.xl, paddingBottom: ADMIN.space.md }}>
+      <View style={{ paddingBottom: ADMIN.space.md }}>
         {/* Segmented tabs — one control, not a scrolling row of pills */}
         <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
           {FILTERS.map(({ value, label }) => {
@@ -640,9 +642,16 @@ export default function AdminUsersScreen() {
 
         {usersError && <View style={{ marginTop: ADMIN.space.md }}><ErrorMessage message={usersError} /></View>}
       </View>
+    </View>
+  );
 
+  return (
+    <View style={{ flex: 1, backgroundColor: ADMIN.bg }}>
       {isLoading ? (
-        <UserSkeleton />
+        <View style={{ flex: 1, paddingHorizontal: ADMIN.space.xl }}>
+          {listHeader}
+          <UserSkeleton />
+        </View>
       ) : (
         <FlatList
           ref={listRef}
@@ -659,6 +668,7 @@ export default function AdminUsersScreen() {
           contentContainerStyle={{ paddingHorizontal: ADMIN.space.xl, paddingBottom: insets.bottom + ADMIN.space.xl }}
           ListHeaderComponent={
             <View>
+              {listHeader}
               <Card style={{ flexDirection: "row", marginBottom: ADMIN.space.xl }}>
                 {[
                   { label: "Utilisateurs", value: users.length },
