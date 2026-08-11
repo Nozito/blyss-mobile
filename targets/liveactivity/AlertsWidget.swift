@@ -81,13 +81,22 @@ struct AlertsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: kind,
-            provider: BlyssWidgetProvider(
-                placeholderPayload: BlyssWidgetMock.alertsPending,
-                currentPayload: { WidgetSnapshotStore.read()?.alerts ?? BlyssWidgetMock.alertsPending },
+            provider: BlyssWidgetProvider<WidgetAccess<AlertsPayload>>(
+                placeholderPayload: .granted(BlyssWidgetMock.alertsPending),
+                currentPayload: {
+                    guard WidgetSnapshotStore.hasAdminAccess() else { return .locked }
+                    return .granted(WidgetSnapshotStore.read()?.alerts ?? BlyssWidgetMock.alertsPending)
+                },
                 refreshMinutes: 15
             )
         ) { entry in
-            AlertsWidgetView(payload: entry.payload)
+            switch entry.payload {
+            case .locked:
+                WidgetLockedStateView(audience: "admin")
+                    .blyssContainerBackground(BlyssWidgetPalette.background)
+            case .granted(let payload):
+                AlertsWidgetView(payload: payload)
+            }
         }
         .configurationDisplayName("À traiter")
         .description("Paiements, comptes et incidents qui attendent une action.")
@@ -99,19 +108,19 @@ struct AlertsWidget: Widget {
 #Preview("Pending — Light", as: .systemSmall) {
     AlertsWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.alertsPending)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.alertsPending))
 }
 
 @available(iOS 17.0, *)
 #Preview("Critical incident", as: .systemSmall) {
     AlertsWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.alertsCritical)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.alertsCritical))
 }
 
 @available(iOS 17.0, *)
 #Preview("All clear", as: .systemSmall) {
     AlertsWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.alertsClear)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.alertsClear))
 }

@@ -94,13 +94,22 @@ struct RevenueWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: kind,
-            provider: BlyssWidgetProvider(
-                placeholderPayload: BlyssWidgetMock.revenue,
-                currentPayload: { WidgetSnapshotStore.read()?.revenue ?? BlyssWidgetMock.revenue },
+            provider: BlyssWidgetProvider<WidgetAccess<RevenuePayload>>(
+                placeholderPayload: .granted(BlyssWidgetMock.revenue),
+                currentPayload: {
+                    guard WidgetSnapshotStore.hasProAccess() else { return .locked }
+                    return .granted(WidgetSnapshotStore.read()?.revenue ?? BlyssWidgetMock.revenue)
+                },
                 refreshMinutes: 30
             )
         ) { entry in
-            RevenueWidgetView(payload: entry.payload)
+            switch entry.payload {
+            case .locked:
+                WidgetLockedStateView(audience: "pro")
+                    .blyssContainerBackground(BlyssWidgetPalette.background)
+            case .granted(let payload):
+                RevenueWidgetView(payload: payload)
+            }
         }
         .configurationDisplayName("Chiffre d'affaires")
         .description("Ton chiffre d'affaires du mois, son évolution et ton objectif.")
@@ -112,12 +121,12 @@ struct RevenueWidget: Widget {
 #Preview("Small — Light", as: .systemSmall) {
     RevenueWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.revenue)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.revenue))
 }
 
 @available(iOS 17.0, *)
 #Preview("Medium — Light", as: .systemMedium) {
     RevenueWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.revenue)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.revenue))
 }

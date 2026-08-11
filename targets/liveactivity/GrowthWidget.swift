@@ -70,13 +70,22 @@ struct GrowthWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: kind,
-            provider: BlyssWidgetProvider(
-                placeholderPayload: BlyssWidgetMock.growth,
-                currentPayload: { WidgetSnapshotStore.read()?.growth ?? BlyssWidgetMock.growth },
+            provider: BlyssWidgetProvider<WidgetAccess<GrowthPayload>>(
+                placeholderPayload: .granted(BlyssWidgetMock.growth),
+                currentPayload: {
+                    guard WidgetSnapshotStore.hasAdminAccess() else { return .locked }
+                    return .granted(WidgetSnapshotStore.read()?.growth ?? BlyssWidgetMock.growth)
+                },
                 refreshMinutes: 30
             )
         ) { entry in
-            GrowthWidgetView(payload: entry.payload)
+            switch entry.payload {
+            case .locked:
+                WidgetLockedStateView(audience: "admin")
+                    .blyssContainerBackground(BlyssWidgetPalette.background)
+            case .granted(let payload):
+                GrowthWidgetView(payload: payload)
+            }
         }
         .configurationDisplayName("Revenus & croissance")
         .description("Les revenus Blyss du jour, de la semaine et leur évolution.")
@@ -88,12 +97,12 @@ struct GrowthWidget: Widget {
 #Preview("Small — Light", as: .systemSmall) {
     GrowthWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.growth)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.growth))
 }
 
 @available(iOS 17.0, *)
 #Preview("Medium — Light", as: .systemMedium) {
     GrowthWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.growth)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.growth))
 }

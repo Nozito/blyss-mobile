@@ -59,6 +59,29 @@ struct WidgetEmptyStateView: View {
     }
 }
 
+/// Shown instead of a widget's real content when the signed-in account
+/// doesn't have the role it's meant for (see `WidgetAccess`/`hasProAccess`/
+/// `hasAdminAccess` in BlyssWidgetModels.swift).
+struct WidgetLockedStateView: View {
+    let audience: String // "pro" | "admin" — used only for the message
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 17))
+                .foregroundStyle(BlyssWidgetPalette.textSecondary)
+            Text("Réservé aux \(audience == "admin" ? "admins" : "pros")")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(BlyssWidgetPalette.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 /// French, no-decimal euro formatting ("2 840 €") shared by every widget
 /// that surfaces a monetary amount.
 enum BlyssEuroFormat {

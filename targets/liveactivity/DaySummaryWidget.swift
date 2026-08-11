@@ -99,15 +99,22 @@ struct DaySummaryWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: kind,
-            provider: BlyssWidgetProvider(
-                placeholderPayload: BlyssWidgetMock.daySummaryScheduled,
+            provider: BlyssWidgetProvider<WidgetAccess<DaySummaryPayload>>(
+                placeholderPayload: .granted(BlyssWidgetMock.daySummaryScheduled),
                 currentPayload: {
-                    WidgetSnapshotStore.read()?.daySummary?.payload ?? BlyssWidgetMock.daySummaryScheduled
+                    guard WidgetSnapshotStore.hasProAccess() else { return .locked }
+                    return .granted(WidgetSnapshotStore.read()?.daySummary?.payload ?? BlyssWidgetMock.daySummaryScheduled)
                 },
                 refreshMinutes: 15
             )
         ) { entry in
-            DaySummaryWidgetView(payload: entry.payload)
+            switch entry.payload {
+            case .locked:
+                WidgetLockedStateView(audience: "pro")
+                    .blyssContainerBackground(BlyssWidgetPalette.background)
+            case .granted(let payload):
+                DaySummaryWidgetView(payload: payload)
+            }
         }
         .configurationDisplayName("Ma journée")
         .description("Le nombre de rendez-vous de ta journée et l'heure du prochain.")
@@ -119,26 +126,26 @@ struct DaySummaryWidget: Widget {
 #Preview("Scheduled — Small", as: .systemSmall) {
     DaySummaryWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.daySummaryScheduled)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.daySummaryScheduled))
 }
 
 @available(iOS 17.0, *)
 #Preview("Scheduled — Medium", as: .systemMedium) {
     DaySummaryWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.daySummaryScheduled)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.daySummaryScheduled))
 }
 
 @available(iOS 17.0, *)
 #Preview("Free day", as: .systemSmall) {
     DaySummaryWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.daySummaryFree)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.daySummaryFree))
 }
 
 @available(iOS 17.0, *)
 #Preview("Finished day", as: .systemSmall) {
     DaySummaryWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.daySummaryFinished)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.daySummaryFinished))
 }

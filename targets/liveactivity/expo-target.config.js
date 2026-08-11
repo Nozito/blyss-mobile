@@ -24,6 +24,13 @@ module.exports = {
     blyssBorder: { light: "#EBE6E0", dark: "#2C2C2E" },
   },
   // App Group mirrors ios.entitlements['com.apple.security.application-groups']
-  // from app.config.ts automatically (see @bacons/apple-targets README) — the
-  // static home-screen widget reads the shared next-appointment payload from it.
+  // from app.config.ts automatically for "widget" targets (see
+  // @bacons/apple-targets build/with-widget.js — SHOULD_USE_APP_GROUPS_BY_DEFAULT),
+  // but only once this `entitlements` key exists (even empty, as below) to opt
+  // in — without it, no CODE_SIGN_ENTITLEMENTS is generated for this target at
+  // all, and the shared UserDefaults(suiteName: "group.blyss.app") read in the
+  // widget's Swift code silently returns nil, permanently falling back to mock
+  // data. The static home-screen widget reads the shared next-appointment
+  // payload from this app group.
+  entitlements: {},
 };

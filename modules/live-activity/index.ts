@@ -68,6 +68,10 @@ export interface WidgetSnapshotPayload {
   platformOverview?: WidgetPlatformOverviewPayload;
   alerts?: WidgetAlertsPayload;
   growth?: WidgetGrowthPayload;
+  // Which account is currently signed in — lets a widget lock instead of
+  // rendering figures meant for a different role (see widgetSync.syncAccountRole).
+  accountRole?: "pro" | "client" | null;
+  accountIsAdmin?: boolean;
 }
 
 interface LiveActivityEventsMap {
@@ -85,7 +89,6 @@ interface NativeLiveActivityModule {
   startActivity(payload: LiveRdvStartPayload): Promise<string | null>;
   updateActivity(payload: LiveRdvContent): Promise<void>;
   endActivity(): Promise<void>;
-  getActiveActivityId(): Promise<string | null>;
   writeSharedNextAppointment(payload: LiveRdvStartPayload | null): void;
   writeWidgetSnapshot(payload: WidgetSnapshotPayload): void;
   addListener<EventName extends keyof LiveActivityEventsMap>(
@@ -124,11 +127,6 @@ export async function updateLiveActivity(payload: LiveRdvContent): Promise<void>
 
 export async function endLiveActivity(): Promise<void> {
   await nativeModule?.endActivity();
-}
-
-export async function getActiveLiveActivityId(): Promise<string | null> {
-  if (!nativeModule) return null;
-  return nativeModule.getActiveActivityId();
 }
 
 /** Feeds the static Home Screen widget — pass null when there's no upcoming RDV. */

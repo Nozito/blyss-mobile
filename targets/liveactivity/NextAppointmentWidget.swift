@@ -122,20 +122,27 @@ struct NextAppointmentWidget: Widget {
             // Payload is Optional so the "no upcoming appointment" state can
             // be represented (and previewed) through the same widget/entry
             // type rather than a second parallel Widget declaration.
-            provider: BlyssWidgetProvider<NextAppointmentPayload?>(
-                placeholderPayload: BlyssWidgetMock.nextAppointment,
+            provider: BlyssWidgetProvider<WidgetAccess<NextAppointmentPayload?>>(
+                placeholderPayload: .granted(BlyssWidgetMock.nextAppointment),
                 // `nil` is a real, meaningful state here ("no upcoming RDV"),
                 // not a stand-in for "no data yet" — only fall back to mock
                 // when the snapshot has never been written at all, not just
                 // when its `nextAppointment` field happens to be nil.
                 currentPayload: {
-                    guard let snapshot = WidgetSnapshotStore.read() else { return BlyssWidgetMock.nextAppointment }
-                    return snapshot.nextAppointment
+                    guard WidgetSnapshotStore.hasProAccess() else { return .locked }
+                    guard let snapshot = WidgetSnapshotStore.read() else { return .granted(BlyssWidgetMock.nextAppointment) }
+                    return .granted(snapshot.nextAppointment)
                 },
                 refreshMinutes: 15
             )
         ) { entry in
-            NextAppointmentWidgetView(payload: entry.payload)
+            switch entry.payload {
+            case .locked:
+                WidgetLockedStateView(audience: "pro")
+                    .blyssContainerBackground(BlyssWidgetPalette.background)
+            case .granted(let payload):
+                NextAppointmentWidgetView(payload: payload)
+            }
         }
         .configurationDisplayName("Prochain rendez-vous")
         .description("Le nom de ta cliente, la prestation et l'heure de ton prochain rendez-vous.")
@@ -147,33 +154,33 @@ struct NextAppointmentWidget: Widget {
 #Preview("Small — Light", as: .systemSmall) {
     NextAppointmentWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.nextAppointment)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.nextAppointment))
 }
 
 @available(iOS 17.0, *)
 #Preview("Medium — Light", as: .systemMedium) {
     NextAppointmentWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.nextAppointment)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.nextAppointment))
 }
 
 @available(iOS 17.0, *)
 #Preview("Circular", as: .accessoryCircular) {
     NextAppointmentWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.nextAppointment)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.nextAppointment))
 }
 
 @available(iOS 17.0, *)
 #Preview("Rectangular", as: .accessoryRectangular) {
     NextAppointmentWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.nextAppointment)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.nextAppointment))
 }
 
 @available(iOS 17.0, *)
 #Preview("Small — Empty", as: .systemSmall) {
     NextAppointmentWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: Optional<NextAppointmentPayload>.none)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(Optional<NextAppointmentPayload>.none))
 }

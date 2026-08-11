@@ -17,6 +17,16 @@ struct BlyssWidgetEntry<Payload>: TimelineEntry {
     let payload: Payload
 }
 
+/// Wraps a Pro/Admin widget's payload with the role check gating it. iOS
+/// has no API to hide a widget *kind* from the "+" gallery based on which
+/// account is signed in — any account can add any widget — so the gate has
+/// to live here, at render time: `.locked` renders a "reserved" state
+/// instead of real (or mock) figures for whoever the payload isn't meant for.
+enum WidgetAccess<T> {
+    case locked
+    case granted(T)
+}
+
 struct BlyssWidgetProvider<Payload>: TimelineProvider {
     let placeholderPayload: Payload
     let currentPayload: () -> Payload
@@ -137,6 +147,12 @@ struct WidgetSnapshot: Codable {
     let platformOverview: PlatformOverviewPayload?
     let alerts: AlertsPayload?
     let growth: GrowthPayload?
+    // Written by AuthContext (via widgetSync.syncAccountRole) whenever the
+    // signed-in account changes, so a Pro widget added by an admin account —
+    // or an Admin widget added by a pro account — locks instead of showing
+    // figures that were never meant for that account.
+    let accountRole: String? // "pro" | "client"
+    let accountIsAdmin: Bool?
 }
 
 enum WidgetSnapshotStore {
@@ -163,6 +179,18 @@ enum WidgetSnapshotStore {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO 8601 date: \(string)")
         }
         return try? decoder.decode(WidgetSnapshot.self, from: data)
+    }
+
+    /// A Pro widget renders real figures only once we positively know the
+    /// signed-in account is a pro — an absent/unwritten role (never logged
+    /// in, or a client account) locks rather than falling through to mock
+    /// data, which would otherwise look like a real (if fake) number.
+    static func hasProAccess() -> Bool {
+        read()?.accountRole == "pro"
+    }
+
+    static func hasAdminAccess() -> Bool {
+        read()?.accountIsAdmin == true
     }
 }
 

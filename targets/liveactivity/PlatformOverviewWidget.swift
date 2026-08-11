@@ -86,13 +86,22 @@ struct PlatformOverviewWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: kind,
-            provider: BlyssWidgetProvider(
-                placeholderPayload: BlyssWidgetMock.platformOverview,
-                currentPayload: { WidgetSnapshotStore.read()?.platformOverview ?? BlyssWidgetMock.platformOverview },
+            provider: BlyssWidgetProvider<WidgetAccess<PlatformOverviewPayload>>(
+                placeholderPayload: .granted(BlyssWidgetMock.platformOverview),
+                currentPayload: {
+                    guard WidgetSnapshotStore.hasAdminAccess() else { return .locked }
+                    return .granted(WidgetSnapshotStore.read()?.platformOverview ?? BlyssWidgetMock.platformOverview)
+                },
                 refreshMinutes: 30
             )
         ) { entry in
-            PlatformOverviewWidgetView(payload: entry.payload)
+            switch entry.payload {
+            case .locked:
+                WidgetLockedStateView(audience: "admin")
+                    .blyssContainerBackground(BlyssWidgetPalette.background)
+            case .granted(let payload):
+                PlatformOverviewWidgetView(payload: payload)
+            }
         }
         .configurationDisplayName("Vue plateforme")
         .description("Le nombre de pros actives, de réservations et leur évolution.")
@@ -104,12 +113,12 @@ struct PlatformOverviewWidget: Widget {
 #Preview("Small — Light", as: .systemSmall) {
     PlatformOverviewWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.platformOverview)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.platformOverview))
 }
 
 @available(iOS 17.0, *)
 #Preview("Medium — Light", as: .systemMedium) {
     PlatformOverviewWidget()
 } timeline: {
-    BlyssWidgetEntry(date: .now, payload: BlyssWidgetMock.platformOverview)
+    BlyssWidgetEntry(date: .now, payload: WidgetAccess.granted(BlyssWidgetMock.platformOverview))
 }

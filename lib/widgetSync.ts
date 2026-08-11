@@ -106,6 +106,20 @@ export function syncAdminDashboardWidgets(input: {
   });
 }
 
+/**
+ * Written whenever the signed-in account changes (see AuthContext) so each
+ * widget's TimelineProvider can lock instead of showing figures meant for a
+ * different role — a pro adding an Admin widget (or vice versa) can't be
+ * prevented at the OS picker level, only gated once it's actually rendering.
+ * `null` (logged out) locks every widget until the next sign-in.
+ */
+export function syncAccountRole(account: { role: "pro" | "client"; isAdmin: boolean } | null): void {
+  writeWidgetSnapshot({
+    accountRole: account?.role ?? null,
+    accountIsAdmin: account?.isAdmin ?? false,
+  });
+}
+
 /** From GET /api/admin/analytics — see app/(admin-tools)/analytics.tsx. */
 export function syncAdminAnalyticsWidgets(
   a?: {
