@@ -99,11 +99,6 @@ public class LiveActivityModule: Module {
             }
         }
 
-        AsyncFunction("getActiveActivityId") { () -> String? in
-            guard #available(iOS 16.2, *) else { return nil }
-            return Activity<LiveRdvAttributes>.activities.first?.id
-        }
-
         // Writes the next-appointment payload to the shared App Group so the
         // static Home Screen widget can render it even outside the Live
         // Activity's trigger window. Pass nil to clear it (no upcoming RDV).

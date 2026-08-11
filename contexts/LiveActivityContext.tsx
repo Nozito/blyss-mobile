@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import { useAuth } from "./AuthContext";
 import { useRevenueCat } from "./RevenueCatContext";
 import { useNotifications } from "./NotificationContext";
@@ -23,7 +23,10 @@ const TRIGGER_WINDOW_MS = 3 * 60 * 60 * 1000;
 // How often to refresh while the app is foregrounded — keeps the shared
 // widget payload and the trigger-window check current without polling hard.
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
-const MUTATION_NOTIF_TYPES = new Set(["booking_cancelled", "booking_rescheduled"]);
+// "new_booking" included so a freshly confirmed reservation reflects in the
+// activity immediately instead of waiting for the next poll — see
+// NotificationContext.tsx:231 for the same literal used at runtime.
+const MUTATION_NOTIF_TYPES = new Set(["booking_cancelled", "booking_rescheduled", "new_booking"]);
 
 interface LiveActivityContextType {
   isSupported: boolean;
@@ -55,8 +58,14 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
   const activeAppointmentIdRef = useRef<number | null>(null);
   const activeActivityIdRef = useRef<string | null>(null);
   const lastNotifIdRef = useRef<number | null>(null);
+  // Coalesces overlapping triggers (poll tick, WS fast-path, refreshNow(),
+  // AppState resume can all fire close together) into a single in-flight
+  // request, queuing at most one more run rather than letting two calls
+  // race on activeAppointmentIdRef/activeActivityIdRef concurrently.
+  const isRefreshingRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
 
-  const refresh = async () => {
+  const doRefresh = async () => {
     const res = await proApi.getLiveActivityNextAppointment();
     if (!res.success) return;
     const next = res.data;
@@ -94,7 +103,7 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
     if (activeAppointmentIdRef.current === next.appointmentId) {
       if (activeActivityIdRef.current) {
         await updateLiveActivity(payload);
-      } else if (inWindow) {
+      } else if (inWindow && isLiveActivitySupported()) {
         // Same appointment re-entering scope after being out of window —
         // shouldn't normally happen (window only shrinks), but stay correct.
         const activityId = await startLiveActivity(payload);
@@ -115,6 +124,23 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
     if (inWindow && isLiveActivitySupported()) {
       const activityId = await startLiveActivity(payload);
       activeActivityIdRef.current = activityId;
+    }
+  };
+
+  const refresh = async () => {
+    if (isRefreshingRef.current) {
+      refreshQueuedRef.current = true;
+      return;
+    }
+    isRefreshingRef.current = true;
+    try {
+      await doRefresh();
+    } finally {
+      isRefreshingRef.current = false;
+      if (refreshQueuedRef.current) {
+        refreshQueuedRef.current = false;
+        void refresh();
+      }
     }
   };
 
@@ -139,6 +165,22 @@ export function LiveActivityProvider({ children }: { children: ReactNode }) {
       refresh().catch(() => {});
     }
   }, [isEligiblePro, notifications]);
+
+  // Safety net against a "ghost" activity: the 5-minute poll only runs while
+  // the app is foregrounded, so if the pro closes the app after their last
+  // appointment and doesn't reopen it, nothing client-side ever calls
+  // endLiveActivity() — the activity can be left showing indefinitely until
+  // an (unauditable, backend-side) push arrives or iOS expires it on its own
+  // schedule. Forcing a refresh every time the app becomes active guarantees
+  // a sync point regardless of how long it was backgrounded/killed for.
+  useEffect(() => {
+    if (!isEligiblePro) return;
+    const onAppStateChange = (state: AppStateStatus) => {
+      if (state === "active") refresh().catch(() => {});
+    };
+    const sub = AppState.addEventListener("change", onAppStateChange);
+    return () => sub.remove();
+  }, [isEligiblePro]);
 
   // Push token registration — lets the server start/update/end the activity
   // remotely (app killed), independent of the foreground WS fast-path above.
