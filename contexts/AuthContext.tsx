@@ -19,6 +19,7 @@ import {
   type SignupResponse,
 } from "@/lib/api";
 import { storage } from "@/lib/storage";
+import { syncAccountRole } from "@/lib/widgetSync";
 
 async function rcLogIn(userId: number) {
   try {
@@ -122,6 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth().then(() => { _initialized.current = true; });
   }, []);
+
+  // Un seul point d'entrée pour garder les widgets à jour sur le rôle du
+  // compte connecté, plutôt qu'un appel à dupliquer à chaque site qui fait
+  // setUser (login, signup, refreshProfile, patchUser, logout...) — capte
+  // aussi bien la reconnexion que le logout (user → null verrouille les
+  // widgets Pro/Admin jusqu'à la prochaine connexion).
+  useEffect(() => {
+    syncAccountRole(user ? { role: user.role, isAdmin: user.is_admin ?? false } : null);
+  }, [user]);
 
   // Refetch du profil quand l'app revient au premier plan (rôle, pro_status peuvent avoir changé)
   useEffect(() => {

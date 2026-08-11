@@ -26,6 +26,7 @@ import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { usePro } from "@/hooks/usePro";
+import { BiometricToggle } from "@/components/screens/shared/BiometricToggle";
 import type { User } from "@/lib/api";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -285,6 +286,7 @@ export default function ProSettingsScreen() {
       <View>
         <SectionHeader icon="lock-closed-outline" label="Sécurité" />
         <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+          <BiometricToggle />
           <Input
             label="Ancien mot de passe"
             value={currentPassword}

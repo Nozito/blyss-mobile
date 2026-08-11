@@ -102,9 +102,12 @@ export default function LoginScreen() {
         setAppleAvailable(available);
       }
 
-      // Biometrics — only if user has a stored token
+      // Biometrics — only if user has a stored token AND explicitly opted in
+      // from their account settings (BiometricToggle) — no silent opt-in.
       const token = await storage.getAccessToken();
       if (!token) return;
+      const optedIn = await storage.getBiometricEnabled();
+      if (!optedIn) return;
 
       const hasHardware = await LocalAuthentication.hasHardwareAsync().catch(() => false);
       const isEnrolled  = await LocalAuthentication.isEnrolledAsync().catch(() => false);

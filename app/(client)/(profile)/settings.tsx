@@ -17,6 +17,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { BiometricToggle } from "@/components/screens/shared/BiometricToggle";
 import { safeBack } from "@/lib/navigation";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
@@ -167,6 +168,7 @@ export default function SettingsScreen() {
         <View style={{ marginBottom: 20 }}>
           <SectionHeader icon="lock-closed-outline" label="Sécurité" />
           <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 16, ...Shadows.card }}>
+            <BiometricToggle />
             <Input
               label="Ancien mot de passe"
               value={currentPassword}

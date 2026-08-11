@@ -4,6 +4,7 @@ const KEYS = {
   ACCESS_TOKEN: "blyss_access_token",
   REFRESH_TOKEN: "blyss_refresh_token",
   USER_CACHE: "blyss_user_cache",
+  BIOMETRIC_ENABLED: "blyss_biometric_enabled",
 } as const;
 
 export const storage = {
@@ -35,6 +36,18 @@ export const storage = {
       SecureStore.deleteItemAsync(KEYS.ACCESS_TOKEN).catch(() => null),
       SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN).catch(() => null),
     ]);
+  },
+
+  async getBiometricEnabled(): Promise<boolean> {
+    return (await SecureStore.getItemAsync(KEYS.BIOMETRIC_ENABLED)) === "true";
+  },
+
+  async setBiometricEnabled(enabled: boolean): Promise<void> {
+    if (enabled) {
+      await SecureStore.setItemAsync(KEYS.BIOMETRIC_ENABLED, "true");
+    } else {
+      await SecureStore.deleteItemAsync(KEYS.BIOMETRIC_ENABLED).catch(() => null);
+    }
   },
 
   async getUserCache(): Promise<Record<string, unknown> | null> {
