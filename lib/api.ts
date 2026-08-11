@@ -606,6 +606,15 @@ export const proApi = {
       accept_online_payment: data.accept_online,
     }) }),
 
+  getCancellationPolicy: (): Promise<ApiResponse<{ cancellation_notice_hours: number }>> =>
+    apiCall("/api/pro/settings/cancellation-policy"),
+
+  updateCancellationPolicy: (cancellation_notice_hours: number): Promise<ApiResponse<{ cancellation_notice_hours: number }>> =>
+    apiCall("/api/pro/settings/cancellation-policy", {
+      method: "PATCH",
+      body: JSON.stringify({ cancellation_notice_hours }),
+    }),
+
   getLiveActivityNextAppointment: () =>
     apiCall<{
       appointmentId: number;

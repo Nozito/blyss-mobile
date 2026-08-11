@@ -76,6 +76,41 @@ export default function ProSettingsScreen() {
   const [addressPublic, setAddressPublic] = useState(user?.geo_precision === "address");
   const [showAddressConfirm, setShowAddressConfirm] = useState(false);
 
+  // Politique d'annulation — table `users`, mais un endpoint séparé
+  // (PATCH /api/pro/settings/cancellation-policy) plutôt que usersApi.update,
+  // donc sauvegardée immédiatement au tap plutôt que via le bouton du bas.
+  const ALLOWED_NOTICE_HOURS = [0, 2, 4, 6, 12, 24, 48, 72] as const;
+  const [noticeHours, setNoticeHours] = useState<number | null>(null);
+  const [noticeSaving, setNoticeSaving] = useState(false);
+  const [noticeSuccess, setNoticeSuccess] = useState(false);
+  const [noticeError, setNoticeError] = useState(false);
+
+  useEffect(() => {
+    proApi.getCancellationPolicy().then((res) => {
+      if (res.success && res.data) setNoticeHours(res.data.cancellation_notice_hours);
+    }).catch(() => {});
+  }, []);
+
+  const handleSelectNoticeHours = async (hours: number) => {
+    if (noticeSaving || hours === noticeHours) return;
+    const previous = noticeHours;
+    setNoticeHours(hours);
+    setNoticeSaving(true);
+    setNoticeSuccess(false);
+    setNoticeError(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const res = await proApi.updateCancellationPolicy(hours);
+    setNoticeSaving(false);
+    if (res.success) {
+      setNoticeSuccess(true);
+      setTimeout(() => setNoticeSuccess(false), 2500);
+    } else {
+      setNoticeHours(previous);
+      setNoticeError(true);
+      setTimeout(() => setNoticeError(false), 3000);
+    }
+  };
+
   type FormValues = Partial<Omit<User, "service_radius_km">> & { service_radius_km?: string };
 
   const { control, handleSubmit } = useForm<FormValues>({
@@ -412,6 +447,49 @@ export default function ProSettingsScreen() {
                 )}
               />
             </>
+          )}
+        </View>
+      </View>
+
+      {/* ── POLITIQUE D'ANNULATION ── */}
+      <View>
+        <SectionHeader icon="time-outline" label="Politique d'annulation" />
+        <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 14, ...Shadows.card }}>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
+            Délai minimum avant lequel une cliente peut annuler son rendez-vous sans que tu perdes le créneau à la dernière minute. Passé ce délai, elle ne peut plus annuler depuis l'app.
+          </Text>
+
+          {noticeHours === null ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {ALLOWED_NOTICE_HOURS.map((h) => {
+                const selected = h === noticeHours;
+                return (
+                  <AnimatedPressable
+                    key={h}
+                    onPress={() => handleSelectNoticeHours(h)}
+                    disabled={noticeSaving}
+                    style={{
+                      paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12,
+                      backgroundColor: selected ? colors.primary : colors.cream,
+                      opacity: noticeSaving && !selected ? 0.5 : 1,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: selected ? colors.onColor : colors.foreground }}>
+                      {h === 0 ? "Aucun délai" : `${h}h avant`}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          )}
+
+          {noticeSuccess && (
+            <Text style={{ fontSize: 12, color: colors.success, fontWeight: "600" }}>Délai mis à jour ✓</Text>
+          )}
+          {noticeError && (
+            <Text style={{ fontSize: 12, color: colors.destructive, fontWeight: "600" }}>Impossible de mettre à jour — réessaie</Text>
           )}
         </View>
       </View>
