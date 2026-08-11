@@ -30,7 +30,7 @@ type QuickReply = { label: string; icon: React.ComponentProps<typeof Ionicons>["
 
 const QUICK_REPLIES_BEFORE: QuickReply[] = [
   { label: "Confirmer l'adresse", icon: "location-outline" },
-  { label: "Je suis disponible plus tôt ?", icon: "time-outline" },
+  { label: "Avez-vous un créneau plus tôt ?", icon: "time-outline" },
   { label: "Quel est le prix exact ?", icon: "pricetag-outline" },
 ];
 const QUICK_REPLIES_AFTER: QuickReply[] = [
@@ -283,8 +283,9 @@ export default function MessageThreadScreen() {
           }
         />
 
-        {/* Quick replies */}
-        {messages.length < 6 && (
+        {/* Quick replies — un coup de pouce pour démarrer, pas un menu permanent :
+            disparaît dès que le fil contient un message. */}
+        {messages.length === 0 && (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
             {quickReplies.map((q) => (
               <Pressable
