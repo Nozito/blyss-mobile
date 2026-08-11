@@ -20,6 +20,7 @@ import {
   messagesApi,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/Toast";
 import { useFavorites } from "@/hooks/useFavorites";
 import { ReviewModal } from "@/components/ui/ReviewModal";
 import { withAlpha } from "@/constants/colors";
@@ -70,6 +71,7 @@ export default function SpecialistProfileScreen() {
   const heartScale = useRef(new Animated.Value(1)).current;
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [openingThread, setOpeningThread] = useState(false);
@@ -444,6 +446,8 @@ export default function SpecialistProfileScreen() {
             setOpeningThread(false);
             if (res.success && res.data) {
               router.push({ pathname: "/message-thread/[id]", params: { id: String(res.data.id) } });
+            } else {
+              showToast(res.error ?? "Impossible d'ouvrir la conversation", "error");
             }
           }}
           style={{

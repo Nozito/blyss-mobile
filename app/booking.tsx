@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { stripePaymentsApi, specialistsApi, messagesApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/Toast";
 import {
   ServiceSelector,
   type Prestation,
@@ -138,6 +139,7 @@ export default function BookingScreen() {
   const { proId } = useLocalSearchParams<{ proId: string }>();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { showTransition, hideTransition } = useAppTransition();
+  const { showToast } = useToast();
 
   const [step, setStep] = useState(1);
   const navigation = useNavigation();
@@ -512,6 +514,8 @@ export default function BookingScreen() {
               setContactingPro(false);
               if (res.success && res.data) {
                 router.push({ pathname: "/message-thread/[id]", params: { id: String(res.data.id) } });
+              } else {
+                showToast(res.error ?? "Impossible d'ouvrir la conversation", "error");
               }
             }}
           />
