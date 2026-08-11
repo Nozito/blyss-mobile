@@ -20,8 +20,9 @@ import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ThreadList } from "@/components/screens/shared/ThreadList";
 
-type Tab = "activity" | "preferences";
+type Tab = "activity" | "messages" | "preferences";
 type PrefKey = keyof ClientNotificationSettings;
 
 // booking_confirmed, message_received, and late_alert removed — no backend
@@ -93,6 +94,12 @@ function getPrefSections(colors: ReturnType<typeof useThemeColors>): Array<{ tit
         { key: "changes",   label: "Modifications & annulations", subtitle: "Si l'experte change ou annule ton créneau", icon: "calendar-outline", iconBg: withAlpha(colors.warning, 0.13), iconColor: colors.warning },
         // "late" (Retard de l'experte) removed — no backend code path ever
         // sends a late_alert notification, so the toggle controlled nothing.
+      ],
+    },
+    {
+      title: "Messages",
+      items: [
+        { key: "messages", label: "Nouveaux messages", subtitle: "Quand une pro te répond", icon: "chatbubble-ellipses-outline", iconBg: withAlpha(colors.primary, 0.13), iconColor: colors.primary },
       ],
     },
   ];
@@ -176,7 +183,7 @@ export default function ClientNotificationsScreen() {
 
         {/* Segmented control */}
         <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
-          {([["activity", "Activité"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
+          {([["activity", "Activité"], ["messages", "Messages"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
             <AnimatedPressable
               key={id}
               onPress={() => {
@@ -272,6 +279,8 @@ export default function ClientNotificationsScreen() {
               )}
             />
           )
+        ) : tab === "messages" ? (
+          <ThreadList />
         ) : prefsLoading ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator color={colors.primary} />

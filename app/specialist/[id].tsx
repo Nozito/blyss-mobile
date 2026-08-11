@@ -17,6 +17,7 @@ import {
   specialistsApi,
   reviewsApi,
   clientApi,
+  messagesApi,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -71,6 +72,7 @@ export default function SpecialistProfileScreen() {
   const { user } = useAuth();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [openingThread, setOpeningThread] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["specialist", id],
@@ -428,6 +430,44 @@ export default function SpecialistProfileScreen() {
           <Text style={{ color: colors.white, fontWeight: "700", fontSize: 16 }}>
             Réserver avec {firstName}
           </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={async () => {
+            if (!user) {
+              router.push("/(auth)/login");
+              return;
+            }
+            if (openingThread) return;
+            setOpeningThread(true);
+            const res = await messagesApi.openThread(Number(id));
+            setOpeningThread(false);
+            if (res.success && res.data) {
+              router.push({ pathname: "/message-thread/[id]", params: { id: String(res.data.id) } });
+            }
+          }}
+          style={{
+            flexDirection: "row",
+            gap: 8,
+            borderRadius: 999,
+            paddingVertical: 14,
+            marginTop: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1.4,
+            borderColor: colors.border,
+          }}
+        >
+          {openingThread ? (
+            <ActivityIndicator size="small" color={colors.foreground} />
+          ) : (
+            <>
+              <Ionicons name="chatbubble-outline" size={16} color={colors.foreground} />
+              <Text style={{ color: colors.foreground, fontWeight: "700", fontSize: 14 }}>
+                Une question ? Écrire à {firstName}
+              </Text>
+            </>
+          )}
         </Pressable>
 
         {/* Réalisations — masquée si la pro n'a pas de photo de portfolio */}

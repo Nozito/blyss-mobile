@@ -157,3 +157,41 @@ export async function syncAppointmentsToCalendar(appointments: SyncableAppointme
 
   await setEventMap(map);
 }
+
+export interface ClientBookingEvent {
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  location?: string;
+  notes?: string;
+}
+
+/**
+ * Ajout ponctuel côté client : demande la permission puis insère l'événement
+ * dans le calendrier "Blyss" (créé s'il n'existe pas). Pas de suivi/réconciliation
+ * — c'est un simple export one-shot depuis l'écran de confirmation de réservation.
+ */
+export async function addAppointmentToCalendar(
+  event: ClientBookingEvent
+): Promise<{ ok: boolean; error?: string }> {
+  if (Platform.OS !== "ios") return { ok: false, error: "Disponible uniquement sur iOS." };
+
+  const { status } = await Calendar.requestCalendarPermissionsAsync();
+  if (status !== "granted") {
+    return { ok: false, error: "Accès au calendrier refusé. Active-le dans Réglages > Blyss." };
+  }
+
+  try {
+    const calendarId = await findOrCreateBlyssCalendar();
+    await Calendar.createEventAsync(calendarId, {
+      title: event.title,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      location: event.location,
+      notes: event.notes,
+    });
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Impossible d'ajouter le rendez-vous au calendrier." };
+  }
+}

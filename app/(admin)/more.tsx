@@ -28,6 +28,7 @@ const ACCENT = ADMIN.accent;
 const TOOLS = [
   { key: "coupons",    label: "Coupons",          sub: "Codes promo",       symbol: "tag.fill",             androidIcon: "pricetag-outline"        as const, color: Colors.warning,    route: "/(admin-tools)/coupons" },
   { key: "reviews",    label: "Avis",             sub: "Modération",        symbol: "text.bubble.fill",     androidIcon: "chatbubble-outline"      as const, color: Colors.destructive, route: "/(admin-tools)/reviews" },
+  { key: "messages",   label: "Messages",         sub: "Conversations signalées", symbol: "flag.fill",     androidIcon: "flag-outline"            as const, color: Colors.destructive, route: "/(admin-tools)/messages" },
   { key: "analytics",  label: "Analytics",        sub: "Métriques & revenus", symbol: "chart.bar.fill",     androidIcon: "bar-chart-outline"       as const, color: Colors.pro,        route: "/(admin-tools)/analytics" },
   { key: "logs",       label: "Logs",             sub: "Événements système", symbol: "waveform",            androidIcon: "pulse-outline"           as const, color: Colors.info,       route: "/(admin-tools)/logs" },
   { key: "notifs",     label: "Notifs",           sub: "Push ciblées",      symbol: "bell.fill",            androidIcon: "notifications-outline"   as const, color: Colors.success,    route: "/(admin-tools)/notifications" },

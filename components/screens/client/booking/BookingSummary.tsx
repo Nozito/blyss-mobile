@@ -18,6 +18,8 @@ interface Props {
   paymentMethod: "online" | "on_site" | null;
   onSelectPayment: (method: "online" | "on_site") => void;
   canPayOnline: boolean;
+  onContactPro?: () => void;
+  contactingPro?: boolean;
 }
 
 function PaymentChoice({
@@ -100,6 +102,8 @@ export function BookingSummary({
   paymentMethod,
   onSelectPayment,
   canPayOnline,
+  onContactPro,
+  contactingPro,
 }: Props) {
   const colors = useThemeColors();
   const dateLabel = selectedDate.toLocaleDateString("fr-FR", {
@@ -199,6 +203,24 @@ export function BookingSummary({
           </View>
         </View>
       </View>
+
+      {/* Une précision à donner avant de valider (allergie, adresse, etc.) */}
+      {onContactPro && (
+        <AnimatedPressable
+          onPress={onContactPro}
+          disabled={contactingPro}
+          style={{
+            flexDirection: "row", alignItems: "center", gap: 10,
+            backgroundColor: colors.primaryLight, borderRadius: 14, padding: 14,
+          }}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.primary} />
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: colors.primary }}>
+            Une précision pour {proName} avant de réserver ?
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+        </AnimatedPressable>
+      )}
 
       {/* Réassurance annulation — visible avant le choix du mode de paiement */}
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>

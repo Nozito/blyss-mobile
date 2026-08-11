@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { stripePaymentsApi, specialistsApi } from "@/lib/api";
+import { stripePaymentsApi, specialistsApi, messagesApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ServiceSelector,
@@ -158,6 +158,7 @@ export default function BookingScreen() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
+  const [contactingPro, setContactingPro] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -503,6 +504,16 @@ export default function BookingScreen() {
             paymentMethod={paymentMethod}
             onSelectPayment={setPaymentMethod}
             canPayOnline={canPayOnline}
+            contactingPro={contactingPro}
+            onContactPro={async () => {
+              if (contactingPro || !proId) return;
+              setContactingPro(true);
+              const res = await messagesApi.openThread(Number(proId));
+              setContactingPro(false);
+              if (res.success && res.data) {
+                router.push({ pathname: "/message-thread/[id]", params: { id: String(res.data.id) } });
+              }
+            }}
           />
         ) : null;
       case 4:
@@ -525,6 +536,12 @@ export default function BookingScreen() {
                   date: formattedDate ?? "",
                   time: selectedTime ?? "",
                   amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
+                  dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
+                  durationMinutes: selectedPrestationData?.duration_minutes != null
+                    ? String(selectedPrestationData.duration_minutes)
+                    : "",
+                  proCity: pro.city ?? "",
+                  proId: String(proId),
                 },
               } as Parameters<typeof router.replace>[0]);
               hideTransition();

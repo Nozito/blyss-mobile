@@ -159,6 +159,10 @@ function AppContent() {
           name="booking/[id]"
           options={{ presentation: "card", animation: "slide_from_bottom" }}
         />
+        <Stack.Screen
+          name="message-thread/[id]"
+          options={{ presentation: "card", animation: "slide_from_bottom" }}
+        />
       </Stack>
       {splashVisible && (
         <LaunchSplash

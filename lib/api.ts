@@ -455,6 +455,80 @@ export const reviewsApi = {
     apiCall(`/api/reviews/${reviewId}/flag`, { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
+// ── Messages API ("Écrire à sa pro") ───────────────────────────────────────
+
+export interface ChatThreadSummary {
+  id: number;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  last_reservation_id: number | null;
+  unread_count: number;
+  other_id: number;
+  other_name: string;
+  other_photo: string | null;
+  reservation_status: string | null;
+}
+
+export interface ChatMessage {
+  id: number;
+  sender_id: number | null;
+  body: string | null;
+  attachment_url: string | null;
+  attachment_thumbnail: string | null;
+  created_at: string;
+  read_at?: string | null;
+}
+
+export interface ChatThreadDetail {
+  id: number;
+  otherName: string;
+  otherPhoto: string | null;
+  lastReservationId: number | null;
+  reservationStatus: string | null;
+  messages: ChatMessage[];
+}
+
+export const messagesApi = {
+  listThreads: (): Promise<ApiResponse<ChatThreadSummary[]>> => apiCall("/api/messages/threads"),
+
+  openThread: (proId: number, reservationId?: number): Promise<ApiResponse<{ id: number }>> =>
+    apiCall("/api/messages/threads", { method: "POST", body: JSON.stringify({ proId, reservationId }) }),
+
+  getThread: (threadId: number): Promise<ApiResponse<ChatThreadDetail>> =>
+    apiCall(`/api/messages/threads/${threadId}`),
+
+  sendMessage: async (
+    threadId: number,
+    { body, photoUri }: { body?: string; photoUri?: string }
+  ): Promise<ApiResponse<ChatMessage>> => {
+    try {
+      const accessToken = await storage.getAccessToken();
+      const formData = new FormData();
+      if (body) formData.append("body", body);
+      if (photoUri) {
+        const filename = photoUri.split("/").pop() ?? "photo.jpg";
+        const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+        const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+        // @ts-expect-error — React Native FormData accepts { uri, name, type }
+        formData.append("photo", { uri: photoUri, name: filename, type: mimeType });
+      }
+      const response = await fetch(`${API_BASE_URL}/api/messages/threads/${threadId}/messages`, {
+        method: "POST",
+        headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        body: formData,
+      });
+      const json = (await response.json().catch(() => null)) as { success?: boolean; data?: ChatMessage; message?: string } | null;
+      if (!response.ok || !json?.success) return { success: false, error: json?.message ?? "Erreur lors de l'envoi" };
+      return { success: true, data: json.data };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Erreur de connexion" };
+    }
+  },
+
+  reportThread: (threadId: number, reason?: string): Promise<ApiResponse<void>> =>
+    apiCall(`/api/messages/threads/${threadId}/report`, { method: "POST", body: JSON.stringify({ reason }) }),
+};
+
 // ── Favorites API ─────────────────────────────────────────────────────────────
 
 export const favoritesApi = {
@@ -1084,4 +1158,18 @@ export const adminApi = {
     apiCall(`/api/admin/reviews/${id}/restore`, { method: "PATCH" }),
   ignoreReviewFlag: (id: number): Promise<ApiResponse<void>> =>
     apiCall(`/api/admin/reviews/${id}/ignore`, { method: "PATCH" }),
+
+  // Messages moderation — sur signalement uniquement (voir messages.routes.ts)
+  getMessageThreads: (params?: { flagged?: boolean; deleted?: boolean; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
+    const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
+    return apiCall(`/api/admin/messages/threads${q}`);
+  },
+  getMessageThreadDetail: (id: number): Promise<ApiResponse<{ messages: unknown[]; flags: unknown[] }>> =>
+    apiCall(`/api/admin/messages/threads/${id}`),
+  deleteMessageThread: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/messages/threads/${id}`, { method: "DELETE" }),
+  restoreMessageThread: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/messages/threads/${id}/restore`, { method: "PATCH" }),
+  ignoreMessageFlag: (id: number): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/messages/threads/${id}/ignore`, { method: "PATCH" }),
 };

@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   Animated,
   StyleSheet,
   ScrollView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -13,6 +14,9 @@ import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { useToast } from "@/components/ui/Toast";
+import { addAppointmentToCalendar } from "@/lib/appleCalendarSync";
+import { messagesApi } from "@/lib/api";
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -26,11 +30,64 @@ export default function BookingConfirmationScreen() {
     time?: string;
     amount?: string;
     confirmationCode?: string;
+    dateISO?: string;
+    durationMinutes?: string;
+    proCity?: string;
+    proId?: string;
   }>();
+  const { showToast } = useToast();
+  const [addingToCalendar, setAddingToCalendar] = useState(false);
+  const [openingThread, setOpeningThread] = useState(false);
 
   const scaleAnim  = useRef(new Animated.Value(0)).current;
   const opacAnim   = useRef(new Animated.Value(0)).current;
   const slideAnim  = useRef(new Animated.Value(30)).current;
+
+  const canAddToCalendar = Platform.OS === "ios" && !!params.dateISO && !!params.time;
+
+  const handleAddToCalendar = async () => {
+    if (!params.dateISO || !params.time) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAddingToCalendar(true);
+    try {
+      const startDate = new Date(`${params.dateISO}T${params.time}:00`);
+      const duration = params.durationMinutes ? Number(params.durationMinutes) : 60;
+      const endDate = new Date(startDate.getTime() + duration * 60_000);
+      const title = params.serviceName
+        ? `${params.serviceName} — ${params.specialistName ?? "Blyss"}`
+        : params.specialistName ?? "Rendez-vous Blyss";
+
+      const result = await addAppointmentToCalendar({
+        title,
+        startDate,
+        endDate,
+        location: params.proCity || undefined,
+        notes: params.confirmationCode ? `Référence Blyss : ${params.confirmationCode}` : undefined,
+      });
+
+      if (result.ok) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showToast("Rendez-vous ajouté à ton calendrier", "success");
+      } else {
+        showToast(result.error ?? "Impossible d'ajouter le rendez-vous au calendrier", "error");
+      }
+    } finally {
+      setAddingToCalendar(false);
+    }
+  };
+
+  const handleContactPro = async () => {
+    if (!params.proId || openingThread) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setOpeningThread(true);
+    const res = await messagesApi.openThread(Number(params.proId));
+    setOpeningThread(false);
+    if (res.success && res.data) {
+      router.push({ pathname: "/message-thread/[id]", params: { id: String(res.data.id) } });
+    } else {
+      showToast(res.error ?? "Impossible d'ouvrir la conversation", "error");
+    }
+  };
 
   useEffect(() => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -117,6 +174,32 @@ export default function BookingConfirmationScreen() {
             <Text style={[styles.ctaPrimaryText, { color: colors.onColor }]}>Voir mes réservations</Text>
           </AnimatedPressable>
 
+          {canAddToCalendar && (
+            <AnimatedPressable
+              onPress={handleAddToCalendar}
+              disabled={addingToCalendar}
+              style={[styles.ctaSecondary, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.foreground} />
+              <Text style={[styles.ctaSecondaryText, { color: colors.foreground }]}>
+                {addingToCalendar ? "Ajout en cours…" : "Ajouter à mon calendrier"}
+              </Text>
+            </AnimatedPressable>
+          )}
+
+          {!!params.proId && (
+            <AnimatedPressable
+              onPress={handleContactPro}
+              disabled={openingThread}
+              style={[styles.ctaSecondary, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={colors.foreground} />
+              <Text style={[styles.ctaSecondaryText, { color: colors.foreground }]}>
+                {openingThread ? "Ouverture…" : `Écrire à ${params.specialistName ?? "la pro"}`}
+              </Text>
+            </AnimatedPressable>
+          )}
+
           <AnimatedPressable
             onPress={() => {
               router.replace("/(client)" as Parameters<typeof router.replace>[0]);
@@ -195,6 +278,16 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ctaPrimaryText: { fontSize: 15, fontWeight: "700" },
+  ctaSecondary: {
+    height: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  ctaSecondaryText: { fontSize: 14, fontWeight: "600" },
   ctaGhost: { height: 48, alignItems: "center", justifyContent: "center" },
   ctaGhostText: { fontSize: 14, fontWeight: "600" },
 });

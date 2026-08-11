@@ -9,11 +9,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
+import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { proApi, ProNotificationSettings } from "@/lib/api";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { ThreadList } from "@/components/screens/shared/ThreadList";
+
+type Tab = "messages" | "preferences";
 
 const DEFAULT_PREFS: ProNotificationSettings = {
   new_reservation: true,
@@ -67,6 +71,19 @@ function getSections(colors: ReturnType<typeof useThemeColors>): Array<{ title: 
       ],
     },
     {
+      title: "Messages",
+      items: [
+        {
+          key: "client_message",
+          label: "Nouveaux messages",
+          subtitle: "Quand une cliente t'écrit",
+          icon: "chatbubble-ellipses-outline",
+          iconBg: withAlpha(colors.primary, 0.13),
+          iconColor: colors.primary,
+        },
+      ],
+    },
+    {
       title: "Paiement & Activité",
       items: [
         {
@@ -96,6 +113,7 @@ export default function ProNotificationsScreen() {
   const SECTIONS = useMemo(() => getSections(colors), [colors]);
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
+  const [tab, setTab] = useState<Tab>("messages");
   const [prefs, setPrefs] = useState<ProNotificationSettings>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -131,6 +149,53 @@ export default function ProNotificationsScreen() {
     );
   }
 
+  const header = (
+    <>
+      {/* Header */}
+      <View style={{ marginBottom: 16 }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>
+          Notifications
+        </Text>
+        <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
+          {tab === "messages" ? "Tes conversations avec tes clientes" : "Préférences de réception"}
+        </Text>
+      </View>
+
+      {/* Segmented control */}
+      <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
+        {([["messages", "Messages"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
+          <AnimatedPressable
+            key={id}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setTab(id);
+            }}
+            style={{
+              flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center",
+              backgroundColor: tab === id ? colors.white : "transparent",
+              shadowColor: colors.black, shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: tab === id ? 0.08 : 0, shadowRadius: 4,
+              elevation: tab === id ? 2 : 0,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: tab === id ? colors.foreground : colors.mutedForeground }}>
+              {label}
+            </Text>
+          </AnimatedPressable>
+        ))}
+      </View>
+    </>
+  );
+
+  if (tab === "messages") {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, paddingHorizontal: 20 }}>
+        {header}
+        <ThreadList />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       ref={scrollRef}
@@ -143,15 +208,7 @@ export default function ProNotificationsScreen() {
       automaticallyAdjustContentInsets={false}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <View style={{ marginBottom: 24 }}>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>
-          Notifications
-        </Text>
-        <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
-          Préférences de réception
-        </Text>
-      </View>
+      {header}
 
       {/* Sections toggles */}
       {SECTIONS.map((section) => (

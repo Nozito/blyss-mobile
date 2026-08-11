@@ -62,6 +62,11 @@ export default function AdminDashboard() {
     queryFn: () => adminApi.getReviews({ flagged: true, limit: 50 }),
     staleTime: 60_000,
   });
+  const { data: threadsData } = useQuery({
+    queryKey: ["admin-messages-flagged"],
+    queryFn: () => adminApi.getMessageThreads({ flagged: true, limit: 50 }),
+    staleTime: 60_000,
+  });
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
@@ -78,7 +83,8 @@ export default function AdminDashboard() {
   const sparkData = (d?.revenue_history ?? d?.revenueHistory ?? []) as number[];
   const pendingBookings = stats?.bookingsByStatus?.pending ?? 0;
   const flaggedReviews  = (reviewsData?.data as unknown[] | undefined)?.length ?? 0;
-  const urgentCount = pendingBookings + flaggedReviews;
+  const flaggedThreads  = (threadsData?.data as unknown[] | undefined)?.length ?? 0;
+  const urgentCount = pendingBookings + flaggedReviews + flaggedThreads;
 
   const maxSpark = useMemo(() => Math.max(1, ...sparkData), [sparkData]);
   const totalSparkRevenue = useMemo(() => sparkData.reduce((s, v) => s + v, 0), [sparkData]);
@@ -206,6 +212,7 @@ export default function AdminDashboard() {
               items={[
                 { label: "réservations à confirmer",      count: pendingBookings, tone: "warning", onPress: () => router.push("/(admin)/bookings") },
                 { label: "avis signalés",                  count: flaggedReviews,  tone: "danger",  onPress: () => router.push("/(admin-tools)/reviews") },
+                { label: "conversations signalées",        count: flaggedThreads,  tone: "danger",  onPress: () => router.push("/(admin-tools)/messages") },
               ]}
             />
           </Card>
