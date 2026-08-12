@@ -19,8 +19,8 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/Toast";
-import { useActionSheet } from "@/components/ui/ActionSheet";
-import { messagesApi, type ChatMessage } from "@/lib/api";
+import { Modal } from "@/components/ui/Modal";
+import { messagesApi, REPORT_REASONS, type ChatMessage } from "@/lib/api";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { resolveMediaUrl } from "@/lib/media";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
@@ -69,13 +69,17 @@ export default function MessageThreadScreen() {
   const colors = useThemeColors();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const showActionSheet = useActionSheet();
   const queryClient = useQueryClient();
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const [draft, setDraft] = useState("");
   const [pickedPhoto, setPickedPhoto] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportReasonCode, setReportReasonCode] = useState<string | null>(null);
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["message-thread", threadId],
@@ -89,6 +93,10 @@ export default function MessageThreadScreen() {
   useEffect(() => {
     if (thread?.messages) setMessages(thread.messages);
   }, [thread?.messages]);
+
+  useEffect(() => {
+    if (thread) setLocked(!!thread.isLocked);
+  }, [thread]);
 
   useEffect(() => {
     // Une fois le fil consulté (marqué lu côté serveur par GET /threads/:id),
@@ -118,7 +126,7 @@ export default function MessageThreadScreen() {
   const handleSend = async () => {
     const body = draft.trim();
     if (!body && !pickedPhoto) return;
-    if (sending) return;
+    if (sending || locked) return;
     setSending(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const res = await messagesApi.sendMessage(threadId, { body: body || undefined, photoUri: pickedPhoto || undefined });
@@ -133,22 +141,25 @@ export default function MessageThreadScreen() {
     }
   };
 
-  const handleReport = () => {
+  const openReportModal = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
-    showActionSheet(
-      {
-        title: "Signaler cette conversation ?",
-        message: "Un membre de l'équipe Blyss va l'examiner. Elle ne sera pas lue automatiquement sinon.",
-        options: ["Annuler", "Signaler"],
-        cancelButtonIndex: 0,
-        destructiveButtonIndex: 1,
-      },
-      async (idx) => {
-        if (idx !== 1) return;
-        const res = await messagesApi.reportThread(threadId);
-        showToast(res.success ? "Merci, la conversation va être examinée." : (res.error ?? "Erreur"), res.success ? "success" : "error");
-      }
-    );
+    setReportReasonCode(null);
+    setReportDetails("");
+    setReportModalVisible(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReasonCode || reportSubmitting) return;
+    setReportSubmitting(true);
+    const res = await messagesApi.reportThread(threadId, reportReasonCode, reportDetails.trim() || undefined);
+    setReportSubmitting(false);
+    if (res.success) {
+      setReportModalVisible(false);
+      setLocked(true);
+      showToast("Merci, la conversation va être examinée par l'équipe Blyss.", "success");
+    } else {
+      showToast(res.error ?? "Erreur lors du signalement", "error");
+    }
   };
 
   if (isLoading) {
@@ -193,7 +204,7 @@ export default function MessageThreadScreen() {
             )}
           </View>
           <AnimatedIconButton
-            onPress={handleReport}
+            onPress={openReportModal}
             style={{ padding: 6 }}
             accessibilityLabel="Signaler cette conversation"
             accessibilityRole="button"
@@ -201,6 +212,23 @@ export default function MessageThreadScreen() {
             <Ionicons name="flag-outline" size={20} color={colors.mutedForeground} />
           </AnimatedIconButton>
         </View>
+
+        {/* Lock banner — posé dès qu'un signalement (le nôtre ou celui de
+            l'autre partie) a mis la conversation en attente d'examen. */}
+        {locked && (
+          <View
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 8,
+              marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 14,
+              backgroundColor: colors.destructiveLight ?? colors.muted,
+            }}
+          >
+            <Ionicons name="lock-closed-outline" size={16} color={colors.destructive} />
+            <Text style={{ flex: 1, fontSize: 12, color: colors.destructive, lineHeight: 17 }}>
+              Cette conversation a été signalée et est en cours d'examen par l'équipe Blyss. L'envoi de messages est suspendu.
+            </Text>
+          </View>
+        )}
 
         {/* Reservation pin */}
         {thread.lastReservationId && (
@@ -324,41 +352,112 @@ export default function MessageThreadScreen() {
         )}
 
         {/* Composer */}
-        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-          <Pressable
-            onPress={handlePickPhoto}
-            accessibilityRole="button"
-            accessibilityLabel="Ajouter une photo"
-            style={{ padding: 8 }}
-          >
-            <Ionicons name="camera-outline" size={22} color={colors.mutedForeground} />
-          </Pressable>
+        {!locked && (
+          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <Pressable
+              onPress={handlePickPhoto}
+              accessibilityRole="button"
+              accessibilityLabel="Ajouter une photo"
+              style={{ padding: 8 }}
+            >
+              <Ionicons name="camera-outline" size={22} color={colors.mutedForeground} />
+            </Pressable>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Écrire un message…"
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              style={{
+                flex: 1, maxHeight: 100, fontSize: 14, color: colors.foreground,
+                backgroundColor: colors.muted, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10,
+              }}
+            />
+            <AnimatedPressable
+              onPress={handleSend}
+              disabled={sending || (!draft.trim() && !pickedPhoto)}
+              accessibilityRole="button"
+              accessibilityLabel="Envoyer le message"
+              accessibilityState={{ disabled: sending || (!draft.trim() && !pickedPhoto) }}
+              style={{
+                width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
+                backgroundColor: (draft.trim() || pickedPhoto) ? colors.primary : colors.disabled,
+              }}
+            >
+              {sending ? <ActivityIndicator size="small" color={colors.onColor} /> : <Ionicons name="arrow-up" size={18} color={colors.onColor} />}
+            </AnimatedPressable>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+
+      <Modal visible={reportModalVisible} onClose={() => setReportModalVisible(false)} title="Signaler cette conversation" bottomSheet>
+        <View style={{ gap: 14, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 13, color: colors.mutedForeground, lineHeight: 18 }}>
+            Un membre de l'équipe Blyss va examiner cette conversation. L'envoi de messages sera suspendu pour les deux parties le temps de l'examen.
+          </Text>
+
+          <View style={{ gap: 8 }}>
+            {REPORT_REASONS.map((reasonOption) => {
+              const selected = reportReasonCode === reasonOption.code;
+              return (
+                <Pressable
+                  key={reasonOption.code}
+                  onPress={() => setReportReasonCode(reasonOption.code)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 10,
+                    borderWidth: 1.2, borderColor: selected ? colors.primary : colors.border,
+                    backgroundColor: selected ? colors.primaryLight : "transparent",
+                    borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12,
+                  }}
+                >
+                  <Ionicons
+                    name={selected ? "radio-button-on" : "radio-button-off"}
+                    size={18}
+                    color={selected ? colors.primary : colors.mutedForeground}
+                  />
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: selected ? colors.primary : colors.foreground }}>
+                    {reasonOption.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Écrire un message…"
+            value={reportDetails}
+            onChangeText={setReportDetails}
+            placeholder="Ajoute des précisions si besoin (optionnel)"
             placeholderTextColor={colors.mutedForeground}
             multiline
+            numberOfLines={3}
             style={{
-              flex: 1, maxHeight: 100, fontSize: 14, color: colors.foreground,
-              backgroundColor: colors.muted, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10,
+              minHeight: 70, fontSize: 13, color: colors.foreground,
+              backgroundColor: colors.muted, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
+              textAlignVertical: "top",
             }}
           />
+
           <AnimatedPressable
-            onPress={handleSend}
-            disabled={sending || (!draft.trim() && !pickedPhoto)}
+            onPress={handleSubmitReport}
+            disabled={!reportReasonCode || reportSubmitting}
             accessibilityRole="button"
-            accessibilityLabel="Envoyer le message"
-            accessibilityState={{ disabled: sending || (!draft.trim() && !pickedPhoto) }}
+            accessibilityLabel="Confirmer le signalement"
+            accessibilityState={{ disabled: !reportReasonCode || reportSubmitting }}
             style={{
-              width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
-              backgroundColor: (draft.trim() || pickedPhoto) ? colors.primary : colors.disabled,
+              height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center",
+              backgroundColor: reportReasonCode ? colors.destructive : colors.disabled,
             }}
           >
-            {sending ? <ActivityIndicator size="small" color={colors.onColor} /> : <Ionicons name="arrow-up" size={18} color={colors.onColor} />}
+            {reportSubmitting ? (
+              <ActivityIndicator size="small" color={colors.onColor} />
+            ) : (
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Signaler la conversation</Text>
+            )}
           </AnimatedPressable>
         </View>
-      </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
