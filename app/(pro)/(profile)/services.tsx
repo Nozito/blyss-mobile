@@ -61,7 +61,7 @@ const ServiceRow = memo(function ServiceRow({
           alignItems: "center", justifyContent: "center",
         }}>
           <Ionicons
-            name="sparkles-outline"
+            name="color-palette-outline"
             size={22}
             color={inactive ? colors.mutedForeground : colors.primary}
           />
@@ -329,7 +329,7 @@ export default function ServicesScreen() {
                 backgroundColor: `${colors.primary}15`,
                 alignItems: "center", justifyContent: "center",
               }}>
-                <Ionicons name="sparkles-outline" size={28} color={colors.primary} />
+                <Ionicons name="color-palette-outline" size={28} color={colors.primary} />
               </View>
               <Text style={{ fontSize: 18, fontWeight: "700", color: colors.foreground }}>
                 Aucune prestation

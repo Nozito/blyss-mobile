@@ -17,6 +17,7 @@ import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectio
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { resolveMediaUrl } from "@/lib/media";
+import { normalizeAdminDashboardStats } from "@/lib/adminStats";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -24,7 +25,6 @@ const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
 const ACCENT = ADMIN.accent;
 
-// "Validation pros" removed — no backend behind it (see dashboard.tsx).
 const TOOLS = [
   { key: "coupons",    label: "Coupons",          sub: "Codes promo",       symbol: "tag.fill",             androidIcon: "pricetag-outline"        as const, color: Colors.warning,    route: "/(admin-tools)/coupons" },
   { key: "reviews",    label: "Avis",             sub: "Modération",        symbol: "text.bubble.fill",     androidIcon: "chatbubble-outline"      as const, color: Colors.destructive, route: "/(admin-tools)/reviews" },
@@ -104,7 +104,7 @@ export default function AdminMoreScreen() {
     staleTime: 5 * 60_000,
   });
 
-  const d = (dashData?.data as any) ?? {};
+  const dashStats = normalizeAdminDashboardStats((dashData?.data as any)?.stats);
 
   const logoutScale = useRef(new Animated.Value(1)).current;
 
@@ -113,9 +113,9 @@ export default function AdminMoreScreen() {
   const photoUri = resolveMediaUrl(user?.profile_photo);
 
   const stats = [
-    { label: "Utilisateurs", value: d?.stats?.totalUsers ?? "—", symbol: "person.2.fill",   icon: "people-outline"   as const, route: "/(admin)/users" },
-    { label: "RDV du mois",  value: d?.stats?.totalBookings ?? "—", symbol: "calendar.circle.fill", icon: "calendar-outline" as const, route: "/(admin)/bookings" },
-    { label: "CA du mois",   value: d?.stats?.monthRevenue ? `${Number(d.stats.monthRevenue).toFixed(0)}€` : "—", symbol: "banknote.fill", icon: "wallet-outline" as const, route: "/(admin-tools)/analytics" },
+    { label: "Utilisateurs", value: dashStats?.totalUsers ?? "—", symbol: "person.2.fill",   icon: "people-outline"   as const, route: "/(admin)/users" },
+    { label: "RDV du mois",  value: dashStats?.monthBookings ?? "—", symbol: "calendar.circle.fill", icon: "calendar-outline" as const, route: "/(admin)/bookings" },
+    { label: "CA du mois",   value: dashStats?.monthRevenue ? `${Number(dashStats.monthRevenue).toFixed(0)}€` : "—", symbol: "banknote.fill", icon: "wallet-outline" as const, route: "/(admin-tools)/analytics" },
   ];
 
   return (

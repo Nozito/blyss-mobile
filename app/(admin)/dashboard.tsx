@@ -17,6 +17,7 @@ import { Card } from "@/components/admin/Card";
 import { useScrollToTop } from "@react-navigation/native";
 import { toNumber as n } from "@/lib/bookingUtils";
 import { syncAdminDashboardWidgets } from "@/lib/widgetSync";
+import { normalizeAdminDashboardStats } from "@/lib/adminStats";
 
 function DashboardSkeleton({ top }: { top: number }) {
   return (
@@ -52,11 +53,6 @@ export default function AdminDashboard() {
     queryFn: () => adminApi.getDashboardStats(),
     staleTime: 5 * 60_000, retry: false,
   });
-  // "Validation Pros" was removed from this dashboard — there was no
-  // backend behind it at all (no /api/admin/pros routes, and pro_status
-  // has no 'pending'/'rejected' state in the schema; it's driven by
-  // subscription status instead). Re-add once that workflow actually
-  // exists.
   const { data: reviewsData } = useQuery({
     queryKey: ["admin-reviews-flagged"],
     queryFn: () => adminApi.getReviews({ flagged: true, limit: 50 }),
@@ -71,15 +67,7 @@ export default function AdminDashboard() {
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
   const d   = (rawData?.data as any) ?? null;
-  const raw = d?.stats ?? null;
-  const stats = raw ? {
-    totalUsers:    raw.total_users    ?? raw.totalUsers    ?? 0,
-    todayBookings: raw.today_bookings ?? raw.bookings_today ?? raw.todayBookings ?? 0,
-    monthRevenue:  raw.revenue_month  ?? raw.month_revenue  ?? raw.monthRevenue  ?? 0,
-    activeUsers:   raw.active_users   ?? raw.activeUsers    ?? 0,
-    bookingsByStatus: (raw.bookings_by_status ?? raw.bookingsByStatus ?? {}) as Record<string, number>,
-    revenueChange: raw.changes?.revenue ?? null as number | null,
-  } : null;
+  const stats = normalizeAdminDashboardStats(d?.stats);
   const sparkData = (d?.revenue_history ?? d?.revenueHistory ?? []) as number[];
   const pendingBookings = stats?.bookingsByStatus?.pending ?? 0;
   const flaggedReviews  = (reviewsData?.data as unknown[] | undefined)?.length ?? 0;

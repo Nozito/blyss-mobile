@@ -110,7 +110,7 @@ function UserPicker({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError } = useQuery({
     queryKey: ["admin-users-search", debouncedSearch],
     queryFn: () => adminApi.getUsers({ search: debouncedSearch, limit: 20 }),
     enabled: debouncedSearch.length >= 2,
@@ -184,8 +184,15 @@ function UserPicker({
         </View>
       )}
 
+      {/* Error state — distinct from "no results" */}
+      {debouncedSearch.length >= 2 && !isFetching && isError && (
+        <Text style={{ fontSize: 12, color: Colors.destructive, marginTop: 8, textAlign: "center", paddingVertical: 12 }}>
+          Erreur réseau — la recherche a échoué, réessaie.
+        </Text>
+      )}
+
       {/* Empty state */}
-      {debouncedSearch.length >= 2 && !isFetching && users.length === 0 && (
+      {debouncedSearch.length >= 2 && !isFetching && !isError && users.length === 0 && (
         <Text style={{ fontSize: 12, color: TEXT3, marginTop: 8, textAlign: "center", paddingVertical: 12 }}>
           Aucun utilisateur trouvé
         </Text>

@@ -1,19 +1,20 @@
 import React, { useState, useCallback } from "react";
 import {
-  View, Text, FlatList, ActivityIndicator, RefreshControl, Modal, ScrollView,
+  View, Text, FlatList, ActivityIndicator, RefreshControl, Modal, ScrollView, TextInput, Pressable, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { adminApi } from "@/lib/api";
+import { adminApi, REPORT_REASONS, type AdminMessageReport } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { safeBack } from "@/lib/navigation";
+import { resolveMediaUrl } from "@/lib/media";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -32,8 +33,21 @@ interface AdminThread {
   created_at: string;
   client_name: string;
   pro_name: string;
+  is_locked: boolean;
   flags_count: number;
+  flags_total: number;
+  last_reason_code: string | null;
   last_reason: string | null;
+}
+
+function reasonLabel(code: string | null): string {
+  return REPORT_REASONS.find((r) => r.code === code)?.label ?? "Autre";
+}
+function reportOutcome(status: "pending" | "reviewed", outcome: "upheld" | "dismissed" | "abusive" | null): { label: string; bg: string; border: string; color: string } {
+  if (status === "pending") return { label: "En attente", bg: ADMIN.dangerBg, border: ADMIN.dangerBorder, color: Colors.destructive };
+  if (outcome === "abusive") return { label: "Signalement abusif", bg: ADMIN.dangerBg, border: ADMIN.dangerBorder, color: Colors.destructive };
+  if (outcome === "dismissed") return { label: "Classé sans suite", bg: ADMIN.surfaceHover, border: ADMIN.border, color: TEXT3 };
+  return { label: "Confirmé", bg: ADMIN.warningBg, border: ADMIN.warningBorder, color: ADMIN.warning };
 }
 
 interface AdminThreadMessage {
@@ -77,20 +91,36 @@ export default function AdminMessagesScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminThread | null>(null);
   const [detailThread, setDetailThread] = useState<AdminThread | null>(null);
+  const [ignoreTarget, setIgnoreTarget] = useState<AdminThread | null>(null);
+  const [ignoreOutcome, setIgnoreOutcome] = useState<"dismissed" | "abusive">("dismissed");
+  const [ignoreNote, setIgnoreNote] = useState("");
 
-  const { data, isLoading, refetch } = useQuery({
+  const PAGE_SIZE = 30;
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["admin-message-threads", tab],
-    queryFn: () => adminApi.getMessageThreads(tab === "flagged" ? { flagged: true } : { deleted: true }),
+    queryFn: ({ pageParam }) => adminApi.getMessageThreads({
+      ...(tab === "flagged" ? { flagged: true } : { deleted: true }),
+      limit: PAGE_SIZE,
+      page: pageParam,
+    }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, p) => sum + ((p.data as AdminThread[] | undefined)?.length ?? 0), 0);
+      const total = lastPage.meta?.total;
+      if (total == null || loaded >= total) return undefined;
+      return allPages.length + 1;
+    },
   });
 
-  const threads: AdminThread[] = ((data?.data as AdminThread[] | undefined) ?? []);
+  const threads: AdminThread[] = (data?.pages.flatMap((p) => (p.data as AdminThread[] | undefined) ?? []) ?? []) as AdminThread[];
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: ["admin-message-thread-detail", detailThread?.id],
-    queryFn: () => adminApi.getMessageThreadDetail(detailThread!.id),
-    enabled: !!detailThread,
+    queryFn: () => adminApi.getMessageThreadDetail(detailThread?.id ?? -1),
+    enabled: detailThread != null,
   });
   const detailMessages = (detailData?.data?.messages as AdminThreadMessage[] | undefined) ?? [];
+  const detailFlags = (detailData?.data?.flags as AdminMessageReport[] | undefined) ?? [];
 
   const invalidateBoth = () => {
     void qc.invalidateQueries({ queryKey: ["admin-message-threads", "flagged"] });
@@ -110,12 +140,19 @@ export default function AdminMessagesScreen() {
   });
 
   const ignoreMut = useMutation({
-    mutationFn: (id: number) => adminApi.ignoreMessageFlag(id),
+    mutationFn: ({ id, outcome, note }: { id: number; outcome: "dismissed" | "abusive"; note?: string }) =>
+      adminApi.ignoreMessageFlag(id, { outcome, note }),
     onSuccess: () => {
-      showToast("Signalement ignoré.", "success");
+      showToast(
+        ignoreOutcome === "abusive" ? "Signalement classé comme abusif." : "Signalement classé sans suite.",
+        "success"
+      );
       invalidateBoth();
+      setIgnoreTarget(null);
+      setIgnoreOutcome("dismissed");
+      setIgnoreNote("");
     },
-    onError: () => setActionError("Impossible d'ignorer ce signalement."),
+    onError: () => setActionError("Impossible de traiter ce signalement."),
   });
 
   const restoreMut = useMutation({
@@ -188,6 +225,17 @@ export default function AdminMessagesScreen() {
           {listHeader}
           <ThreadSkeleton />
         </View>
+      ) : isError ? (
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
+          {listHeader}
+          <View style={{ alignItems: "center", paddingVertical: 80, gap: 12 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les conversations</Text>
+            <Text style={{ fontSize: 13, color: TEXT2, textAlign: "center", paddingHorizontal: 20 }}>Vérifie ta connexion et réessaie.</Text>
+            <AnimatedPressable onPress={onRefresh}>
+              <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
+            </AnimatedPressable>
+          </View>
+        </View>
       ) : (
         <FlatList
           data={threads}
@@ -197,6 +245,13 @@ export default function AdminMessagesScreen() {
           maxToRenderPerBatch={10}
           windowSize={7}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); }}
+          ListFooterComponent={isFetchingNextPage ? (
+            <View style={{ paddingVertical: 20 }}>
+              <ActivityIndicator size="small" color={ADMIN.accent} />
+            </View>
+          ) : null}
           ListHeaderComponent={<View style={{ paddingHorizontal: 4 }}>{listHeader}</View>}
           ListEmptyComponent={
             tab === "flagged" ? (
@@ -240,10 +295,15 @@ export default function AdminMessagesScreen() {
                 )}
               </View>
 
-              {item.last_reason && (
+              {item.last_reason_code && (
                 <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: ADMIN.border }}>
-                  <Text style={{ fontSize: 11, color: TEXT3, marginBottom: 2 }}>Motif du signalement</Text>
-                  <Text style={{ fontSize: 13, color: TEXT2, lineHeight: 18 }}>{item.last_reason}</Text>
+                  <Text style={{ fontSize: 11, color: TEXT3, marginBottom: 2 }}>
+                    Motif du signalement{item.flags_total > 1 ? ` (${item.flags_total} signalements au total)` : ""}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT2 }}>{reasonLabel(item.last_reason_code)}</Text>
+                  {item.last_reason && (
+                    <Text style={{ fontSize: 12, color: TEXT3, lineHeight: 17, marginTop: 4 }}>{item.last_reason}</Text>
+                  )}
                 </View>
               )}
 
@@ -264,7 +324,7 @@ export default function AdminMessagesScreen() {
 
                 {tab === "flagged" ? (
                   <AnimatedPressable
-                    onPress={() => { setActionError(null); ignoreMut.mutate(item.id); }}
+                    onPress={() => { setActionError(null); setIgnoreOutcome("dismissed"); setIgnoreNote(""); setIgnoreTarget(item); }}
                     disabled={ignoreMut.isPending}
                     style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
                   >
@@ -320,29 +380,149 @@ export default function AdminMessagesScreen() {
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-              {detailMessages.map((m) => (
+              {detailFlags.length > 0 && (
+                <View style={{ backgroundColor: CARD, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: BORDER, gap: 10, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: TEXT1 }}>Historique des signalements</Text>
+                  {detailFlags.map((f) => {
+                    const outcomeBadge = reportOutcome(f.status, f.outcome);
+                    return (
+                    <View key={f.id} style={{ borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: TEXT2 }}>{reasonLabel(f.reason_code)}</Text>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: outcomeBadge.bg, borderWidth: 1, borderColor: outcomeBadge.border }}>
+                          <Text style={{ fontSize: 9, fontWeight: "700", color: outcomeBadge.color }}>
+                            {outcomeBadge.label}
+                          </Text>
+                        </View>
+                      </View>
+                      {f.reason && <Text style={{ fontSize: 11, color: TEXT3, marginTop: 2, lineHeight: 15 }}>{f.reason}</Text>}
+                      {f.admin_note && (
+                        <Text style={{ fontSize: 11, color: TEXT2, marginTop: 4, lineHeight: 15, fontStyle: "italic" }}>
+                          Note admin : {f.admin_note}
+                        </Text>
+                      )}
+                      <Text style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>
+                        Par {f.flagged_by_name} · {new Date(f.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                      </Text>
+                    </View>
+                    );
+                  })}
+                </View>
+              )}
+              {detailMessages.map((m) => {
+                const photoUri = !m.deleted_at ? resolveMediaUrl(m.attachment_url) : null;
+                return (
                 <View
                   key={m.id}
                   style={{
                     alignSelf: m.sender_role === "pro" ? "flex-end" : "flex-start",
                     maxWidth: "82%",
                     backgroundColor: m.deleted_at ? ADMIN.surfaceHover : (m.sender_role === "pro" ? ADMIN.accentBg : CARD),
-                    borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 12,
+                    borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: photoUri ? 8 : 12, gap: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3, marginBottom: 4, textTransform: "uppercase" }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3, textTransform: "uppercase" }}>
                     {m.sender_role === "pro" ? "Pro" : m.sender_role === "client" ? "Cliente" : "Compte supprimé"}
                   </Text>
-                  <Text style={{ fontSize: 13, color: m.deleted_at ? TEXT3 : TEXT1, lineHeight: 18, fontStyle: m.deleted_at ? "italic" : "normal" }}>
-                    {m.deleted_at ? "Contenu effacé par modération" : (m.body || (m.attachment_url ? "📷 Photo" : ""))}
-                  </Text>
-                  <Text style={{ fontSize: 10, color: TEXT3, marginTop: 6 }}>
+                  {photoUri && (
+                    <Image source={{ uri: photoUri }} style={{ width: 220, height: 220, borderRadius: 10 }} resizeMode="cover" />
+                  )}
+                  {m.deleted_at ? (
+                    <Text style={{ fontSize: 13, color: TEXT3, lineHeight: 18, fontStyle: "italic" }}>Contenu effacé par modération</Text>
+                  ) : m.body ? (
+                    <Text style={{ fontSize: 13, color: TEXT1, lineHeight: 18 }}>{m.body}</Text>
+                  ) : null}
+                  <Text style={{ fontSize: 10, color: TEXT3 }}>
                     {new Date(m.created_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </Text>
                 </View>
-              ))}
+                );
+              })}
             </ScrollView>
           )}
+        </View>
+      </Modal>
+
+      {/* Décision sur un signalement classé sans effacer le contenu — distingue
+          "infondé de bonne foi" (n'engage personne) de "abusif" (engage le
+          reporter, compte vers son seuil de signalements abusifs). Note
+          interne uniquement, jamais montrée aux utilisateurs. */}
+      <Modal visible={!!ignoreTarget} transparent animationType="fade" onRequestClose={() => setIgnoreTarget(null)}>
+        <View style={{ flex: 1, backgroundColor: ADMIN.overlay, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
+          <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => setIgnoreTarget(null)} />
+          <View style={{ backgroundColor: CARD, borderRadius: 20, padding: 20, width: "100%", borderWidth: 1, borderColor: BORDER, gap: 14 }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: TEXT1 }}>Classer ce signalement</Text>
+            <Text style={{ fontSize: 13, color: TEXT3, lineHeight: 18 }}>
+              {ignoreTarget ? `${ignoreTarget.client_name} ↔ ${ignoreTarget.pro_name}` : ""} — le contenu n'est pas effacé.
+            </Text>
+
+            <View style={{ gap: 8 }}>
+              {([
+                { key: "dismissed" as const, label: "Infondé, bonne foi", desc: "Personne n'est fautif — n'engage ni le reporter ni la personne visée." },
+                { key: "abusive" as const, label: "Signalement abusif", desc: "Le signalement était mensonger — compte contre le reporter." },
+              ]).map((opt) => {
+                const selected = ignoreOutcome === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => setIgnoreOutcome(opt.key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    style={{
+                      flexDirection: "row", alignItems: "flex-start", gap: 10,
+                      borderWidth: 1.2, borderColor: selected ? ADMIN.accent : BORDER,
+                      backgroundColor: selected ? ADMIN.accentBg : "transparent",
+                      borderRadius: 12, padding: 12,
+                    }}
+                  >
+                    <Ionicons
+                      name={selected ? "radio-button-on" : "radio-button-off"}
+                      size={17}
+                      color={selected ? ADMIN.accent : TEXT3}
+                      style={{ marginTop: 1 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: selected ? ADMIN.accent : TEXT1 }}>{opt.label}</Text>
+                      <Text style={{ fontSize: 11, color: TEXT3, marginTop: 2, lineHeight: 15 }}>{opt.desc}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <TextInput
+              value={ignoreNote}
+              onChangeText={setIgnoreNote}
+              placeholder="Note interne (optionnelle) — jamais visible par les utilisateurs"
+              placeholderTextColor={TEXT3}
+              multiline
+              numberOfLines={3}
+              style={{
+                minHeight: 64, fontSize: 13, color: TEXT1,
+                backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 12,
+                textAlignVertical: "top",
+              }}
+            />
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <AnimatedPressable
+                onPress={() => setIgnoreTarget(null)}
+                disabled={ignoreMut.isPending}
+                style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: TEXT2, fontWeight: "700" }}>Annuler</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={() => { if (ignoreTarget) ignoreMut.mutate({ id: ignoreTarget.id, outcome: ignoreOutcome, note: ignoreNote.trim() || undefined }); }}
+                disabled={ignoreMut.isPending}
+                style={{ flex: 1, height: 46, borderRadius: 14, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center" }}
+              >
+                {ignoreMut.isPending
+                  ? <ActivityIndicator size="small" color={ADMIN.accent} />
+                  : <Text style={{ color: ADMIN.accent, fontWeight: "800" }}>Confirmer</Text>}
+              </AnimatedPressable>
+            </View>
+          </View>
         </View>
       </Modal>
 

@@ -85,7 +85,7 @@ export default function ReviewsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminReview | null>(null);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-reviews", tab],
     queryFn: () => adminApi.getReviews(tab === "flagged" ? { flagged: true } : { deleted: true }),
   });
@@ -182,6 +182,17 @@ export default function ReviewsScreen() {
         <View style={{ flex: 1, paddingHorizontal: 20 }}>
           {listHeader}
           <ReviewSkeleton />
+        </View>
+      ) : isError ? (
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
+          {listHeader}
+          <View style={{ alignItems: "center", paddingVertical: 80, gap: 12 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les avis</Text>
+            <Text style={{ fontSize: 13, color: TEXT2, textAlign: "center", paddingHorizontal: 20 }}>Vérifie ta connexion et réessaie.</Text>
+            <AnimatedPressable onPress={onRefresh}>
+              <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
+            </AnimatedPressable>
+          </View>
         </View>
       ) : (
         <FlatList

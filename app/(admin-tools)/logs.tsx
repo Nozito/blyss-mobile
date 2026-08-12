@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View, Text, ScrollView, TextInput, Animated, FlatList,
 } from "react-native";
@@ -123,22 +123,25 @@ export default function AdminLogsScreen() {
   const [loadError, setLoadError]     = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter]   = useState("all");
-  const [dateFilter, setDateFilter]   = useState("today");
+  // "all" par défaut — "today" comme défaut donnait une liste vide dès que
+  // l'activité du jour était faible, ce qui se lit comme "les logs ne
+  // marchent pas" plutôt que comme un filtre actif.
+  const [dateFilter, setDateFilter]   = useState("all");
 
-  useEffect(() => { fetchLogs(); }, [dateFilter]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await adminApi.getLogs?.({ date: dateFilter });
+      const res = await adminApi.getLogs({ date: dateFilter });
       setLogs((res?.data || []) as Log[]);
     } catch {
       setLoadError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFilter]);
+
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const filtered = logs.filter((log) => {
     const matchesType   = typeFilter === "all" || log.type === typeFilter;

@@ -6,11 +6,11 @@ import {
 } from "react-native";
 import { useActionSheet } from "@/components/ui/ActionSheet";
 import Swipeable from "react-native-gesture-handler/Swipeable";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { adminApi, AdminUser } from "@/lib/api";
+import { adminApi, AdminUser, REPORT_REASONS } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Colors, withAlpha } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
@@ -22,7 +22,7 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { SectionLabel } from "@/components/admin/SectionLabel";
 import { Row } from "@/components/admin/Row";
-import { ActionGrid, type ActionTileData } from "@/components/admin/ActionGrid";
+import { ActionGrid } from "@/components/admin/ActionGrid";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
@@ -46,6 +46,15 @@ function getActivePlan(user: AdminUser): string | null {
 function joinedDate(user: AdminUser): string | null {
   if (!user.created_at) return null;
   return new Date(user.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+}
+function reasonLabel(code: string): string {
+  return REPORT_REASONS.find((r) => r.code === code)?.label ?? "Autre";
+}
+function reportOutcome(status: "pending" | "reviewed", outcome: "upheld" | "dismissed" | "abusive" | null): { label: string; tone: "danger" | "warning" | "neutral" } {
+  if (status === "pending") return { label: "En attente", tone: "danger" };
+  if (outcome === "abusive") return { label: "Abusif", tone: "danger" };
+  if (outcome === "dismissed") return { label: "Classé sans suite", tone: "neutral" };
+  return { label: "Confirmé", tone: "warning" };
 }
 
 // ── Skeleton — same card shape as the real rows, so the layout doesn't jump ──
@@ -244,6 +253,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               <View style={{ flexDirection: "row", gap: ADMIN.space.sm, flexWrap: "wrap", justifyContent: "center", marginBottom: ADMIN.space.sm }}>
                 <StatusBadge label={full.is_admin ? "Admin" : roleName(full)} tone="neutral" />
                 {planStr && <StatusBadge label={planStr} tone="warning" />}
+                {full.reports?.is_vigilant && <StatusBadge label={`Vigilance · ${full.reports.reported_count} signalements`} tone="warning" />}
+                {full.reports?.is_abusive_reporter && <StatusBadge label={`Reporter à risque · ${full.reports.made_abusive_count} abusifs`} tone="danger" />}
                 {!full.is_active && <StatusBadge label="Banni" tone="danger" />}
               </View>
               <AnimatedPressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -297,6 +308,50 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                     />
                   ))}
                 </Card>
+              </View>
+            )}
+
+            {/* Signalements — historique complet, traités ou non, dans les deux
+                sens, pour décider d'un bannissement en un coup d'œil. */}
+            {((full.reports?.against.length ?? 0) > 0 || (full.reports?.made.length ?? 0) > 0) && (
+              <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
+                <SectionLabel>{`Signalements reçus (${full.reports?.against.length ?? 0})`}</SectionLabel>
+                {(full.reports?.against.length ?? 0) > 0 ? (
+                  <Card style={{ padding: 0 }}>
+                    {(full.reports?.against ?? []).map((r, i, arr) => (
+                      <Row
+                        key={r.id}
+                        title={reasonLabel(r.reason_code)}
+                        subtitle={`Par ${r.flagged_by_name} · ${new Date(r.created_at).toLocaleDateString("fr-FR")}${r.reason ? ` — ${r.reason}` : ""}${r.admin_note ? ` · Note: ${r.admin_note}` : ""}`}
+                        trailing={<StatusBadge label={reportOutcome(r.status, r.outcome).label} tone={reportOutcome(r.status, r.outcome).tone} />}
+                        showDivider={i < arr.length - 1}
+                      />
+                    ))}
+                  </Card>
+                ) : (
+                  <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>Aucun signalement reçu.</Text>
+                )}
+
+                {(full.reports?.made.length ?? 0) > 0 && (
+                  <>
+                    <View style={{ height: ADMIN.space.md }} />
+                    <SectionLabel>{`Signalements effectués (${full.reports?.made.length ?? 0})`}</SectionLabel>
+                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }}>
+                      {`${full.reports?.made_justified_count ?? 0} fondé(s) · ${full.reports?.made_dismissed_count ?? 0} infondé(s) de bonne foi · ${full.reports?.made_abusive_count ?? 0} abusif(s)`}
+                    </Text>
+                    <Card style={{ padding: 0 }}>
+                      {(full.reports?.made ?? []).map((r, i, arr) => (
+                        <Row
+                          key={r.id}
+                          title={reasonLabel(r.reason_code)}
+                          subtitle={`Contre ${r.reported_user_name} · ${new Date(r.created_at).toLocaleDateString("fr-FR")}${r.admin_note ? ` · Note: ${r.admin_note}` : ""}`}
+                          trailing={<StatusBadge label={reportOutcome(r.status, r.outcome).label} tone={reportOutcome(r.status, r.outcome).tone} />}
+                          showDivider={i < arr.length - 1}
+                        />
+                      ))}
+                    </Card>
+                  </>
+                )}
               </View>
             )}
 
@@ -410,6 +465,8 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
+              {item.is_vigilant && <StatusBadge label="Vigilance" tone="warning" />}
+              {item.is_abusive_reporter && <StatusBadge label="Reporter à risque" tone="danger" />}
               <StatusBadge label={!item.is_active ? "Banni" : roleName(item)} tone={!item.is_active ? "danger" : "neutral"} />
             </View>
             <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
@@ -468,14 +525,23 @@ export default function AdminUsersScreen() {
   const [confirmTarget, setConfirmTarget] = useState<{ action: "ban" | "delete"; user: AdminUser } | null>(null);
   const debouncedSearch = useDebounce(search, 380);
 
-  const { data, isLoading, refetch } = useQuery({
+  const PAGE_SIZE = 80;
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["admin-users", debouncedSearch, roleFilter],
-    queryFn:  () => adminApi.getUsers({
+    queryFn: ({ pageParam }) => adminApi.getUsers({
       search: debouncedSearch || undefined,
-      limit:  80,
+      limit:  PAGE_SIZE,
+      page:   pageParam,
       role:   (roleFilter === "all" || roleFilter === "banned") ? undefined : roleFilter,
       banned: roleFilter === "banned" ? true : undefined,
     }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, p) => sum + ((p.data as AdminUser[] | undefined)?.length ?? 0), 0);
+      const total = lastPage.meta?.total;
+      if (total == null || loaded >= total) return undefined;
+      return allPages.length + 1;
+    },
   });
 
   const banMut = useMutation({
@@ -508,7 +574,8 @@ export default function AdminUsersScreen() {
     onError: () => { setConfirmTarget(null); setUsersError("Impossible de supprimer cet utilisateur."); },
   });
 
-  const users       = (data?.data as AdminUser[] | undefined) ?? [];
+  const users       = (data?.pages.flatMap((p) => (p.data as AdminUser[] | undefined) ?? []) ?? []) as AdminUser[];
+  const totalUsers  = data?.pages[0]?.meta?.total;
   const activeCount = users.filter((u) =>  u.is_active).length;
   const bannedCount = users.filter((u) => !u.is_active).length;
   const onRefresh   = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
@@ -652,6 +719,19 @@ export default function AdminUsersScreen() {
           {listHeader}
           <UserSkeleton />
         </View>
+      ) : isError ? (
+        <View style={{ flex: 1, paddingHorizontal: ADMIN.space.xl }}>
+          {listHeader}
+          <View style={{ alignItems: "center", paddingVertical: 80 }}>
+            <Text style={{ ...ADMIN.type.title, color: ADMIN.text, marginBottom: 6 }}>Impossible de charger les utilisateurs</Text>
+            <Text style={{ ...ADMIN.type.body, color: ADMIN.textSub, textAlign: "center", paddingHorizontal: 40, marginBottom: 16 }}>
+              Vérifie ta connexion et réessaie.
+            </Text>
+            <AnimatedPressable onPress={onRefresh}>
+              <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
+            </AnimatedPressable>
+          </View>
+        </View>
       ) : (
         <FlatList
           ref={listRef}
@@ -666,12 +746,19 @@ export default function AdminUsersScreen() {
           automaticallyAdjustContentInsets={false}
           contentInsetAdjustmentBehavior="never"
           contentContainerStyle={{ paddingHorizontal: ADMIN.space.xl, paddingBottom: insets.bottom + ADMIN.space.xl }}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); }}
+          ListFooterComponent={isFetchingNextPage ? (
+            <View style={{ paddingVertical: ADMIN.space.lg }}>
+              <ActivityIndicator size="small" color={ADMIN.accent} />
+            </View>
+          ) : null}
           ListHeaderComponent={
             <View>
               {listHeader}
               <Card style={{ flexDirection: "row", marginBottom: ADMIN.space.xl }}>
                 {[
-                  { label: "Utilisateurs", value: users.length },
+                  { label: "Utilisateurs", value: totalUsers ?? users.length },
                   { label: "Actifs",       value: activeCount },
                   { label: "Bannis",       value: bannedCount },
                 ].map(({ label, value }, i) => (
@@ -684,7 +771,7 @@ export default function AdminUsersScreen() {
                   </React.Fragment>
                 ))}
               </Card>
-              <SectionLabel trailing={debouncedSearch ? `${users.length} résultat${users.length !== 1 ? "s" : ""}` : undefined}>
+              <SectionLabel trailing={totalUsers != null && totalUsers > users.length ? `${users.length} sur ${totalUsers}` : debouncedSearch ? `${users.length} résultat${users.length !== 1 ? "s" : ""}` : undefined}>
                 {debouncedSearch ? "Résultats" : FILTERS.find((f) => f.value === roleFilter)?.label ?? "Tous"}
               </SectionLabel>
             </View>

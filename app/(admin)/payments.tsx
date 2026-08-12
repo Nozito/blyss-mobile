@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, TextInput, FlatList,
   ActivityIndicator, RefreshControl, Animated,
 } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -130,11 +130,30 @@ export default function AdminPaymentsScreen() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<AdminPayment | null>(null);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const PAGE_SIZE = 50;
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["admin-payments"],
-    queryFn:  () => adminApi.getPayments(),
+    queryFn: ({ pageParam }) => adminApi.getPayments({ limit: PAGE_SIZE, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, p) => sum + ((p.data as AdminPayment[] | undefined)?.length ?? 0), 0);
+      const total = lastPage.meta?.total;
+      if (total == null || loaded >= total) return undefined;
+      return allPages.length + 1;
+    },
     staleTime: 2 * 60_000,
   });
+
+  // CA total / CA du mois viennent de l'endpoint d'agrégats, pas d'un reduce
+  // sur les transactions chargées — sinon les totaux dépendent de la page en
+  // cours et sous-évaluent le vrai chiffre dès qu'il y a plus de paiements
+  // que PAGE_SIZE.
+  const { data: analyticsData } = useQuery({
+    queryKey: ["admin-analytics"],
+    queryFn: () => adminApi.getAnalytics(),
+    staleTime: 2 * 60_000,
+  });
+  const revenueAgg = analyticsData?.data?.revenue;
 
   const refundMut = useMutation({
     mutationFn: (id: number) => adminApi.refundPayment(id),
@@ -155,7 +174,9 @@ export default function AdminPaymentsScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  const transactions = (data?.data as AdminPayment[] | undefined) ?? [];
+  const transactions = (data?.pages.flatMap((p) => (p.data as AdminPayment[] | undefined) ?? []) ?? []) as AdminPayment[];
+  const totalTransactions = data?.pages[0]?.meta?.total;
+  const partiallyLoaded = totalTransactions != null && totalTransactions > transactions.length;
 
   const filtered = transactions.filter((t) => {
     const matchStatus = statusFilter === "all" || t.status === statusFilter;
@@ -170,8 +191,10 @@ export default function AdminPaymentsScreen() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
-  const caTotal  = succeeded.reduce((s, t) => s + Number(t.amount), 0);
-  const caMois   = thisMonth.reduce((s, t) => s + Number(t.amount), 0);
+  // Net total et "en attente" n'ont pas d'équivalent dans /analytics — calculés
+  // sur les transactions chargées, avec un badge "partiel" si tout n'est pas chargé.
+  const caTotal  = revenueAgg?.total_revenue ?? succeeded.reduce((s, t) => s + Number(t.amount), 0);
+  const caMois   = revenueAgg?.month_revenue ?? thisMonth.reduce((s, t) => s + Number(t.amount), 0);
   const netTotal = succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0);
   const pending  = transactions.filter((t) => t.status === "pending" || t.status === "processing").length;
 
@@ -184,10 +207,29 @@ export default function AdminPaymentsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setExporting(true);
     try {
-      const monthLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-      const total = thisMonth.reduce((s, t) => s + Number(t.amount), 0).toFixed(2);
+      // L'export est un document comptable — on ne peut pas se contenter des
+      // transactions déjà chargées dans la liste (pagination) sous peine de
+      // sous-déclarer le CA du mois. On récupère tous les paiements réussis.
+      const allSucceeded: AdminPayment[] = [];
+      let page = 1;
+      while (true) {
+        const res = await adminApi.getPayments({ status: "succeeded", limit: 100, page });
+        const batch = (res.data as AdminPayment[] | undefined) ?? [];
+        allSucceeded.push(...batch);
+        const total = res.meta?.total;
+        if (batch.length === 0 || total == null || allSucceeded.length >= total) break;
+        page += 1;
+      }
+      const now = new Date();
+      const monthTx = allSucceeded.filter((t) => {
+        const d = new Date(t.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
 
-      const rows = thisMonth.map((tx) => `
+      const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      const total = monthTx.reduce((s, t) => s + Number(t.amount), 0).toFixed(2);
+
+      const rows = monthTx.map((tx) => `
         <tr>
           <td>${tx.client_name}</td>
           <td>${tx.pro_name}</td>
@@ -211,7 +253,7 @@ export default function AdminPaymentsScreen() {
           .footer { margin-top: 40px; font-size: 10px; color: #9CA3AF; text-align: center; }
         </style></head><body>
         <h1>Blyss Admin — Transactions</h1>
-        <p class="sub">${monthLabel} · ${thisMonth.length} transactions</p>
+        <p class="sub">${monthLabel} · ${monthTx.length} transactions</p>
         <table>
           <thead><tr><th>Client</th><th>Pro</th><th>Date</th><th style="text-align:right">Montant</th><th>Statut</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -285,6 +327,13 @@ export default function AdminPaymentsScreen() {
         maxToRenderPerBatch={10}
         windowSize={7}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} />}
+        onEndReachedThreshold={0.4}
+        onEndReached={() => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); }}
+        ListFooterComponent={isFetchingNextPage ? (
+          <View style={{ paddingVertical: 20 }}>
+            <ActivityIndicator size="small" color={ACCENT} />
+          </View>
+        ) : null}
         ListHeaderComponent={
           <>
             {/* Page title */}
@@ -300,8 +349,8 @@ export default function AdminPaymentsScreen() {
               <View style={{ flexDirection: "row", marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: ADMIN.border }}>
                 {[
                   { label: "Ce mois",      value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-                  { label: "Net total",    value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-                  { label: "Transactions", value: String(transactions.length) },
+                  { label: partiallyLoaded ? "Net (chargé)" : "Net total", value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
+                  { label: "Transactions", value: String(totalTransactions ?? transactions.length) },
                 ].map(({ label, value }, i) => (
                   <React.Fragment key={label}>
                     {i > 0 && <View style={{ width: 1, backgroundColor: ADMIN.border, marginHorizontal: 14 }} />}
@@ -318,8 +367,8 @@ export default function AdminPaymentsScreen() {
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
               {[
                 { label: "Ce mois",    value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.pro },
-                { label: "Net total",  value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
-                { label: "En attente", value: String(pending), color: Colors.warning },
+                { label: partiallyLoaded ? "Net (chargé)" : "Net total", value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
+                { label: partiallyLoaded ? "Attente (chargé)" : "En attente", value: String(pending), color: Colors.warning },
               ].map(({ label, value, color }) => (
                 <View key={label} style={{ flex: 1, backgroundColor: ADMIN.surface, borderRadius: ADMIN.cardRadius, padding: 14, borderWidth: 1, borderColor: ADMIN.border }}>
                   <Text style={{ fontSize: 10, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>{label}</Text>
@@ -350,13 +399,13 @@ export default function AdminPaymentsScreen() {
               </View>
               <Pressable
                 onPress={handleExportPDF}
-                disabled={exporting || thisMonth.length === 0}
+                disabled={exporting || caMois === 0}
                 accessibilityLabel="Exporter les transactions en PDF"
                 accessibilityRole="button"
                 style={({ pressed }) => [{
                   width: 44, height: 44, borderRadius: 10, backgroundColor: ADMIN.surfaceHover,
                   alignItems: "center", justifyContent: "center",
-                  opacity: (pressed || exporting || thisMonth.length === 0) ? 0.5 : 1,
+                  opacity: (pressed || exporting || caMois === 0) ? 0.5 : 1,
                 }]}
               >
                 {exporting

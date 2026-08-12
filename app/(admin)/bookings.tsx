@@ -4,7 +4,7 @@ import {
   ActivityIndicator, RefreshControl, Platform, ScrollView, Share, Linking, StyleSheet,
 } from "react-native";
 import RNDateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -24,6 +24,7 @@ import { ActionGrid, type ActionTileData } from "@/components/admin/ActionGrid";
 import { Card } from "@/components/admin/Card";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/admin/Avatar";
+import { toNumber } from "@/lib/bookingUtils";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
@@ -76,7 +77,7 @@ function BookingCard({
 
   const cfg        = STATUS_CFG[booking.status as BookingStatus];
   const tone       = STATUS_TONE[booking.status as BookingStatus];
-  const price      = typeof booking.price === "number" ? booking.price : parseFloat(String(booking.price ?? "0"));
+  const price      = toNumber(booking.price);
   const dt         = new Date(booking.start_datetime);
   const time       = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const dateLabel  = dt.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -171,7 +172,7 @@ function BookingDetailSheet({
 }) {
   const cfg        = STATUS_CFG[booking.status as BookingStatus];
   const tone       = STATUS_TONE[booking.status as BookingStatus];
-  const price      = typeof booking.price === "number" ? booking.price : parseFloat(String(booking.price ?? "0"));
+  const price      = toNumber(booking.price);
   const dt         = new Date(booking.start_datetime);
   const dateLabel  = dt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
   const time       = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -255,7 +256,7 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
   const revenue = useMemo(() =>
     bookings
       .filter((b) => b.status !== "cancelled")
-      .reduce((s, b) => s + (typeof b.price === "number" ? b.price : parseFloat(String(b.price ?? "0"))), 0),
+      .reduce((s, b) => s + toNumber(b.price), 0),
     [bookings]
   );
 
@@ -441,14 +442,23 @@ export default function AdminBookingsScreen() {
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
   const activeAdvancedFilters = (dateFilter ? 1 : 0) + (clientFilter ? 1 : 0);
 
-  const { data, isLoading, refetch } = useQuery({
+  const PAGE_SIZE = 100;
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["admin-bookings", statusFilter, dateFilter ? toISODate(dateFilter) : null, clientFilter?.id ?? null],
-    queryFn:  () => adminApi.getBookings({
-      limit: 100,
+    queryFn: ({ pageParam }) => adminApi.getBookings({
+      limit: PAGE_SIZE,
+      page: pageParam,
       status: statusFilter !== "all" ? statusFilter : undefined,
       date: dateFilter ? toISODate(dateFilter) : undefined,
       user_id: clientFilter?.id,
     }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, p) => sum + ((p.data as AdminBooking[] | undefined)?.length ?? 0), 0);
+      const total = lastPage.meta?.total;
+      if (total == null || loaded >= total) return undefined;
+      return allPages.length + 1;
+    },
     staleTime: 2 * 60_000,
   });
 
@@ -474,7 +484,7 @@ export default function AdminBookingsScreen() {
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
-  const bookings = (data?.data as AdminBooking[] | undefined) ?? [];
+  const bookings = (data?.pages.flatMap((p) => (p.data as AdminBooking[] | undefined) ?? []) ?? []) as AdminBooking[];
 
   // Search is client-side over the fetched page — the bookings endpoint has no text-search param.
   const filteredBookings = useMemo(() => {
@@ -651,6 +661,17 @@ export default function AdminBookingsScreen() {
             <Text style={{ fontSize: 13, color: TEXT2 }}>Chargement…</Text>
           </View>
         </View>
+      ) : isError ? (
+        <View style={{ flex: 1 }}>
+          <AdminHeader title="Réservations" />
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1, textAlign: "center" }}>Impossible de charger les réservations</Text>
+            <Text style={{ fontSize: 13, color: TEXT2, textAlign: "center" }}>Vérifie ta connexion et réessaie.</Text>
+            <AnimatedPressable onPress={onRefresh}>
+              <Text style={{ color: ACCENT, fontWeight: "700" }}>Réessayer</Text>
+            </AnimatedPressable>
+          </View>
+        </View>
       ) : (
         <SectionList
           ref={listRef}
@@ -665,6 +686,13 @@ export default function AdminBookingsScreen() {
           automaticallyAdjustContentInsets={false}
           contentInsetAdjustmentBehavior="never"
           ListHeaderComponent={ListHeader}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => { if (hasNextPage && !isFetchingNextPage && !debouncedSearch) fetchNextPage(); }}
+          ListFooterComponent={isFetchingNextPage ? (
+            <View style={{ paddingVertical: ADMIN.space.lg }}>
+              <ActivityIndicator size="small" color={ACCENT} />
+            </View>
+          ) : null}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

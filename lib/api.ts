@@ -485,8 +485,17 @@ export interface ChatThreadDetail {
   otherPhoto: string | null;
   lastReservationId: number | null;
   reservationStatus: string | null;
+  isLocked: boolean;
   messages: ChatMessage[];
 }
+
+export const REPORT_REASONS: { code: string; label: string }[] = [
+  { code: "injures_menaces", label: "Injures ou menaces" },
+  { code: "arnaque_paiement", label: "Tentative d'arnaque ou de paiement hors app" },
+  { code: "contournement_plateforme", label: "Contournement de la plateforme" },
+  { code: "contenu_inapproprie", label: "Contenu inapproprié" },
+  { code: "autre", label: "Autre" },
+];
 
 export const messagesApi = {
   listThreads: (): Promise<ApiResponse<ChatThreadSummary[]>> => apiCall("/api/messages/threads"),
@@ -525,8 +534,8 @@ export const messagesApi = {
     }
   },
 
-  reportThread: (threadId: number, reason?: string): Promise<ApiResponse<void>> =>
-    apiCall(`/api/messages/threads/${threadId}/report`, { method: "POST", body: JSON.stringify({ reason }) }),
+  reportThread: (threadId: number, reasonCode: string, reason?: string): Promise<ApiResponse<void>> =>
+    apiCall(`/api/messages/threads/${threadId}/report`, { method: "POST", body: JSON.stringify({ reasonCode, reason }) }),
 };
 
 // ── Favorites API ─────────────────────────────────────────────────────────────
@@ -973,6 +982,10 @@ export interface AdminUser {
   pro_status?: string | null;
   bio?: string | null;
   is_verified?: boolean;
+  reported_count?: number;
+  is_vigilant?: boolean;
+  abusive_reports_count?: number;
+  is_abusive_reporter?: boolean;
   stats?: {
     total_bookings: number;
     completed: number;
@@ -980,6 +993,45 @@ export interface AdminUser {
     total_spent: number;
   };
   subscription_history?: AdminSubscription[];
+  reports?: {
+    against: AdminMessageReport[];
+    made: AdminMessageReport[];
+    reported_count: number;
+    is_vigilant: boolean;
+    made_total: number;
+    made_justified_count: number;
+    made_dismissed_count: number;
+    made_abusive_count: number;
+    is_abusive_reporter: boolean;
+  };
+}
+
+export interface AdminMessageThreadListItem {
+  id: number;
+  last_message_preview: string | null;
+  last_message_at: string | null;
+  created_at: string;
+  is_locked: boolean;
+  client_name: string;
+  pro_name: string;
+  flags_count: number;
+  flags_total: number;
+  last_reason_code: string | null;
+  last_reason: string | null;
+}
+
+export interface AdminMessageReport {
+  id: number;
+  thread_id: number;
+  reason_code: string;
+  reason: string | null;
+  status: "pending" | "reviewed";
+  outcome: "upheld" | "dismissed" | "abusive" | null;
+  admin_note: string | null;
+  created_at: string;
+  handled_at: string | null;
+  flagged_by_name?: string;
+  reported_user_name?: string;
 }
 
 export interface AdminSubscription {
@@ -1033,7 +1085,10 @@ export interface AdminCoupon {
   code: string;
   discount_type: "percent" | "fixed";
   discount_value: number;
-  applicable_plans: string[];
+  // Backend sometimes returns this as a stringified JSON array rather than a
+  // real array — always run it through parsePlans() (app/(admin-tools)/coupons.tsx)
+  // before use.
+  applicable_plans: string[] | string;
   expires_at?: string | null;
   max_uses?: number | null;
   used_count: number;
@@ -1047,6 +1102,7 @@ export interface AdminAnalytics {
     month_revenue: number;
     successful_payments: number;
     refunded_payments: number;
+    growth?: number | null;
   };
   users: {
     total_users: number;
@@ -1146,16 +1202,6 @@ export const adminApi = {
     return apiCall(`/api/admin/logs${q}`);
   },
 
-  // Pro validation
-  getPros: (params?: { status?: "pending" | "active" | "suspended"; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
-    const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
-    return apiCall(`/api/admin/pros${q}`);
-  },
-  approvePro: (id: number): Promise<ApiResponse<{ id: number }>> =>
-    apiCall(`/api/admin/pros/${id}/approve`, { method: "PATCH" }),
-  rejectPro: (id: number, data: { reason: string }): Promise<ApiResponse<{ id: number }>> =>
-    apiCall(`/api/admin/pros/${id}/reject`, { method: "PATCH", body: JSON.stringify(data) }),
-
   // Reviews moderation
   getReviews: (params?: { flagged?: boolean; deleted?: boolean; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
     const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
@@ -1169,16 +1215,16 @@ export const adminApi = {
     apiCall(`/api/admin/reviews/${id}/ignore`, { method: "PATCH" }),
 
   // Messages moderation — sur signalement uniquement (voir messages.routes.ts)
-  getMessageThreads: (params?: { flagged?: boolean; deleted?: boolean; page?: number; limit?: number }): Promise<ApiResponse<unknown[]>> => {
+  getMessageThreads: (params?: { flagged?: boolean; deleted?: boolean; page?: number; limit?: number }): Promise<ApiResponse<AdminMessageThreadListItem[]> & { meta?: AdminMeta }> => {
     const q = params ? buildQuery(params as Record<string, string | number | boolean | undefined | null>) : "";
     return apiCall(`/api/admin/messages/threads${q}`);
   },
-  getMessageThreadDetail: (id: number): Promise<ApiResponse<{ messages: unknown[]; flags: unknown[] }>> =>
+  getMessageThreadDetail: (id: number): Promise<ApiResponse<{ messages: unknown[]; flags: AdminMessageReport[] }>> =>
     apiCall(`/api/admin/messages/threads/${id}`),
-  deleteMessageThread: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/admin/messages/threads/${id}`, { method: "DELETE" }),
-  restoreMessageThread: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/admin/messages/threads/${id}/restore`, { method: "PATCH" }),
-  ignoreMessageFlag: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/admin/messages/threads/${id}/ignore`, { method: "PATCH" }),
+  deleteMessageThread: (id: number, note?: string): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/messages/threads/${id}`, { method: "DELETE", body: JSON.stringify({ note }) }),
+  restoreMessageThread: (id: number, note?: string): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/messages/threads/${id}/restore`, { method: "PATCH", body: JSON.stringify({ note }) }),
+  ignoreMessageFlag: (id: number, params?: { outcome?: "dismissed" | "abusive"; note?: string }): Promise<ApiResponse<void>> =>
+    apiCall(`/api/admin/messages/threads/${id}/ignore`, { method: "PATCH", body: JSON.stringify(params ?? {}) }),
 };

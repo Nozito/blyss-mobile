@@ -29,10 +29,11 @@ import { hasPlanAtLeast } from "@/constants/plans";
 import { Input } from "@/components/ui/Input";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { proProfileSchema } from "@/lib/validation";
+import { proProfileSchema, postalCodeSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { resolveMediaUrl } from "@/lib/media";
+import { LocationSection } from "@/components/screens/client/specialist/LocationSection";
 
 const SCREEN_W = Dimensions.get("window").width;
 const GALLERY_CELL = (SCREEN_W - 40 - 8) / 3;
@@ -67,6 +68,7 @@ export default function ProPublicProfileScreen() {
   const gallery: GalleryImage[] = (galleryData?.data as GalleryImage[] | undefined) ?? [];
 
   const bannerUri = resolveMediaUrl(user?.banner_photo);
+  const previewPhotoUri = resolveMediaUrl(user?.profile_photo);
 
   const handlePickBanner = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -232,10 +234,18 @@ export default function ProPublicProfileScreen() {
       return;
     }
     if (instagram && instagramError) { setSaveError(instagramError ?? "Handle Instagram invalide."); return; }
-    if (addressPublic && (!addressLine || !postalCode || !city)) {
-      setSaveError("Adresse, code postal et ville requis pour publier ton adresse exacte.");
+    if (!addressLine || !postalCode || !city) {
+      setSaveError("Adresse, code postal et ville requis — c'est ce qui est communiqué à tes clientes une fois leur rendez-vous confirmé.");
       return;
     }
+    const postalParsed = postalCodeSchema.safeParse(postalCode);
+    if (!postalParsed.success) {
+      setSaveError(postalParsed.error.errors[0]?.message ?? "Code postal invalide.");
+      return;
+    }
+
+    const clampedRadiusKm = Math.min(30, Math.max(1, parseFloat(serviceRadiusKm) || 5));
+    const clampedRadiusStr = String(clampedRadiusKm);
 
     setIsSaving(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -248,13 +258,11 @@ export default function ProPublicProfileScreen() {
         profile_visibility: isPublic ? "public" : "private",
         acceptance_conditions: conditions,
         geo_precision: addressPublic ? "address" : "city",
-        service_radius_km: Math.min(30, Math.max(1, parseFloat(serviceRadiusKm) || 5)),
+        service_radius_km: clampedRadiusKm,
         service_area_label: serviceAreaLabel,
       };
-      if (addressPublic) {
-        payload.address_line = addressLine;
-        payload.postal_code = postalCode;
-      }
+      payload.address_line = addressLine;
+      payload.postal_code = postalCode;
       const res = await proApi.updateProfile(payload);
       if (!res.success) {
         setSaveError(res.error ?? "Impossible de mettre à jour le profil.");
@@ -262,7 +270,8 @@ export default function ProPublicProfileScreen() {
         return;
       }
       qc.invalidateQueries({ queryKey: ["pro-public-profile"] });
-      setInitial({ activityName, city, bio, instagram, isPublic, conditions, addressPublic, addressLine, postalCode, serviceRadiusKm, serviceAreaLabel });
+      setServiceRadiusKm(clampedRadiusStr);
+      setInitial({ activityName, city, bio, instagram, isPublic, conditions, addressPublic, addressLine, postalCode, serviceRadiusKm: clampedRadiusStr, serviceAreaLabel });
       setHasChanges(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
@@ -524,12 +533,18 @@ export default function ProPublicProfileScreen() {
               </View>
             )}
 
-            {addressPublic ? (
-              <>
-                <Input label="Adresse" value={addressLine} onChangeText={setAddressLine} leftIcon="pin-outline" />
-                <Input label="Code postal" value={postalCode} onChangeText={setPostalCode} keyboardType="number-pad" leftIcon="mail-outline" />
-              </>
-            ) : (
+            <Input label="Adresse *" value={addressLine} onChangeText={setAddressLine} leftIcon="pin-outline" />
+            <Input
+              label="Code postal *"
+              value={postalCode}
+              onChangeText={(t) => setPostalCode(t.replace(/\D/g, "").slice(0, 5))}
+              keyboardType="number-pad"
+              leftIcon="mail-outline"
+              hint="5 chiffres"
+              maxLength={5}
+            />
+
+            {!addressPublic && (
               <>
                 <View style={{ backgroundColor: colors.cream, borderRadius: 12, padding: 12, flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
                   <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} style={{ marginTop: 1 }} />
@@ -543,6 +558,7 @@ export default function ProPublicProfileScreen() {
                   onChangeText={setServiceRadiusKm}
                   keyboardType="number-pad"
                   leftIcon="navigate-outline"
+                  hint="Entre 1 et 30 km"
                 />
                 <Input
                   label="Libellé de zone (optionnel)"
@@ -914,12 +930,16 @@ export default function ProPublicProfileScreen() {
                 />
               )}
               <View
-                className="w-20 h-20 rounded-2xl items-center justify-center mb-3"
+                className="w-20 h-20 rounded-2xl items-center justify-center mb-3 overflow-hidden"
                 style={{ backgroundColor: `${colors.primary}20` }}
               >
-                <Text className="text-3xl font-bold" style={{ color: colors.primary }}>
-                  {(activityName || user?.first_name || "P")[0]}
-                </Text>
+                {previewPhotoUri ? (
+                  <Image source={{ uri: previewPhotoUri }} style={{ width: 80, height: 80 }} resizeMode="cover" />
+                ) : (
+                  <Text className="text-3xl font-bold" style={{ color: colors.primary }}>
+                    {(activityName || user?.first_name || "P")[0]}
+                  </Text>
+                )}
               </View>
               <Text className="text-xl font-bold text-center" style={{ color: colors.foreground }}>
                 {activityName || "Nom de l'activité"}
@@ -948,6 +968,52 @@ export default function ProPublicProfileScreen() {
                 <Text className="text-sm leading-relaxed" style={{ color: colors.mutedForeground }}>{bio}</Text>
               </View>
             ) : null}
+
+            {/* Localisation */}
+            <View className="mb-4">
+              <LocationSection
+                city={city}
+                addressVisible={addressPublic}
+                addressLine={addressLine || null}
+                serviceAreaLabel={serviceAreaLabel || null}
+                serviceRadiusKm={parseFloat(serviceRadiusKm) || null}
+                lat={null}
+                lng={null}
+                conditions={conditions}
+              />
+            </View>
+
+            <Pressable
+              onPress={() => setShowPreview(false)}
+              style={{
+                height: 56, borderRadius: 20,
+                backgroundColor: colors.primary,
+                alignItems: "center", justifyContent: "center",
+                flexDirection: "row", gap: 8,
+                marginBottom: 10,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+              }}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
+              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 15 }}>Réserver</Text>
+            </Pressable>
+
+            <Pressable
+              disabled
+              style={{
+                flexDirection: "row", gap: 8,
+                borderRadius: 999, paddingVertical: 14, marginBottom: 16,
+                alignItems: "center", justifyContent: "center",
+                borderWidth: 1.4, borderColor: colors.border,
+              }}
+            >
+              <Ionicons name="chatbubble-outline" size={16} color={colors.foreground} />
+              <Text style={{ color: colors.foreground, fontWeight: "700", fontSize: 14 }}>
+                Une question ? Écrire à {activityName || user?.first_name || "la pro"}
+              </Text>
+            </Pressable>
 
             {/* Réalisations */}
             {gallery.length > 0 && (
@@ -1010,21 +1076,6 @@ export default function ProPublicProfileScreen() {
               </View>
             )}
 
-            <Pressable
-              onPress={() => setShowPreview(false)}
-              style={{
-                height: 56, borderRadius: 20,
-                backgroundColor: colors.primary,
-                alignItems: "center", justifyContent: "center",
-                flexDirection: "row", gap: 8,
-                shadowColor: colors.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
-              }}
-            >
-              <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
-              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 15 }}>Réserver</Text>
-            </Pressable>
             <Pressable onPress={() => setShowPreview(false)} style={{ marginTop: 12, alignItems: "center" }}>
               <Text style={{ fontSize: 13, color: colors.mutedForeground }}>Fermer l'aperçu</Text>
             </Pressable>

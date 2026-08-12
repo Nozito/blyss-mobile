@@ -245,6 +245,9 @@ function CouponCard({
   coupon, index, onToggle, onDelete, onShare, onLongPress,
 }: {
   coupon: AdminCoupon & { applicable_plans: string[] };
+  // ↑ narrows the union above: by the time a coupon reaches this component
+  // it has already been through parsePlans() in the parent, so applicable_plans
+  // is guaranteed to be a real array here.
   index: number;
   onToggle: (id: number, active: boolean) => void;
   onDelete: (c: AdminCoupon) => void;

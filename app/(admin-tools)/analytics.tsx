@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View, Text, ScrollView, Pressable, useWindowDimensions,
   Animated,
@@ -259,14 +259,14 @@ export default function AdminAnalyticsScreen() {
   });
 
   const a = analytics?.data as AdminAnalytics | undefined;
-  const revenuePoints  = (revenueData?.data  ?? []).map((r) => Number(r.revenue));
-  const usersPoints    = (usersData?.data     ?? []).map((r) => Number(r.new_users));
-  const bookingsPoints = (bookingsData?.data  ?? []).map((r) => Number(r.total));
+  const revenuePoints  = useMemo(() => (revenueData?.data  ?? []).map((r) => Number(r.revenue)),   [revenueData]);
+  const usersPoints    = useMemo(() => (usersData?.data    ?? []).map((r) => Number(r.new_users)), [usersData]);
+  const bookingsPoints = useMemo(() => (bookingsData?.data ?? []).map((r) => Number(r.total)),     [bookingsData]);
 
-  const growth = (a as any)?.revenue?.growth as number | null | undefined;
+  const growth = a?.revenue?.growth;
 
   useEffect(() => {
-    syncAdminAnalyticsWidgets(a as any);
+    syncAdminAnalyticsWidgets(a);
   }, [a]);
 
   const today = new Date().toLocaleDateString("fr-FR", {
@@ -543,6 +543,9 @@ export default function AdminAnalyticsScreen() {
             color={Colors.warning}
             badge={`${Number(a.bookings.total)} total`}
           />
+          <Text style={{ fontSize: 11, color: TEXT3, marginTop: -8, marginBottom: 14 }}>
+            Toutes périodes confondues — ne suit pas le sélecteur ci-dessus
+          </Text>
           {[
             { label: "Confirmées", value: a.bookings.confirmed, color: Colors.info },
             { label: "Terminées",  value: a.bookings.completed, color: Colors.success },

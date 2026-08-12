@@ -30,6 +30,12 @@ export const proProfileSchema = z.object({
   instagram: z.string().max(100).optional().or(z.literal("")),
 });
 
+// French postal code — 5 digits (DOM-TOM included, e.g. 97400)
+export const postalCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{5}$/, "Code postal invalide (5 chiffres)");
+
 // ─── Review schema ────────────────────────────────────────────────────────────
 
 export const reviewSchema = z.object({
