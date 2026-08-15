@@ -96,16 +96,6 @@ export interface ProNotificationSettings {
   activity_summary: boolean;
 }
 
-export interface SavedCard {
-  id: number;
-  brand: "visa" | "mastercard" | "amex";
-  last4: string;
-  exp_month: string;
-  exp_year: string;
-  cardholder_name: string;
-  is_default: boolean;
-}
-
 export interface ClientNote {
   first_name: string;
   last_name: string;
@@ -932,34 +922,6 @@ export const nailTechApi = {
 
   getMyWaitingList: (): Promise<ApiResponse<WaitingListEntry[]>> =>
     apiCall("/api/client/waiting-list"),
-};
-
-// ── Payment Methods API ───────────────────────────────────────────────────────
-
-export const paymentMethodsApi = {
-  getAll: (): Promise<ApiResponse<SavedCard[]>> => apiCall("/api/client/payment-methods"),
-  delete: (id: number): Promise<ApiResponse<void>> =>
-    apiCall(`/api/client/payment-methods/${id}`, { method: "DELETE" }),
-  setDefault: (id: number): Promise<ApiResponse<void>> =>
-    // Backend only registers PUT for this route (app.put(...)) — PATCH 404'd.
-    apiCall(`/api/client/payment-methods/${id}/default`, { method: "PUT" }),
-  // apiCall() ne rejette jamais sa promesse — ces deux fonctions lèvent
-  // explicitement en cas d'échec pour que le try/catch de payments.tsx
-  // (handleAddCard) réagisse réellement, au lieu de fermer la modale d'ajout
-  // de carte comme si l'enregistrement avait réussi alors qu'il avait échoué
-  // côté serveur.
-  createSetupIntent: async (): Promise<{ clientSecret: string }> => {
-    const res = await apiCall<{ clientSecret: string }>("/api/client/payment-methods/setup-intent", { method: "POST" });
-    if (!res.success || !res.data) throw new Error(res.error ?? "Impossible d'initialiser l'ajout de carte");
-    return res.data;
-  },
-  confirmSetup: async (paymentMethodId: string): Promise<void> => {
-    const res = await apiCall("/api/client/payment-methods/confirm", {
-      method: "POST",
-      body: JSON.stringify({ paymentMethodId }),
-    });
-    if (!res.success) throw new Error(res.error ?? "Impossible d'enregistrer la carte");
-  },
 };
 
 // ── Admin Types ───────────────────────────────────────────────────────────────
