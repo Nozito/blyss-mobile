@@ -257,6 +257,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     withStoreKitConfig,
     "@bacons/apple-targets",
+    "expo-localization",
     // Pas le plugin "@sentry/react-native" ici : il injecte une phase de
     // build Xcode qui tente d'uploader les dSYM/sourcemaps et échoue tout
     // le build (local ET EAS) tant que SENTRY_ORG/SENTRY_PROJECT/

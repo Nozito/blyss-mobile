@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, runOnJS } from "react-native-reanimated";
 import { SplashOverlay } from "@/components/ui/SplashOverlay";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -13,6 +13,7 @@ import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import * as Sentry from "@sentry/react-native";
+import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
@@ -37,6 +38,12 @@ if (ENV.SENTRY_DSN) {
     tracesSampleRate: 0.2,
     enableNativeCrashHandling: true,
     debug: __DEV__,
+    // Breadcrumbs réseau (requêtes échouées visibles dans le fil d'événements).
+    enableCaptureFailedRequests: true,
+    // Session Replay — activé partout (les données clientes sensibles restent
+    // masquées par défaut : maskAllText/maskAllImages/maskAllVectors à `true`).
+    replaysSessionSampleRate: __DEV__ ? 1.0 : 0.1,
+    replaysOnErrorSampleRate: 1.0,
   });
 }
 
@@ -95,6 +102,37 @@ function LaunchSplash({ revealed, onHidden }: { revealed: boolean; onHidden: () 
 // `ready` pilote le hide natif, `nativeHidden` confirme qu'il a réellement eu
 // lieu — c'est ce dernier (via `revealed`) qui pilote le fondu du logo JS,
 // puisque c'est le seul instant où ce logo devient visible à l'écran.
+// Suit la route active (expo-router ne s'appuie pas sur un NavigationContainer
+// directement accessible par l'autocapture screens de PostHog) et synchronise
+// l'identité PostHog avec la session — reset() explicite à la déconnexion pour
+// ne pas mélanger les événements de deux comptes sur le même appareil.
+function PostHogTracking() {
+  const posthog = usePostHog();
+  const pathname = usePathname();
+  const { user, isLoading } = useAuth();
+  const identifiedUserId = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!posthog || !pathname) return;
+    posthog.screen(pathname);
+  }, [posthog, pathname]);
+
+  useEffect(() => {
+    if (!posthog || isLoading) return;
+    if (user) {
+      if (identifiedUserId.current !== user.id) {
+        posthog.identify(String(user.id), { role: user.role, is_admin: user.is_admin, pro_status: user.pro_status ?? null });
+        identifiedUserId.current = user.id;
+      }
+    } else if (identifiedUserId.current !== null) {
+      posthog.reset();
+      identifiedUserId.current = null;
+    }
+  }, [posthog, user, isLoading]);
+
+  return null;
+}
+
 function AppContent() {
   const { isLoading } = useAuth();
   const colors = useThemeColors();
@@ -127,6 +165,7 @@ function AppContent() {
   return (
     <>
       <StatusBar style="auto" />
+      <PostHogTracking />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -155,6 +194,7 @@ function AppContent() {
           name="specialist/[id]"
           options={{ presentation: "card", animation: "slide_from_bottom" }}
         />
+        <Stack.Screen name="s/[id]" options={{ animation: "none" }} />
         <Stack.Screen
           name="booking/[id]"
           options={{ presentation: "card", animation: "slide_from_bottom" }}
@@ -178,6 +218,17 @@ function AppContent() {
   );
 }
 
+// Pas d'analytics sans clé (dev local sans variable, ou build sans secret
+// configuré) — même filet de sécurité que pour Sentry ci-dessus.
+function PostHogRoot({ children }: { children: React.ReactNode }) {
+  if (!ENV.POSTHOG_KEY) return <>{children}</>;
+  return (
+    <PostHogProvider apiKey={ENV.POSTHOG_KEY} options={{ host: ENV.POSTHOG_HOST }} autocapture={{ captureScreens: false }}>
+      {children}
+    </PostHogProvider>
+  );
+}
+
 // ── Root layout ───────────────────────────────────────────────────────────────
 function RootLayout() {
   return (
@@ -189,15 +240,17 @@ function RootLayout() {
               <OfflineBanner />
               <StripeProvider publishableKey={STRIPE_PK} urlScheme="blyss" merchantIdentifier="merchant.com.blyss.app">
                 <QueryClientProvider client={queryClient}>
-                  <AuthProvider>
-                    <RevenueCatProvider>
-                      <NotificationProvider>
-                        <LiveActivityProvider>
-                          <AppContent />
-                        </LiveActivityProvider>
-                      </NotificationProvider>
-                    </RevenueCatProvider>
-                  </AuthProvider>
+                  <PostHogRoot>
+                    <AuthProvider>
+                      <RevenueCatProvider>
+                        <NotificationProvider>
+                          <LiveActivityProvider>
+                            <AppContent />
+                          </LiveActivityProvider>
+                        </NotificationProvider>
+                      </RevenueCatProvider>
+                    </AuthProvider>
+                  </PostHogRoot>
                 </QueryClientProvider>
               </StripeProvider>
             </TransitionProvider>

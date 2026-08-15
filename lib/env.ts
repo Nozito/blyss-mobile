@@ -3,6 +3,8 @@ export const ENV = {
   STRIPE_PK: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
   REVENUECAT_IOS: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "",
   SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN ?? "",
+  POSTHOG_KEY: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? "",
+  POSTHOG_HOST: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com",
 } as const;
 
 const REQUIRED: Array<{ key: keyof typeof ENV; label: string }> = [
