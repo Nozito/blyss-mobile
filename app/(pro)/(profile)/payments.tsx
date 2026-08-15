@@ -270,6 +270,12 @@ export default function ProPaymentsScreen() {
             </AnimatedPressable>
           )}
         </View>
+        {isStripeConnected && (
+          <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 8, lineHeight: 15 }}>
+            Des frais de traitement Stripe peuvent s'appliquer aux paiements en ligne — ils sont prélevés
+            sur le montant que tu reçois, jamais ajoutés au prix payé par la cliente.
+          </Text>
+        )}
       </View>
 
       {/* ── Acompte (visible uniquement si Stripe actif) ── */}

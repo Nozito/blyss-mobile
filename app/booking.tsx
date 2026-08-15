@@ -565,11 +565,17 @@ export default function BookingScreen() {
               hideTransition();
             }}
             onError={(msg) => {
+              // Le fallback générique masquait le vrai motif Stripe (carte
+              // expirée, CVC incorrect, fonds insuffisants…) dès qu'il ne
+              // contenait ni "declined" ni "network" littéralement — la
+              // plupart des refus Stripe ne matchent aucun des deux. On
+              // affiche donc le message Stripe brut dans ce cas, à la fois
+              // plus utile pour la cliente et pour le diagnostic.
               const readable = msg.toLowerCase().includes("declined") || msg.toLowerCase().includes("refusé")
                 ? "Ta carte a été refusée. Vérifie tes informations."
                 : msg.toLowerCase().includes("network") || msg.toLowerCase().includes("réseau")
                 ? "Erreur de connexion. Votre carte n'a pas été débitée."
-                : "Le paiement a échoué. Réessayez ou changez de moyen de paiement.";
+                : `Le paiement a échoué : ${msg}`;
               setBookingError(readable);
             }}
           />
