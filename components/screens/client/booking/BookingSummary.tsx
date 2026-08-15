@@ -18,6 +18,9 @@ interface Props {
   paymentMethod: "online" | "on_site" | null;
   onSelectPayment: (method: "online" | "on_site") => void;
   canPayOnline: boolean;
+  /** Acompte configuré par la pro — le paiement sur place n'est plus proposé. */
+  mustPayOnline: boolean;
+  depositPercentage: number;
   onContactPro?: () => void;
   contactingPro?: boolean;
 }
@@ -102,6 +105,8 @@ export function BookingSummary({
   paymentMethod,
   onSelectPayment,
   canPayOnline,
+  mustPayOnline,
+  depositPercentage,
   onContactPro,
   contactingPro,
 }: Props) {
@@ -231,7 +236,29 @@ export function BookingSummary({
       </View>
 
       {/* Payment method */}
-      {canPayOnline ? (
+      {mustPayOnline ? (
+        <View style={{
+          flexDirection: "row", alignItems: "center", gap: 12,
+          backgroundColor: colors.primaryLight, borderRadius: 14,
+          padding: 14, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.2),
+        }}>
+          <View style={{
+            width: 36, height: 36, borderRadius: 10,
+            backgroundColor: colors.primaryLight,
+            alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <Ionicons name="phone-portrait-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground, marginBottom: 2 }}>
+              Acompte de {depositPercentage}% — paiement en ligne
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
+              Ce professionnel demande un acompte pour confirmer le rendez-vous. Le reste se règle sur place.
+            </Text>
+          </View>
+        </View>
+      ) : canPayOnline ? (
         <View style={{ gap: 12 }}>
           <Text style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}>Mode de paiement</Text>
           <View style={{ gap: 10 }}>

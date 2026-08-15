@@ -43,6 +43,10 @@ interface Pro {
   profile_photo: string | null;
   accept_online_payment: boolean;
   stripe_onboarding_complete: boolean;
+  // Fallback à 50 si absent — même règle par défaut que le serveur
+  // (backend/server.ts, POST /api/reservations) pour que ce que montre
+  // l'écran corresponde à ce qui va réellement se passer à la réservation.
+  deposit_percentage: number;
   acceptance_conditions: ConditionItem[] | null;
 }
 
@@ -222,6 +226,7 @@ export default function BookingScreen() {
           profile_photo: (proResult.profile_photo as string | null) ?? null,
           accept_online_payment: Boolean(proResult.accept_online_payment),
           stripe_onboarding_complete: Boolean(proResult.stripe_onboarding_complete),
+          deposit_percentage: Number(proResult.deposit_percentage ?? 50),
           acceptance_conditions: (proResult.acceptance_conditions as ConditionItem[] | null) ?? null,
         });
 
@@ -318,12 +323,19 @@ export default function BookingScreen() {
     Boolean(pro?.stripe_onboarding_complete),
     Boolean(pro?.accept_online_payment)
   );
+  // Un acompte ne peut pas être encaissé sur place — s'il en demande un, le
+  // paiement en ligne n'est plus un choix, c'est la seule option possible.
+  const depositRequired = (pro?.deposit_percentage ?? 0) > 0;
+  const mustPayOnline = canPayOnline && depositRequired;
 
   useEffect(() => {
-    if (pro && !canPayOnline && paymentMethod === null) {
-      setPaymentMethod("on_site");
+    if (!pro) return;
+    if (!canPayOnline) {
+      if (paymentMethod === null) setPaymentMethod("on_site");
+    } else if (mustPayOnline) {
+      if (paymentMethod !== "online") setPaymentMethod("online");
     }
-  }, [pro, canPayOnline]);
+  }, [pro, canPayOnline, mustPayOnline, paymentMethod]);
 
   const isStepValid = () => {
     if (step === 1) return selectedPrestation !== null;
@@ -506,6 +518,8 @@ export default function BookingScreen() {
             paymentMethod={paymentMethod}
             onSelectPayment={setPaymentMethod}
             canPayOnline={canPayOnline}
+            mustPayOnline={mustPayOnline}
+            depositPercentage={pro.deposit_percentage}
             contactingPro={contactingPro}
             onContactPro={async () => {
               if (contactingPro || !proId) return;
