@@ -13,7 +13,12 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.blyssapp.fr",
-        "EXPO_PUBLIC_WS_URL": "wss://api.blyssapp.fr/ws"
+        "EXPO_PUBLIC_WS_URL": "wss://api.blyssapp.fr/ws",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51SUSaMBx4RQ7wwjuFhT0hfJi24EhaZQLVWRvIi9au0Phqrm24TIPyHAjIlALYdrExWi2X4qZ70YDI96x6z0NjTYk00NdryknaT",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_FYWoROKVDBfjzGGOliilvwZzaRJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://f4e4b218fe2da7b183d21c08683d9e81@o4510970606911488.ingest.de.sentry.io/4511263886147664",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_nGa5GeErDs9kAHs2iPvHgBEMDZ8u62qc69yBxpxG44aS",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
       }
     },
     "preview": {
@@ -24,7 +29,12 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://staging.blyssapp.fr",
-        "EXPO_PUBLIC_WS_URL": "wss://staging.blyssapp.fr/ws"
+        "EXPO_PUBLIC_WS_URL": "wss://staging.blyssapp.fr/ws",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51SUSaMBx4RQ7wwjuFhT0hfJi24EhaZQLVWRvIi9au0Phqrm24TIPyHAjIlALYdrExWi2X4qZ70YDI96x6z0NjTYk00NdryknaT",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_FYWoROKVDBfjzGGOliilvwZzaRJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://f4e4b218fe2da7b183d21c08683d9e81@o4510970606911488.ingest.de.sentry.io/4511263886147664",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_nGa5GeErDs9kAHs2iPvHgBEMDZ8u62qc69yBxpxG44aS",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
       }
     },
     "production": {
@@ -35,7 +45,12 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://app.blyssapp.fr",
-        "EXPO_PUBLIC_WS_URL": "wss://app.blyssapp.fr/ws"
+        "EXPO_PUBLIC_WS_URL": "wss://app.blyssapp.fr/ws",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51SUSaMBx4RQ7wwjuFhT0hfJi24EhaZQLVWRvIi9au0Phqrm24TIPyHAjIlALYdrExWi2X4qZ70YDI96x6z0NjTYk00NdryknaT",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_FYWoROKVDBfjzGGOliilvwZzaRJ",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://f4e4b218fe2da7b183d21c08683d9e81@o4510970606911488.ingest.de.sentry.io/4511263886147664",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_nGa5GeErDs9kAHs2iPvHgBEMDZ8u62qc69yBxpxG44aS",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
       }
     }
   },
