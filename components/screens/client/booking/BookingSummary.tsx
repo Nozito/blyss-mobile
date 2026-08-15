@@ -21,6 +21,9 @@ interface Props {
   /** Acompte configuré par la pro — le paiement sur place n'est plus proposé. */
   mustPayOnline: boolean;
   depositPercentage: number;
+  cancellationNoticeHours: number;
+  cancellationPolicyAccepted: boolean;
+  onToggleCancellationPolicy: () => void;
   onContactPro?: () => void;
   contactingPro?: boolean;
 }
@@ -107,6 +110,9 @@ export function BookingSummary({
   canPayOnline,
   mustPayOnline,
   depositPercentage,
+  cancellationNoticeHours,
+  cancellationPolicyAccepted,
+  onToggleCancellationPolicy,
   onContactPro,
   contactingPro,
 }: Props) {
@@ -227,13 +233,36 @@ export function BookingSummary({
         </AnimatedPressable>
       )}
 
-      {/* Réassurance annulation — visible avant le choix du mode de paiement */}
-      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-        <Ionicons name="information-circle-outline" size={15} color={colors.mutedForeground} style={{ marginTop: 1 }} />
-        <Text style={{ flex: 1, fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
-          Tu pourras annuler ce rendez-vous depuis l'app. Les conditions d'annulation du professionnel s'appliquent.
+      {/* Conditions d'annulation — acceptation explicite requise pour continuer,
+          pour éviter les litiges ("je ne savais pas que l'acompte ne serait
+          pas remboursé"). */}
+      <AnimatedPressable
+        onPress={onToggleCancellationPolicy}
+        style={{
+          flexDirection: "row", alignItems: "flex-start", gap: 10,
+          backgroundColor: colors.white, borderRadius: 14, padding: 14,
+          borderWidth: 1, borderColor: cancellationPolicyAccepted ? colors.primary : colors.border,
+        }}
+      >
+        <View
+          style={{
+            width: 22, height: 22, borderRadius: 6, marginTop: 1, flexShrink: 0,
+            backgroundColor: cancellationPolicyAccepted ? colors.primary : colors.cream,
+            alignItems: "center", justifyContent: "center",
+            borderWidth: cancellationPolicyAccepted ? 0 : 1, borderColor: colors.border,
+          }}
+        >
+          {cancellationPolicyAccepted && <Ionicons name="checkmark" size={14} color={colors.white} />}
+        </View>
+        <Text style={{ flex: 1, fontSize: 12, color: colors.foreground, lineHeight: 17 }}>
+          J'ai pris connaissance des conditions d'annulation de {proName} : annulation possible{" "}
+          {cancellationNoticeHours === 0 ? "jusqu'au rendez-vous" : `jusqu'à ${cancellationNoticeHours}h avant le rendez-vous`},
+          au-delà l'annulation n'est plus possible depuis l'app.
+          {paymentMethod === "online" && depositPercentage > 0 && depositPercentage < 100
+            ? " L'acompte reste acquis au professionnel en cas d'annulation, seul le reste est remboursé."
+            : ""}
         </Text>
-      </View>
+      </AnimatedPressable>
 
       {/* Payment method */}
       {mustPayOnline ? (

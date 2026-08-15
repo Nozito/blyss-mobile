@@ -47,6 +47,10 @@ interface Pro {
   // (backend/server.ts, POST /api/reservations) pour que ce que montre
   // l'écran corresponde à ce qui va réellement se passer à la réservation.
   deposit_percentage: number;
+  // Même fallback (24h) que celui appliqué côté serveur quand la colonne est
+  // NULL (backend/server.ts, GET /api/client/my-booking) — pour rester
+  // cohérent avec ce que verra réellement le client une fois la réservation faite.
+  cancellation_notice_hours: number;
   acceptance_conditions: ConditionItem[] | null;
 }
 
@@ -165,6 +169,9 @@ export default function BookingScreen() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
   const [contactingPro, setContactingPro] = useState(false);
+  // Acceptation explicite des conditions d'annulation — évite les litiges
+  // ("je ne savais pas que l'acompte ne serait pas remboursé").
+  const [cancellationPolicyAccepted, setCancellationPolicyAccepted] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -227,6 +234,7 @@ export default function BookingScreen() {
           accept_online_payment: Boolean(proResult.accept_online_payment),
           stripe_onboarding_complete: Boolean(proResult.stripe_onboarding_complete),
           deposit_percentage: Number(proResult.deposit_percentage ?? 50),
+          cancellation_notice_hours: Number(proResult.cancellation_notice_hours ?? 24),
           acceptance_conditions: (proResult.acceptance_conditions as ConditionItem[] | null) ?? null,
         });
 
@@ -340,7 +348,7 @@ export default function BookingScreen() {
   const isStepValid = () => {
     if (step === 1) return selectedPrestation !== null;
     if (step === 2) return selectedDate !== null && selectedTime !== null;
-    if (step === 3) return paymentMethod !== null;
+    if (step === 3) return paymentMethod !== null && cancellationPolicyAccepted;
     return true;
   };
 
@@ -520,6 +528,9 @@ export default function BookingScreen() {
             canPayOnline={canPayOnline}
             mustPayOnline={mustPayOnline}
             depositPercentage={pro.deposit_percentage}
+            cancellationNoticeHours={pro.cancellation_notice_hours}
+            cancellationPolicyAccepted={cancellationPolicyAccepted}
+            onToggleCancellationPolicy={() => setCancellationPolicyAccepted((v) => !v)}
             contactingPro={contactingPro}
             onContactPro={async () => {
               if (contactingPro || !proId) return;
