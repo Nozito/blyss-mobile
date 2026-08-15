@@ -29,34 +29,45 @@ struct LiveRdvLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(phase.headerLabel)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.6))
-                        if context.state.showTime {
-                            Text(context.state.startAt, style: .time)
-                                .font(.caption.weight(.semibold))
-                                .monospacedDigit()
-                                .foregroundStyle(.white)
+                    // Same centering trick as the leading logo, so all three
+                    // regions share one visual middle instead of the logo
+                    // floating at a different height than the text blocks.
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(phase.headerLabel)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.6))
+                            if context.state.showTime {
+                                Text(context.state.startAt, style: .time)
+                                    .font(.caption.weight(.semibold))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.white)
+                            }
                         }
+                        Spacer(minLength: 0)
                     }
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        LiveRdvFocalName(phase: phase, clientFirstName: context.state.clientFirstName)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        if context.state.privacyLevel == "full",
-                           let detail = LiveRdvDetailText.make(
-                               prestationName: context.state.prestationName,
-                               durationMinutes: context.state.durationMinutes
-                           ) {
-                            Text(detail)
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.7))
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        VStack(alignment: .leading, spacing: 2) {
+                            LiveRdvFocalName(phase: phase, clientFirstName: context.state.clientFirstName)
+                                .font(.headline)
+                                .foregroundStyle(.white)
                                 .lineLimit(1)
+                            if context.state.privacyLevel == "full",
+                               let detail = LiveRdvDetailText.make(
+                                   prestationName: context.state.prestationName,
+                                   durationMinutes: context.state.durationMinutes
+                               ) {
+                                Text(detail)
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .lineLimit(1)
+                            }
                         }
+                        Spacer(minLength: 0)
                     }
                 }
             } compactLeading: {
@@ -244,4 +255,61 @@ private struct LiveRdvCountdownText: View {
             Text("Terminé")
         }
     }
+}
+
+// ── Previews ─────────────────────────────────────────────────────────────
+// Xcode canvas only — mirrors the two screenshots this layout was fixed
+// against: "Lina" 47 min out (expanded + compact upcoming) and a same-hour
+// countdown well over an hour away (compact, long timer string).
+
+private extension LiveRdvAttributes.ContentState {
+    static var previewUpcoming: Self {
+        .init(
+            startAt: Date().addingTimeInterval(47 * 60),
+            endAt: Date().addingTimeInterval((47 + 60) * 60),
+            prestationName: "French manucure",
+            clientFirstName: "Lina",
+            showTime: true,
+            privacyLevel: "full"
+        )
+    }
+
+    static var previewLongCountdown: Self {
+        .init(
+            startAt: Date().addingTimeInterval(82 * 60 + 22),
+            endAt: Date().addingTimeInterval((82 + 60) * 60),
+            prestationName: "Pose gel",
+            clientFirstName: "Sophie",
+            showTime: true,
+            privacyLevel: "full"
+        )
+    }
+}
+
+@available(iOS 17.0, *)
+#Preview("Dynamic Island — Expanded", as: .dynamicIsland(.expanded), using: LiveRdvAttributes(reservationId: 1)) {
+    LiveRdvLiveActivity()
+} contentStates: {
+    LiveRdvAttributes.ContentState.previewUpcoming
+}
+
+@available(iOS 17.0, *)
+#Preview("Dynamic Island — Compact", as: .dynamicIsland(.compact), using: LiveRdvAttributes(reservationId: 1)) {
+    LiveRdvLiveActivity()
+} contentStates: {
+    LiveRdvAttributes.ContentState.previewUpcoming
+}
+
+@available(iOS 17.0, *)
+#Preview("Dynamic Island — Compact (long countdown)", as: .dynamicIsland(.compact), using: LiveRdvAttributes(reservationId: 1)) {
+    LiveRdvLiveActivity()
+} contentStates: {
+    LiveRdvAttributes.ContentState.previewLongCountdown
+}
+
+@available(iOS 17.0, *)
+#Preview("Lock Screen", as: .content, using: LiveRdvAttributes(reservationId: 1)) {
+    LiveRdvLiveActivity()
+} contentStates: {
+    LiveRdvAttributes.ContentState.previewUpcoming
 }
