@@ -18,10 +18,11 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { clientApi, reviewsApi, stripePaymentsApi } from "@/lib/api";
+import { clientApi, reviewsApi, stripePaymentsApi, messagesApi } from "@/lib/api";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { useToast } from "@/components/ui/Toast";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
@@ -199,6 +200,7 @@ export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const [reviewVisible, setReviewVisible] = useState(false);
   const [balanceClientSecret, setBalanceClientSecret] = useState<string | null>(null);
   const [balanceAmount, setBalanceAmount] = useState(0);
@@ -206,6 +208,7 @@ export default function BookingDetailScreen() {
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [bookingError, setBookingError]     = useState<string | null>(null);
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+  const [contactingPro, setContactingPro] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["booking-detail", id],
@@ -291,6 +294,13 @@ export default function BookingDetailScreen() {
       return { label: "✓ Payé sur place", color: colors.successText, bg: colors.successLight };
     if (s === "deposit_paid")
       return { label: "Acompte versé", color: colors.info, bg: colors.infoLight };
+    // "unpaid" couvre deux cas très différents : un paiement en ligne qui
+    // aurait dû aboutir mais ne l'a pas (vraiment "en attente", à surveiller)
+    // et une réservation "payer sur place" où rien n'est dû avant le
+    // rendez-vous (état normal, pas un souci) — le badge orange laissait
+    // penser au client que quelque chose clochait dans ce second cas.
+    if (!booking.paid_online)
+      return { label: "À régler sur place", color: colors.info, bg: colors.infoLight };
     return { label: "Paiement en attente", color: colors.warning, bg: colors.warningLight };
   })();
 
@@ -375,52 +385,48 @@ export default function BookingDetailScreen() {
             </View>
           </View>
 
-          {Boolean(booking.address_line) && (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
+            {Boolean(booking.address_line) && (
+              <Pressable
+                style={[styles.contactBtn, styles.contactBtnSolo]}
+                onPress={() => {
+                  const query = encodeURIComponent(
+                    `${booking.address_line}, ${booking.postal_code ?? ""} ${city ?? ""}`.trim()
+                  );
+                  const url = Platform.select({
+                    ios: `maps:0,0?q=${query}`,
+                    android: `geo:0,0?q=${query}`,
+                    default: `https://maps.google.com/?q=${query}`,
+                  });
+                  Linking.openURL(url!).catch(() => {});
+                }}
+              >
+                <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+                <Text style={styles.contactBtnText}>Voir l'itinéraire</Text>
+              </Pressable>
+            )}
+
             <Pressable
-              style={[styles.contactBtn, { marginTop: 12, alignSelf: "flex-start" }]}
-              onPress={() => {
-                const query = encodeURIComponent(
-                  `${booking.address_line}, ${booking.postal_code ?? ""} ${city ?? ""}`.trim()
-                );
-                const url = Platform.select({
-                  ios: `maps:0,0?q=${query}`,
-                  android: `geo:0,0?q=${query}`,
-                  default: `https://maps.google.com/?q=${query}`,
-                });
-                Linking.openURL(url!).catch(() => {});
+              style={[styles.contactBtn, styles.contactBtnSolo, { opacity: contactingPro ? 0.6 : 1 }]}
+              disabled={contactingPro}
+              onPress={async () => {
+                if (contactingPro) return;
+                setContactingPro(true);
+                const res = await messagesApi.openThread(booking.pro_id, booking.id);
+                setContactingPro(false);
+                if (res.success && res.data) {
+                  router.push({ pathname: "/message-thread/[id]", params: { id: String(res.data.id) } });
+                } else {
+                  showToast(res.error ?? "Impossible d'ouvrir la conversation", "error");
+                }
               }}
             >
-              <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-              <Text style={styles.contactBtnText}>Voir l'itinéraire</Text>
+              {contactingPro
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.primary} />}
+              <Text style={styles.contactBtnText}>Message</Text>
             </Pressable>
-          )}
-
-          {booking.pro_phone && (
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-              <Pressable
-                style={styles.contactBtn}
-                onPress={() =>
-                  Linking.canOpenURL(`tel:${booking.pro_phone}`)
-                    .then((ok) => { if (ok) Linking.openURL(`tel:${booking.pro_phone}`); })
-                    .catch(() => {})
-                }
-              >
-                <Ionicons name="call-outline" size={16} color={colors.primary} />
-                <Text style={styles.contactBtnText}>Appeler</Text>
-              </Pressable>
-              <Pressable
-                style={styles.contactBtn}
-                onPress={() =>
-                  Linking.canOpenURL(`sms:${booking.pro_phone}`)
-                    .then((ok) => { if (ok) Linking.openURL(`sms:${booking.pro_phone}`); })
-                    .catch(() => {})
-                }
-              >
-                <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
-                <Text style={styles.contactBtnText}>SMS</Text>
-              </Pressable>
-            </View>
-          )}
+          </View>
         </FadeCard>
 
         {/* Card Prestation */}
@@ -641,6 +647,10 @@ function useStyles(colors: Record<string, string>) {
       borderWidth: 1, borderColor: `${colors.primary}30`, borderRadius: 12,
       paddingVertical: 13, minHeight: 44, backgroundColor: colors.primaryLight,
     },
+    // Taille au contenu plutôt qu'étiré sur toute la largeur (flex:1 de
+    // contactBtn n'a de sens que quand ces boutons se partagent une rangée
+    // à eux seuls) — utilisé quand ils cohabitent avec d'autres éléments.
+    contactBtnSolo: { flex: 0, paddingHorizontal: 16 },
     contactBtnText: { fontSize: 14, fontWeight: "600", color: colors.primary },
 
     prestationName: { fontSize: 18, fontWeight: "800", color: colors.foreground, marginBottom: 6 },
