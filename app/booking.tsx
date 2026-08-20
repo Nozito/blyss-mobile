@@ -172,6 +172,12 @@ export default function BookingScreen() {
   // Acceptation explicite des conditions d'annulation — évite les litiges
   // ("je ne savais pas que l'acompte ne serait pas remboursé").
   const [cancellationPolicyAccepted, setCancellationPolicyAccepted] = useState(false);
+  // Demande expresse d'exécution anticipée + perte du droit de rétractation
+  // (art. L221-18 s. Code de la consommation) — distincte de l'acceptation
+  // ci-dessus. Le serveur la rend obligatoire pour tout RDV à moins de 14
+  // jours (voir POST /api/reservations côté backend) ; on la recueille dans
+  // tous les cas, la quasi-totalité des créneaux étant réservés à court terme.
+  const [withdrawalRightAccepted, setWithdrawalRightAccepted] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -348,7 +354,7 @@ export default function BookingScreen() {
   const isStepValid = () => {
     if (step === 1) return selectedPrestation !== null;
     if (step === 2) return selectedDate !== null && selectedTime !== null;
-    if (step === 3) return paymentMethod !== null && cancellationPolicyAccepted;
+    if (step === 3) return paymentMethod !== null && cancellationPolicyAccepted && withdrawalRightAccepted;
     return true;
   };
 
@@ -388,6 +394,7 @@ export default function BookingScreen() {
           price: selectedPrestationData.price,
           slot_id: selectedSlot?.id,
           payment_method: paymentMethod ?? "on_site",
+          early_execution_requested: withdrawalRightAccepted,
         });
 
         if (!resaResult.success || !resaResult.data) {
@@ -531,6 +538,8 @@ export default function BookingScreen() {
             cancellationNoticeHours={pro.cancellation_notice_hours}
             cancellationPolicyAccepted={cancellationPolicyAccepted}
             onToggleCancellationPolicy={() => setCancellationPolicyAccepted((v) => !v)}
+            withdrawalRightAccepted={withdrawalRightAccepted}
+            onToggleWithdrawalRight={() => setWithdrawalRightAccepted((v) => !v)}
             contactingPro={contactingPro}
             onContactPro={async () => {
               if (contactingPro || !proId) return;

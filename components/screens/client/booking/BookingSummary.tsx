@@ -24,6 +24,11 @@ interface Props {
   cancellationNoticeHours: number;
   cancellationPolicyAccepted: boolean;
   onToggleCancellationPolicy: () => void;
+  /** Demande expresse d'exécution anticipée (art. L221-18 s. Code de la
+   * consommation) — case distincte de la politique d'annulation du pro,
+   * obligatoire dès que le RDV a lieu à moins de 14 jours. */
+  withdrawalRightAccepted: boolean;
+  onToggleWithdrawalRight: () => void;
   onContactPro?: () => void;
   contactingPro?: boolean;
 }
@@ -113,6 +118,8 @@ export function BookingSummary({
   cancellationNoticeHours,
   cancellationPolicyAccepted,
   onToggleCancellationPolicy,
+  withdrawalRightAccepted,
+  onToggleWithdrawalRight,
   onContactPro,
   contactingPro,
 }: Props) {
@@ -261,6 +268,35 @@ export function BookingSummary({
           {paymentMethod === "online" && depositPercentage > 0 && depositPercentage < 100
             ? " L'acompte reste acquis au professionnel en cas d'annulation, seul le reste est remboursé."
             : ""}
+        </Text>
+      </AnimatedPressable>
+
+      {/* Droit de rétractation — case distincte de la politique d'annulation
+          du pro : art. L221-18 s. Code de la consommation impose une demande
+          expresse d'exécution anticipée + l'information sur la perte du
+          droit de rétractation, séparément de toute autre acceptation. */}
+      <AnimatedPressable
+        onPress={onToggleWithdrawalRight}
+        style={{
+          flexDirection: "row", alignItems: "flex-start", gap: 10,
+          backgroundColor: colors.white, borderRadius: 14, padding: 14,
+          borderWidth: 1, borderColor: withdrawalRightAccepted ? colors.primary : colors.border,
+        }}
+      >
+        <View
+          style={{
+            width: 22, height: 22, borderRadius: 6, marginTop: 1, flexShrink: 0,
+            backgroundColor: withdrawalRightAccepted ? colors.primary : colors.cream,
+            alignItems: "center", justifyContent: "center",
+            borderWidth: withdrawalRightAccepted ? 0 : 1, borderColor: colors.border,
+          }}
+        >
+          {withdrawalRightAccepted && <Ionicons name="checkmark" size={14} color={colors.white} />}
+        </View>
+        <Text style={{ flex: 1, fontSize: 12, color: colors.foreground, lineHeight: 17 }}>
+          Je demande expressément que la prestation commence avant l'expiration du délai de
+          rétractation de 14 jours, et je reconnais qu'une fois la prestation pleinement exécutée,
+          je perds mon droit de rétractation.
         </Text>
       </AnimatedPressable>
 

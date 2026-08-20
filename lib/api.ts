@@ -800,6 +800,8 @@ export const stripePaymentsApi = {
     price: number;
     slot_id?: number | null;
     payment_method: "online" | "on_site";
+    /** Demande expresse d'exécution anticipée — cf. server.ts POST /api/reservations. */
+    early_execution_requested: boolean;
   }): Promise<ApiResponse<{ id: number; deposit_percentage: number; deposit_amount: number | null; price: number }>> =>
     apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
 
