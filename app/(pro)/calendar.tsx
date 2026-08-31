@@ -840,20 +840,28 @@ export default function ProCalendarScreen() {
     setShowNewAppt(true);
   };
 
-  const handleAppointmentSaved = (info?: { proposalSent?: boolean }) => {
+  const handleAppointmentSaved = (info?: {
+    proposalSent?: boolean;
+    overrideApplied?: "outside_hours" | "conflict" | null;
+  }) => {
     void fetchMonthData(selectedYear, selectedMonth, { silent: true });
     void fetchSlots(selectedDateStr, { silent: true });
     // Un report proposé par la pro ne modifie pas le RDV tant que la cliente
     // n'a pas accepté — le refetch ci-dessus continuera donc d'afficher
     // l'horaire d'origine, ce qui est le comportement attendu.
-    showToast(
-      info?.proposalSent
-        ? "Proposition envoyée à la cliente, en attente de confirmation"
-        : editingAppt
-          ? "Rendez-vous modifié"
-          : "Rendez-vous créé",
-      "success"
-    );
+    let message: string;
+    if (info?.proposalSent) {
+      message = "Proposition envoyée à la cliente, en attente de confirmation";
+    } else if (editingAppt) {
+      message = "Rendez-vous modifié";
+    } else if (info?.overrideApplied === "conflict") {
+      message = "RDV ajouté malgré un conflit — pense à prévenir la cliente concernée";
+    } else if (info?.overrideApplied === "outside_hours") {
+      message = "RDV ajouté hors de tes horaires d'ouverture";
+    } else {
+      message = "Rendez-vous ajouté";
+    }
+    showToast(message, "success");
   };
 
   const handleNoShow = async (apt: Appointment) => {

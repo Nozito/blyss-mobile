@@ -78,6 +78,42 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+// ── Moteur de disponibilités (chantier 3.2/3.3/3.4) ───────────────────────────
+
+export interface AvailabilitySlot {
+  /** Instant ISO — départ visible du RDV. */
+  start: string;
+  /** Instant ISO — fin visible du RDV. */
+  end: string;
+}
+
+export interface AvailabilityResponse {
+  timezone: string;
+  requested_duration_minutes: number;
+  total_blocked_minutes: number;
+  days: Array<{ date: string; slots: AvailabilitySlot[] }>;
+}
+
+export type ManualOverrideMode = "outside_hours" | "conflict";
+
+/** Réponse de POST /api/pro/appointments — succès ou refus exploitable. */
+export type CreateAppointmentResult =
+  | {
+      success: true;
+      data: { id: number; price: number; override_applied: ManualOverrideMode | null };
+    }
+  | {
+      success: false;
+      error: string;
+      /** Code machine backend : SLOT_NO_LONGER_AVAILABLE, OUTSIDE_WORKING_HOURS, … */
+      code?: string;
+      /** Créneaux de repli proposés par le backend (best-effort). */
+      alternativeSlots?: AvailabilitySlot[];
+      /** true ⇒ la pro peut relancer en mode override (hors horaires / conflit). */
+      canOverride?: boolean;
+      status?: number;
+    };
+
 export interface ClientNotificationSettings {
   reminders: boolean;
   changes: boolean;
@@ -580,13 +616,65 @@ export const proApi = {
       `/api/pro/clients/search?q=${encodeURIComponent(q)}`
     ),
 
-  createAppointment: (data: {
+  /**
+   * Créneaux calculés côté serveur pour une plage de dates. Remplace la
+   * génération locale (calendar.tsx / getAvailableSlots). `role: "pro"` côté
+   * mobile pro : pas de contrainte de lead-time, la pro voit tout son planning.
+   */
+  getAvailability: (params: {
+    proId: number;
+    serviceIds: number[];
+    fromDate: string;
+    toDate: string;
+    timezone?: string;
+    slotStepMinutes?: number;
+  }): Promise<ApiResponse<AvailabilityResponse>> => {
+    const q = new URLSearchParams({
+      service_ids: params.serviceIds.join(","),
+      from: params.fromDate,
+      to: params.toDate,
+      ...(params.timezone ? { timezone: params.timezone } : {}),
+      ...(params.slotStepMinutes ? { step: String(params.slotStepMinutes) } : {}),
+    });
+    return apiCall(`/api/pro/${params.proId}/availability?${q.toString()}`);
+  },
+
+  createAppointment: async (data: {
     client_id: number;
     prestation_id: number;
     start_datetime: string;
     end_datetime: string;
     early_execution_requested?: boolean;
-  }) => apiCall<{ id: number; price: number }>("/api/pro/appointments", { method: "POST", body: JSON.stringify(data) }),
+    /** Override d'ajout manuel — cf. 3.4. Jamais envoyé sans confirmation pro explicite. */
+    manual_override?: {
+      mode: ManualOverrideMode;
+      note?: string;
+      acknowledged_conflict_reservation_ids?: number[];
+    };
+  }): Promise<CreateAppointmentResult> => {
+    // rawApiCall (pas apiCall) : on a besoin du corps complet du 409
+    // (alternativeSlots, canOverride) que apiCall écrase.
+    const { response, json } = await rawApiCall<{
+      success?: boolean;
+      data?: { id: number; price: number; override_applied: ManualOverrideMode | null };
+      error?: string;
+      message?: string;
+      alternativeSlots?: AvailabilitySlot[];
+      canOverride?: boolean;
+    }>("/api/pro/appointments", { method: "POST", body: JSON.stringify(data) });
+
+    if (response.ok && json?.data) {
+      return { success: true, data: json.data };
+    }
+    return {
+      success: false,
+      error: json?.message ?? json?.error ?? "Erreur lors de la création du rendez-vous",
+      code: json?.error,
+      alternativeSlots: json?.alternativeSlots,
+      canOverride: json?.canOverride,
+      status: response.status,
+    };
+  },
 
   // Ne modifie plus directement le RDV : crée une proposition que la cliente
   // doit explicitement accepter. La réponse ne contient PAS le nouveau créneau

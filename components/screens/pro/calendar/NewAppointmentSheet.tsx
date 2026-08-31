@@ -10,7 +10,8 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { useDebounce } from "@/hooks/useDebounce";
-import { proApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { proApi, type AvailabilitySlot, type ManualOverrideMode } from "@/lib/api";
 
 type Client = {
   id: number;
@@ -59,12 +60,13 @@ export function NewAppointmentSheet({
   onClose: () => void;
   /** `proposalSent: true` = la pro a modifié un RDV existant : ce n'est qu'une
    * proposition envoyée à la cliente, pas encore un changement effectif. */
-  onSaved: (info?: { proposalSent?: boolean }) => void;
+  onSaved: (info?: { proposalSent?: boolean; overrideApplied?: ManualOverrideMode | null }) => void;
   /** When set, the sheet edits this appointment instead of creating a new one — client isn't editable. */
   editing?: EditableAppointment | null;
 }) {
   const colors = useThemeColors();
   const isDark = useIsDarkMode();
+  const { user } = useAuth();
   const isEditing = !!editing;
 
   const [step, setStep] = useState<1 | 2 | 3>(isEditing ? 2 : 1);
@@ -89,12 +91,32 @@ export function NewAppointmentSheet({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Créneaux calculés côté serveur (moteur de dispo 3.2) — remplace la
+  // génération locale. Chargés pour la date sélectionnée dès qu'une prestation
+  // est choisie (flow création uniquement).
+  const [computedSlots, setComputedSlots] = useState<AvailabilitySlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [selectedSlotStart, setSelectedSlotStart] = useState<string | null>(null);
+  // Override d'ajout manuel (3.4) : proposé seulement après un refus du backend
+  // avec canOverride, jamais par défaut.
+  const [pendingOverride, setPendingOverride] = useState<{
+    mode: ManualOverrideMode;
+    message: string;
+  } | null>(null);
+  const [overrideNote, setOverrideNote] = useState("");
+  const [alternativeSlots, setAlternativeSlots] = useState<AvailabilitySlot[]>([]);
+
   useEffect(() => {
     if (!visible) return;
     setError(null);
     setSaving(false);
     setInitiatedVia("app");
     setPhoneReason("");
+    setComputedSlots([]);
+    setSelectedSlotStart(null);
+    setPendingOverride(null);
+    setOverrideNote("");
+    setAlternativeSlots([]);
     if (editing) {
       setStep(2);
       setSelectedClient(null);
@@ -151,8 +173,44 @@ export function NewAppointmentSheet({
   }, [visible, isEditing, debouncedClientQuery]);
 
   const duration = selectedPrestation?.duration_minutes ?? editing?.durationMinutes ?? 60;
+  const dateStr = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+
+  // Charge les créneaux calculés pour la date + prestation sélectionnées.
+  useEffect(() => {
+    if (!visible || isEditing || step !== 3 || !selectedPrestation || !user?.id) return;
+    let cancelled = false;
+    setSlotsLoading(true);
+    setSelectedSlotStart(null);
+    setPendingOverride(null);
+    setAlternativeSlots([]);
+    proApi
+      .getAvailability({
+        proId: user.id,
+        serviceIds: [selectedPrestation.id],
+        fromDate: dateStr,
+        toDate: dateStr,
+      })
+      .then((res) => {
+        if (cancelled) return;
+        const day = res.success && res.data ? res.data.days.find((d) => d.date === dateStr) : undefined;
+        setComputedSlots(day?.slots ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setComputedSlots([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSlotsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, isEditing, step, selectedPrestation, dateStr, user?.id]);
+
+  // Départ effectif : un créneau calculé si choisi, sinon la saisie manuelle
+  // (heure libre — déclenche le chemin override si hors créneaux).
   const [h, m] = time.split(":").map(Number);
-  const startAt = toIsoAt(date, h || 0, m || 0);
+  const manualStartAt = toIsoAt(date, h || 0, m || 0);
+  const startAt = selectedSlotStart ? new Date(selectedSlotStart) : manualStartAt;
   const endAt = new Date(startAt.getTime() + duration * 60_000);
   const needsEarlyExecutionConsent = startAt.getTime() - Date.now() < EARLY_EXECUTION_THRESHOLD_MS;
 
@@ -175,6 +233,11 @@ export function NewAppointmentSheet({
       return;
     }
 
+    if (pendingOverride?.mode === "conflict" && !overrideNote.trim()) {
+      setError("Indique le motif pour forcer ce créneau en conflit");
+      return;
+    }
+
     setSaving(true);
     try {
       if (isEditing && editing) {
@@ -189,23 +252,53 @@ export function NewAppointmentSheet({
         onSaved({ proposalSent: true });
         onClose();
         return;
-      } else {
-        if (!selectedClient) {
-          setError("Choisis une cliente");
-          setSaving(false);
-          return;
-        }
-        const res = await proApi.createAppointment({
-          client_id: selectedClient.id,
-          prestation_id: selectedPrestation.id,
-          start_datetime: startAt.toISOString(),
-          end_datetime: endAt.toISOString(),
-          early_execution_requested: needsEarlyExecutionConsent,
-        });
-        if (!res.success) throw new Error(res.error || "Erreur lors de la création");
       }
-      onSaved();
-      onClose();
+
+      if (!selectedClient) {
+        setError("Choisis une cliente");
+        setSaving(false);
+        return;
+      }
+
+      const res = await proApi.createAppointment({
+        client_id: selectedClient.id,
+        prestation_id: selectedPrestation.id,
+        start_datetime: startAt.toISOString(),
+        end_datetime: endAt.toISOString(),
+        early_execution_requested: needsEarlyExecutionConsent,
+        ...(pendingOverride
+          ? {
+              manual_override: {
+                mode: pendingOverride.mode,
+                ...(overrideNote.trim() ? { note: overrideNote.trim() } : {}),
+              },
+            }
+          : {}),
+      });
+
+      if (res.success) {
+        onSaved({ overrideApplied: res.data.override_applied });
+        onClose();
+        return;
+      }
+
+      // Refus exploitable : le backend indique si un override est possible.
+      if (res.canOverride && res.code) {
+        const mode: ManualOverrideMode = res.code === "OUTSIDE_WORKING_HOURS" ? "outside_hours" : "conflict";
+        setPendingOverride({
+          mode,
+          message:
+            mode === "outside_hours"
+              ? "Ce créneau est en dehors de tes horaires d'ouverture. Tu peux l'ajouter quand même — les heures voisines ne deviennent pas réservables pour autant."
+              : "Ce créneau chevauche un rendez-vous existant. Forcer l'ajout est un dernier recours : la cliente concernée devra être prévenue.",
+        });
+        setAlternativeSlots(res.alternativeSlots ?? []);
+        setError(null);
+        return;
+      }
+
+      setAlternativeSlots(res.alternativeSlots ?? []);
+      throw new Error(res.error || "Erreur lors de la création");
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : "Une erreur est survenue");
     } finally {
@@ -362,31 +455,152 @@ export function NewAppointmentSheet({
                 <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
                   Heure de début
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"].map((t) => (
-                      <AnimatedPressable
-                        key={t}
-                        onPress={() => setTime(t)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: time === t ? colors.primary : colors.muted }}
-                      >
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: time === t ? colors.onColor : colors.foreground }}>{t}</Text>
-                      </AnimatedPressable>
-                    ))}
+
+                {isEditing ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      {["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"].map((t) => (
+                        <AnimatedPressable
+                          key={t}
+                          onPress={() => setTime(t)}
+                          style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: time === t ? colors.primary : colors.muted }}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: time === t ? colors.onColor : colors.foreground }}>{t}</Text>
+                        </AnimatedPressable>
+                      ))}
+                    </View>
+                  </ScrollView>
+                ) : slotsLoading ? (
+                  <View style={{ paddingVertical: 16, alignItems: "center" }}><ActivityIndicator size="small" color={colors.primary} /></View>
+                ) : (
+                  <View style={{ gap: 10 }}>
+                    {computedSlots.length === 0 ? (
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
+                        Aucun créneau disponible ce jour-là selon tes horaires et ton planning.
+                      </Text>
+                    ) : (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          {computedSlots.map((s) => {
+                            const label = new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                            const active = selectedSlotStart === s.start;
+                            return (
+                              <AnimatedPressable
+                                key={s.start}
+                                onPress={() => { setSelectedSlotStart(s.start); setPendingOverride(null); setAlternativeSlots([]); }}
+                                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: active ? colors.primary : colors.muted }}
+                              >
+                                <Text style={{ fontSize: 13, fontWeight: "700", color: active ? colors.onColor : colors.foreground }}>{label}</Text>
+                              </AnimatedPressable>
+                            );
+                          })}
+                        </View>
+                      </ScrollView>
+                    )}
+
+                    <AnimatedPressable
+                      onPress={() => { setSelectedSlotStart(null); setShowDatePicker(false); }}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                    >
+                      <Ionicons name={selectedSlotStart ? "ellipse-outline" : "radio-button-on"} size={15} color={colors.primary} />
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>Saisir une autre heure</Text>
+                    </AnimatedPressable>
+
+                    {!selectedSlotStart && (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          {["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"].map((t) => (
+                            <AnimatedPressable
+                              key={t}
+                              onPress={() => { setTime(t); setPendingOverride(null); }}
+                              style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: time === t ? colors.primary : "transparent" }}
+                            >
+                              <Text style={{ fontSize: 13, fontWeight: "700", color: time === t ? colors.onColor : colors.foreground }}>{t}</Text>
+                            </AnimatedPressable>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    )}
                   </View>
-                </ScrollView>
+                )}
               </View>
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.muted, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
                 <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
                 <Text style={{ fontSize: 13, color: colors.mutedForeground, flex: 1 }}>
                   RDV de{" "}
-                  <Text style={{ fontWeight: "700", color: colors.foreground }}>{time}</Text>
+                  <Text style={{ fontWeight: "700", color: colors.foreground }}>
+                    {startAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                  </Text>
                   {" "}à{" "}
-                  <Text style={{ fontWeight: "700", color: colors.foreground }}>{`${pad2(endAt.getHours())}:${pad2(endAt.getMinutes())}`}</Text>
+                  <Text style={{ fontWeight: "700", color: colors.foreground }}>
+                    {endAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                  </Text>
                   {" · "}{duration} min · sur place
                 </Text>
               </View>
+
+              {pendingOverride && (
+                <View
+                  style={{
+                    gap: 10,
+                    backgroundColor: pendingOverride.mode === "conflict" ? colors.destructiveLight : colors.warningLight,
+                    borderRadius: 12,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: pendingOverride.mode === "conflict" ? colors.destructiveText : colors.warningBorder,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <Ionicons
+                      name={pendingOverride.mode === "conflict" ? "alert-circle" : "warning-outline"}
+                      size={18}
+                      color={pendingOverride.mode === "conflict" ? colors.destructive : colors.warningText}
+                    />
+                    <Text style={{ fontSize: 12, color: colors.warningTextDark, flex: 1, lineHeight: 17 }}>
+                      {pendingOverride.message}
+                    </Text>
+                  </View>
+                  {pendingOverride.mode === "conflict" && (
+                    <TextInput
+                      value={overrideNote}
+                      onChangeText={setOverrideNote}
+                      placeholder="Motif obligatoire (ex: cliente prévenue, RDV maintenu à sa demande)"
+                      placeholderTextColor={colors.mutedForeground}
+                      multiline
+                      style={{ backgroundColor: colors.white, borderRadius: 10, padding: 10, fontSize: 13, color: colors.foreground, minHeight: 54, textAlignVertical: "top" }}
+                    />
+                  )}
+                </View>
+              )}
+
+              {alternativeSlots.length > 0 && (
+                <View style={{ gap: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground }}>Créneaux proches disponibles</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      {alternativeSlots.map((s) => (
+                        <AnimatedPressable
+                          key={s.start}
+                          onPress={() => {
+                            const d = new Date(s.start);
+                            setDate(d);
+                            setSelectedSlotStart(s.start);
+                            setPendingOverride(null);
+                            setAlternativeSlots([]);
+                          }}
+                          style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.muted }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>
+                            {new Date(s.start).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}{" "}
+                            {new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                          </Text>
+                        </AnimatedPressable>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
 
               {isEditing && (
                 <View style={{ gap: 8 }}>
@@ -454,7 +668,15 @@ export function NewAppointmentSheet({
               <LoadingButton
                 loading={saving}
                 onPress={handleSubmit}
-                label={isEditing ? "Enregistrer les modifications" : "Créer le rendez-vous"}
+                label={
+                  isEditing
+                    ? "Enregistrer les modifications"
+                    : pendingOverride?.mode === "conflict"
+                      ? "Forcer malgré le conflit"
+                      : pendingOverride?.mode === "outside_hours"
+                        ? "Ajouter hors horaires"
+                        : "Créer le rendez-vous"
+                }
               />
             </View>
           )}
