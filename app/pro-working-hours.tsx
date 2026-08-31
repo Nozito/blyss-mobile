@@ -22,6 +22,9 @@ import {
   emptyWorkingWeek as emptyWeek,
 } from "@/lib/workingHours";
 
+// NOTE: route top-level (et non app/(pro)/settings/working-hours) car
+// (pro)/_layout.tsx est un NativeTabs qui ne gère pas les sous-dossiers.
+// Même pattern que pro-subscription. Navigable via router.push("/pro-working-hours").
 export default function ProWorkingHoursScreen() {
   const router = useRouter();
   const colors = useThemeColors();

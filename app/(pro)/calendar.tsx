@@ -961,6 +961,11 @@ export default function ProCalendarScreen() {
     }
   };
 
+  // Planning "semaine type" = génération en masse de slots précréés. N'a de sens
+  // qu'en mode legacy (useNewEngine === false) : avec le moteur, les créneaux
+  // découlent des working_hours.
+  // TODO 4.6 — supprimer applyWeeklyPlanning / doApplyWeeklyPlanning / la modale
+  // quand les slots legacy seront retirés.
   const applyWeeklyPlanning = () => {
     if (activeDays.length === 0 || planningSlots.length === 0) return;
 
@@ -1974,7 +1979,9 @@ export default function ProCalendarScreen() {
         </View>
       </Modal>
 
-      {/* ── WEEKLY PLANNING MODAL ── */}
+      {/* ── WEEKLY PLANNING MODAL (legacy uniquement) ── */}
+      {/* TODO 4.6 — à supprimer avec les slots legacy. Jamais ouverte en mode
+          moteur : la carte "Planning" pointe alors vers pro-working-hours. */}
       <Modal visible={showPlanningModal} onClose={() => setShowPlanningModal(false)} bottomSheet noPadding maxHeight="90%">
         <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28, flex: 1 }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />

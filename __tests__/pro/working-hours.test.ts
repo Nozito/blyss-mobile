@@ -52,6 +52,14 @@ describe("validateWorkingHours", () => {
     ).toMatch(/chevauchent/);
   });
 
+  it("régression — chevauchement 09:00-12:00 + 11:00-13:00 le même jour", () => {
+    const err = validateWorkingHours([
+      { weekday: 2, ranges: [{ start_time: "09:00", end_time: "12:00" }, { start_time: "11:00", end_time: "13:00" }] },
+    ]);
+    expect(err).toMatch(/chevauchent/);
+    expect(err).toMatch(/Mardi/);
+  });
+
   it("WORKING_HOURS_TIMES couvre 06:00 → 23:45 par pas de 15 min", () => {
     expect(WORKING_HOURS_TIMES[0]).toBe("06:00");
     expect(WORKING_HOURS_TIMES[WORKING_HOURS_TIMES.length - 1]).toBe("23:45");
