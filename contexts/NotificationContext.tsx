@@ -199,6 +199,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
       const reservationId = data?.reservation_id;
+      const requestId = data?.request_id;
       const notifType = data?.type as string | undefined;
 
       // Marque la notif correspondante comme lue (local + serveur) — sans ça, une
@@ -221,7 +222,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       });
 
       if (user?.role === "client") {
-        if (reservationId) {
+        if (notifType === "booking_reschedule_proposed" && requestId) {
+          router.push(`/reschedule-request/${String(requestId)}` as never);
+        } else if (reservationId) {
           router.push(`/booking/${String(reservationId)}` as never);
         } else {
           router.push("/(client)/notifications" as never);
