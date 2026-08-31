@@ -42,6 +42,7 @@ import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
 import { useDebounce } from "@/hooks/useDebounce";
+import { NewAppointmentSheet, type EditableAppointment } from "@/components/screens/pro/calendar/NewAppointmentSheet";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -466,6 +467,8 @@ export default function ProCalendarScreen() {
   const [showUnavailModal, setShowUnavailModal] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
+  const [showNewAppt, setShowNewAppt] = useState(false);
+  const [editingAppt, setEditingAppt] = useState<EditableAppointment | null>(null);
 
   const [newSlotTime, setNewSlotTime] = useState("09:00");
   const [newSlotDuration, setNewSlotDuration] = useState(60);
@@ -820,6 +823,37 @@ export default function ProCalendarScreen() {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible d'annuler ce rendez-vous", "error");
     }
+  };
+
+  const openEditAppointment = (apt: Appointment) => {
+    const aptDate = new Date(apt.date);
+    const [h, m] = String(apt.time).split(":");
+    aptDate.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+    setEditingAppt({
+      id: apt.id,
+      clientLabel: apt.client_name ?? `${apt.client_first_name ?? ""} ${apt.client_last_name ?? ""}`.trim(),
+      prestationId: null,
+      date: aptDate,
+      durationMinutes: parseDuration(apt.duration),
+    });
+    setSelectedApt(null);
+    setShowNewAppt(true);
+  };
+
+  const handleAppointmentSaved = (info?: { proposalSent?: boolean }) => {
+    void fetchMonthData(selectedYear, selectedMonth, { silent: true });
+    void fetchSlots(selectedDateStr, { silent: true });
+    // Un report proposé par la pro ne modifie pas le RDV tant que la cliente
+    // n'a pas accepté — le refetch ci-dessus continuera donc d'afficher
+    // l'horaire d'origine, ce qui est le comportement attendu.
+    showToast(
+      info?.proposalSent
+        ? "Proposition envoyée à la cliente, en attente de confirmation"
+        : editingAppt
+          ? "Rendez-vous modifié"
+          : "Rendez-vous créé",
+      "success"
+    );
   };
 
   const handleNoShow = async (apt: Appointment) => {
@@ -1203,13 +1237,22 @@ export default function ProCalendarScreen() {
               {selectedDateLabel}
             </Text>
           </View>
-          <AnimatedPressable
-            onPress={() => setShowAddSlot(true)}
-            style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
-          >
-            <Ionicons name="add" size={16} color={colors.onColor} />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Créneau</Text>
-          </AnimatedPressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <AnimatedPressable
+              onPress={() => { setEditingAppt(null); setShowNewAppt(true); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.pro, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
+            >
+              <Ionicons name="person-add-outline" size={14} color={colors.onColor} />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>RDV</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              onPress={() => setShowAddSlot(true)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
+            >
+              <Ionicons name="add" size={16} color={colors.onColor} />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Créneau</Text>
+            </AnimatedPressable>
+          </View>
         </View>
 
         {/* ── ABSENCE BANNER ── */}
@@ -1611,6 +1654,25 @@ export default function ProCalendarScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 15, fontWeight: "700", color: colors.warningText }}>Cliente non venue</Text>
                         <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>Enregistrer l'absence</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                    </AnimatedPressable>
+                    <View style={{ height: 1, backgroundColor: colors.border }} />
+                  </>
+                )}
+
+                {getAptStatus(selectedApt) === "pending" && (
+                  <>
+                    <AnimatedPressable
+                      onPress={() => openEditAppointment(selectedApt)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: withAlpha(colors.pro, 0.12), alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="create-outline" size={22} color={colors.pro} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Modifier le rendez-vous</Text>
+                        <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>Changer la date, l'heure ou la prestation</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
                     </AnimatedPressable>
@@ -2039,6 +2101,14 @@ export default function ProCalendarScreen() {
           </View>
         </View>
       </RNModal>
+
+      {/* ── NEW / EDIT APPOINTMENT SHEET ── */}
+      <NewAppointmentSheet
+        visible={showNewAppt}
+        onClose={() => { setShowNewAppt(false); setEditingAppt(null); }}
+        onSaved={handleAppointmentSaved}
+        editing={editingAppt}
+      />
 
     </View>
   );

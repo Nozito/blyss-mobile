@@ -39,6 +39,7 @@ const NOTIF_CFG: Record<string, { icon: React.ComponentProps<typeof Ionicons>["n
   promotional:       { icon: "gift-outline",             color: "#FF2D55", bg: "rgba(255,45,85,.12)" },
   no_show:           { icon: "close-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
   slot_available:    { icon: "calendar-outline",         color: "#34C759", bg: "rgba(52,199,89,.12)" },
+  booking_reschedule_proposed: { icon: "swap-horizontal-outline", color: "#FF9500", bg: "rgba(255,149,0,.12)" },
   recall:            { icon: "refresh-outline",          color: "#5856D6", bg: "rgba(88,86,214,.12)" },
   default:           { icon: "notifications-outline",    color: "#8E8E93", bg: "rgba(142,142,147,.12)" },
 };
@@ -252,7 +253,10 @@ export default function ClientNotificationsScreen() {
                             // la plus attendue d'un centre de notifications (aller voir le
                             // rendez-vous concerné) était absente.
                             const reservationId = notif.data?.reservation_id;
-                            if (reservationId != null) {
+                            const requestId = notif.data?.request_id;
+                            if (notif.type === "booking_reschedule_proposed" && requestId != null) {
+                              router.push(`/reschedule-request/${String(requestId)}` as never);
+                            } else if (reservationId != null) {
                               router.push(`/booking/${String(reservationId)}` as never);
                             }
                           }}

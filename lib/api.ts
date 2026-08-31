@@ -571,6 +571,38 @@ export const proApi = {
 
   getClients: () => apiCall<unknown[]>("/api/pro/clients"),
 
+  // Unlike getClients (only clients who already have a reservation with this
+  // pro), this searches every app client — used to pick a client when the
+  // pro manually creates an appointment for someone booking with her for
+  // the first time.
+  searchClients: (q: string) =>
+    apiCall<{ id: number; first_name: string; last_name: string; phone_number: string | null; email: string; profile_photo: string | null }[]>(
+      `/api/pro/clients/search?q=${encodeURIComponent(q)}`
+    ),
+
+  createAppointment: (data: {
+    client_id: number;
+    prestation_id: number;
+    start_datetime: string;
+    end_datetime: string;
+    early_execution_requested?: boolean;
+  }) => apiCall<{ id: number; price: number }>("/api/pro/appointments", { method: "POST", body: JSON.stringify(data) }),
+
+  // Ne modifie plus directement le RDV : crée une proposition que la cliente
+  // doit explicitement accepter. La réponse ne contient PAS le nouveau créneau
+  // confirmé — seulement l'id de la proposition en attente et sa date d'expiration.
+  updateAppointment: (
+    id: number,
+    data: {
+      start_datetime: string;
+      end_datetime: string;
+      prestation_id?: number;
+      reason?: string;
+      initiated_via?: "app" | "phone";
+    }
+  ): Promise<ApiResponse<{ request_id: number; expires_at: string }>> =>
+    apiCall(`/api/pro/appointments/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
   getSubscription: () =>
     apiCall<{
       id: number;
@@ -784,6 +816,28 @@ export const clientApi = {
     apiCall(`/api/client/my-booking/${id}/reschedule`, { method: "PATCH", body: JSON.stringify(data) }),
   getAvailableSlots: (proId: number, date: string): Promise<ApiResponse<Array<{ id: number; time: string }>>> =>
     apiCall(`/api/slots/available/${proId}/${date}`),
+  getRescheduleRequest: (
+    id: number
+  ): Promise<ApiResponse<{
+    request: {
+      id: number;
+      reservation_id: number;
+      status: "pending" | "accepted" | "declined" | "expired" | "cancelled";
+      expires_at: string;
+      proposed_start_datetime: string;
+      proposed_end_datetime: string;
+      proposed_prestation_id: number | null;
+      proposed_price: number | null;
+      original_start_datetime: string;
+      original_end_datetime: string;
+      initiated_via: "app" | "phone";
+      reason: string | null;
+    };
+  }>> => apiCall(`/api/client/reschedule-requests/${id}`),
+  acceptRescheduleRequest: (id: number): Promise<ApiResponse<{ reservationId: number }>> =>
+    apiCall(`/api/client/reschedule-requests/${id}/accept`, { method: "PATCH" }),
+  declineRescheduleRequest: (id: number): Promise<ApiResponse<{ reservationId: number }>> =>
+    apiCall(`/api/client/reschedule-requests/${id}/decline`, { method: "PATCH" }),
 };
 
 // ── Payments API ──────────────────────────────────────────────────────────────
