@@ -34,6 +34,17 @@ export interface User {
   service_radius_km?: number | null;
   service_area_label?: string | null;
   acceptance_conditions?: { text: string; accepted: boolean }[] | null;
+  /** Chantier 4 : true ⇒ la pro est sur le moteur de disponibilités (working_hours). */
+  uses_availability_engine?: boolean;
+}
+
+export interface WorkingHoursRange {
+  start_time: string; // "HH:MM"
+  end_time: string; // "HH:MM"
+}
+export interface WorkingHoursDay {
+  weekday: number; // 0 = dimanche … 6 = samedi
+  ranges: WorkingHoursRange[];
 }
 
 export interface LoginCredentials {
@@ -775,6 +786,35 @@ export const proApi = {
     apiCall(`/api/pro/slots/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   deleteSlot: (id: number) => apiCall(`/api/pro/slots/${id}`, { method: "DELETE" }),
+
+  // ── Horaires d'ouverture (chantier 4) ──────────────────────────────────────
+  getWorkingHours: (): Promise<ApiResponse<{ days: WorkingHoursDay[] }>> =>
+    apiCall("/api/pro/working-hours"),
+
+  /**
+   * Remplace toutes les plages. `migrated: true` ⇒ 1ʳᵉ sauvegarde non vide,
+   * la pro vient de basculer sur le moteur de disponibilités.
+   */
+  setWorkingHours: async (
+    days: WorkingHoursDay[]
+  ): Promise<
+    | { success: true; migrated: boolean }
+    | { success: false; error: string; code?: string }
+  > => {
+    const { response, json } = await rawApiCall<{
+      data?: { migrated: boolean };
+      error?: string;
+      message?: string;
+    }>("/api/pro/working-hours", { method: "PUT", body: JSON.stringify({ days }) });
+    if (response.ok && json?.data) {
+      return { success: true, migrated: !!json.data.migrated };
+    }
+    return {
+      success: false,
+      error: json?.message ?? json?.error ?? "Impossible d'enregistrer les horaires",
+      code: json?.error,
+    };
+  },
 
   updateReservationStatus: (id: number, status: "completed" | "cancelled") =>
     apiCall(`/api/pro/reservations/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),

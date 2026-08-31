@@ -22,8 +22,8 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { proApi, nailTechApi } from "@/lib/api";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { proApi, nailTechApi, type AvailabilitySlot } from "@/lib/api";
 import { toLocalDate } from "@/lib/dateUtils";
 import {
   isCalendarSyncEnabled,
@@ -517,6 +517,58 @@ export default function ProCalendarScreen() {
   const selectedMonth = selectedDate.getMonth();
   const selectedDateStr = toLocalDate(selectedDate);
 
+  // ── Chantier 4 : bascule vers le moteur de disponibilités ──────────────────
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const r = await proApi.getProfile();
+      return r.success && r.data ? r.data : null;
+    },
+    staleTime: 60_000,
+  });
+  const useNewEngine = profile?.uses_availability_engine ?? false;
+
+  const { data: workingHoursData } = useQuery({
+    queryKey: ["working-hours"],
+    queryFn: async () => {
+      const r = await proApi.getWorkingHours();
+      return r.success && r.data ? r.data : null;
+    },
+    staleTime: 60_000,
+  });
+  const hasWorkingHours = (workingHoursData?.days ?? []).some((d) => d.ranges.length > 0);
+  const showOnboardingBanner = !useNewEngine && !hasWorkingHours;
+
+  // Prestation de référence pour interroger la dispo (la plus courte = granularité max).
+  const { data: refServiceId } = useQuery({
+    queryKey: ["ref-service"],
+    enabled: useNewEngine,
+    queryFn: async () => {
+      const r = await proApi.getServices();
+      const list = (r.success && Array.isArray(r.data)
+        ? (r.data as { id: number; duration_minutes: number; active?: boolean }[])
+        : []
+      ).filter((s) => s.active !== false);
+      if (list.length === 0) return null;
+      return list.slice().sort((a, b) => (a.duration_minutes ?? 0) - (b.duration_minutes ?? 0))[0].id;
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: engineSlots, isLoading: engineSlotsLoading } = useQuery({
+    queryKey: ["availability", "self", selectedDateStr, refServiceId],
+    enabled: useNewEngine && !!refServiceId && !!profile,
+    queryFn: async (): Promise<AvailabilitySlot[]> => {
+      const r = await proApi.getAvailability({
+        proId: profile!.id,
+        serviceIds: [refServiceId!],
+        fromDate: selectedDateStr,
+        toDate: selectedDateStr,
+      });
+      return r.success && r.data ? (r.data.days.find((d) => d.date === selectedDateStr)?.slots ?? []) : [];
+    },
+  });
+
   const fetchMonthData = useCallback(async (year: number, month: number, opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
@@ -552,7 +604,10 @@ export default function ProCalendarScreen() {
   }, []);
 
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
-  useEffect(() => { void fetchSlots(selectedDateStr); }, [fetchSlots, selectedDateStr]);
+  useEffect(() => {
+    if (useNewEngine) return; // moteur : la dispo vient de getAvailability (useQuery), pas des slots
+    void fetchSlots(selectedDateStr);
+  }, [fetchSlots, selectedDateStr, useNewEngine]);
 
   // Search spans every reservation (past + future), not just the currently
   // loaded month — proApi.getCalendar() is always date-bounded, so this goes
@@ -845,7 +900,8 @@ export default function ProCalendarScreen() {
     overrideApplied?: "outside_hours" | "conflict" | null;
   }) => {
     void fetchMonthData(selectedYear, selectedMonth, { silent: true });
-    void fetchSlots(selectedDateStr, { silent: true });
+    if (useNewEngine) void qc.invalidateQueries({ queryKey: ["availability"] });
+    else void fetchSlots(selectedDateStr, { silent: true });
     // Un report proposé par la pro ne modifie pas le RDV tant que la cliente
     // n'a pas accepté — le refetch ci-dessus continuera donc d'afficher
     // l'horaire d'origine, ce qui est le comportement attendu.
@@ -1217,14 +1273,16 @@ export default function ProCalendarScreen() {
         {/* ── PLANNING & ABSENCES CARDS ── */}
         <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
           <AnimatedPressable
-            onPress={() => setShowPlanningModal(true)}
+            onPress={() => (useNewEngine ? router.push("/pro-working-hours" as never) : setShowPlanningModal(true))}
             style={{ flex: 1, backgroundColor: PLANNING.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: PLANNING.border }}
           >
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="calendar-number-outline" size={20} color={PLANNING.color} />
+              <Ionicons name={useNewEngine ? "time-outline" : "calendar-number-outline"} size={20} color={PLANNING.color} />
             </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>Planning</Text>
-            <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>Semaine type & horaires</Text>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>{useNewEngine ? "Horaires" : "Planning"}</Text>
+            <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>
+              {useNewEngine ? "Tes horaires d'ouverture" : "Semaine type & horaires"}
+            </Text>
           </AnimatedPressable>
           <AnimatedPressable
             onPress={() => setShowUnavailModal(true)}
@@ -1253,13 +1311,15 @@ export default function ProCalendarScreen() {
               <Ionicons name="person-add-outline" size={14} color={colors.onColor} />
               <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>RDV</Text>
             </AnimatedPressable>
-            <AnimatedPressable
-              onPress={() => setShowAddSlot(true)}
-              style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
-            >
-              <Ionicons name="add" size={16} color={colors.onColor} />
-              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Créneau</Text>
-            </AnimatedPressable>
+            {!useNewEngine && (
+              <AnimatedPressable
+                onPress={() => setShowAddSlot(true)}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
+              >
+                <Ionicons name="add" size={16} color={colors.onColor} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Créneau</Text>
+              </AnimatedPressable>
+            )}
           </View>
         </View>
 
@@ -1277,8 +1337,64 @@ export default function ProCalendarScreen() {
           </View>
         )}
 
+        {/* ── ONBOARDING BANNER (bascule chantier 4) ── */}
+        {showOnboardingBanner && (
+          <View style={{ backgroundColor: withAlpha(colors.primary, 0.08), borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.25), gap: 10 }}>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
+              <Text style={{ flex: 1, fontSize: 13, color: colors.foreground, lineHeight: 18 }}>
+                Configure tes horaires d'ouverture pour activer le nouveau moteur de disponibilités —
+                tes créneaux réservables seront calculés automatiquement, plus besoin de les créer un par un.
+              </Text>
+            </View>
+            <AnimatedPressable
+              onPress={() => router.push("/pro-working-hours" as never)}
+              style={{ alignSelf: "flex-start", backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9 }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Configurer mes horaires</Text>
+            </AnimatedPressable>
+          </View>
+        )}
+
         {/* ── SLOTS ── */}
-        {slotsLoading ? (
+        {useNewEngine ? (
+          engineSlotsLoading ? (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : !refServiceId ? (
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, marginBottom: 16, gap: 6 }}>
+              <Ionicons name="pricetag-outline" size={36} color={colors.border} />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucune prestation active</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Ajoute une prestation pour voir tes créneaux disponibles.</Text>
+            </View>
+          ) : (engineSlots ?? []).length === 0 ? (
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, marginBottom: 16, gap: 6 }}>
+              <Ionicons name="time-outline" size={36} color={colors.border} />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun créneau libre ce jour</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Selon tes horaires d'ouverture, ton planning et tes absences.</Text>
+            </View>
+          ) : (
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card, marginBottom: 16 }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+                Créneaux libres ({(engineSlots ?? []).length})
+              </Text>
+              {(engineSlots ?? []).map((s, i) => {
+                const start = new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                const end = new Date(s.end).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                return (
+                  <View key={s.start}>
+                    {i > 0 && <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }} />}
+                    <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} />
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>{start} – {end}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )
+        ) : slotsLoading ? (
           <View style={{ padding: 20, alignItems: "center" }}>
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
