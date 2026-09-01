@@ -464,6 +464,10 @@ export default function ProCalendarScreen() {
 
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [addingSlot, setAddingSlot] = useState(false);
+  // Chantier design (lot a) — les outils « slots précréés » (legacy) sont repliés
+  // derrière un dépliant tant que la pro n'a pas basculé sur le moteur. Filet le
+  // temps de la migration ; à retirer avec les slots (backend 4.6b).
+  const [showLegacyTools, setShowLegacyTools] = useState(false);
   const [showUnavailModal, setShowUnavailModal] = useState(false);
   const [showPlanningModal, setShowPlanningModal] = useState(false);
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
@@ -537,7 +541,9 @@ export default function ProCalendarScreen() {
     staleTime: 60_000,
   });
   const hasWorkingHours = (workingHoursData?.days ?? []).some((d) => d.ranges.length > 0);
-  const showOnboardingBanner = !useNewEngine && !hasWorkingHours;
+  // Bandeau de bascule : visible pour toute pro pas encore sur le moteur, tant
+  // qu'elle n'a pas configuré ses horaires (l'enregistrement bascule le flag).
+  const showBasculeBanner = !useNewEngine && !hasWorkingHours;
 
   // Prestation de référence pour interroger la dispo (la plus courte = granularité max).
   const { data: refServiceId } = useQuery({
@@ -1278,15 +1284,15 @@ export default function ProCalendarScreen() {
         {/* ── PLANNING & ABSENCES CARDS ── */}
         <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
           <AnimatedPressable
-            onPress={() => (useNewEngine ? router.push("/pro-working-hours" as never) : setShowPlanningModal(true))}
+            onPress={() => router.push("/pro-working-hours" as never)}
             style={{ flex: 1, backgroundColor: PLANNING.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: PLANNING.border }}
           >
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name={useNewEngine ? "time-outline" : "calendar-number-outline"} size={20} color={PLANNING.color} />
+              <Ionicons name="time-outline" size={20} color={PLANNING.color} />
             </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>{useNewEngine ? "Horaires" : "Planning"}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>Horaires</Text>
             <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>
-              {useNewEngine ? "Tes horaires d'ouverture" : "Semaine type & horaires"}
+              Tes horaires d'ouverture
             </Text>
           </AnimatedPressable>
           <AnimatedPressable
@@ -1316,7 +1322,7 @@ export default function ProCalendarScreen() {
               <Ionicons name="person-add-outline" size={14} color={colors.onColor} />
               <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>RDV</Text>
             </AnimatedPressable>
-            {!useNewEngine && (
+            {!useNewEngine && showLegacyTools && (
               <AnimatedPressable
                 onPress={() => setShowAddSlot(true)}
                 style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
@@ -1342,21 +1348,22 @@ export default function ProCalendarScreen() {
           </View>
         )}
 
-        {/* ── ONBOARDING BANNER (bascule chantier 4) ── */}
-        {showOnboardingBanner && (
-          <View style={{ backgroundColor: withAlpha(colors.primary, 0.08), borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.25), gap: 10 }}>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
-              <Text style={{ flex: 1, fontSize: 13, color: colors.foreground, lineHeight: 18 }}>
-                Configure tes horaires d'ouverture pour activer le nouveau moteur de disponibilités —
-                tes créneaux réservables seront calculés automatiquement, plus besoin de les créer un par un.
-              </Text>
+        {/* ── BANDEAU DE BASCULE (chantier design lot a) ── */}
+        {showBasculeBanner && (
+          <View style={{ backgroundColor: withAlpha(colors.primary, 0.1), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1.5, borderColor: withAlpha(colors.primary, 0.35), gap: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.foreground }}>Passe à la nouvelle gestion de tes horaires</Text>
             </View>
+            <Text style={{ fontSize: 13, color: colors.foreground, lineHeight: 19 }}>
+              Configure tes horaires d'ouverture une fois : tes créneaux réservables sont ensuite calculés
+              automatiquement, plus besoin de les créer un par un.
+            </Text>
             <AnimatedPressable
               onPress={() => router.push("/pro-working-hours" as never)}
-              style={{ alignSelf: "flex-start", backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9 }}
+              style={{ alignSelf: "stretch", backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center" }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Configurer mes horaires</Text>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.onColor }}>Configurer mes horaires</Text>
             </AnimatedPressable>
           </View>
         )}
@@ -1399,22 +1406,45 @@ export default function ProCalendarScreen() {
               })}
             </View>
           )
-        ) : slotsLoading ? (
-          <View style={{ padding: 20, alignItems: "center" }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        ) : slots.length === 0 ? (
-          <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, marginBottom: 16, gap: 6 }}>
-            <Ionicons name="time-outline" size={36} color={colors.border} />
-            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun créneau ce jour</Text>
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Appuie sur « + Créneau » pour en ajouter</Text>
-          </View>
         ) : (
-          <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card, marginBottom: 16 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
-              Créneaux ({slots.length})
-            </Text>
-            {slots.map((slot, i) => {
+          <>
+            <AnimatedPressable
+              onPress={() => setShowLegacyTools((v) => !v)}
+              accessibilityLabel="Gérer mes anciens créneaux"
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}
+            >
+              <Ionicons name="construct-outline" size={15} color={colors.mutedForeground} />
+              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>Gérer mes anciens créneaux</Text>
+              <Ionicons name={showLegacyTools ? "chevron-up" : "chevron-down"} size={16} color={colors.mutedForeground} />
+            </AnimatedPressable>
+            {showLegacyTools && (
+              <View style={{ marginBottom: 16, gap: 10 }}>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>
+                  Ces créneaux précréés ne servent plus une fois tes horaires d&apos;ouverture configurés. En attendant, tu peux encore les gérer ici.
+                </Text>
+                <AnimatedPressable
+                  onPress={() => setShowPlanningModal(true)}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
+                >
+                  <Ionicons name="calendar-number-outline" size={14} color={colors.foreground} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>Planning semaine type</Text>
+                </AnimatedPressable>
+                {slotsLoading ? (
+                  <View style={{ padding: 20, alignItems: "center" }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : slots.length === 0 ? (
+                  <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, gap: 6 }}>
+                    <Ionicons name="time-outline" size={36} color={colors.border} />
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun créneau ce jour</Text>
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Appuie sur « + Créneau » pour en ajouter</Text>
+                  </View>
+                ) : (
+                  <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card }}>
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+                      Créneaux ({slots.length})
+                    </Text>
+                    {slots.map((slot, i) => {
               const isBooked = !slot.isAvailable && !slot.isPast;
               const isOpen = slot.isAvailable && slot.isActive && !slot.isPast;
               const isEditing = editingSlotId === slot.id;
@@ -1536,7 +1566,11 @@ export default function ProCalendarScreen() {
                 </View>
               );
             })}
-          </View>
+                  </View>
+                )}
+              </View>
+            )}
+          </>
         )}
 
         {/* ── APPOINTMENTS ── */}
