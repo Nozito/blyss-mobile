@@ -1,8 +1,25 @@
 # Design 4 — Dépréciation des slots précréés
 
-> Statut : **proposition — attend validation CTO**. Fait suite aux chantiers 1 & 3
-> (moteur de disponibilités mergé). Objectif : sortir du modèle `slots` précréés
-> manuellement au profit de `working_hours` + `getAvailability`, **sans rupture**.
+> Statut : **validé CTO — 4.1 → 4.6a livrés et mergés**. 4.6b (suppression
+> physique `slots` / `slot_id`) est prêt mais **différé** tant que 100 % des pros
+> actives ne sont pas migrées. Fait suite aux chantiers 1 & 3 (moteur de
+> disponibilités mergé). Objectif : sortir du modèle `slots` précréés manuellement
+> au profit de `working_hours` + `getAvailability`, **sans rupture**.
+
+## État au 2026-09-01
+
+| Sous-chantier | PR | Statut |
+|---|---|---|
+| 4.1 — flag `uses_availability_engine` + adaptateur `slots → AvailabilityResponse` | blyss-app #7 | ✅ mergé |
+| 4.2 — `migrate-pros-to-availability-engine.ts` | blyss-app #8 | ✅ mergé |
+| 4.3 — éditeur `working_hours` mobile (`app/pro-working-hours.tsx`) | blyss-mobile #3 | ✅ mergé |
+| 4.4 — `calendar.tsx` mode moteur (lecture seule) | blyss-mobile #3 | ✅ mergé |
+| 4.5 — bannière d'onboarding pros existantes | blyss-mobile #3 | ✅ mergé |
+| 4.6a — audit + contrainte `EXCLUDE` (non appliquée) + dépréciation douce des routes | blyss-app #9 | ✅ mergé |
+| 4.6b prep — `cleanup-legacy-slots.ts` + migration `drop_slot_id` auto-gardée + flag `SLOTS_HARD_DEPRECATION` + seed sans chevauchement | blyss-app #9 | ✅ mergé |
+| 4.6b exécution — `DELETE FROM slots` / `DROP COLUMN slot_id` / `DROP TABLE slots` / suppression des routes | — | ⏸️ bloqué : **0/16 pros actives migrées** |
+
+Détail d'implémentation et procédure post-migration : voir [§6](#6-implémentation-46--procédure-de-sortie).
 
 ---
 
@@ -193,25 +210,81 @@ Maquette (vue semaine, 7 lignes) :
 
 ## 4. Ordre de livraison proposé
 
-| PR | Contenu | Risque |
+| PR | Contenu | Livré |
 |---|---|---|
-| 4.1 | migration `uses_availability_engine` + `AVAILABILITY_ENGINE_FORCE_OFF` + adaptateur `slots → AvailabilityResponse` dans `getAvailability` (mode `false`) + tests | faible — défaut `false`, non-régression |
-| 4.2 | endpoints `GET/PUT /api/pro/working-hours` + validation + tests + E2E | faible |
-| 4.3 | mobile : `working-hours.tsx` + `lib/api.ts` + entrée depuis `calendar.tsx` | moyen (nouvel écran) |
-| 4.4 | mobile : `calendar.tsx` mode `uses_availability_engine` (vue lecture seule, `+ Indisponibilité`, retrait des sheets slots) derrière le flag | moyen |
-| 4.5 | bannière d'onboarding pros existantes + bascule phase 2 | moyen |
-| 4.6 | (après metrics) migration forcée + **suppression** flag / routes `slots` / table `slots` / `slot_id` + contrainte `EXCLUDE USING gist` | élevé — PR dédiée, script d'audit préalable |
+| 4.1 | migration `uses_availability_engine` + kill-switch + adaptateur `slots → AvailabilityResponse` dans `getAvailability` (mode `false`) + tests | ✅ blyss-app #7 |
+| 4.2 | endpoints `GET/PUT /api/pro/working-hours` + validation + `migrate-pros-to-availability-engine.ts` + tests/E2E | ✅ blyss-app #8 |
+| 4.3 | mobile : `app/pro-working-hours.tsx` + `lib/api.ts` + entrée depuis `calendar.tsx` | ✅ blyss-mobile #3 |
+| 4.4 | mobile : `calendar.tsx` mode `uses_availability_engine` (vue lecture seule) derrière le flag | ✅ blyss-mobile #3 |
+| 4.5 | bannière d'onboarding pros existantes | ✅ blyss-mobile #3 |
+| 4.6a | audit `audit-slots-and-overlaps.ts` + migration `EXCLUDE USING gist` (non appliquée) + dépréciation douce (`guardLegacySlotWrite` → 410) | ✅ blyss-app #9 |
+| 4.6b prep | `cleanup-legacy-slots.ts` + migration `drop_slot_id` auto-gardée + flag `SLOTS_HARD_DEPRECATION` + seed sophie sans chevauchement | ✅ blyss-app #9 |
+| 4.6b exécution | migration forcée des pros restantes + `DELETE FROM slots` + `DROP COLUMN slot_id` + `DROP TABLE slots` + suppression des routes legacy + purge des réfs `slot_id` dans le code | ⏸️ à faire quand `active_migrated == active_total` |
 
 ---
 
-## 5. Questions ouvertes pour le CTO
+## 5. Décisions CTO (questions initialement ouvertes)
 
-1. **Granularité du flag** : par pro (proposé) ou global on/off ? Par pro permet
-   une bascule douce mais ajoute un `if` dans `calendar.tsx` et l'adaptateur.
-2. **`slots` ouverts non réservés à la bascule** : suppression sèche (proposé,
-   après snapshot) ou conservation en `blocked` pour rollback ?
-3. **Éditeur `working_hours` = point d'entrée de la bascule** (proposé) ou étape
-   séparée dans un onboarding dédié ?
-4. **Indisponibilité "récurrente"** (ex. "fermé tous les mercredis après-midi") :
-   dans le périmètre de cet écran (une 4ᵉ plage "pause") ou plus tard ? Le modèle
-   `working_hours` actuel le gère nativement (il suffit de ne pas créer la plage).
+1. **Granularité du flag** → **par pro** (`users.uses_availability_engine`). Un seul
+   `if (useNewEngine)` en haut de `calendar.tsx`, `NewAppointmentSheet` inchangé
+   grâce à l'adaptateur.
+2. **`slots` ouverts non réservés à la bascule** → **suppression sèche après
+   snapshot** (fichier JSON dans `backend/migration-snapshots/`), via
+   `--force-clear-open` (script 4.2) puis `cleanup-legacy-slots.ts` (4.6b).
+3. **Point d'entrée de la bascule** → **l'éditeur `working_hours`** : première
+   sauvegarde non vide ⇒ `uses_availability_engine = true` + `{ migrated: true }`
+   ⇒ toast d'explication mobile.
+4. **Indisponibilité récurrente** → **hors périmètre** : le modèle `working_hours`
+   la gère nativement (ne pas créer la plage). Pas de 4ᵉ plage "pause".
+
+---
+
+## 6. Implémentation 4.6 & procédure de sortie
+
+### 6.1 Scripts (repo `blyss-app`)
+
+| Script | Rôle | Sécurité |
+|---|---|---|
+| `backend/audit-slots-and-overlaps.ts` | lecture seule : avancement bascule, slots orphelins, résas sans `blocked_*`, paires en chevauchement bloquant `EXCLUDE` | aucun write |
+| `backend/migrate-pros-to-availability-engine.ts` | bascule les pros éligibles (working_hours + pas de slot ouvert à venir) ; `--dry-run`, `--pro`, `--limit`, `--force-clear-open` | snapshot avant tout write |
+| `backend/cleanup-legacy-slots.ts` | supprime les slots des pros **déjà migrées** ; `--execute` requis (dry-run par défaut), `--pro`, `--batch`, `--force-booked` | snapshot par pro, DELETE transactionnel, ignore les pros dont un slot est encore lié à une résa non annulée |
+
+### 6.2 Migrations (`supabase/migrations/`)
+
+| Fichier | Effet | État |
+|---|---|---|
+| `20260902000001_availability_engine.sql` | `working_hours`, colonnes `blocked_*` + backfill futur | appliquée |
+| `20260903000001_availability_engine_flag.sql` | `users.uses_availability_engine` | appliquée |
+| `20260904000001_reservations_no_overlap.sql` | contrainte `EXCLUDE USING gist (pro_id =, tstzrange(blocked_start, blocked_end) &&)` sur `confirmed`/`pending`, hors override `conflict` | **non appliquée** — prérequis : 0 paire chevauchante (re-seed sophie fait) |
+| `20260904000002_drop_reservations_slot_id.sql` | `DROP COLUMN reservations.slot_id` + `DROP INDEX idx_reservations_slot` | **auto-gardée** : `RAISE EXCEPTION` (rollback) tant qu'il reste une pro active legacy ou une résa non annulée avec `slot_id` |
+
+### 6.3 Flag `SLOTS_HARD_DEPRECATION`
+
+Env var backend, défaut `off`. À `true` : `guardLegacySlotWrite` renvoie `410
+SLOTS_DEPRECATED` **pour toutes les pros** (plus seulement les migrées) sur
+`POST /api/pro/slots`, `POST /api/slots/create`, `PATCH /api/pro/slots/:id`.
+Étape intermédiaire avant la suppression physique des routes.
+
+### 6.4 Procédure post-merge
+
+**Phase 1 — bascule progressive**
+```bash
+ts-node backend/migrate-pros-to-availability-engine.ts --dry-run
+ts-node backend/migrate-pros-to-availability-engine.ts --limit 10
+ts-node backend/audit-slots-and-overlaps.ts   # vérifie l'avancement
+```
+
+**Phase 2 — quand `active_migrated == active_total`**
+```bash
+node scripts/db.mjs seed                       # re-seed sophie (E2E)
+node scripts/db.mjs push                       # applique 20260904000001 + 000002
+ts-node backend/cleanup-legacy-slots.ts --execute
+# .env.prod : SLOTS_HARD_DEPRECATION=true  → redémarrage backend
+```
+
+**Phase 3 — PR de nettoyage final**
+- suppression des routes `POST /api/pro/slots`, `GET /api/slots/available/:proId/:date`, `PATCH/DELETE /api/pro/slots/:id`, routes `/api/slots/*` legacy
+- `DROP TABLE slots`
+- purge des ~53 références `slot_id` dans le code booking / reschedule / cancellation
+- retrait du flag `SLOTS_HARD_DEPRECATION` (devenu inconditionnel)
+- mise à jour de cette doc → chantier clos
