@@ -476,7 +476,7 @@ export function NewAppointmentSheet({
                   <View style={{ gap: 10 }}>
                     {computedSlots.length === 0 ? (
                       <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-                        Aucun créneau disponible ce jour-là selon tes horaires et ton planning.
+                        Aucun créneau disponible ce jour-là selon tes horaires d'ouverture et tes absences.
                       </Text>
                     ) : (
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -536,7 +536,7 @@ export function NewAppointmentSheet({
                   <Text style={{ fontWeight: "700", color: colors.foreground }}>
                     {endAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                   </Text>
-                  {" · "}{duration} min · sur place
+                  {" · "}{duration} min
                 </Text>
               </View>
 
