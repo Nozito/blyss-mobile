@@ -1050,7 +1050,7 @@ export default function ProCalendarScreen() {
       if (!res.success) throw new Error(res.error);
     } catch {
       setUnavailabilities(backup);
-      showToast("Impossible de supprimer cette indisponibilité", "error");
+      showToast("Impossible de supprimer cette absence", "error");
     }
   };
 
@@ -1297,7 +1297,7 @@ export default function ProCalendarScreen() {
               <Ionicons name="moon-outline" size={20} color={ABSENCES.color} />
             </View>
             <Text style={{ fontSize: 14, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
-            <Text style={{ fontSize: 11, color: ABSENCES.color, lineHeight: 15 }}>Congés & indisponibilités</Text>
+            <Text style={{ fontSize: 11, color: ABSENCES.color, lineHeight: 15 }}>Journées et plages bloquées</Text>
           </AnimatedPressable>
         </View>
 
@@ -1377,7 +1377,7 @@ export default function ProCalendarScreen() {
             <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, marginBottom: 16, gap: 6 }}>
               <Ionicons name="time-outline" size={36} color={colors.border} />
               <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun créneau libre ce jour</Text>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Selon tes horaires d'ouverture, ton planning et tes absences.</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Selon tes horaires d'ouverture et tes absences.</Text>
             </View>
           ) : (
             <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card, marginBottom: 16 }}>
@@ -1842,8 +1842,8 @@ export default function ProCalendarScreen() {
                   <Ionicons name="moon-outline" size={22} color={ABSENCES.color} />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 18, fontWeight: "800", color: ABSENCES.colorDark }}>Absences & congés</Text>
-                  <Text style={{ fontSize: 12, color: ABSENCES.color, marginTop: 1 }}>Bloque des périodes d'indisponibilité</Text>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
+                  <Text style={{ fontSize: 12, color: ABSENCES.color, marginTop: 1 }}>Bloque une journée ou une période</Text>
                 </View>
               </View>
               <AnimatedIconButton
