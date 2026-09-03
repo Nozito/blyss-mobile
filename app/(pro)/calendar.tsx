@@ -1205,7 +1205,10 @@ export default function ProCalendarScreen() {
         )}
 
         {/* ── PLANNING & ABSENCES CARDS ── */}
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
+        {/* Même grille pour les deux : la zone de sous-titre réserve 2 lignes
+            (minHeight) pour que les cartes aient la même hauteur et des bas
+            alignés, que le libellé tienne sur 1 ou 2 lignes. */}
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 16, alignItems: "stretch" }}>
           {([
             { icon: "time-outline", title: "Horaires", sub: "Tes horaires d'ouverture", onPress: () => router.push("/pro-working-hours" as never) },
             { icon: "moon-outline", title: "Absences", sub: "Journées et plages bloquées", onPress: () => setShowUnavailModal(true) },
@@ -1219,7 +1222,7 @@ export default function ProCalendarScreen() {
                 <Ionicons name={c.icon} size={20} color={colors.foreground} />
               </View>
               <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>{c.title}</Text>
-              <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>{c.sub}</Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15, minHeight: 30 }}>{c.sub}</Text>
             </AnimatedPressable>
           ))}
         </View>
