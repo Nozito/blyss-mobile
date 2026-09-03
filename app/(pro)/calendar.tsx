@@ -1348,20 +1348,22 @@ export default function ProCalendarScreen() {
           </View>
         )}
 
-        {/* ── BANDEAU DE BASCULE (chantier design lot a) ── */}
+        {/* ── CARTE DE BASCULE — gestion des horaires ── */}
         {showBasculeBanner && (
-          <View style={{ backgroundColor: withAlpha(colors.primary, 0.1), borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1.5, borderColor: withAlpha(colors.primary, 0.35), gap: 12 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
-              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.foreground }}>Passe à la nouvelle gestion de tes horaires</Text>
+          <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 10, ...Shadows.card }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="time-outline" size={22} color={colors.foreground} />
             </View>
-            <Text style={{ fontSize: 13, color: colors.foreground, lineHeight: 19 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.foreground, textAlign: "center" }}>
+              Passe à la nouvelle gestion de tes horaires
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, lineHeight: 19, textAlign: "center" }}>
               Configure tes horaires d'ouverture une fois : tes créneaux réservables sont ensuite calculés
               automatiquement, plus besoin de les créer un par un.
             </Text>
             <AnimatedPressable
               onPress={() => router.push("/pro-working-hours" as never)}
-              style={{ alignSelf: "stretch", backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center" }}
+              style={{ alignSelf: "stretch", backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 2 }}
             >
               <Text style={{ fontSize: 14, fontWeight: "800", color: colors.onColor }}>Configurer mes horaires</Text>
             </AnimatedPressable>
