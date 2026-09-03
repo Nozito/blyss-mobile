@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, ScrollView, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { DateField } from "@/components/ui/DateField";
 import { useToast } from "@/components/ui/Toast";
-import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 import { toLocalDate } from "@/lib/dateUtils";
 import { proApi } from "@/lib/api";
@@ -40,23 +40,18 @@ export function AbsenceSheet({
   loading?: boolean;
 }) {
   const colors = useThemeColors();
-  const isDark = useIsDarkMode();
   const { showToast } = useToast();
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setStartDate(null);
     setEndDate(null);
     setReason("");
-    setShowStartPicker(false);
-    setShowEndPicker(false);
     setError(null);
   };
 
@@ -131,66 +126,24 @@ export function AbsenceSheet({
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16, gap: 16 }}>
           <View style={{ gap: 12 }}>
-            <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                Du
-              </Text>
-              <AnimatedPressable
-                onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}
-                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? colors.primary : colors.border, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-              >
-                <Text style={{ fontSize: 14, color: startDate ? colors.foreground : colors.mutedForeground, fontWeight: startDate ? "700" : "400" }}>
-                  {startDate ? startDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
-                </Text>
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-              </AnimatedPressable>
-              {showStartPicker && (
-                <DateTimePicker
-                  value={startDate ?? new Date()}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "inline" : "default"}
-                  minimumDate={new Date()}
-                  onChange={(_, date) => {
-                    if (Platform.OS === "android") setShowStartPicker(false);
-                    if (date) {
-                      setStartDate(date);
-                      if (endDate && endDate < date) setEndDate(null);
-                    }
-                  }}
-                  themeVariant={isDark ? "dark" : "light"}
-                  accentColor={colors.primary}
-                />
-              )}
-            </View>
+            <DateField
+              label="Du"
+              value={startDate}
+              minimumDate={new Date()}
+              onChange={(d) => {
+                setStartDate(d);
+                if (endDate && endDate < d) setEndDate(null);
+              }}
+              formatValue={(d) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            />
 
-            <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                Au
-              </Text>
-              <AnimatedPressable
-                onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}
-                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? colors.primary : colors.border, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-              >
-                <Text style={{ fontSize: 14, color: endDate ? colors.foreground : colors.mutedForeground, fontWeight: endDate ? "700" : "400" }}>
-                  {endDate ? endDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
-                </Text>
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-              </AnimatedPressable>
-              {showEndPicker && (
-                <DateTimePicker
-                  value={endDate ?? startDate ?? new Date()}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "inline" : "default"}
-                  minimumDate={startDate ?? new Date()}
-                  onChange={(_, date) => {
-                    if (Platform.OS === "android") setShowEndPicker(false);
-                    if (date) setEndDate(date);
-                  }}
-                  themeVariant={isDark ? "dark" : "light"}
-                  accentColor={colors.primary}
-                />
-              )}
-            </View>
+            <DateField
+              label="Au"
+              value={endDate}
+              minimumDate={startDate ?? new Date()}
+              onChange={setEndDate}
+              formatValue={(d) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            />
 
             <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
