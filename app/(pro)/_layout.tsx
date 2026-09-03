@@ -40,7 +40,10 @@ export default function ProLayout() {
 
   return (
     <NativeTabs
-      blurEffect="systemUltraThinMaterial"
+      // Chrome material : matériau translucide "Liquid Glass" conservé, mais
+      // plus opaque que systemUltraThinMaterial — le contenu qui défile
+      // dessous n'interfère plus avec la lisibilité des icônes.
+      blurEffect="systemChromeMaterial"
       tintColor={Colors.primary}
       minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
