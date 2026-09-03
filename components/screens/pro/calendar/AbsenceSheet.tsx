@@ -19,19 +19,6 @@ export type Unavailability = {
   reason: string | null;
 };
 
-// Palette locale du module Absences — repliée sur le vocabulaire ambré déjà
-// utilisé ailleurs sur l'écran calendrier (bandeau "jour d'absence", carte).
-function getAbsences(colors: ReturnType<typeof useThemeColors>) {
-  return {
-    bg: colors.warningLight,
-    border: colors.warningBorder,
-    color: colors.warningText,
-    colorDark: colors.warningTextDark,
-    iconBg: withAlpha(colors.warning, 0.12),
-    closeBg: withAlpha(colors.warningBorder, 0.4),
-  } as const;
-}
-
 /**
  * Bottom-sheet de gestion des absences (périodes d'indisponibilité).
  * Aucune logique de rendez-vous ici : uniquement l'API absences
@@ -52,7 +39,6 @@ export function AbsenceSheet({
   const colors = useThemeColors();
   const isDark = useIsDarkMode();
   const { showToast } = useToast();
-  const ABSENCES = getAbsences(colors);
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -148,12 +134,12 @@ export function AbsenceSheet({
               </Text>
               <AnimatedPressable
                 onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}
-                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? ABSENCES.color : colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? colors.primary : colors.border, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
               >
-                <Text style={{ fontSize: 14, color: startDate ? ABSENCES.colorDark : colors.mutedForeground, fontWeight: startDate ? "700" : "400" }}>
+                <Text style={{ fontSize: 14, color: startDate ? colors.foreground : colors.mutedForeground, fontWeight: startDate ? "700" : "400" }}>
                   {startDate ? startDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
                 </Text>
-                <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
+                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
               </AnimatedPressable>
               {showStartPicker && (
                 <DateTimePicker
@@ -169,7 +155,7 @@ export function AbsenceSheet({
                     }
                   }}
                   themeVariant={isDark ? "dark" : "light"}
-                  accentColor={ABSENCES.color}
+                  accentColor={colors.primary}
                 />
               )}
             </View>
@@ -180,12 +166,12 @@ export function AbsenceSheet({
               </Text>
               <AnimatedPressable
                 onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}
-                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? ABSENCES.color : colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? colors.primary : colors.border, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
               >
-                <Text style={{ fontSize: 14, color: endDate ? ABSENCES.colorDark : colors.mutedForeground, fontWeight: endDate ? "700" : "400" }}>
+                <Text style={{ fontSize: 14, color: endDate ? colors.foreground : colors.mutedForeground, fontWeight: endDate ? "700" : "400" }}>
                   {endDate ? endDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
                 </Text>
-                <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
+                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
               </AnimatedPressable>
               {showEndPicker && (
                 <DateTimePicker
@@ -198,7 +184,7 @@ export function AbsenceSheet({
                     if (date) setEndDate(date);
                   }}
                   themeVariant={isDark ? "dark" : "light"}
-                  accentColor={ABSENCES.color}
+                  accentColor={colors.primary}
                 />
               )}
             </View>
@@ -212,7 +198,7 @@ export function AbsenceSheet({
                 onChangeText={setReason}
                 placeholder="Vacances, maladie…"
                 placeholderTextColor={colors.mutedForeground}
-                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 14, fontSize: 14, color: colors.foreground, backgroundColor: ABSENCES.bg }}
+                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 14, fontSize: 14, color: colors.foreground, backgroundColor: colors.muted }}
               />
             </View>
           </View>
@@ -226,15 +212,15 @@ export function AbsenceSheet({
                 .slice()
                 .sort((a, b) => a.start_date.localeCompare(b.start_date))
                 .map((u) => (
-                <View key={u.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: ABSENCES.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: ABSENCES.border }}>
+                <View key={u.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: ABSENCES.colorDark }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
                       {new Date(u.start_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
                       {u.start_date !== u.end_date
                         ? ` → ${new Date(u.end_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
                         : ` (${new Date(u.start_date + "T12:00:00").getFullYear()})`}
                     </Text>
-                    {u.reason && <Text style={{ fontSize: 11, color: ABSENCES.color, marginTop: 2 }}>{u.reason}</Text>}
+                    {u.reason && <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>{u.reason}</Text>}
                   </View>
                   <AnimatedIconButton
                     onPress={() => removeUnavailability(u.id)}
@@ -256,7 +242,7 @@ export function AbsenceSheet({
             onPress={createUnavailability}
             disabled={!startDate || !endDate}
             label={!startDate || !endDate ? "Sélectionne les dates" : "Bloquer la période"}
-            style={{ backgroundColor: (!startDate || !endDate) ? colors.disabled : ABSENCES.color }}
+            style={{ backgroundColor: (!startDate || !endDate) ? colors.disabled : colors.primary }}
           />
         </View>
       </View>
