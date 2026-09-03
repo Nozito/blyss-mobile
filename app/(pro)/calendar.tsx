@@ -44,6 +44,7 @@ import { useLiveActivity } from "@/contexts/LiveActivityContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { NewAppointmentSheet, type EditableAppointment } from "@/components/screens/pro/calendar/NewAppointmentSheet";
 import { AbsenceSheet, type Unavailability } from "@/components/screens/pro/calendar/AbsenceSheet";
+import { StatusBadge, getStatusCfg } from "@/components/screens/pro/calendar/StatusBadge";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -137,17 +138,6 @@ function getPlanning(colors: ReturnType<typeof useThemeColors>) {
   } as const;
 }
 
-
-function getStatusCfg(colors: ReturnType<typeof useThemeColors>): Record<string, { label: string; color: string; bg: string; icon: string }> {
-  return {
-    completed:    { label: "Terminé",    color: colors.successText,  bg: withAlpha(colors.successText, 0.12),  icon: "checkmark-circle-outline" },
-    cancelled:    { label: "Annulé",     color: colors.destructive,  bg: withAlpha(colors.destructive, 0.12),  icon: "close-circle-outline" },
-    pending:      { label: "À venir",    color: colors.warning,      bg: withAlpha(colors.warning, 0.12),      icon: "time-outline" },
-    ongoing:      { label: "En cours",   color: colors.info,         bg: withAlpha(colors.info, 0.12),         icon: "radio-button-on-outline" },
-    past_pending: { label: "À valider",  color: colors.pro,          bg: withAlpha(colors.pro, 0.12),          icon: "alert-circle-outline" },
-    no_show:      { label: "Absent",     color: colors.destructive,  bg: withAlpha(colors.destructive, 0.12),  icon: "person-remove-outline" },
-  };
-}
 
 function getAptStatus(apt: Appointment): string {
   if (apt.status === "completed") return "completed";
@@ -403,10 +393,7 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
         {apt.price != null && (
           <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>{Number(apt.price).toFixed(2).replace(".", ",")} €</Text>
         )}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: cfg.color }} />
-          <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
-        </View>
+        <StatusBadge statusKey={statusKey} variant="inline" />
       </View>
     </AnimatedPressable>
   );
@@ -419,7 +406,6 @@ export default function ProCalendarScreen() {
   const colors = useThemeColors();
   const isDark = useIsDarkMode();
   const PLANNING = useMemo(() => getPlanning(colors), [colors]);
-  const STATUS_CFG = useMemo(() => getStatusCfg(colors), [colors]);
   const qc = useQueryClient();
   const router = useRouter();
   const showActionSheet = useActionSheet();
@@ -999,7 +985,6 @@ export default function ProCalendarScreen() {
   };
 
   const aptStatusKey = selectedApt ? getAptStatus(selectedApt) : "pending";
-  const aptStatusCfg = STATUS_CFG[aptStatusKey] ?? STATUS_CFG.pending;
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
@@ -1689,9 +1674,7 @@ export default function ProCalendarScreen() {
                 <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
                   <View style={{ flex: 1, marginRight: 12 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, backgroundColor: aptStatusCfg.bg }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: aptStatusCfg.color }}>{aptStatusCfg.label}</Text>
-                      </View>
+                      <StatusBadge statusKey={aptStatusKey} variant="pill" />
                       {selectedApt.price != null && (
                         <Text style={{ fontSize: 13, fontWeight: "800", color: colors.primary }}>
                           {Number(selectedApt.price).toFixed(2).replace(".", ",")} €
