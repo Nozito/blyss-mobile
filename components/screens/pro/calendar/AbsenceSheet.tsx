@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, ScrollView, Platform } from "react-native";
+import { View, Text, TextInput, ScrollView, ActivityIndicator, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
@@ -30,11 +30,14 @@ export function AbsenceSheet({
   onClose,
   unavailabilities,
   onChanged,
+  loading = false,
 }: {
   visible: boolean;
   onClose: () => void;
   unavailabilities: Unavailability[];
   onChanged: (list: Unavailability[]) => void;
+  /** true tant que la liste initiale n'est pas résolue côté parent. */
+  loading?: boolean;
 }) {
   const colors = useThemeColors();
   const isDark = useIsDarkMode();
@@ -203,7 +206,18 @@ export function AbsenceSheet({
             </View>
           </View>
 
-          {unavailabilities.length > 0 && (
+          {loading ? (
+            <View style={{ paddingVertical: 24, alignItems: "center" }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : unavailabilities.length === 0 ? (
+            <View style={{ paddingVertical: 20, alignItems: "center", gap: 6 }}>
+              <Ionicons name="calendar-clear-outline" size={22} color={colors.border} />
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>
+                Aucune absence planifiée
+              </Text>
+            </View>
+          ) : (
             <View style={{ gap: 8 }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
                 Absences planifiées ({unavailabilities.length})

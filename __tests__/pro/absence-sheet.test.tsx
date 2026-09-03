@@ -77,9 +77,17 @@ const setup = (props: Partial<React.ComponentProps<typeof AbsenceSheet>> = {}) =
 beforeEach(() => jest.clearAllMocks());
 
 describe("AbsenceSheet", () => {
-  it("état vide : pas de liste 'Absences planifiées'", () => {
-    const { queryByText } = setup({ unavailabilities: [] });
+  it("état vide : message dédié, pas de liste", () => {
+    const { queryByText, getByText } = setup({ unavailabilities: [] });
     expect(queryByText(/Absences planifiées/)).toBeNull();
+    expect(getByText("Aucune absence planifiée")).toBeTruthy();
+  });
+
+  it("état chargement : indicateur, ni liste ni message vide", () => {
+    const { queryByText, UNSAFE_getAllByType } = setup({ unavailabilities: [], loading: true });
+    expect(queryByText("Aucune absence planifiée")).toBeNull();
+    const { ActivityIndicator } = require("react-native");
+    expect(UNSAFE_getAllByType(ActivityIndicator).length).toBeGreaterThan(0);
   });
 
   it("CTA désactivé tant que les deux dates ne sont pas choisies", () => {

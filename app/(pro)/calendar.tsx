@@ -1802,6 +1802,7 @@ export default function ProCalendarScreen() {
         onClose={() => setShowUnavailModal(false)}
         unavailabilities={unavailabilities}
         onChanged={setUnavailabilities}
+        loading={loading}
       />
 
       {/* ── WEEKLY PLANNING MODAL (legacy uniquement) ── */}
