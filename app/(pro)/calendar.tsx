@@ -137,16 +137,6 @@ function getPlanning(colors: ReturnType<typeof useThemeColors>) {
   } as const;
 }
 
-function getAbsences(colors: ReturnType<typeof useThemeColors>) {
-  return {
-    bg: colors.warningLight,
-    border: colors.warningBorder,
-    color: colors.warningText,
-    colorDark: colors.warningTextDark,
-    iconBg: withAlpha(colors.warning, 0.12),
-    closeBg: withAlpha(colors.warningBorder, 0.4),
-  } as const;
-}
 
 function getStatusCfg(colors: ReturnType<typeof useThemeColors>): Record<string, { label: string; color: string; bg: string; icon: string }> {
   return {
@@ -429,7 +419,6 @@ export default function ProCalendarScreen() {
   const colors = useThemeColors();
   const isDark = useIsDarkMode();
   const PLANNING = useMemo(() => getPlanning(colors), [colors]);
-  const ABSENCES = useMemo(() => getAbsences(colors), [colors]);
   const STATUS_CFG = useMemo(() => getStatusCfg(colors), [colors]);
   const qc = useQueryClient();
   const router = useRouter();
@@ -1232,28 +1221,22 @@ export default function ProCalendarScreen() {
 
         {/* ── PLANNING & ABSENCES CARDS ── */}
         <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
-          <AnimatedPressable
-            onPress={() => router.push("/pro-working-hours" as never)}
-            style={{ flex: 1, backgroundColor: PLANNING.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: PLANNING.border }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="time-outline" size={20} color={PLANNING.color} />
-            </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>Horaires</Text>
-            <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>
-              Tes horaires d'ouverture
-            </Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            onPress={() => setShowUnavailModal(true)}
-            style={{ flex: 1, backgroundColor: ABSENCES.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: ABSENCES.border }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ABSENCES.iconBg, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="moon-outline" size={20} color={ABSENCES.color} />
-            </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
-            <Text style={{ fontSize: 11, color: ABSENCES.color, lineHeight: 15 }}>Journées et plages bloquées</Text>
-          </AnimatedPressable>
+          {([
+            { icon: "time-outline", title: "Horaires", sub: "Tes horaires d'ouverture", onPress: () => router.push("/pro-working-hours" as never) },
+            { icon: "moon-outline", title: "Absences", sub: "Journées et plages bloquées", onPress: () => setShowUnavailModal(true) },
+          ] as const).map((c) => (
+            <AnimatedPressable
+              key={c.title}
+              onPress={c.onPress}
+              style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: colors.border, ...Shadows.card }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={c.icon} size={20} color={colors.foreground} />
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>{c.title}</Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>{c.sub}</Text>
+            </AnimatedPressable>
+          ))}
         </View>
 
         {/* ── SELECTED DAY LABEL ── */}

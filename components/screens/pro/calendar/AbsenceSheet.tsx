@@ -119,23 +119,23 @@ export function AbsenceSheet({
       <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28, flex: 1 }}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
 
-        <View style={{ backgroundColor: ABSENCES.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: ABSENCES.border }}>
+        <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: ABSENCES.iconBg, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="moon-outline" size={22} color={ABSENCES.color} />
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="moon-outline" size={22} color={colors.foreground} />
               </View>
               <View>
-                <Text style={{ fontSize: 18, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
-                <Text style={{ fontSize: 12, color: ABSENCES.color, marginTop: 1 }}>Bloque une journée ou une période</Text>
+                <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground }}>Absences</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>Bloque une journée ou une période</Text>
               </View>
             </View>
             <AnimatedIconButton
               onPress={handleClose}
               accessibilityLabel="Fermer"
-              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ABSENCES.closeBg, alignItems: "center", justifyContent: "center" }}
+              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
             >
-              <Ionicons name="close" size={18} color={ABSENCES.colorDark} />
+              <Ionicons name="close" size={18} color={colors.foreground} />
             </AnimatedIconButton>
           </View>
         </View>
