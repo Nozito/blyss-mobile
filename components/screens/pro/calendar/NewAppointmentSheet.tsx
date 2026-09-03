@@ -76,6 +76,12 @@ export function NewAppointmentSheet({
   const [clientResults, setClientResults] = useState<Client[]>([]);
   const [clientSearchLoading, setClientSearchLoading] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  // RGPD — "relation" : recherche par nom parmi les clientes de la pro.
+  // "exact" : walk-in, correspondance exacte email/téléphone uniquement.
+  const [clientMode, setClientMode] = useState<"relation" | "exact">("relation");
+  // Contact exact saisi pour une walk-in — renvoyé au backend qui revérifie
+  // la concordance avec le client_id.
+  const [walkinContact, setWalkinContact] = useState<string | null>(null);
 
   const [services, setServices] = useState<Prestation[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
@@ -110,6 +116,8 @@ export function NewAppointmentSheet({
     if (!visible) return;
     setError(null);
     setSaving(false);
+    setClientMode("relation");
+    setWalkinContact(null);
     setInitiatedVia("app");
     setPhoneReason("");
     setComputedSlots([]);
@@ -159,7 +167,7 @@ export function NewAppointmentSheet({
     }
     let cancelled = false;
     setClientSearchLoading(true);
-    proApi.searchClients(debouncedClientQuery).then((res) => {
+    proApi.searchClients(debouncedClientQuery, { exact: clientMode === "exact" }).then((res) => {
       if (cancelled) return;
       setClientResults(res.success && res.data ? res.data : []);
       setClientSearchLoading(false);
@@ -170,7 +178,7 @@ export function NewAppointmentSheet({
       }
     });
     return () => { cancelled = true; };
-  }, [visible, isEditing, debouncedClientQuery]);
+  }, [visible, isEditing, debouncedClientQuery, clientMode]);
 
   const duration = selectedPrestation?.duration_minutes ?? editing?.durationMinutes ?? 60;
   const dateStr = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
@@ -266,6 +274,7 @@ export function NewAppointmentSheet({
         start_datetime: startAt.toISOString(),
         end_datetime: endAt.toISOString(),
         early_execution_requested: needsEarlyExecutionConsent,
+        ...(walkinContact ? { client_contact: walkinContact } : {}),
         ...(pendingOverride
           ? {
               manual_override: {
@@ -332,15 +341,42 @@ export function NewAppointmentSheet({
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 18, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
           {step === 1 && !isEditing && (
             <View style={{ gap: 12 }}>
+              {/* RGPD — la recherche par nom ne porte que sur les clientes de la
+                  pro ; une nouvelle cliente se rattache par email/téléphone exact. */}
+              <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 12, padding: 3 }}>
+                {([
+                  { key: "relation", label: "Mes clientes" },
+                  { key: "exact", label: "Nouvelle cliente" },
+                ] as const).map((opt) => {
+                  const active = clientMode === opt.key;
+                  return (
+                    <AnimatedPressable
+                      key={opt.key}
+                      onPress={() => {
+                        setClientMode(opt.key);
+                        setClientQuery("");
+                        setClientResults([]);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      style={{ flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10, backgroundColor: active ? colors.white : "transparent" }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: active ? colors.foreground : colors.mutedForeground }}>{opt.label}</Text>
+                    </AnimatedPressable>
+                  );
+                })}
+              </View>
+
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.muted, borderRadius: 12, paddingHorizontal: 14, height: 46 }}>
-                <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
+                <Ionicons name={clientMode === "exact" ? "at-outline" : "search-outline"} size={16} color={colors.mutedForeground} />
                 <TextInput
                   value={clientQuery}
                   onChangeText={setClientQuery}
-                  placeholder="Nom, téléphone ou email"
+                  placeholder={clientMode === "exact" ? "Email ou téléphone exact" : "Nom de la cliente"}
                   placeholderTextColor={colors.mutedForeground}
                   style={{ flex: 1, fontSize: 14, color: colors.foreground }}
                   autoCapitalize="none"
+                  keyboardType={clientMode === "exact" ? "email-address" : "default"}
                 />
               </View>
 
@@ -348,14 +384,24 @@ export function NewAppointmentSheet({
                 <View style={{ padding: 20, alignItems: "center" }}><ActivityIndicator size="small" color={colors.primary} /></View>
               ) : clientResults.length === 0 ? (
                 <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center", paddingVertical: 12 }}>
-                  {debouncedClientQuery ? "Aucune cliente trouvée" : "Recherche une cliente déjà inscrite sur l'app"}
+                  {clientMode === "exact"
+                    ? (debouncedClientQuery
+                        ? "Aucune cliente avec cet email ou ce téléphone exact"
+                        : "Saisis l'email ou le téléphone exact communiqué par la cliente")
+                    : (debouncedClientQuery
+                        ? "Aucune cliente à ce nom parmi les tiennes"
+                        : "Recherche parmi tes clientes existantes")}
                 </Text>
               ) : (
                 <View style={{ gap: 8 }}>
                   {clientResults.map((c) => (
                     <AnimatedPressable
                       key={c.id}
-                      onPress={() => { setSelectedClient(c); setStep(2); }}
+                      onPress={() => {
+                        setSelectedClient(c);
+                        setWalkinContact(clientMode === "exact" ? clientQuery.trim() : null);
+                        setStep(2);
+                      }}
                       style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.white, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: colors.border }}
                     >
                       <Avatar uri={c.profile_photo} name={`${c.first_name} ${c.last_name}`} size={40} />
