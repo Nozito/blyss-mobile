@@ -441,8 +441,8 @@ export default function ProDashboard() {
 
             {/* Divider + CTA contextuel */}
             <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.18)" }} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "500" }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "500", flexShrink: 1 }}>
                 {weeklyStats.isUp ? "+" : "-"}{weeklyStats.change}% vs semaine dernière
               </Text>
               <AnimatedPressable
@@ -460,6 +460,7 @@ export default function ProDashboard() {
                   backgroundColor: "rgba(255,255,255,0.22)",
                   borderWidth: 1,
                   borderColor: "rgba(255,255,255,0.3)",
+                  flexShrink: 0,
                 }}
               >
                 <Ionicons name={heroState.ctaIcon} size={14} color={colors.onColor} />
