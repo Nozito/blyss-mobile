@@ -270,15 +270,15 @@ function CalendarGrid({
                 backgroundColor: isSel
                   ? colors.primary
                   : isU
-                    ? withAlpha(colors.warning, 0.14)
+                    ? colors.muted
                     : "transparent",
                 borderWidth: isU && !isSel ? 1 : 0,
-                borderColor: withAlpha(colors.warning, 0.4),
+                borderColor: colors.border,
               }}>
                 <Text style={{
                   fontSize: 13,
                   fontWeight: isSel || isTod ? "800" : "500",
-                  color: isSel ? colors.onColor : isTod ? colors.primary : isU ? colors.warningTextDark : colors.foreground,
+                  color: isSel ? colors.onColor : isTod ? colors.primary : isU ? colors.mutedForeground : colors.foreground,
                 }}>
                   {day}
                 </Text>
@@ -286,7 +286,7 @@ function CalendarGrid({
                   <Ionicons
                     name="moon"
                     size={9}
-                    color={colors.warning}
+                    color={colors.mutedForeground}
                     style={{ position: "absolute", bottom: -1, right: -1 }}
                   />
                 )}
@@ -1146,18 +1146,18 @@ export default function ProCalendarScreen() {
                       backgroundColor: isActive
                         ? colors.primary
                         : isUnavail
-                          ? withAlpha(colors.warning, 0.15)
+                          ? colors.muted
                           : isToday
                             ? withAlpha(colors.primary, 0.10)
                             : "transparent" }}
                   >
                     <Text style={{ fontSize: 9, fontWeight: "700",
-                      color: isActive ? colors.onColor : isUnavail ? colors.warning : colors.mutedForeground,
+                      color: isActive ? colors.onColor : colors.mutedForeground,
                       textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
                       {["L","M","M","J","V","S"][i]}
                     </Text>
                     <Text style={{ fontSize: 16, fontWeight: "800",
-                      color: isActive ? colors.onColor : isUnavail ? colors.warning : isToday ? colors.primary : colors.foreground }}>
+                      color: isActive ? colors.onColor : isUnavail ? colors.mutedForeground : isToday ? colors.primary : colors.foreground }}>
                       {base.getDate()}
                     </Text>
                     {hasApt && !isUnavail && (
@@ -1166,7 +1166,7 @@ export default function ProCalendarScreen() {
                     )}
                     {isUnavail && (
                       <View style={{ width: 18, height: 3, borderRadius: 2, marginTop: 2,
-                        backgroundColor: isActive ? withAlpha(colors.white, 0.8) : colors.warning }} />
+                        backgroundColor: isActive ? withAlpha(colors.white, 0.8) : colors.mutedForeground }} />
                     )}
                   </AnimatedPressable>
                 );

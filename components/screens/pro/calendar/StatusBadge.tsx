@@ -1,30 +1,58 @@
 import React, { useMemo } from "react";
 import { View, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 /**
- * Configuration d'affichage des statuts de rendez-vous (libellé, couleur,
- * fond, icône). Point d'entrée unique — consommé par le badge et par les
- * éléments qui reprennent la couleur du statut (pastille d'avatar…).
+ * Trois rôles visuels — jamais la couleur seule :
+ *   primary : état actif / "live"        (En cours)
+ *   neutral : structure, états passés    (À venir, Terminé, Annulé)
+ *   alert   : action requise / anomalie  (À valider, Absent)
+ *
+ * La distinction se fait aussi par l'icône, le barré (Annulé) et l'opacité
+ * réduite (Terminé).
  */
+export type StatusRole = "primary" | "neutral" | "alert";
+
+type StatusMeta = {
+  label: string;
+  role: StatusRole;
+  icon: string;
+  strikethrough?: boolean;
+  dim?: boolean;
+};
+
+const STATUS_META: Record<string, StatusMeta> = {
+  pending:      { label: "À venir",   role: "neutral", icon: "time-outline" },
+  ongoing:      { label: "En cours",  role: "primary", icon: "ellipse" },
+  past_pending: { label: "À valider", role: "alert",   icon: "alert-circle" },
+  completed:    { label: "Terminé",   role: "neutral", icon: "checkmark-circle-outline", dim: true },
+  cancelled:    { label: "Annulé",    role: "neutral", icon: "close-circle-outline", strikethrough: true },
+  no_show:      { label: "Absent",    role: "alert",   icon: "person-remove-outline" },
+};
+
+export type StatusCfg = StatusMeta & { color: string; bg: string };
+
 export function getStatusCfg(
   colors: ReturnType<typeof useThemeColors>
-): Record<string, { label: string; color: string; bg: string; icon: string }> {
-  return {
-    completed:    { label: "Terminé",    color: colors.successText,  bg: withAlpha(colors.successText, 0.12),  icon: "checkmark-circle-outline" },
-    cancelled:    { label: "Annulé",     color: colors.destructive,  bg: withAlpha(colors.destructive, 0.12),  icon: "close-circle-outline" },
-    pending:      { label: "À venir",    color: colors.warning,      bg: withAlpha(colors.warning, 0.12),      icon: "time-outline" },
-    ongoing:      { label: "En cours",   color: colors.info,         bg: withAlpha(colors.info, 0.12),         icon: "radio-button-on-outline" },
-    past_pending: { label: "À valider",  color: colors.pro,          bg: withAlpha(colors.pro, 0.12),          icon: "alert-circle-outline" },
-    no_show:      { label: "Absent",     color: colors.destructive,  bg: withAlpha(colors.destructive, 0.12),  icon: "person-remove-outline" },
-  };
+): Record<string, StatusCfg> {
+  const color = (r: StatusRole) =>
+    r === "primary" ? colors.primary : r === "alert" ? colors.warning : colors.mutedForeground;
+  const bg = (r: StatusRole) =>
+    r === "primary"
+      ? withAlpha(colors.primary, 0.12)
+      : r === "alert"
+        ? withAlpha(colors.warning, 0.14)
+        : colors.muted;
+
+  const out: Record<string, StatusCfg> = {};
+  for (const [key, m] of Object.entries(STATUS_META)) {
+    out[key] = { ...m, color: color(m.role), bg: bg(m.role) };
+  }
+  return out;
 }
 
-/**
- * Badge de statut d'un rendez-vous. `inline` = pastille + libellé (listes),
- * `pill` = capsule pleine (détail du jour).
- */
 export function StatusBadge({
   statusKey,
   variant,
@@ -36,18 +64,43 @@ export function StatusBadge({
   const STATUS_CFG = useMemo(() => getStatusCfg(colors), [colors]);
   const cfg = STATUS_CFG[statusKey] ?? STATUS_CFG.pending;
 
+  const label = (
+    <Text
+      style={{
+        fontSize: 10,
+        fontWeight: "700",
+        color: cfg.color,
+        textDecorationLine: cfg.strikethrough ? "line-through" : "none",
+      }}
+    >
+      {cfg.label}
+    </Text>
+  );
+
   if (variant === "pill") {
     return (
-      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, backgroundColor: cfg.bg }}>
-        <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 4,
+          paddingHorizontal: 10,
+          paddingVertical: 3,
+          borderRadius: 20,
+          backgroundColor: cfg.bg,
+          opacity: cfg.dim ? 0.7 : 1,
+        }}
+      >
+        <Ionicons name={cfg.icon as keyof typeof Ionicons.glyphMap} size={11} color={cfg.color} />
+        {label}
       </View>
     );
   }
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: cfg.color }} />
-      <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, opacity: cfg.dim ? 0.7 : 1 }}>
+      <Ionicons name={cfg.icon as keyof typeof Ionicons.glyphMap} size={11} color={cfg.color} />
+      {label}
     </View>
   );
 }
