@@ -43,6 +43,8 @@ import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { NewAppointmentSheet, type EditableAppointment } from "@/components/screens/pro/calendar/NewAppointmentSheet";
+import { AbsenceSheet, type Unavailability } from "@/components/screens/pro/calendar/AbsenceSheet";
+import { StatusBadge, getStatusCfg } from "@/components/screens/pro/calendar/StatusBadge";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -66,13 +68,6 @@ type Appointment = {
   client_last_name?: string;
   prestation_name?: string;
   price?: number;
-};
-
-type Unavailability = {
-  id: number;
-  start_date: string;
-  end_date: string;
-  reason: string | null;
 };
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
@@ -143,27 +138,6 @@ function getPlanning(colors: ReturnType<typeof useThemeColors>) {
   } as const;
 }
 
-function getAbsences(colors: ReturnType<typeof useThemeColors>) {
-  return {
-    bg: colors.warningLight,
-    border: colors.warningBorder,
-    color: colors.warningText,
-    colorDark: colors.warningTextDark,
-    iconBg: withAlpha(colors.warning, 0.12),
-    closeBg: withAlpha(colors.warningBorder, 0.4),
-  } as const;
-}
-
-function getStatusCfg(colors: ReturnType<typeof useThemeColors>): Record<string, { label: string; color: string; bg: string; icon: string }> {
-  return {
-    completed:    { label: "Terminé",    color: colors.successText,  bg: withAlpha(colors.successText, 0.12),  icon: "checkmark-circle-outline" },
-    cancelled:    { label: "Annulé",     color: colors.destructive,  bg: withAlpha(colors.destructive, 0.12),  icon: "close-circle-outline" },
-    pending:      { label: "À venir",    color: colors.warning,      bg: withAlpha(colors.warning, 0.12),      icon: "time-outline" },
-    ongoing:      { label: "En cours",   color: colors.info,         bg: withAlpha(colors.info, 0.12),         icon: "radio-button-on-outline" },
-    past_pending: { label: "À valider",  color: colors.pro,          bg: withAlpha(colors.pro, 0.12),          icon: "alert-circle-outline" },
-    no_show:      { label: "Absent",     color: colors.destructive,  bg: withAlpha(colors.destructive, 0.12),  icon: "person-remove-outline" },
-  };
-}
 
 function getAptStatus(apt: Appointment): string {
   if (apt.status === "completed") return "completed";
@@ -296,15 +270,15 @@ function CalendarGrid({
                 backgroundColor: isSel
                   ? colors.primary
                   : isU
-                    ? withAlpha(colors.warning, 0.14)
+                    ? colors.muted
                     : "transparent",
                 borderWidth: isU && !isSel ? 1 : 0,
-                borderColor: withAlpha(colors.warning, 0.4),
+                borderColor: colors.border,
               }}>
                 <Text style={{
                   fontSize: 13,
                   fontWeight: isSel || isTod ? "800" : "500",
-                  color: isSel ? colors.onColor : isTod ? colors.primary : isU ? colors.warningTextDark : colors.foreground,
+                  color: isSel ? colors.onColor : isTod ? colors.primary : isU ? colors.mutedForeground : colors.foreground,
                 }}>
                   {day}
                 </Text>
@@ -312,7 +286,7 @@ function CalendarGrid({
                   <Ionicons
                     name="moon"
                     size={9}
-                    color={colors.warning}
+                    color={colors.mutedForeground}
                     style={{ position: "absolute", bottom: -1, right: -1 }}
                   />
                 )}
@@ -419,10 +393,7 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
         {apt.price != null && (
           <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>{Number(apt.price).toFixed(2).replace(".", ",")} €</Text>
         )}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: cfg.color }} />
-          <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
-        </View>
+        <StatusBadge statusKey={statusKey} variant="inline" />
       </View>
     </AnimatedPressable>
   );
@@ -435,8 +406,6 @@ export default function ProCalendarScreen() {
   const colors = useThemeColors();
   const isDark = useIsDarkMode();
   const PLANNING = useMemo(() => getPlanning(colors), [colors]);
-  const ABSENCES = useMemo(() => getAbsences(colors), [colors]);
-  const STATUS_CFG = useMemo(() => getStatusCfg(colors), [colors]);
   const qc = useQueryClient();
   const router = useRouter();
   const showActionSheet = useActionSheet();
@@ -481,13 +450,6 @@ export default function ProCalendarScreen() {
   const [editTime, setEditTime] = useState("09:00");
   const [editDur, setEditDur] = useState(60);
 
-  const [unavailStartDate, setUnavailStartDate] = useState<Date | null>(null);
-  const [unavailEndDate, setUnavailEndDate] = useState<Date | null>(null);
-  const [unavailReason, setUnavailReason] = useState("");
-  const [unavailSaving, setUnavailSaving] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
-
   const [activeDays, setActiveDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [planningSlots, setPlanningSlots] = useState<string[]>(["09:00", "14:00"]);
   const [weeklyPlanSaving, setWeeklyPlanSaving] = useState(false);
@@ -496,7 +458,6 @@ export default function ProCalendarScreen() {
   const [newPlanTime, setNewPlanTime] = useState(new Date());
 
   const [slotError, setSlotError] = useState<string | null>(null);
-  const [unavailError, setUnavailError] = useState<string | null>(null);
   const [planningError, setPlanningError] = useState<string | null>(null);
   const [planningInfo, setPlanningInfo] = useState<string | null>(null);
   const [showDeleteSlotId, setShowDeleteSlotId] = useState<string | null>(null);
@@ -941,31 +902,6 @@ export default function ProCalendarScreen() {
     }
   };
 
-  const createUnavailability = async () => {
-    setUnavailError(null);
-    if (!unavailStartDate || !unavailEndDate) {
-      setUnavailError("Sélectionne une période");
-      return;
-    }
-    const startStr = toLocalDate(unavailStartDate);
-    const endStr = toLocalDate(unavailEndDate);
-    if (endStr < startStr) {
-      setUnavailError("La date de fin doit être après le début");
-      return;
-    }
-    setUnavailSaving(true);
-    try {
-      await proApi.createUnavailability({ start_date: startStr, end_date: endStr, reason: unavailReason || undefined });
-      const res = await proApi.getUnavailabilities();
-      if (res.success && res.data) setUnavailabilities(res.data as Unavailability[]);
-      setUnavailStartDate(null); setUnavailEndDate(null); setUnavailReason("");
-      setShowUnavailModal(false);
-    } catch {
-      setUnavailError("Impossible d'enregistrer la période");
-    } finally {
-      setUnavailSaving(false);
-    }
-  };
 
   // Planning "semaine type" = génération en masse de slots précréés. N'a de sens
   // qu'en mode legacy (useNewEngine === false) : avec le moteur, les créneaux
@@ -1048,20 +984,7 @@ export default function ProCalendarScreen() {
     }
   };
 
-  const removeUnavailability = async (id: number) => {
-    const backup = [...unavailabilities];
-    setUnavailabilities((prev) => prev.filter((u) => u.id !== id));
-    try {
-      const res = await proApi.deleteUnavailability(id);
-      if (!res.success) throw new Error(res.error);
-    } catch {
-      setUnavailabilities(backup);
-      showToast("Impossible de supprimer cette absence", "error");
-    }
-  };
-
   const aptStatusKey = selectedApt ? getAptStatus(selectedApt) : "pending";
-  const aptStatusCfg = STATUS_CFG[aptStatusKey] ?? STATUS_CFG.pending;
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
@@ -1223,18 +1146,18 @@ export default function ProCalendarScreen() {
                       backgroundColor: isActive
                         ? colors.primary
                         : isUnavail
-                          ? withAlpha(colors.warning, 0.15)
+                          ? colors.muted
                           : isToday
                             ? withAlpha(colors.primary, 0.10)
                             : "transparent" }}
                   >
                     <Text style={{ fontSize: 9, fontWeight: "700",
-                      color: isActive ? colors.onColor : isUnavail ? colors.warning : colors.mutedForeground,
+                      color: isActive ? colors.onColor : colors.mutedForeground,
                       textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
                       {["L","M","M","J","V","S"][i]}
                     </Text>
                     <Text style={{ fontSize: 16, fontWeight: "800",
-                      color: isActive ? colors.onColor : isUnavail ? colors.warning : isToday ? colors.primary : colors.foreground }}>
+                      color: isActive ? colors.onColor : isUnavail ? colors.mutedForeground : isToday ? colors.primary : colors.foreground }}>
                       {base.getDate()}
                     </Text>
                     {hasApt && !isUnavail && (
@@ -1243,7 +1166,7 @@ export default function ProCalendarScreen() {
                     )}
                     {isUnavail && (
                       <View style={{ width: 18, height: 3, borderRadius: 2, marginTop: 2,
-                        backgroundColor: isActive ? withAlpha(colors.white, 0.8) : colors.warning }} />
+                        backgroundColor: isActive ? withAlpha(colors.white, 0.8) : colors.mutedForeground }} />
                     )}
                   </AnimatedPressable>
                 );
@@ -1282,29 +1205,26 @@ export default function ProCalendarScreen() {
         )}
 
         {/* ── PLANNING & ABSENCES CARDS ── */}
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
-          <AnimatedPressable
-            onPress={() => router.push("/pro-working-hours" as never)}
-            style={{ flex: 1, backgroundColor: PLANNING.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: PLANNING.border }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="time-outline" size={20} color={PLANNING.color} />
-            </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: PLANNING.colorDark }}>Horaires</Text>
-            <Text style={{ fontSize: 11, color: PLANNING.color, lineHeight: 15 }}>
-              Tes horaires d'ouverture
-            </Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            onPress={() => setShowUnavailModal(true)}
-            style={{ flex: 1, backgroundColor: ABSENCES.bg, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: ABSENCES.border }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ABSENCES.iconBg, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="moon-outline" size={20} color={ABSENCES.color} />
-            </View>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
-            <Text style={{ fontSize: 11, color: ABSENCES.color, lineHeight: 15 }}>Journées et plages bloquées</Text>
-          </AnimatedPressable>
+        {/* Même grille pour les deux : la zone de sous-titre réserve 2 lignes
+            (minHeight) pour que les cartes aient la même hauteur et des bas
+            alignés, que le libellé tienne sur 1 ou 2 lignes. */}
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 16, alignItems: "stretch" }}>
+          {([
+            { icon: "time-outline", title: "Horaires", sub: "Tes horaires d'ouverture", onPress: () => router.push("/pro-working-hours" as never) },
+            { icon: "moon-outline", title: "Absences", sub: "Journées et plages bloquées", onPress: () => setShowUnavailModal(true) },
+          ] as const).map((c) => (
+            <AnimatedPressable
+              key={c.title}
+              onPress={c.onPress}
+              style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: colors.border, ...Shadows.card }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: withAlpha(colors.primary, 0.1), alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={c.icon} size={20} color={colors.primary} />
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>{c.title}</Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15, minHeight: 30 }}>{c.sub}</Text>
+            </AnimatedPressable>
+          ))}
         </View>
 
         {/* ── SELECTED DAY LABEL ── */}
@@ -1352,14 +1272,13 @@ export default function ProCalendarScreen() {
         {showBasculeBanner && (
           <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 10, ...Shadows.card }}>
             <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="time-outline" size={22} color={colors.foreground} />
+              <Ionicons name="calendar-outline" size={22} color={colors.foreground} />
             </View>
             <Text style={{ fontSize: 15, fontWeight: "800", color: colors.foreground, textAlign: "center" }}>
               Passe à la nouvelle gestion de tes horaires
             </Text>
             <Text style={{ fontSize: 13, color: colors.mutedForeground, lineHeight: 19, textAlign: "center" }}>
-              Configure tes horaires d'ouverture une fois : tes créneaux réservables sont ensuite calculés
-              automatiquement, plus besoin de les créer un par un.
+              Configure tes horaires d'ouverture une fois : tes créneaux réservables sont ensuite calculés automatiquement.
             </Text>
             <AnimatedPressable
               onPress={() => router.push("/pro-working-hours" as never)}
@@ -1413,10 +1332,10 @@ export default function ProCalendarScreen() {
             <AnimatedPressable
               onPress={() => setShowLegacyTools((v) => !v)}
               accessibilityLabel="Gérer mes anciens créneaux"
-              style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}
             >
-              <Ionicons name="construct-outline" size={15} color={colors.mutedForeground} />
-              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>Gérer mes anciens créneaux</Text>
+              <Ionicons name="construct-outline" size={15} color={colors.foreground} />
+              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: colors.foreground }}>Gérer mes anciens créneaux</Text>
               <Ionicons name={showLegacyTools ? "chevron-up" : "chevron-down"} size={16} color={colors.mutedForeground} />
             </AnimatedPressable>
             {showLegacyTools && (
@@ -1759,9 +1678,7 @@ export default function ProCalendarScreen() {
                 <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
                   <View style={{ flex: 1, marginRight: 12 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, backgroundColor: aptStatusCfg.bg }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: aptStatusCfg.color }}>{aptStatusCfg.label}</Text>
-                      </View>
+                      <StatusBadge statusKey={aptStatusKey} variant="pill" />
                       {selectedApt.price != null && (
                         <Text style={{ fontSize: 13, fontWeight: "800", color: colors.primary }}>
                           {Number(selectedApt.price).toFixed(2).replace(".", ",")} €
@@ -1866,154 +1783,14 @@ export default function ProCalendarScreen() {
         )}
       </RNModal>
 
-      {/* ── UNAVAILABILITY MODAL ── */}
-      <Modal visible={showUnavailModal} onClose={() => setShowUnavailModal(false)} bottomSheet noPadding maxHeight="90%">
-        <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28, flex: 1 }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
-
-          <View style={{ backgroundColor: ABSENCES.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: ABSENCES.border }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: ABSENCES.iconBg, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="moon-outline" size={22} color={ABSENCES.color} />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 18, fontWeight: "800", color: ABSENCES.colorDark }}>Absences</Text>
-                  <Text style={{ fontSize: 12, color: ABSENCES.color, marginTop: 1 }}>Bloque une journée ou une période</Text>
-                </View>
-              </View>
-              <AnimatedIconButton
-                onPress={() => setShowUnavailModal(false)}
-                accessibilityLabel="Fermer"
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ABSENCES.closeBg, alignItems: "center", justifyContent: "center" }}
-              >
-                <Ionicons name="close" size={18} color={ABSENCES.colorDark} />
-              </AnimatedIconButton>
-            </View>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16, gap: 16 }}>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Du
-                </Text>
-                <AnimatedPressable
-                  onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showStartPicker ? ABSENCES.color : colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Text style={{ fontSize: 14, color: unavailStartDate ? ABSENCES.colorDark : colors.mutedForeground, fontWeight: unavailStartDate ? "700" : "400" }}>
-                    {unavailStartDate ? unavailStartDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
-                  </Text>
-                  <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
-                </AnimatedPressable>
-                {showStartPicker && (
-                  <DateTimePicker
-                    value={unavailStartDate ?? new Date()}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "default"}
-                    minimumDate={new Date()}
-                    onChange={(_, date) => {
-                      if (Platform.OS === "android") setShowStartPicker(false);
-                      if (date) {
-                        setUnavailStartDate(date);
-                        if (unavailEndDate && unavailEndDate < date) setUnavailEndDate(null);
-                      }
-                    }}
-                    themeVariant={isDark ? "dark" : "light"}
-                    accentColor={ABSENCES.color}
-                  />
-                )}
-              </View>
-
-              <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Au
-                </Text>
-                <AnimatedPressable
-                  onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showEndPicker ? ABSENCES.color : colors.border, paddingHorizontal: 14, backgroundColor: ABSENCES.bg, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Text style={{ fontSize: 14, color: unavailEndDate ? ABSENCES.colorDark : colors.mutedForeground, fontWeight: unavailEndDate ? "700" : "400" }}>
-                    {unavailEndDate ? unavailEndDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Sélectionner une date"}
-                  </Text>
-                  <Ionicons name="calendar-outline" size={18} color={ABSENCES.color} />
-                </AnimatedPressable>
-                {showEndPicker && (
-                  <DateTimePicker
-                    value={unavailEndDate ?? unavailStartDate ?? new Date()}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "default"}
-                    minimumDate={unavailStartDate ?? new Date()}
-                    onChange={(_, date) => {
-                      if (Platform.OS === "android") setShowEndPicker(false);
-                      if (date) setUnavailEndDate(date);
-                    }}
-                    themeVariant={isDark ? "dark" : "light"}
-                    accentColor={ABSENCES.color}
-                  />
-                )}
-              </View>
-
-              <View style={{ gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Raison (optionnel)
-                </Text>
-                <TextInput
-                  value={unavailReason}
-                  onChangeText={setUnavailReason}
-                  placeholder="Vacances, maladie…"
-                  placeholderTextColor={colors.mutedForeground}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 14, fontSize: 14, color: colors.foreground, backgroundColor: ABSENCES.bg }}
-                />
-              </View>
-            </View>
-
-            {unavailabilities.length > 0 && (
-              <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Absences planifiées ({unavailabilities.length})
-                </Text>
-                {unavailabilities
-                  .slice()
-                  .sort((a, b) => a.start_date.localeCompare(b.start_date))
-                  .map((u) => (
-                  <View key={u.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: ABSENCES.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: ABSENCES.border }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: ABSENCES.colorDark }}>
-                        {new Date(u.start_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-                        {u.start_date !== u.end_date
-                          ? ` → ${new Date(u.end_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
-                          : ` (${new Date(u.start_date + "T12:00:00").getFullYear()})`}
-                      </Text>
-                      {u.reason && <Text style={{ fontSize: 11, color: ABSENCES.color, marginTop: 2 }}>{u.reason}</Text>}
-                    </View>
-                    <AnimatedIconButton
-                      onPress={() => removeUnavailability(u.id)}
-                      accessibilityLabel="Supprimer cette période d'absence"
-                      style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(colors.destructive, 0.10), alignItems: "center", justifyContent: "center", marginLeft: 8 }}
-                    >
-                      <Ionicons name="trash-outline" size={16} color={colors.destructive} />
-                    </AnimatedIconButton>
-                  </View>
-                ))}
-              </View>
-            )}
-
-          </ScrollView>
-
-          <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 8 }}>
-            {unavailError && <ErrorMessage message={unavailError} />}
-            <LoadingButton
-              loading={unavailSaving}
-              onPress={createUnavailability}
-              disabled={!unavailStartDate || !unavailEndDate}
-              label={!unavailStartDate || !unavailEndDate ? "Sélectionne les dates" : "Bloquer la période"}
-              style={{ backgroundColor: (!unavailStartDate || !unavailEndDate) ? colors.disabled : ABSENCES.color }}
-            />
-          </View>
-        </View>
-      </Modal>
+      {/* ── ABSENCES (bottom-sheet extrait) ── */}
+      <AbsenceSheet
+        visible={showUnavailModal}
+        onClose={() => setShowUnavailModal(false)}
+        unavailabilities={unavailabilities}
+        onChanged={setUnavailabilities}
+        loading={loading}
+      />
 
       {/* ── WEEKLY PLANNING MODAL (legacy uniquement) ── */}
       {/* TODO 4.6 — à supprimer avec les slots legacy. Jamais ouverte en mode
