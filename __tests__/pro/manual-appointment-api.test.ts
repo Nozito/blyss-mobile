@@ -116,4 +116,28 @@ describe("proApi.createAppointment", () => {
     expect(res.success).toBe(false);
     expect(res.canOverride).toBeUndefined();
   });
+
+  it("transmet client_contact (walk-in) dans le corps", async () => {
+    mockFetch.mockReturnValueOnce(jsonResponse(200, { success: true, data: { id: 60, price: 40, override_applied: null } }));
+    await proApi.createAppointment({ ...base, client_contact: "walkin@ex.com" });
+    const body = JSON.parse((mockFetch.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.client_contact).toBe("walkin@ex.com");
+  });
+});
+
+describe("proApi.searchClients — périmètre RGPD", () => {
+  it("mode relation (défaut) : n'ajoute pas exact=1", async () => {
+    mockFetch.mockReturnValueOnce(jsonResponse(200, { success: true, data: [] }));
+    await proApi.searchClients("Léa");
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain("/api/pro/clients/search?q=L%C3%A9a");
+    expect(url).not.toContain("exact=1");
+  });
+
+  it("mode exact : ajoute exact=1", async () => {
+    mockFetch.mockReturnValueOnce(jsonResponse(200, { success: true, data: [] }));
+    await proApi.searchClients("walkin@ex.com", { exact: true });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain("exact=1");
+  });
 });

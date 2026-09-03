@@ -618,13 +618,17 @@ export const proApi = {
 
   getClients: () => apiCall<unknown[]>("/api/pro/clients"),
 
-  // Unlike getClients (only clients who already have a reservation with this
-  // pro), this searches every app client — used to pick a client when the
-  // pro manually creates an appointment for someone booking with her for
-  // the first time.
-  searchClients: (q: string) =>
-    apiCall<{ id: number; first_name: string; last_name: string; phone_number: string | null; email: string; profile_photo: string | null }[]>(
-      `/api/pro/clients/search?q=${encodeURIComponent(q)}`
+  // RGPD — deux modes, filtrés côté serveur :
+  //  - défaut : recherche par nom/email/téléphone LIMITÉE aux clientes ayant
+  //    déjà une réservation confirmed/completed avec cette pro.
+  //  - { exact: true } : walk-in — résout une cliente sans historique
+  //    UNIQUEMENT sur correspondance exacte d'un email ou téléphone que la
+  //    pro connaît déjà (aucun match par nom / fragment).
+  // NB : en mode exact, le backend ne renvoie que { id, first_name, last_name,
+  // profile_photo } (minimisation) — phone_number / email sont absents.
+  searchClients: (q: string, opts?: { exact?: boolean }) =>
+    apiCall<{ id: number; first_name: string; last_name: string; phone_number?: string | null; email?: string; profile_photo: string | null }[]>(
+      `/api/pro/clients/search?q=${encodeURIComponent(q)}${opts?.exact ? "&exact=1" : ""}`
     ),
 
   /**
@@ -656,6 +660,10 @@ export const proApi = {
     start_datetime: string;
     end_datetime: string;
     early_execution_requested?: boolean;
+    /** Walk-in RGPD — email ou téléphone exact saisi par la pro pour une
+     * cliente sans réservation antérieure. Concordance avec client_id
+     * revérifiée côté serveur. */
+    client_contact?: string;
     /** Override d'ajout manuel — cf. 3.4. Jamais envoyé sans confirmation pro explicite. */
     manual_override?: {
       mode: ManualOverrideMode;
