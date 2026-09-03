@@ -1332,10 +1332,10 @@ export default function ProCalendarScreen() {
             <AnimatedPressable
               onPress={() => setShowLegacyTools((v) => !v)}
               accessibilityLabel="Gérer mes anciens créneaux"
-              style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}
             >
-              <Ionicons name="construct-outline" size={15} color={colors.mutedForeground} />
-              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>Gérer mes anciens créneaux</Text>
+              <Ionicons name="construct-outline" size={15} color={colors.foreground} />
+              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: colors.foreground }}>Gérer mes anciens créneaux</Text>
               <Ionicons name={showLegacyTools ? "chevron-up" : "chevron-down"} size={16} color={colors.mutedForeground} />
             </AnimatedPressable>
             {showLegacyTools && (
