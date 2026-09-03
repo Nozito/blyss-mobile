@@ -44,7 +44,9 @@ jest.mock("@/components/ui/LoadingButton", () => ({
 jest.mock("@/components/ui/AnimatedPressable", () => {
   const { Pressable } = require("react-native");
   return {
-    AnimatedPressable: ({ children, onPress }: any) => <Pressable onPress={onPress}>{children}</Pressable>,
+    AnimatedPressable: ({ children, onPress, accessibilityLabel }: any) => (
+      <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel}>{children}</Pressable>
+    ),
     AnimatedIconButton: ({ children, onPress, accessibilityLabel }: any) => (
       <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel}>{children}</Pressable>
     ),
@@ -76,6 +78,13 @@ const setup = (props: Partial<React.ComponentProps<typeof AbsenceSheet>> = {}) =
 
 beforeEach(() => jest.clearAllMocks());
 
+/** Ouvre le DateField `label`, choisit la date mockée, valide (parcours iOS). */
+function pickDate(utils: ReturnType<typeof setup>, label: string) {
+  fireEvent.press(utils.getByLabelText(label));            // ouvre la Modal du picker
+  fireEvent.press(utils.getByText("pick"));                // le picker pousse une date dans le draft
+  fireEvent.press(utils.getByLabelText("Valider la date")); // OK → onChange(parent)
+}
+
 describe("AbsenceSheet", () => {
   it("état vide : message dédié, pas de liste", () => {
     const { queryByText, getByText } = setup({ unavailabilities: [] });
@@ -98,12 +107,11 @@ describe("AbsenceSheet", () => {
   it("succès : crée l'absence puis rafraîchit la liste via onChanged", async () => {
     mockCreate.mockResolvedValue({ success: true });
     mockGet.mockResolvedValue({ success: true, data: [{ id: 9, start_date: "2026-10-01", end_date: "2026-10-01", reason: null }] });
-    const { getByText, getAllByText, onChanged, onClose } = setup();
+    const u = setup();
+    const { getByText, onChanged, onClose } = u;
 
-    fireEvent.press(getAllByText("Sélectionner une date")[0]); // ouvre picker "Du"
-    fireEvent.press(getAllByText("pick")[0]);
-    fireEvent.press(getAllByText("Sélectionner une date")[0]); // ouvre picker "Au"
-    fireEvent.press(getAllByText("pick")[0]);
+    pickDate(u, "Du");
+    pickDate(u, "Au");
 
     fireEvent.press(getByText("Bloquer la période"));
 
@@ -117,13 +125,11 @@ describe("AbsenceSheet", () => {
 
   it("erreur : affiche le message si l'API échoue", async () => {
     mockCreate.mockRejectedValue(new Error("boom"));
-    const { getByText, getAllByText, findByText } = setup();
-    fireEvent.press(getAllByText("Sélectionner une date")[0]);
-    fireEvent.press(getAllByText("pick")[0]);
-    fireEvent.press(getAllByText("Sélectionner une date")[0]);
-    fireEvent.press(getAllByText("pick")[0]);
-    fireEvent.press(getByText("Bloquer la période"));
-    expect(await findByText("Impossible d'enregistrer la période")).toBeTruthy();
+    const u = setup();
+    pickDate(u, "Du");
+    pickDate(u, "Au");
+    fireEvent.press(u.getByText("Bloquer la période"));
+    expect(await u.findByText("Impossible d'enregistrer la période")).toBeTruthy();
   });
 
   it("suppression : optimiste + rollback + toast si l'API échoue", async () => {
