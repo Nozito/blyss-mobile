@@ -1218,8 +1218,8 @@ export default function ProCalendarScreen() {
               onPress={c.onPress}
               style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: colors.border, ...Shadows.card }}
             >
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name={c.icon} size={20} color={colors.foreground} />
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: withAlpha(colors.primary, 0.1), alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={c.icon} size={20} color={colors.primary} />
               </View>
               <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>{c.title}</Text>
               <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15, minHeight: 30 }}>{c.sub}</Text>
