@@ -17,8 +17,9 @@ type Client = {
   id: number;
   first_name: string;
   last_name: string;
-  phone_number: string | null;
-  email: string;
+  // Absents en mode "Nouvelle cliente" (exact) — minimisation côté backend.
+  phone_number?: string | null;
+  email?: string;
   profile_photo: string | null;
 };
 

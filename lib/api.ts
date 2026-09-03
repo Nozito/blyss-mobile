@@ -624,8 +624,10 @@ export const proApi = {
   //  - { exact: true } : walk-in — résout une cliente sans historique
   //    UNIQUEMENT sur correspondance exacte d'un email ou téléphone que la
   //    pro connaît déjà (aucun match par nom / fragment).
+  // NB : en mode exact, le backend ne renvoie que { id, first_name, last_name,
+  // profile_photo } (minimisation) — phone_number / email sont absents.
   searchClients: (q: string, opts?: { exact?: boolean }) =>
-    apiCall<{ id: number; first_name: string; last_name: string; phone_number: string | null; email: string; profile_photo: string | null }[]>(
+    apiCall<{ id: number; first_name: string; last_name: string; phone_number?: string | null; email?: string; profile_photo: string | null }[]>(
       `/api/pro/clients/search?q=${encodeURIComponent(q)}${opts?.exact ? "&exact=1" : ""}`
     ),
 
