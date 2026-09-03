@@ -39,6 +39,13 @@ describe("StatusBadge", () => {
     }
   });
 
+  it("rôle alert : texte foncé sur fond clair (contraste AA)", () => {
+    const colors: any = { warningTextDark: "#B45309", warningLight: "#FFF7ED", primary: "#p", mutedForeground: "#m", muted: "#mm" };
+    const cfg = getStatusCfg(colors);
+    expect(cfg.no_show.color).toBe("#B45309");
+    expect(cfg.no_show.bg).toBe("#FFF7ED");
+  });
+
   it("mapping sur 3 rôles", () => {
     const cfg = getStatusCfg(new Proxy({}, { get: () => "#000" }) as any);
     expect(cfg.ongoing.role).toBe("primary");

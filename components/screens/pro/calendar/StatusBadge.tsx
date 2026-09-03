@@ -37,13 +37,15 @@ export type StatusCfg = StatusMeta & { color: string; bg: string };
 export function getStatusCfg(
   colors: ReturnType<typeof useThemeColors>
 ): Record<string, StatusCfg> {
+  // alert : texte foncé (warningTextDark) sur warningLight → contraste AA
+  // (~5:1 clair, élevé en sombre), au lieu de l'ambre vif sous-contrasté.
   const color = (r: StatusRole) =>
-    r === "primary" ? colors.primary : r === "alert" ? colors.warning : colors.mutedForeground;
+    r === "primary" ? colors.primary : r === "alert" ? colors.warningTextDark : colors.mutedForeground;
   const bg = (r: StatusRole) =>
     r === "primary"
       ? withAlpha(colors.primary, 0.12)
       : r === "alert"
-        ? withAlpha(colors.warning, 0.14)
+        ? colors.warningLight
         : colors.muted;
 
   const out: Record<string, StatusCfg> = {};
