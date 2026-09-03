@@ -23,6 +23,7 @@ import { Modal } from "@/components/ui/Modal";
 import { messagesApi, REPORT_REASONS, type ChatMessage } from "@/lib/api";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { resolveMediaUrl } from "@/lib/media";
+import { canShowReservationPin } from "@/lib/reservationPin";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 
@@ -230,8 +231,9 @@ export default function MessageThreadScreen() {
           </View>
         )}
 
-        {/* Reservation pin */}
-        {thread.lastReservationId && (
+        {/* Reservation pin — visible seulement pour un RDV actif à venir
+            (masquée si passé, annulé, terminé ou inexistant). */}
+        {thread.lastReservationId && canShowReservationPin(thread.reservationStatus, thread.reservationStart) && (
           <Pressable
             onPress={() => router.push(`/booking/${thread.lastReservationId}` as never)}
             accessibilityRole="button"

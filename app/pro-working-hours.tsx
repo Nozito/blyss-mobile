@@ -41,6 +41,7 @@ export default function ProWorkingHoursScreen() {
   });
 
   const [week, setWeek] = useState<WorkingHoursDay[]>(emptyWeek());
+  const [showHelp, setShowHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Édition d'une plage : { weekday, index (-1 = nouvelle) }
   const [editing, setEditing] = useState<{ weekday: number; index: number } | null>(null);
@@ -130,13 +131,22 @@ export default function ProWorkingHoursScreen() {
             Tes créneaux réservables en découlent automatiquement.
           </Text>
         </View>
-        <AnimatedIconButton
-          onPress={() => safeBack(router, "/(pro)/calendar")}
-          accessibilityLabel="Fermer"
-          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
-        >
-          <Ionicons name="close" size={18} color={colors.foreground} />
-        </AnimatedIconButton>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <AnimatedIconButton
+            onPress={() => setShowHelp(true)}
+            accessibilityLabel="Comment fonctionnent les horaires"
+            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons name="help-circle-outline" size={20} color={colors.foreground} />
+          </AnimatedIconButton>
+          <AnimatedIconButton
+            onPress={() => safeBack(router, "/(pro)/calendar")}
+            accessibilityLabel="Fermer"
+            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons name="close" size={18} color={colors.foreground} />
+          </AnimatedIconButton>
+        </View>
       </View>
 
       {isLoading ? (
@@ -256,6 +266,43 @@ export default function ProWorkingHoursScreen() {
 
           <LoadingButton loading={false} onPress={commitEditor} label="Valider la plage" />
         </View>
+      </Modal>
+
+      <Modal visible={showHelp} onClose={() => setShowHelp(false)} bottomSheet noPadding maxHeight="80%">
+        <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center" }} />
+          <Text style={{ fontSize: 18, fontWeight: "800", color: colors.foreground }}>
+            Comment tes disponibilités sont calculées
+          </Text>
+          {[
+            { icon: "time-outline", title: "Horaires d'ouverture", body: "Les plages que tu définis ici. Tes clientes ne peuvent réserver qu'à l'intérieur de ces plages." },
+            { icon: "moon-outline", title: "Jours fermés", body: "Un jour sans aucune plage est fermé : il n'apparaît jamais comme réservable." },
+            { icon: "airplane-outline", title: "Absences", body: "Des congés ponctuels (vacances, imprévu) qui se gèrent depuis le Calendrier. Ils retirent les créneaux de ces dates, même pendant tes horaires habituels." },
+            { icon: "contract-outline", title: "Temps de battement (buffers)", body: "Le temps avant / après un rendez-vous se règle prestation par prestation, dans Prestations. Il est réservé automatiquement autour de chaque RDV." },
+          ].map((row) => (
+            <View key={row.title} style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={row.icon as keyof typeof Ionicons.glyphMap} size={17} color={colors.foreground} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>{row.title}</Text>
+                <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 2, lineHeight: 18 }}>{row.body}</Text>
+              </View>
+            </View>
+          ))}
+          <View style={{ backgroundColor: colors.muted, borderRadius: 12, padding: 14 }}>
+            <Text style={{ fontSize: 13, color: colors.foreground, lineHeight: 19 }}>
+              Créneaux réservables = horaires d'ouverture − rendez-vous déjà pris − absences − temps de battement.
+            </Text>
+          </View>
+          <AnimatedPressable
+            onPress={() => { setShowHelp(false); router.push("/(pro)/(profile)/services" as never); }}
+            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}
+          >
+            <Ionicons name="pricetags-outline" size={16} color={colors.foreground} />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>Régler les temps de battement</Text>
+          </AnimatedPressable>
+        </ScrollView>
       </Modal>
     </SafeAreaView>
   );

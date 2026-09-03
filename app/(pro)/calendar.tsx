@@ -42,6 +42,7 @@ import { hasPlanAtLeast } from "@/constants/plans";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
 import { useDebounce } from "@/hooks/useDebounce";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { NewAppointmentSheet, type EditableAppointment } from "@/components/screens/pro/calendar/NewAppointmentSheet";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -505,7 +506,8 @@ export default function ProCalendarScreen() {
   const [planningDuration, setPlanningDuration] = useState(60);
 
   type ViewMode = "month" | "week";
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  // Dernier choix vue complète / réduite mémorisé jusqu'à ce que la pro le change.
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>("pro_calendar_view_mode", "month");
   const toggleAnim = useRef(new Animated.Value(1)).current;
 
   const toggleViewMode = useCallback(() => {
@@ -514,8 +516,8 @@ export default function ProCalendarScreen() {
       Animated.timing(toggleAnim, { toValue: 0.7, duration: 100, useNativeDriver: true }),
       Animated.spring(toggleAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }),
     ]).start();
-    setViewMode((v) => (v === "month" ? "week" : "month"));
-  }, [toggleAnim]);
+    setViewMode(viewMode === "month" ? "week" : "month");
+  }, [toggleAnim, viewMode, setViewMode]);
 
   const selectedYear  = selectedDate.getFullYear();
   const selectedMonth = selectedDate.getMonth();
