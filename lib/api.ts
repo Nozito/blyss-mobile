@@ -815,6 +815,12 @@ export const proApi = {
     };
   },
 
+  // #34 — spécialités nails déclarées par la pro (taxonomie de reco).
+  getNailStyles: (): Promise<ApiResponse<{ styles: NailStyle[] }>> =>
+    apiCall("/api/pro/nail-styles"),
+  setNailStyles: (styles: NailStyle[]): Promise<ApiResponse<{ styles: NailStyle[] }>> =>
+    apiCall("/api/pro/nail-styles", { method: "PUT", body: JSON.stringify({ styles }) }),
+
   updateReservationStatus: (id: number, status: "completed" | "cancelled") =>
     apiCall(`/api/pro/reservations/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
 
@@ -965,6 +971,64 @@ export const clientApi = {
     apiCall(`/api/client/reschedule-requests/${id}/accept`, { method: "PATCH" }),
   declineRescheduleRequest: (id: number): Promise<ApiResponse<{ reservationId: number }>> =>
     apiCall(`/api/client/reschedule-requests/${id}/decline`, { method: "PATCH" }),
+};
+
+// ── Onboarding client (#34) ───────────────────────────────────────────────────
+
+export const NAIL_STYLES = [
+  "nail_art",
+  "french_nude",
+  "couleurs_vives",
+  "vernis_gel",
+  "pose_resine",
+  "autre",
+] as const;
+export type NailStyle = (typeof NAIL_STYLES)[number];
+
+export interface ClientOnboardingStatus {
+  current_step: number;
+  completed: boolean;
+  completed_at: string | null;
+  skipped: boolean;
+  style_nails: NailStyle | null;
+}
+
+export interface OnboardingRecommendation {
+  pro_id: number;
+  name: string;
+  city: string | null;
+  profile_photo: string | null;
+  banner_photo: string | null;
+  rating: number;
+  reviews_count: number;
+  bookings_90d: number;
+  has_availability: boolean;
+  matches_style: boolean;
+  open_slots: { today: number; this_week: number; this_weekend: number };
+}
+
+export const clientOnboardingApi = {
+  getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
+    apiCall("/api/client/onboarding/status"),
+
+  setPreferences: (style_nails: NailStyle, city?: string): Promise<ApiResponse<{ style_nails: NailStyle }>> =>
+    apiCall("/api/client/onboarding/preferences", {
+      method: "POST",
+      body: JSON.stringify(city ? { style_nails, city } : { style_nails }),
+    }),
+
+  getRecommendations: (city?: string): Promise<
+    ApiResponse<{ style_nails: NailStyle | null; style_filter_active: boolean; recommendations: OnboardingRecommendation[] }>
+  > => apiCall(`/api/client/onboarding/recommendations${city ? `?city=${encodeURIComponent(city)}` : ""}`),
+
+  tapCta: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/cta", { method: "POST" }),
+
+  complete: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/complete", { method: "POST" }),
+
+  skip: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/skip", { method: "POST" }),
 };
 
 // ── Payments API ──────────────────────────────────────────────────────────────

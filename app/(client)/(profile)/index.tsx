@@ -20,6 +20,8 @@ import { resolveMediaUrl } from "@/lib/media";
 // Groupe compte
 const ACCOUNT_ITEMS = [
   { icon: "settings-outline" as const, label: "Paramètres", route: "/(client)/(profile)/settings" },
+  // #34 — reprendre / revoir l'onboarding nails
+  { icon: "sparkles-outline" as const, label: "Découverte nails", route: "/client-onboarding?from=settings" },
 ] as const;
 
 // Groupe support

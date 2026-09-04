@@ -378,7 +378,9 @@ export default function RegisterScreen() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
             showTransition();
             if (formData.role === "pro") router.replace("/(pro)/dashboard" as any);
-            else router.replace("/(client)" as any);
+            // #34 — nouveau client : onboarding nails juste après l'inscription
+            // (skippable, jamais bloquant).
+            else router.replace("/client-onboarding?from=signup" as any);
             hideTransition();
           }}
         />

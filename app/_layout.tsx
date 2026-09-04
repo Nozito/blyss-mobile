@@ -180,6 +180,8 @@ function AppContent() {
         <Stack.Screen name="(pro)" options={{ animation: "fade" }} />
         <Stack.Screen name="(admin)" options={{ animation: "fade" }} />
         <Stack.Screen name="pro-onboarding" options={{ animation: "fade" }} />
+        <Stack.Screen name="client-onboarding" options={{ animation: "fade", gestureEnabled: false }} />
+        <Stack.Screen name="pro-nail-styles" options={{ presentation: "card", animation: "slide_from_bottom" }} />
         <Stack.Screen name="pro-subscription" options={{ animation: "fade" }} />
         <Stack.Screen name="pro-subscription-success" options={{ animation: "fade" }} />
         <Stack.Screen name="pro-working-hours" options={{ presentation: "card", animation: "slide_from_bottom" }} />
