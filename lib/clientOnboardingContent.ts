@@ -1,70 +1,85 @@
 /**
- * #34 — contenu statique de l'onboarding client nails (refonte design « B ancré »).
- * Voix affirmée sur les écrans bornes (bienvenue / carousel), sobre et aligné
- * sur l'app au milieu. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
+ * #34 — contenu statique de l'onboarding client nails (passe 3b « poster editorial × DA »).
+ * 7 écrans, zéro emoji. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
+ *
+ *   1 Bienvenue → 2 Comment ça marche → 3 Préférences → 4 Recos
+ *   → 5 CTA premier RDV → 6 Notifications → 7 Comment tu as connu Blyss
  */
-import type { NailStyle } from "@/lib/api";
-
-export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; emoji: string }[] = [
-  { value: "nail_art", label: "Nail art", emoji: "🎨" },
-  { value: "french_nude", label: "French / nude", emoji: "🤍" },
-  { value: "couleurs_vives", label: "Couleurs vives", emoji: "🌈" },
-  { value: "vernis_gel", label: "Vernis gel", emoji: "✨" },
-  { value: "pose_resine", label: "Pose résine", emoji: "💎" },
-  { value: "autre", label: "Autre / je ne sais pas", emoji: "💅" },
-];
+import type { NailStyle, NailService } from "@/lib/api";
 
 /**
- * Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo.
- * `title` est affiché en display lourd capitales ; `body` porte la clarté.
+ * Écran 3 — groupe « Le style » (1 choix, enum nail_style). `code` = réf nuancier
+ * (onboarding client). `emoji` conservé pour l'écran pro « Mes spécialités » qui
+ * réutilise cette liste.
  */
+export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string; emoji: string }[] = [
+  { value: "nail_art", label: "Nail art", code: "NL·01", emoji: "🎨" },
+  { value: "french_nude", label: "French / nude", code: "NL·02", emoji: "🤍" },
+  { value: "couleurs_vives", label: "Couleurs vives", code: "NL·03", emoji: "🌈" },
+  { value: "vernis_gel", label: "Vernis gel", code: "NL·04", emoji: "✨" },
+  { value: "pose_resine", label: "Pose résine", code: "NL·05", emoji: "💎" },
+  { value: "autre", label: "Autre", code: "NL·06", emoji: "💅" },
+];
+
+/** Écran 3 — groupe « Ce que tu viens faire » (multi, services[]). Axe prestation, aucun mot commun avec le style. */
+export const NAIL_SERVICE_OPTIONS: { value: NailService; label: string }[] = [
+  { value: "nouvelle_pose", label: "Nouvelle pose" },
+  { value: "remplissage", label: "Remplissage" },
+  { value: "depose", label: "Dépose" },
+  { value: "semi_permanent", label: "Semi-perm." },
+  { value: "capsules", label: "Capsules" },
+  { value: "soin_pieds", label: "Soin des pieds" },
+];
+
+/** Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo. */
 export const WELCOME = {
   eyebrow: "✦ Blyss · onglerie",
   title: "Tes ongles méritent mieux",
-  body: "Les meilleures prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos, réservées en quelques taps.",
-  socialProof: "Des milliers de RDV nails réservés chaque mois",
+  sticker: "✦ 1 minute chrono",
+  body: "Les meilleures prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos.",
+  socialProof: "→ Des milliers de RDV nails / mois",
   cta: "On y va",
-  skip: "Plus tard",
 };
 
-/**
- * Écran 5 — carousel, 3 slides plein champ. `field` = clé de couleur de la
- * palette (token), `ink` = "dark" (texte quasi-noir) ou "light" (texte clair).
- */
-export const FEATURE_SLIDES: {
-  title: string;
-  body: string;
-  emoji: string;
-  field: "primary" | "secondary" | "foreground";
-  ink: "dark" | "light";
-}[] = [
-  {
-    emoji: "📅",
-    title: "Réserve en 3 taps",
-    body: "Les vraies disponibilités de chaque pro, 24/7. Pas d'appel, pas de DM.",
-    field: "primary",
-    ink: "dark",
-  },
-  {
-    emoji: "🔔",
-    title: "On te rappelle au bon moment",
-    body: "Une notif quand il est temps de refaire tes ongles chez ta pro préférée.",
-    field: "secondary",
-    ink: "dark",
-  },
-  {
-    emoji: "💬",
-    title: "Tout au même endroit",
-    body: "Messages, historique, rappels de RDV : ton suivi nails complet dans l'app.",
-    field: "foreground",
-    ink: "light",
-  },
+/** Écran 2 — « comment ça marche », fond prune. 3 étapes, rassure avant de demander. */
+export const HOW_IT_WORKS = {
+  eyebrow: "Avant de commencer",
+  title: "Trois étapes,\nc'est tout",
+  steps: [
+    "Tu choisis ta pro et ton créneau",
+    "Tu reçois ta confirmation direct",
+    "Tu payes à l'institut, après ton soin",
+  ],
+  cta: "J'ai compris",
+};
+
+/** Écran 6 — pré-permission notifications, fond prune. */
+export const NOTIF = {
+  eyebrow: "Presque fini",
+  title: "On te prévient au bon moment",
+  body: "Quand un créneau se libère chez ta pro, et quand c'est l'heure de refaire tes ongles. Rien d'autre.",
+  cta: "Activer les notifs",
+  later: "plus tard",
+};
+
+/** Écran 7 — attribution (acquisition_source). 1 choix, skippable. */
+export const ATTRIBUTION_OPTIONS: { value: string; label: string }[] = [
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "amie", label: "Une amie" },
+  { value: "prothesiste", label: "Ma prothésiste" },
+  { value: "google", label: "Recherche Google" },
+  { value: "pub", label: "Une pub" },
 ];
 
 export const STEP = {
   WELCOME: 1,
-  PREFERENCES: 2,
-  RECOMMENDATIONS: 3,
-  CTA: 4,
-  FEATURES: 5,
+  HOW_IT_WORKS: 2,
+  PREFERENCES: 3,
+  RECOMMENDATIONS: 4,
+  CTA: 5,
+  NOTIFICATIONS: 6,
+  ATTRIBUTION: 7,
 } as const;
+
+export const STEP_COUNT = 7;

@@ -1,14 +1,15 @@
 /**
- * #34 — Onboarding client nails (refonte design « B ancré »). Route top-level.
- * 5 étapes, skippable à tout moment. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
+ * #34 — Onboarding client nails (passe 3b « poster editorial × DA »). Route top-level.
+ * 7 étapes, skippable à tout moment. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
  *
- *   1 Bienvenue → 2 Préférences + ville → 3 Recommandations → 4 CTA → 5 Features
+ *   1 Bienvenue → 2 Comment ça marche → 3 Préférences → 4 Recos
+ *   → 5 CTA premier RDV → 6 Notifications → 7 Comment tu as connu Blyss
  *
- * Parti pris : voix affirmée sur les écrans bornes (1 & 5) — champ de couleur
- * plein cadre, display lourd capitales, bouton pilule noir (accent réservé à
- * l'onboarding). Écrans 2-4 sobres et alignés sur les primitives de l'app
- * (cartes arrondies, LoadingButton, Playfair). Rose de marque partout, aucune
- * couleur neuve. Support dark mode via useThemeColors.
+ * Système : zéro emoji ; titres bornes en fontWeight 900 capitales (SF Pro Black,
+ * aucune police embarquée) ; 3 fonds pleins issus de la palette (rose / cream /
+ * prune #3D1F2C) ; header = numéro géant + « Plus tard » ; boutons pilule ;
+ * ruban à rayures rose × prune qui balaie entre chaque écran. Dark mode via
+ * useThemeColors.
  *
  * Entrée : router.replace("/client-onboarding?from=signup") après l'inscription,
  * ou "?from=settings" pour une reprise manuelle.
@@ -21,128 +22,203 @@ import {
   TextInput,
   ActivityIndicator,
   Pressable,
-  Animated,
+  Animated as RNAnimated,
   useWindowDimensions,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-  type TextStyle,
 } from "react-native";
-import Reanimated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Reanimated, {
+  Easing,
+  FadeIn,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { Image } from "expo-image";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { usePostHog } from "posthog-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Notifications from "expo-notifications";
 import {
   clientOnboardingApi,
   type NailStyle,
+  type NailService,
   type OnboardingRecommendation,
 } from "@/lib/api";
 import {
   NAIL_STYLE_OPTIONS,
+  NAIL_SERVICE_OPTIONS,
+  ATTRIBUTION_OPTIONS,
   WELCOME,
-  FEATURE_SLIDES,
+  HOW_IT_WORKS,
+  NOTIF,
   STEP,
+  STEP_COUNT,
 } from "@/lib/clientOnboardingContent";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useToast } from "@/components/ui/Toast";
-import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
-import { Fonts } from "@/constants/fonts";
-import { Shadows } from "@/constants/shadows";
+
+/** Encres fixes utilisées sur les champs de couleur assumés (rose, prune). */
+const INK = "#1A0710";
+const CREAM = "#F6E9EE";
+const PRUNE = "#3D1F2C";
 
 const STYLE_LABEL = Object.fromEntries(NAIL_STYLE_OPTIONS.map((o) => [o.value, o.label]));
-
-/** Encre foncée réutilisée sur les champs de couleur (rose / doré). */
-const INK_DARK = "#1A0710";
 
 const tap = (style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) =>
   Haptics.impactAsync(style).catch(() => {});
 
-/** Titre "display" — SF Pro Black sur iOS, sans police embarquée. */
-const display = (size: number): TextStyle => ({
-  fontWeight: "900",
-  fontSize: size,
-  lineHeight: size * 1.02,
-  letterSpacing: -size * 0.02,
-  textTransform: "uppercase",
-});
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** Bouton pilule plein — accent visuel réservé aux écrans bornes. */
+const scarcityLabel = (s: { today: number; this_week: number }) =>
+  s.today > 0
+    ? `${s.today} créneau${s.today > 1 ? "x" : ""} · aujourd'hui`
+    : `${s.this_week} créneau${s.this_week > 1 ? "x" : ""} · cette semaine`;
+
+/** Bouton pilule pleine largeur — libellé sur une ligne. */
 function PillButton({
   label,
   onPress,
   bg,
   fg,
+  loading,
 }: {
   label: string;
   onPress: () => void;
   bg: string;
   fg: string;
+  loading?: boolean;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new RNAnimated.Value(1)).current;
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <RNAnimated.View style={{ transform: [{ scale }] }}>
       <Pressable
         onPress={onPress}
+        disabled={loading}
         onPressIn={() =>
-          Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 50 }).start()
+          RNAnimated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start()
         }
         onPressOut={() =>
-          Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start()
+          RNAnimated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start()
         }
         accessibilityRole="button"
         accessibilityLabel={label}
         style={{
-          height: 56,
+          height: 54,
           borderRadius: 999,
           backgroundColor: bg,
           alignItems: "center",
           justifyContent: "center",
+          paddingHorizontal: 12,
         }}
       >
-        <Text
-          style={{
-            color: fg,
-            fontSize: 15,
-            fontWeight: "800",
-            letterSpacing: 0.5,
-            textTransform: "uppercase",
-          }}
-        >
-          {label}
-        </Text>
+        {loading ? (
+          <ActivityIndicator size="small" color={fg} />
+        ) : (
+          <Text
+            numberOfLines={1}
+            style={{
+              color: fg,
+              fontSize: 13.5,
+              fontWeight: "700",
+              letterSpacing: 0.6,
+              textTransform: "uppercase",
+            }}
+          >
+            {label}
+          </Text>
+        )}
       </Pressable>
-    </Animated.View>
+    </RNAnimated.View>
   );
+}
+
+/** Fond de chaque écran : un token de la palette, texte encre ou cream. */
+function useField(step: number, colors: ReturnType<typeof useThemeColors>) {
+  return useMemo(() => {
+    switch (step) {
+      case STEP.WELCOME:
+      case STEP.CTA:
+        return { bg: colors.primary, ink: INK, pill: { bg: INK, fg: CREAM } };
+      case STEP.HOW_IT_WORKS:
+      case STEP.NOTIFICATIONS:
+        return { bg: PRUNE, ink: CREAM, pill: { bg: CREAM, fg: PRUNE } };
+      default:
+        return {
+          bg: colors.cream,
+          ink: colors.foreground,
+          pill: { bg: colors.foreground, fg: colors.background },
+        };
+    }
+  }, [step, colors]);
 }
 
 export default function ClientOnboardingScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const isDark = useIsDarkMode();
   const { showToast } = useToast();
   const posthog = usePostHog();
   const params = useLocalSearchParams<{ from?: string }>();
   const fromSettings = params.from === "settings";
   const { width } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
 
   const [step, setStep] = useState<number>(STEP.WELCOME);
   const [style, setStyle] = useState<NailStyle | null>(null);
+  const [services, setServices] = useState<NailService[]>([]);
   const [city, setCity] = useState("");
   const [cityFocused, setCityFocused] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [recos, setRecos] = useState<OnboardingRecommendation[] | null>(null);
   const [loadingRecos, setLoadingRecos] = useState(false);
-  const [featureSlide, setFeatureSlide] = useState(0);
-  const featureScroll = useRef<ScrollView>(null);
+  const [followed, setFollowed] = useState<Set<number>>(new Set());
+  const [attribution, setAttribution] = useState<string | null>(null);
+  const notifFrom = useRef<"onboarding" | "empty_state">("onboarding");
+
+  const field = useField(step, colors);
+  const ink = field.ink;
+
+  // ── Ruban de transition ──────────────────────────────────────────────
+  const ribbonX = useSharedValue(1.5);
+  const ribbonStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: ribbonX.value * width }, { skewX: "-9deg" }],
+  }));
+
+  const go = useCallback(
+    (next: number) => {
+      if (reduceMotion) {
+        setStep(next);
+        return;
+      }
+      ribbonX.value = withTiming(
+        -0.18,
+        { duration: 200, easing: Easing.in(Easing.cubic) },
+        (finished) => {
+          if (!finished) return;
+          runOnJS(setStep)(next);
+          runOnJS(tap)(Haptics.ImpactFeedbackStyle.Light);
+          ribbonX.value = withTiming(-1.6, { duration: 320, easing: Easing.out(Easing.cubic) });
+        }
+      );
+    },
+    [reduceMotion, ribbonX]
+  );
+
+  // ── Filet de progression ─────────────────────────────────────────────
+  const progress = useSharedValue(step / STEP_COUNT);
+  useEffect(() => {
+    progress.value = withTiming(step / STEP_COUNT, { duration: 400 });
+  }, [step, progress]);
+  const progressStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
   const track = useCallback(
-    (event: string, props?: Record<string, string | number | boolean | null | number[]>) => {
+    (
+      event: string,
+      props?: Record<string, string | number | boolean | null | string[] | number[]>
+    ) => {
       posthog?.capture(event, props as Record<string, unknown> as never);
     },
     [posthog]
@@ -155,14 +231,23 @@ export default function ClientOnboardingScreen() {
       .then((res) => {
         if (res.success && res.data) {
           if (res.data.style_nails) setStyle(res.data.style_nails);
+          if (res.data.services?.length) setServices(res.data.services);
+          if (res.data.acquisition_source) setAttribution(res.data.acquisition_source);
           if (fromSettings && res.data.current_step > 1 && !res.data.completed) {
-            setStep(Math.min(res.data.current_step, STEP.FEATURES));
+            setStep(Math.min(res.data.current_step, STEP_COUNT));
           }
         }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // _notif_prompted quand l'écran notifications s'affiche
+  useEffect(() => {
+    if (step === STEP.NOTIFICATIONS) {
+      track("onboarding_notif_prompted", { from: notifFrom.current });
+    }
+  }, [step, track]);
 
   const leave = useCallback(() => {
     router.replace("/(client)" as never);
@@ -175,16 +260,35 @@ export default function ClientOnboardingScreen() {
     leave();
   }, [step, track, leave]);
 
-  const goPreferences = () => {
-    tap(Haptics.ImpactFeedbackStyle.Medium);
-    setStep(STEP.PREFERENCES);
+  const finish = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    track("onboarding_completed", { steps_seen: STEP_COUNT });
+    clientOnboardingApi.complete().catch(() => {});
+    leave();
+  }, [track, leave]);
+
+  const onHeaderSkip = () => {
+    if (step === STEP.ATTRIBUTION) {
+      finish();
+      return;
+    }
+    doSkip();
   };
+  const skipLabel = fromSettings
+    ? "Fermer"
+    : step === STEP.ATTRIBUTION
+      ? "Passer"
+      : "Plus tard";
 
   const submitPreferences = async () => {
     if (!style) return;
     tap(Haptics.ImpactFeedbackStyle.Medium);
     setSavingPrefs(true);
-    const res = await clientOnboardingApi.setPreferences(style, city.trim() || undefined);
+    const res = await clientOnboardingApi.setPreferences(
+      style,
+      city.trim() || undefined,
+      services.length ? services : undefined
+    );
     setSavingPrefs(false);
     if (!res.success) {
       showToast(res.error ?? "Impossible d'enregistrer", "error");
@@ -192,10 +296,12 @@ export default function ClientOnboardingScreen() {
     }
     track("onboarding_preferences_selected", {
       style_nails: style,
+      services,
+      services_count: services.length,
       has_location: !!city.trim(),
       location: city.trim() || null,
     });
-    setStep(STEP.RECOMMENDATIONS);
+    go(STEP.RECOMMENDATIONS);
     loadRecos();
   };
 
@@ -209,6 +315,7 @@ export default function ClientOnboardingScreen() {
       style_nails: style,
       style_filter_active: (res.success && res.data?.style_filter_active) || false,
       results_count: list.length,
+      empty: list.length === 0,
       pro_ids: list.map((r) => r.pro_id),
       had_scarcity: list.some((r) => r.open_slots.this_week > 0),
     });
@@ -221,605 +328,575 @@ export default function ClientOnboardingScreen() {
     router.push(`/specialist/${r.pro_id}` as never);
   };
 
-  const finish = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    track("onboarding_completed", { steps_seen: STEP.FEATURES });
-    await clientOnboardingApi.complete().catch(() => {});
-    leave();
+  const toggleFollow = (r: OnboardingRecommendation, position: number) => {
+    Haptics.selectionAsync().catch(() => {});
+    setFollowed((prev) => {
+      const next = new Set(prev);
+      if (next.has(r.pro_id)) {
+        next.delete(r.pro_id);
+      } else {
+        next.add(r.pro_id);
+        clientOnboardingApi.followPro(r.pro_id).catch(() => {});
+        track("onboarding_pro_followed", { pro_id: r.pro_id, position });
+      }
+      return next;
+    });
+  };
+
+  const enableNotifs = async () => {
+    tap(Haptics.ImpactFeedbackStyle.Medium);
+    let result: string = "denied";
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      result = status === "granted" ? "granted" : "denied";
+    } catch {
+      result = "error";
+    }
+    track("onboarding_notif_result", { result });
+    go(STEP.ATTRIBUTION);
+  };
+
+  const skipNotifs = () => {
+    track("onboarding_notif_result", { result: "later" });
+    go(STEP.ATTRIBUTION);
+  };
+
+  const pickAttribution = (source: string) => {
+    tap();
+    setAttribution(source);
+    clientOnboardingApi.setAttribution(source).catch(() => {});
+    track("onboarding_attribution", { source });
   };
 
   const topStyle = useMemo(() => recos?.[0] ?? null, [recos]);
+  const isEmpty = !loadingRecos && recos !== null && recos.length === 0;
 
-  const isBoldStep = step === STEP.WELCOME || step === STEP.FEATURES;
-  const slide = FEATURE_SLIDES[featureSlide];
-
-  // ── Encre du header selon le fond de l'écran ────────────────────────────
-  const headerInk =
-    step === STEP.WELCOME
-      ? INK_DARK
-      : step === STEP.FEATURES
-        ? slide.ink === "light"
-          ? "#FFFFFF"
-          : INK_DARK
-        : colors.foreground;
-  const headerAccent = step >= STEP.PREFERENCES && step <= STEP.CTA ? colors.primary : headerInk;
-
-  // ── Header : progression segmentée + skip ──────────────────────────────
-  const Header = () => (
-    <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 16 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 5,
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: withAlpha(headerInk, 0.16),
-            backgroundColor: isBoldStep ? withAlpha(headerInk, 0.08) : "transparent",
-          }}
-        >
-          {[1, 2, 3, 4, 5].map((s) => (
-            <View
-              key={s}
-              style={{
-                width: s === step ? 20 : 7,
-                height: 7,
-                borderRadius: 999,
-                backgroundColor: s <= step ? headerAccent : withAlpha(headerInk, 0.2),
-              }}
-            />
-          ))}
-        </View>
-
-        <Pressable onPress={doSkip} hitSlop={12}>
+  // ── Header : numéro géant + skip + filet ──────────────────────────────
+  const Header = (
+    <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <Text style={{ color: ink, fontWeight: "900", fontSize: 30, letterSpacing: -1.5 }}>
+          {pad2(step)}
+        </Text>
+        <Pressable onPress={onHeaderSkip} hitSlop={12} style={{ marginTop: 8 }}>
           <Text
             style={{
-              color: isBoldStep ? headerInk : colors.mutedForeground,
-              fontSize: 13,
+              color: ink,
+              opacity: 0.62,
+              fontSize: 11,
               fontWeight: "700",
+              letterSpacing: 1,
               textTransform: "uppercase",
-              letterSpacing: 0.4,
-              opacity: isBoldStep ? 0.9 : 1,
             }}
           >
-            {fromSettings ? "Fermer" : WELCOME.skip}
+            {skipLabel}
           </Text>
         </Pressable>
+      </View>
+      <View
+        style={{
+          height: 2,
+          marginTop: 10,
+          borderRadius: 2,
+          backgroundColor: withAlpha(ink, 0.18),
+          overflow: "hidden",
+        }}
+      >
+        <Reanimated.View style={[{ height: 2, borderRadius: 2, backgroundColor: ink }, progressStyle]} />
       </View>
     </View>
   );
 
-  // ── Footer glass pour les écrans fonctionnels (2-4) ────────────────────
-  const StickyFooter = ({ children }: { children: React.ReactNode }) => (
-    <BlurView
-      intensity={isDark ? 40 : 60}
-      tint={isDark ? "dark" : "light"}
-      style={{
-        paddingHorizontal: 24,
-        paddingTop: 14,
-        paddingBottom: 8,
-        borderTopWidth: 1,
-        borderTopColor: withAlpha(colors.foreground, isDark ? 0.08 : 0.05),
-      }}
-    >
-      {children}
-    </BlurView>
+  const Footer = ({ children }: { children: React.ReactNode }) => (
+    <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>{children}</View>
   );
 
-  const gradient: [string, string, string] = isDark
-    ? [colors.background, "#141013", colors.background]
-    : ["#FFF1F6", colors.background, "#FFE1EC"];
+  // ── Chip générique (style / service / attribution) ────────────────────
+  const Chip = ({
+    label,
+    selected,
+    onPress,
+    sub,
+    width: w,
+  }: {
+    label: string;
+    selected: boolean;
+    onPress: () => void;
+    sub?: string;
+    width: string;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      style={{
+        width: w as never,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        borderColor: selected ? colors.primary : withAlpha(ink, 0.18),
+        backgroundColor: selected ? colors.primary : withAlpha(ink, 0.04),
+      }}
+    >
+      <Text
+        style={{
+          color: selected ? INK : ink,
+          fontSize: 11,
+          fontWeight: "800",
+          textTransform: "uppercase",
+          letterSpacing: 0.2,
+        }}
+      >
+        {label}
+      </Text>
+      {sub ? (
+        <Text
+          style={{
+            color: selected ? withAlpha(INK, 0.6) : withAlpha(ink, 0.4),
+            fontSize: 8.5,
+            letterSpacing: 1,
+            marginTop: 2,
+          }}
+        >
+          {sub}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Fond : champ rose plein cadre (1), champ coloré par slide (5), dégradé doux (2-4) */}
-      {step === STEP.WELCOME ? (
-        <View style={{ position: "absolute", inset: 0, backgroundColor: colors.primary }} />
-      ) : step === STEP.FEATURES ? (
-        <View
-          style={{ position: "absolute", inset: 0, backgroundColor: colors[slide.field] }}
-        />
-      ) : (
-        <LinearGradient colors={gradient} style={{ position: "absolute", inset: 0 }} />
-      )}
-
+    <View style={{ flex: 1, backgroundColor: field.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        <Header />
+        {Header}
 
-        {/* ── 1. Bienvenue — hero plein champ rose, voix affirmée ─────── */}
-        {step === STEP.WELCOME && (
-          <>
-            <Reanimated.View
-              entering={FadeInDown.duration(500)}
-              style={{ flex: 1, paddingHorizontal: 26, justifyContent: "center" }}
-            >
-              <Text
-                style={{
-                  color: INK_DARK,
-                  fontSize: 12,
-                  fontWeight: "800",
-                  letterSpacing: 1,
-                  textTransform: "uppercase",
-                  opacity: 0.7,
-                  marginBottom: 18,
-                }}
-              >
-                {WELCOME.eyebrow}
-              </Text>
-
-              <Text style={[display(42), { color: INK_DARK }]}>{WELCOME.title}</Text>
-
-              <View
-                style={{
-                  alignSelf: "flex-start",
-                  marginTop: 18,
-                  backgroundColor: INK_DARK,
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 6,
-                  transform: [{ rotate: "-3deg" }],
-                }}
-              >
+        <Reanimated.View
+          key={step}
+          entering={reduceMotion ? undefined : FadeIn.duration(180)}
+          style={{ flex: 1 }}
+        >
+          {/* ── 1. Bienvenue ─────────────────────────────────────────── */}
+          {step === STEP.WELCOME && (
+            <>
+              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
                 <Text
                   style={{
-                    color: colors.primary,
-                    fontSize: 12,
-                    fontWeight: "800",
-                    letterSpacing: 0.5,
+                    color: ink,
+                    opacity: 0.7,
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 1.4,
                     textTransform: "uppercase",
+                    marginBottom: 16,
                   }}
                 >
-                  ✦ 1 minute chrono
+                  {WELCOME.eyebrow}
                 </Text>
-              </View>
-
-              <Text
-                style={{
-                  color: INK_DARK,
-                  fontSize: 15,
-                  lineHeight: 22,
-                  marginTop: 22,
-                  opacity: 0.9,
-                  maxWidth: 320,
-                }}
-              >
-                {WELCOME.body}
-              </Text>
-
-              <Text
-                style={{
-                  color: INK_DARK,
-                  fontSize: 13,
-                  fontWeight: "700",
-                  marginTop: 20,
-                  opacity: 0.75,
-                }}
-              >
-                {WELCOME.socialProof}
-              </Text>
-            </Reanimated.View>
-
-            <View style={{ paddingHorizontal: 24, paddingBottom: 12, paddingTop: 8 }}>
-              <PillButton label={WELCOME.cta} onPress={goPreferences} bg={INK_DARK} fg="#FFFFFF" />
-            </View>
-          </>
-        )}
-
-        {/* ── 2. Préférences + localisation — sobre, aligné app ──────── */}
-        {step === STEP.PREFERENCES && (
-          <>
-            <Reanimated.View entering={FadeIn.duration(350)} style={{ flex: 1 }}>
-              <ScrollView
-                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={{ color: colors.foreground, fontFamily: Fonts.serif, fontSize: 25, lineHeight: 32 }}>
-                  Quel style tu préfères&nbsp;?
-                </Text>
-                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
-                  Ça nous aide à te présenter les bonnes pros.
-                </Text>
-
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
-                  {NAIL_STYLE_OPTIONS.map((opt, i) => {
-                    const selected = style === opt.value;
-                    return (
-                      <Reanimated.View
-                        key={opt.value}
-                        entering={FadeInDown.delay(i * 40).duration(350)}
-                        style={{ width: "47.5%" }}
-                      >
-                        <AnimatedPressable
-                          onPress={() => {
-                            Haptics.selectionAsync().catch(() => {});
-                            setStyle(opt.value);
-                          }}
-                          style={{
-                            gap: 8,
-                            paddingVertical: 16,
-                            paddingHorizontal: 14,
-                            borderRadius: 18,
-                            borderWidth: 1.5,
-                            borderColor: selected ? colors.primary : colors.border,
-                            backgroundColor: selected
-                              ? withAlpha(colors.primary, isDark ? 0.14 : 0.08)
-                              : colors.card,
-                            ...(selected ? Shadows.soft : Shadows.card),
-                          }}
-                        >
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
-                            {selected && (
-                              <Reanimated.View entering={FadeIn.duration(150)}>
-                                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                              </Reanimated.View>
-                            )}
-                          </View>
-                          <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>
-                            {opt.label}
-                          </Text>
-                        </AnimatedPressable>
-                      </Reanimated.View>
-                    );
-                  })}
-                </View>
-
-                <Text
-                  style={{ color: colors.foreground, fontSize: 15, fontWeight: "700", marginTop: 28 }}
-                >
-                  Où cherches-tu une pro&nbsp;?
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 40, lineHeight: 40, letterSpacing: -1, textTransform: "uppercase" }}>
+                  {WELCOME.title}
                 </Text>
                 <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                    marginTop: 10,
-                    borderWidth: 1.5,
-                    borderColor: cityFocused ? colors.primary : colors.border,
-                    borderRadius: 16,
-                    paddingHorizontal: 16,
-                    backgroundColor: colors.card,
+                    alignSelf: "flex-start",
+                    marginTop: 16,
+                    backgroundColor: INK,
+                    paddingHorizontal: 9,
+                    paddingVertical: 4,
+                    borderRadius: 5,
+                    transform: [{ rotate: "-3deg" }],
                   }}
                 >
-                  <Ionicons
-                    name="location-outline"
-                    size={18}
-                    color={cityFocused ? colors.primary : colors.mutedForeground}
-                  />
-                  <TextInput
-                    value={city}
-                    onChangeText={setCity}
-                    onFocus={() => setCityFocused(true)}
-                    onBlur={() => setCityFocused(false)}
-                    placeholder="Ville ou code postal"
-                    placeholderTextColor={colors.inputPlaceholder}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    returnKeyType="done"
-                    style={{ flex: 1, paddingVertical: 15, fontSize: 15, color: colors.foreground }}
-                  />
-                </View>
-              </ScrollView>
-            </Reanimated.View>
-
-            <StickyFooter>
-              <LoadingButton
-                loading={savingPrefs}
-                onPress={submitPreferences}
-                label="Continuer"
-                disabled={!style}
-              />
-            </StickyFooter>
-          </>
-        )}
-
-        {/* ── 3. Recommandations — sobre, même langage que la fiche pro ─ */}
-        {step === STEP.RECOMMENDATIONS && (
-          <>
-            <Reanimated.View entering={FadeIn.duration(350)} style={{ flex: 1 }}>
-              <ScrollView
-                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={{ color: colors.foreground, fontFamily: Fonts.serif, fontSize: 25, lineHeight: 32 }}>
-                  {style
-                    ? `Nos pros ${STYLE_LABEL[style]?.toLowerCase() ?? ""} pour toi`
-                    : "Nos pros pour toi"}
-                </Text>
-                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
-                  {city.trim()
-                    ? `Autour de ${city.trim()}`
-                    : "Sélectionnées selon leurs avis et leur activité"}
-                </Text>
-
-                {loadingRecos && (
-                  <View style={{ paddingVertical: 48, alignItems: "center" }}>
-                    <ActivityIndicator color={colors.primary} />
-                  </View>
-                )}
-
-                {!loadingRecos && recos && recos.length === 0 && (
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 24 }}>
-                    Aucune pro trouvée pour l'instant. Tu peux explorer toutes les pros depuis
-                    l'accueil.
+                  <Text style={{ color: colors.primary, fontSize: 11, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    {WELCOME.sticker}
                   </Text>
-                )}
+                </View>
+                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 20, maxWidth: 320 }}>
+                  {WELCOME.body}
+                </Text>
+                <Text style={{ color: ink, opacity: 0.72, fontSize: 12, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase", marginTop: 18 }}>
+                  {WELCOME.socialProof}
+                </Text>
+              </View>
+              <Footer>
+                <PillButton label={`${WELCOME.cta} →`} onPress={() => go(STEP.HOW_IT_WORKS)} bg={field.pill.bg} fg={field.pill.fg} />
+              </Footer>
+            </>
+          )}
 
-                <View style={{ gap: 16, marginTop: 22 }}>
-                  {recos?.map((r, i) => (
-                    <Reanimated.View key={r.pro_id} entering={FadeInDown.delay(i * 80).duration(400)}>
-                      <AnimatedPressable
-                        onPress={() => openPro(r, i + 1, "reco_card")}
-                        style={{
-                          borderRadius: 20,
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                          backgroundColor: colors.card,
-                          overflow: "hidden",
-                          ...Shadows.card,
-                        }}
-                      >
-                        {r.banner_photo || r.profile_photo ? (
-                          <View>
-                            <Image
-                              source={{ uri: r.banner_photo ?? r.profile_photo ?? undefined }}
-                              style={{ width: "100%", height: 128 }}
-                              contentFit="cover"
-                              transition={200}
-                            />
-                            <LinearGradient
-                              colors={["transparent", withAlpha("#000000", 0.35)]}
-                              style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 60 }}
-                            />
-                            {r.matches_style && (
-                              <View
-                                style={{
-                                  position: "absolute",
-                                  top: 12,
-                                  left: 12,
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 5,
-                                  borderRadius: 999,
-                                  backgroundColor: withAlpha(colors.primary, 0.95),
-                                }}
-                              >
-                                <Ionicons name="sparkles" size={11} color="#FFFFFF" />
-                                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700" }}>
-                                  Pour ton style
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        ) : null}
-
-                        <View style={{ padding: 16, gap: 8 }}>
-                          <Text style={{ color: colors.foreground, fontSize: 17, fontWeight: "700" }}>
-                            {r.name}
-                          </Text>
-
-                          <View
-                            style={{ flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" }}
-                          >
-                            {r.reviews_count > 0 && (
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                                <Ionicons name="star" size={13} color="#F5A623" />
-                                <Text style={{ color: colors.foreground, fontSize: 13, fontWeight: "600" }}>
-                                  {r.rating.toFixed(1)}
-                                </Text>
-                                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                                  · {r.reviews_count} avis
-                                </Text>
-                              </View>
-                            )}
-                            {r.city && (
-                              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>{r.city}</Text>
-                            )}
-                          </View>
-
-                          {r.open_slots.this_week > 0 ? (
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 6,
-                                alignSelf: "flex-start",
-                                paddingHorizontal: 10,
-                                paddingVertical: 5,
-                                borderRadius: 999,
-                                backgroundColor: withAlpha(colors.primary, isDark ? 0.16 : 0.1),
-                              }}
-                            >
-                              <View
-                                style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: colors.primary }}
-                              />
-                              <Text style={{ color: colors.primary, fontSize: 12.5, fontWeight: "700" }}>
-                                {r.open_slots.today > 0
-                                  ? `${r.open_slots.today} créneau${r.open_slots.today > 1 ? "x" : ""} aujourd'hui`
-                                  : `${r.open_slots.this_week} créneau${r.open_slots.this_week > 1 ? "x" : ""} cette semaine`}
-                              </Text>
-                            </View>
-                          ) : (
-                            <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                              Voir les disponibilités
-                            </Text>
-                          )}
-                        </View>
-                      </AnimatedPressable>
-                    </Reanimated.View>
+          {/* ── 2. Comment ça marche ─────────────────────────────────── */}
+          {step === STEP.HOW_IT_WORKS && (
+            <>
+              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+                <Text style={{ color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 14 }}>
+                  {HOW_IT_WORKS.eyebrow}
+                </Text>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 34, lineHeight: 34, letterSpacing: -1, textTransform: "uppercase" }}>
+                  {HOW_IT_WORKS.title}
+                </Text>
+                <View style={{ marginTop: 24, gap: 14 }}>
+                  {HOW_IT_WORKS.steps.map((s, i) => (
+                    <View key={i} style={{ flexDirection: "row", gap: 12, alignItems: "baseline" }}>
+                      <Text style={{ color: ink, opacity: 0.45, fontWeight: "900", fontSize: 20 }}>{i + 1}</Text>
+                      <Text style={{ color: ink, fontSize: 14, lineHeight: 20, flex: 1 }}>{s}</Text>
+                    </View>
                   ))}
                 </View>
-              </ScrollView>
-            </Reanimated.View>
+              </View>
+              <Footer>
+                <PillButton label={`${HOW_IT_WORKS.cta} →`} onPress={() => go(STEP.PREFERENCES)} bg={field.pill.bg} fg={field.pill.fg} />
+              </Footer>
+            </>
+          )}
 
-            {!loadingRecos && (
-              <StickyFooter>
-                <LoadingButton
-                  loading={false}
-                  onPress={() => {
-                    tap();
-                    setStep(STEP.CTA);
-                  }}
-                  label="Continuer"
-                />
-              </StickyFooter>
-            )}
-          </>
-        )}
-
-        {/* ── 4. CTA premier RDV — sobre + un accent de conversion ────── */}
-        {step === STEP.CTA && (
-          <>
-            <Reanimated.View
-              entering={FadeInDown.duration(500)}
-              style={{ flex: 1, paddingHorizontal: 26, justifyContent: "center" }}
-            >
-              <View
-                style={{
-                  alignSelf: "flex-start",
-                  backgroundColor: withAlpha(colors.primary, isDark ? 0.18 : 0.12),
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 999,
-                  marginBottom: 16,
-                }}
+          {/* ── 3. Préférences (style + service + ville) ──────────────── */}
+          {step === STEP.PREFERENCES && (
+            <>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 16 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
               >
-                <Text
-                  style={{
-                    color: colors.primary,
-                    fontSize: 12,
-                    fontWeight: "800",
-                    letterSpacing: 0.5,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Réservation 24/7
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 24, letterSpacing: -0.5, textTransform: "uppercase" }}>
+                  Dis-nous ce que tu aimes
                 </Text>
-              </View>
 
-              <Text style={{ color: colors.foreground, fontFamily: Fonts.serif, fontSize: 28, lineHeight: 36 }}>
-                Prête pour ton premier RDV&nbsp;?
-              </Text>
-              <Text
-                style={{ color: colors.mutedForeground, fontSize: 15, lineHeight: 23, marginTop: 14 }}
-              >
-                {topStyle
-                  ? `${topStyle.name} a de la place. Réserve ton créneau en quelques taps.`
-                  : "Choisis une pro et réserve ton créneau en quelques taps."}
-              </Text>
-            </Reanimated.View>
-
-            <StickyFooter>
-              <View style={{ gap: 10 }}>
-                {topStyle && (
-                  <LoadingButton
-                    loading={false}
-                    onPress={() => openPro(topStyle, 1, "cta_screen")}
-                    label={`Prendre RDV avec ${topStyle.name}`}
-                  />
-                )}
-                <LoadingButton
-                  loading={false}
-                  onPress={() => {
-                    tap();
-                    setStep(STEP.FEATURES);
-                  }}
-                  label="Voir ce que Blyss propose"
-                  variant="ghost"
-                />
-              </View>
-            </StickyFooter>
-          </>
-        )}
-
-        {/* ── 5. Carousel features — champs de couleur plein cadre ────── */}
-        {step === STEP.FEATURES && (
-          <>
-            <ScrollView
-              ref={featureScroll}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              style={{ flex: 1 }}
-              onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-                if (idx !== featureSlide) {
-                  Haptics.selectionAsync().catch(() => {});
-                  setFeatureSlide(idx);
-                }
-              }}
-            >
-              {FEATURE_SLIDES.map((s) => {
-                const ink = s.ink === "light" ? "#FFFFFF" : INK_DARK;
-                return (
-                  <View key={s.title} style={{ width, paddingHorizontal: 26, justifyContent: "center" }}>
-                    <Text style={{ fontSize: 52, marginBottom: 24 }}>{s.emoji}</Text>
-                    <Text style={[display(38), { color: ink }]}>{s.title}</Text>
-                    <Text
-                      style={{
-                        color: ink,
-                        fontSize: 15,
-                        lineHeight: 23,
-                        marginTop: 16,
-                        opacity: 0.9,
-                        maxWidth: 320,
-                      }}
-                    >
-                      {s.body}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            <View style={{ paddingHorizontal: 24, paddingBottom: 12, paddingTop: 8 }}>
-              <View style={{ flexDirection: "row", gap: 7, justifyContent: "center", marginBottom: 16 }}>
-                {FEATURE_SLIDES.map((_, i) => {
-                  const ink = slide.ink === "light" ? "#FFFFFF" : INK_DARK;
-                  return (
-                    <View
-                      key={i}
-                      style={{
-                        width: i === featureSlide ? 22 : 7,
-                        height: 7,
-                        borderRadius: 999,
-                        backgroundColor: i === featureSlide ? ink : withAlpha(ink, 0.3),
+                <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 16 }}>
+                  Le style — 1 choix
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                  {NAIL_STYLE_OPTIONS.map((o) => (
+                    <Chip
+                      key={o.value}
+                      label={o.label}
+                      sub={o.code}
+                      width="48%"
+                      selected={style === o.value}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setStyle(o.value);
                       }}
                     />
-                  );
-                })}
+                  ))}
+                </View>
+
+                <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 18 }}>
+                  Ce que tu viens faire — plusieurs choix
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                  {NAIL_SERVICE_OPTIONS.map((o) => (
+                    <Chip
+                      key={o.value}
+                      label={o.label}
+                      width="31.5%"
+                      selected={services.includes(o.value)}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setServices((prev) =>
+                          prev.includes(o.value) ? prev.filter((v) => v !== o.value) : [...prev, o.value]
+                        );
+                      }}
+                    />
+                  ))}
+                </View>
+
+                <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 20 }}>
+                  Où cherches-tu ?
+                </Text>
+                <TextInput
+                  value={city}
+                  onChangeText={setCity}
+                  onFocus={() => setCityFocused(true)}
+                  onBlur={() => setCityFocused(false)}
+                  placeholder="Ville / code postal"
+                  placeholderTextColor={withAlpha(ink, 0.4)}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  style={{
+                    marginTop: 8,
+                    borderBottomWidth: 1.5,
+                    borderBottomColor: cityFocused ? colors.primary : withAlpha(ink, 0.25),
+                    paddingVertical: 9,
+                    fontSize: 14,
+                    color: ink,
+                  }}
+                />
+              </ScrollView>
+              <Footer>
+                <PillButton
+                  label="Continuer →"
+                  onPress={submitPreferences}
+                  bg={style ? field.pill.bg : withAlpha(ink, 0.25)}
+                  fg={field.pill.fg}
+                  loading={savingPrefs}
+                />
+              </Footer>
+            </>
+          )}
+
+          {/* ── 4. Recos (+ ♥) / état vide ───────────────────────────── */}
+          {step === STEP.RECOMMENDATIONS && (
+            <>
+              {isEmpty ? (
+                <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+                  <Text style={{ color: ink, fontWeight: "900", fontSize: 26, lineHeight: 27, letterSpacing: -0.5, textTransform: "uppercase" }}>
+                    {city.trim() ? `Pas encore de pro à ${city.trim()}` : "Pas encore de pro par ici"}
+                  </Text>
+                  <Text style={{ color: ink, opacity: 0.7, fontSize: 13, lineHeight: 19, marginTop: 12 }}>
+                    On agrandit le réseau chaque semaine.
+                  </Text>
+                  <View style={{ alignSelf: "flex-start", marginTop: 16, backgroundColor: colors.primary, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: INK, fontSize: 10, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                      On te prévient dès qu'une pro ouvre près de toi
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 16 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 25, letterSpacing: -0.5, textTransform: "uppercase" }}>
+                    {style ? `Tes pros ${STYLE_LABEL[style]?.toLowerCase() ?? ""}` : "Tes pros"}
+                  </Text>
+                  <Text style={{ color: ink, opacity: 0.6, fontSize: 10.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginTop: 6 }}>
+                    {city.trim() ? `Autour de ${city.trim()} · ` : ""}
+                    {recos?.length ?? 0} résultat{(recos?.length ?? 0) > 1 ? "s" : ""}
+                  </Text>
+
+                  {loadingRecos && (
+                    <View style={{ paddingVertical: 44, alignItems: "center" }}>
+                      <ActivityIndicator color={colors.primary} />
+                    </View>
+                  )}
+
+                  <View style={{ marginTop: 14 }}>
+                    {recos?.map((r, i) => {
+                      const isFollowed = followed.has(r.pro_id);
+                      return (
+                        <View
+                          key={r.pro_id}
+                          style={{
+                            flexDirection: "row",
+                            gap: 11,
+                            paddingVertical: 12,
+                            borderTopWidth: 1,
+                            borderTopColor: withAlpha(ink, 0.15),
+                          }}
+                        >
+                          <Pressable
+                            onPress={() => openPro(r, i + 1, "reco_card")}
+                            style={{ flexDirection: "row", gap: 11, flex: 1 }}
+                          >
+                            <Image
+                              source={{ uri: r.banner_photo ?? r.profile_photo ?? undefined }}
+                              style={{
+                                width: 56,
+                                height: 56,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: withAlpha(ink, 0.2),
+                                backgroundColor: withAlpha(ink, 0.06),
+                              }}
+                              contentFit="cover"
+                              transition={150}
+                            />
+                            <View style={{ flex: 1 }}>
+                              {r.matches_style && (
+                                <Text style={{ color: colors.primary, fontSize: 9, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" }}>
+                                  ✦ Pour ton style
+                                </Text>
+                              )}
+                              <Text
+                                numberOfLines={1}
+                                style={{ color: ink, fontSize: 16, fontWeight: "900", letterSpacing: -0.3, textTransform: "uppercase" }}
+                              >
+                                {r.name}
+                              </Text>
+                              <Text style={{ color: withAlpha(ink, 0.6), fontSize: 10, letterSpacing: 0.3, textTransform: "uppercase", marginTop: 3 }}>
+                                {r.reviews_count > 0 ? `★ ${r.rating.toFixed(1)} · ${r.reviews_count} avis` : "Nouvelle sur Blyss"}
+                                {r.city ? ` · ${r.city}` : ""}
+                              </Text>
+                              {r.open_slots.this_week > 0 ? (
+                                <View style={{ alignSelf: "flex-start", marginTop: 6, backgroundColor: colors.primary, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>
+                                  <Text style={{ color: INK, fontSize: 9, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                                    {scarcityLabel(r.open_slots)}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => toggleFollow(r, i + 1)}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={isFollowed ? `Ne plus suivre ${r.name}` : `Suivre ${r.name}`}
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 999,
+                              borderWidth: 1.5,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderColor: isFollowed ? colors.primary : withAlpha(ink, 0.25),
+                              backgroundColor: isFollowed ? colors.primary : "transparent",
+                            }}
+                          >
+                            <Ionicons
+                              name={isFollowed ? "heart" : "heart-outline"}
+                              size={15}
+                              color={isFollowed ? INK : withAlpha(ink, 0.5)}
+                            />
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              )}
+              <Footer>
+                {isEmpty ? (
+                  <View style={{ gap: 8 }}>
+                    <PillButton
+                      label="Préviens-moi →"
+                      onPress={() => {
+                        notifFrom.current = "empty_state";
+                        go(STEP.NOTIFICATIONS);
+                      }}
+                      bg={field.pill.bg}
+                      fg={field.pill.fg}
+                    />
+                    <Pressable onPress={leave} style={{ alignItems: "center", paddingVertical: 6 }}>
+                      <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
+                        Explorer les autres villes
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <PillButton
+                    label="Continuer →"
+                    onPress={() => go(STEP.CTA)}
+                    bg={field.pill.bg}
+                    fg={field.pill.fg}
+                    loading={loadingRecos}
+                  />
+                )}
+              </Footer>
+            </>
+          )}
+
+          {/* ── 5. CTA premier RDV ───────────────────────────────────── */}
+          {step === STEP.CTA && (
+            <>
+              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+                <Text style={{ color: ink, opacity: 0.7, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 14 }}>
+                  Réservation 24/7
+                </Text>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 38, lineHeight: 38, letterSpacing: -1, textTransform: "uppercase" }}>
+                  Premier rendez-vous ?
+                </Text>
+                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 16, maxWidth: 320 }}>
+                  {topStyle
+                    ? `${topStyle.name} a de la place. Ton créneau en quelques taps.`
+                    : "Choisis une pro et réserve ton créneau en quelques taps."}
+                </Text>
               </View>
-              <PillButton
-                label={featureSlide < FEATURE_SLIDES.length - 1 ? "Suivant" : "Commencer à explorer"}
-                onPress={() => {
-                  if (featureSlide < FEATURE_SLIDES.length - 1) {
-                    const next = featureSlide + 1;
-                    featureScroll.current?.scrollTo({ x: next * width, animated: true });
-                    setFeatureSlide(next);
-                    tap();
-                  } else {
-                    finish();
-                  }
-                }}
-                bg={slide.ink === "light" ? "#FFFFFF" : INK_DARK}
-                fg={slide.ink === "light" ? INK_DARK : "#FFFFFF"}
-              />
-            </View>
-          </>
-        )}
+              <Footer>
+                <View style={{ gap: 8 }}>
+                  {topStyle && (
+                    <PillButton
+                      label="Réserver mon RDV →"
+                      onPress={() => openPro(topStyle, 1, "cta_screen")}
+                      bg={field.pill.bg}
+                      fg={field.pill.fg}
+                    />
+                  )}
+                  <Pressable onPress={() => go(STEP.NOTIFICATIONS)} style={{ alignItems: "center", paddingVertical: 6 }}>
+                    <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
+                      Continuer sans réserver
+                    </Text>
+                  </Pressable>
+                </View>
+              </Footer>
+            </>
+          )}
+
+          {/* ── 6. Notifications ─────────────────────────────────────── */}
+          {step === STEP.NOTIFICATIONS && (
+            <>
+              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+                <Text style={{ color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 14 }}>
+                  {NOTIF.eyebrow}
+                </Text>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 32, lineHeight: 33, letterSpacing: -1, textTransform: "uppercase" }}>
+                  {NOTIF.title}
+                </Text>
+                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 16, maxWidth: 320 }}>
+                  {NOTIF.body}
+                </Text>
+              </View>
+              <Footer>
+                <View style={{ gap: 8 }}>
+                  <PillButton label={`${NOTIF.cta} →`} onPress={enableNotifs} bg={field.pill.bg} fg={field.pill.fg} />
+                  <Pressable onPress={skipNotifs} style={{ alignItems: "center", paddingVertical: 6 }}>
+                    <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
+                      {NOTIF.later}
+                    </Text>
+                  </Pressable>
+                </View>
+              </Footer>
+            </>
+          )}
+
+          {/* ── 7. Comment tu as connu Blyss ─────────────────────────── */}
+          {step === STEP.ATTRIBUTION && (
+            <>
+              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 26, lineHeight: 27, letterSpacing: -0.5, textTransform: "uppercase" }}>
+                  Comment tu as connu Blyss ?
+                </Text>
+                <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 10 }}>
+                  1 choix — ça nous aide, c'est tout
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
+                  {ATTRIBUTION_OPTIONS.map((o) => (
+                    <Chip
+                      key={o.value}
+                      label={o.label}
+                      width="48%"
+                      selected={attribution === o.value}
+                      onPress={() => pickAttribution(o.value)}
+                    />
+                  ))}
+                </View>
+              </View>
+              <Footer>
+                <PillButton label="Terminer →" onPress={finish} bg={field.pill.bg} fg={field.pill.fg} />
+              </Footer>
+            </>
+          )}
+        </Reanimated.View>
       </SafeAreaView>
+
+      {/* ── Ruban de transition (au-dessus de tout) ──────────────────── */}
+      <Reanimated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: "absolute",
+            top: -60,
+            bottom: -60,
+            left: 0,
+            width: width * 1.6,
+            flexDirection: "row",
+          },
+          ribbonStyle,
+        ]}
+      >
+        {Array.from({ length: 18 }).map((_, i) => (
+          <View key={i} style={{ flex: 1, backgroundColor: i % 2 ? PRUNE : colors.primary }} />
+        ))}
+      </Reanimated.View>
     </View>
   );
 }

@@ -5,24 +5,57 @@
 > (`expo-blur`, `expo-haptics`, `react-native-reanimated`, `expo-linear-gradient`,
 > `expo-image`). Onboarding **skippable partout**, jamais bloquant, centré nails.
 
-## Direction retenue — « B ancré »
+## Direction retenue — « poster editorial × DA » (passe 3b, validée 2026-09-06)
 
-Après exploration de 3 pistes (beauté éditoriale / color-block expressif / salon
-premium), choix d'un **color-block expressif ancré sur le design system** :
+Historique : passe 1 « fluid glass » puis passe 2 « B ancré » jugées trop
+génériques/IA → **passe 3b**. Artefact de revue :
+`claude.ai/code/artifact/d803d604-20af-46ee-b63b-ac0393506c70`.
 
-- **Écrans bornes (1 Bienvenue, 5 Carousel)** portent la voix : champ de couleur
-  **plein cadre** (rose de marque `#FE5D9D`, doré `#DBA970`, encre `#1A0710` —
-  uniquement des tokens de la palette), titre **display lourd capitales**
-  (SF Pro Black via `fontWeight: "900"`, aucune police embarquée), **bouton
-  pilule noir** (accent visuel réservé à l'onboarding), sticker incliné.
-- **Écrans fonctionnels (2 Préférences, 3 Recos, 4 CTA)** restent **sobres et
-  alignés sur l'app** : Playfair pour les titres, cartes arrondies, `LoadingButton`
-  réutilisé, dégradé de fond doux. Les cartes reco parlent le même langage visuel
-  que la fiche pro que le client verra ensuite.
-- Objectif : un onboarding ~25 % plus affirmé que le reste de l'app, **sans**
-  créer un second design system. Peut servir de pilote de la refonte UX/UI
-  cliente en cours.
-- Aucune couleur neuve, aucune dépendance ajoutée.
+**Système unique sur les 7 écrans :**
+
+- **Zéro emoji.** Chips → libellé + code `NL·0x` ; features → numéro + phrase ;
+  « pour ton style » → `✦` + label ; rareté → pastille pleine.
+- **Titres** des écrans bornes en `fontWeight: "900"` capitales, tracking négatif
+  (SF Pro Black sur iOS, **aucune police embarquée**). Playfair abandonné ici.
+- **3 fonds pleins, tokens uniquement** : rose `colors.primary` `#FE5D9D` (01, 05),
+  cream `colors.cream` `#F8F5F1` (03, 04, 07), **prune** `#3D1F2C` (02, 06 — encre
+  fixe `#1A0710`/`#F6E9EE`, couleur assumée dans les deux thèmes). Doré = accent seul.
+- **Header** = numéro d'étape géant `01`–`07` (vraie séquence) + « Plus tard » /
+  « Passer ». Rien d'autre — pas de libellé d'écran. Filet 2 px rempli à `step/7`.
+- **Boutons pilule** (rayon 999) pleine largeur, libellé capitales court **sur une
+  ligne** (`numberOfLines={1}`).
+- **Cartes reco** = lignes éditoriales (filet 1 px, photo carrée arrondie duotone,
+  nom en 900). Plus de carte à ombre. Bouton `♥` = suivre la pro sans quitter.
+- **Ruban de transition** : rayures diagonales rose × prune (façon rubalise) qui
+  balaie l'écran à chaque passage — ~520 ms, 2 temps (couvre → `setStep` →
+  découvre), haptique `Light` à la couverture, `useReducedMotion()` → `FadeIn`.
+  N'existe **que** pendant la transition.
+- Aucune dépendance mobile ajoutée.
+
+### Ordre des 7 écrans (revu côté comportemental)
+
+| # | Écran | Fond | Levier |
+|---|---|---|---|
+| 1 | Bienvenue | rose | ancrage valeur + preuve sociale |
+| 2 | **Comment ça marche** (ex-carousel dissous) | prune | réciprocité — rassure (« tu payes à l'institut ») avant de demander |
+| 3 | Préférences (`nail_style` 1 choix · `services[]` multi · ville) — **défile** | cream | foot-in-the-door + effet IKEA |
+| 4 | Recos + `♥` (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté |
+| 5 | CTA premier RDV | rose | pic de conversion ; « continuer sans réserver » → 6 |
+| 6 | Notifications (pré-permission) | prune | l'ask au pic d'intention |
+| 7 | Comment tu as connu Blyss (`acquisition_source`) | cream | peak-end faible → dernier, skippable (« Passer ») |
+
+Le **carousel de features est supprimé** : messages redistribués (02, 06, vécus au CTA).
+
+### Dépendances backend blyss-app (1 petite PR à part)
+
+- `POST /api/client/onboarding/preferences` accepte `services[]` (enum
+  `nouvelle_pose|remplissage|depose|semi_permanent|capsules|soin_pieds`).
+- `POST /api/client/onboarding/follow` `{ pro_id }` (ou brancher le favori existant).
+- `POST /api/client/onboarding/attribution` `{ source }` → `client_onboarding.acquisition_source`.
+- `GET /status` renvoie `services` et `acquisition_source` pour la reprise.
+
+Le mobile appelle ces routes en **best-effort** (`.catch(() => {})`) — pas de
+régression si le backend n'est pas encore déployé.
 
 ---
 
@@ -90,7 +123,13 @@ qualitative.
 
 ---
 
-## 4. Les 5 écrans (spécs)
+## 4. Spécs écran par écran
+
+> ⚠️ **Obsolète — décrit la passe 2 « B ancré » (5 écrans).** La passe 3b
+> validée compte **7 écrans** dans un ordre différent (voir « Direction retenue »
+> en tête de doc et l'artefact). Section conservée pour l'historique des biais
+> cognitifs, qui restent valables ; l'implémentation de référence est
+> `app/client-onboarding.tsx`.
 
 ### Écran 1 — Bienvenue *(borne, voix affirmée)*
 - **Fond rose `#FE5D9D` plein cadre**, encre `#1A0710`.
@@ -222,17 +261,21 @@ const StickyFooter = ({ children }) => (
 
 ---
 
-## 8. Tracking PostHog
+## 8. Tracking PostHog (passe 3b)
 
-Events inchangés (payloads = `docs/client-onboarding-tracking.md`) :
+Payloads détaillés = `docs/client-onboarding-tracking.md`.
 
 | Event | Déclencheur |
 |---|---|
 | `onboarding_started` / `onboarding_resumed` | montage écran (selon `from`) |
-| `onboarding_preferences_selected` | validation écran 2 (`style_nails`, `has_location`, `location`) |
-| `onboarding_recommendations_viewed` | chargement recos (`results_count`, `pro_ids`, `had_scarcity`, `style_filter_active`) |
-| `onboarding_cta_tapped` | tap carte reco ou CTA écran 4 (`pro_id`, `position`, `from`) |
-| `onboarding_completed` | fin du carousel (`steps_seen`) |
+| `onboarding_preferences_selected` | validation écran 3 — `style_nails`, **`services`** / `services_count`, `has_location`, `location` |
+| `onboarding_recommendations_viewed` | chargement recos (écran 4) — `results_count`, `empty`, `pro_ids`, `had_scarcity`, `style_filter_active` |
+| `onboarding_pro_followed` **▸ nouveau** | tap `♥` sur une ligne reco — `pro_id`, `position` |
+| `onboarding_cta_tapped` | tap ligne reco ou CTA écran 5 — `pro_id`, `position`, `from` |
+| `onboarding_notif_prompted` **▸ nouveau** | écran 6 affiché — `from` (`onboarding` / `empty_state`) |
+| `onboarding_notif_result` **▸ nouveau** | `granted` / `denied` / `later` / `error` |
+| `onboarding_attribution` **▸ nouveau** | tap d'une source à l'écran 7 — `source` |
+| `onboarding_completed` | écran 7 (Terminer / Passer) — `steps_seen` = 7 |
 | `onboarding_skipped` | « Plus tard » / « Fermer » (`at_step`) |
 
 ---

@@ -985,12 +985,25 @@ export const NAIL_STYLES = [
 ] as const;
 export type NailStyle = (typeof NAIL_STYLES)[number];
 
+/** #34 passe 3b — axe « prestation » (services[]), distinct du style. */
+export const NAIL_SERVICES = [
+  "nouvelle_pose",
+  "remplissage",
+  "depose",
+  "semi_permanent",
+  "capsules",
+  "soin_pieds",
+] as const;
+export type NailService = (typeof NAIL_SERVICES)[number];
+
 export interface ClientOnboardingStatus {
   current_step: number;
   completed: boolean;
   completed_at: string | null;
   skipped: boolean;
   style_nails: NailStyle | null;
+  services?: NailService[];
+  acquisition_source?: string | null;
 }
 
 export interface OnboardingRecommendation {
@@ -1011,11 +1024,27 @@ export const clientOnboardingApi = {
   getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
     apiCall("/api/client/onboarding/status"),
 
-  setPreferences: (style_nails: NailStyle, city?: string): Promise<ApiResponse<{ style_nails: NailStyle }>> =>
+  setPreferences: (
+    style_nails: NailStyle,
+    city?: string,
+    services?: NailService[]
+  ): Promise<ApiResponse<{ style_nails: NailStyle }>> =>
     apiCall("/api/client/onboarding/preferences", {
       method: "POST",
-      body: JSON.stringify(city ? { style_nails, city } : { style_nails }),
+      body: JSON.stringify({
+        style_nails,
+        ...(city ? { city } : {}),
+        ...(services && services.length ? { services } : {}),
+      }),
     }),
+
+  /** #34 passe 3b — suivre une pro depuis l'écran recos (best-effort). */
+  followPro: (pro_id: number): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/follow", { method: "POST", body: JSON.stringify({ pro_id }) }),
+
+  /** #34 passe 3b — écran « comment tu as connu Blyss » (best-effort). */
+  setAttribution: (source: string): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/attribution", { method: "POST", body: JSON.stringify({ source }) }),
 
   getRecommendations: (city?: string): Promise<
     ApiResponse<{ style_nails: NailStyle | null; style_filter_active: boolean; recommendations: OnboardingRecommendation[] }>
