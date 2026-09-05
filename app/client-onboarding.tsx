@@ -650,7 +650,7 @@ export default function ClientOnboardingScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 25, letterSpacing: -0.5, textTransform: "uppercase" }}>
-                    Notre sélection pour toi
+                    Choisies pour toi
                   </Text>
                   <Text style={{ color: ink, opacity: 0.6, fontSize: 10.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginTop: 6 }}>
                     {city.trim() ? `Autour de ${city.trim()} · ` : ""}
