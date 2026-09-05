@@ -5,6 +5,25 @@
 > (`expo-blur`, `expo-haptics`, `react-native-reanimated`, `expo-linear-gradient`,
 > `expo-image`). Onboarding **skippable partout**, jamais bloquant, centré nails.
 
+## Direction retenue — « B ancré »
+
+Après exploration de 3 pistes (beauté éditoriale / color-block expressif / salon
+premium), choix d'un **color-block expressif ancré sur le design system** :
+
+- **Écrans bornes (1 Bienvenue, 5 Carousel)** portent la voix : champ de couleur
+  **plein cadre** (rose de marque `#FE5D9D`, doré `#DBA970`, encre `#1A0710` —
+  uniquement des tokens de la palette), titre **display lourd capitales**
+  (SF Pro Black via `fontWeight: "900"`, aucune police embarquée), **bouton
+  pilule noir** (accent visuel réservé à l'onboarding), sticker incliné.
+- **Écrans fonctionnels (2 Préférences, 3 Recos, 4 CTA)** restent **sobres et
+  alignés sur l'app** : Playfair pour les titres, cartes arrondies, `LoadingButton`
+  réutilisé, dégradé de fond doux. Les cartes reco parlent le même langage visuel
+  que la fiche pro que le client verra ensuite.
+- Objectif : un onboarding ~25 % plus affirmé que le reste de l'app, **sans**
+  créer un second design system. Peut servir de pilote de la refonte UX/UI
+  cliente en cours.
+- Aucune couleur neuve, aucune dépendance ajoutée.
+
 ---
 
 ## 1. Benchmark — synthèse
@@ -54,7 +73,7 @@ qualitative.
 
 | Objectif Apple | Implémentation Blyss |
 |---|---|
-| SF Pro | Police système RN par défaut pour le corps ; `PlayfairDisplay_700Bold` (`Fonts.serif`) pour les titres — identité de marque existante |
+| SF Pro | Corps = police système RN ; titres écrans bornes = **SF Pro Black** (`fontWeight: "900"` + capitales + tracking négatif, zéro police embarquée) ; titres écrans fonctionnels = `PlayfairDisplay_700Bold` (`Fonts.serif`, identité de marque) |
 | Couleurs natives | Palette `useThemeColors()` (source unique `constants/colors.ts`), rose de marque `#FE5D9D` comme accent |
 | Fluid Glass | `expo-blur` `BlurView` sur la pilule de progression, le footer collant CTA ; `tint` suit le thème |
 | Profondeur | Dégradés `expo-linear-gradient` plein écran teintés marque (clair) / profonds (sombre) ; `Shadows.soft` / `Shadows.card` |
@@ -73,15 +92,18 @@ qualitative.
 
 ## 4. Les 5 écrans (spécs)
 
-### Écran 1 — Bienvenue
-- Icône 💅 dans une tuile glass arrondie (`borderRadius: 28`, ombre douce).
-- Eyebrow rose capitales « BIENVENUE SUR BLYSS ».
-- Titre serif 30 pt : « Trouve LA prothésiste ongulaire qu'il te faut ».
-- Corps 15 pt muted, 1 phrase.
-- Ligne preuve sociale : ✨ « Des milliers de RDV nails **réservés chaque mois** ».
-- Footer glass collant : bouton plein `C'est parti`. « Plus tard » dans le header.
-- Anim : `FadeInDown` 500 ms sur le bloc. Haptique `Light` au tap.
-- **Biais** : preuve sociale + ancrage valeur, pas de promo.
+### Écran 1 — Bienvenue *(borne, voix affirmée)*
+- **Fond rose `#FE5D9D` plein cadre**, encre `#1A0710`.
+- Eyebrow « ✦ BLYSS · ONGLERIE ».
+- Titre **display 42 pt, poids 900, capitales, tracking serré** : « Tes ongles
+  méritent mieux ».
+- Sticker incliné −3° sur fond encre : « ✦ 1 MINUTE CHRONO ».
+- Corps 15 pt (`#1A0710` opacity .9) : la promesse claire (pros près de toi,
+  vrai travail, vraies dispos).
+- Ligne preuve sociale : « Des milliers de RDV nails réservés chaque mois ».
+- Bouton **pilule noir** `ON Y VA` pleine largeur. « Plus tard » dans le header.
+- Anim `FadeInDown` 500 ms, haptique `Medium` au tap.
+- **Biais** : preuve sociale, ancrage valeur, rareté douce (« 1 minute »). Pas de promo.
 
 ### Écran 2 — Préférences + localisation
 - Titre serif « Quel style tu préfères ? » + sous-titre justification (« ça nous
@@ -117,14 +139,15 @@ qualitative.
   `Voir ce que Blyss propose`.
 - **Biais** : loi de Hick (1 action), closure, urgence douce (24/7 + « a de la place »).
 
-### Écran 5 — Carousel features
-- `ScrollView` horizontal `pagingEnabled`, 3 slides plein écran :
-  1. 📅 « Réserve en quelques taps » (accent rose)
-  2. 🔔 « On te rappelle au bon moment » (accent info/bleu)
-  3. 💬 « Tout est au même endroit » (accent secondaire/doré)
-- Tuile emoji 104 pt, titre serif 27 pt, corps 15 pt.
-- Dots animés (barre active 22 pt) dans le footer glass.
-- Bouton `Suivant` (scroll programmatique) puis `Commencer à explorer` → `complete`.
+### Écran 5 — Carousel features *(borne, voix affirmée)*
+- `ScrollView` horizontal `pagingEnabled`, 3 slides **plein cadre coloré** :
+  1. 📅 « RÉSERVE EN 3 TAPS » — champ rose `#FE5D9D`, encre `#1A0710`
+  2. 🔔 « ON TE RAPPELLE AU BON MOMENT » — champ doré `#DBA970`, encre `#1A0710`
+  3. 💬 « TOUT AU MÊME ENDROIT » — champ encre `#1A0710`, texte blanc (slide inverse)
+- Emoji 52 pt, titre **display 38 pt poids 900 capitales**, corps 15 pt.
+- Dots animés (barre active 22 pt), encre adaptée au fond de la slide.
+- Bouton **pilule** (noir, ou blanc sur la slide inverse) `SUIVANT` puis
+  `COMMENCER À EXPLORER` → `complete`.
 - Haptique `selectionAsync` au swipe, `notificationAsync(Success)` à la fin.
 - **Biais** : simple exposition, curiosité, closure finale.
 

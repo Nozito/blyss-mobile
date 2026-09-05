@@ -1,6 +1,7 @@
 /**
- * #34 — contenu statique de l'onboarding client nails (refonte design).
- * Cf. docs/DESIGN_34_client-onboarding-refonte.md.
+ * #34 — contenu statique de l'onboarding client nails (refonte design « B ancré »).
+ * Voix affirmée sur les écrans bornes (bienvenue / carousel), sobre et aligné
+ * sur l'app au milieu. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
  */
 import type { NailStyle } from "@/lib/api";
 
@@ -14,38 +15,49 @@ export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; emoji: strin
 ];
 
 /**
- * Écran 1 — ancrage valeur (preuve sociale + storytelling). Pas d'offre promo.
- * `socialProof` : chiffre affiché en gros au-dessus du titre (preuve sociale).
+ * Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo.
+ * `title` est affiché en display lourd capitales ; `body` porte la clarté.
  */
 export const WELCOME = {
-  eyebrow: "Bienvenue sur Blyss",
-  socialProof: "Des milliers de RDV nails",
-  socialProofSuffix: "réservés chaque mois",
-  title: "Trouve LA prothésiste ongulaire qu'il te faut",
-  body: "En une minute, on te présente les pros près de chez toi qui correspondent vraiment à ton style.",
-  cta: "C'est parti",
+  eyebrow: "✦ Blyss · onglerie",
+  title: "Tes ongles méritent mieux",
+  body: "Les meilleures prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos, réservées en quelques taps.",
+  socialProof: "Des milliers de RDV nails réservés chaque mois",
+  cta: "On y va",
   skip: "Plus tard",
 };
 
-/** Écran 5 — carousel features, 3 slides. `tint` = accent de la slide. */
-export const FEATURE_SLIDES: { title: string; body: string; emoji: string; tint: "primary" | "secondary" | "info" }[] = [
+/**
+ * Écran 5 — carousel, 3 slides plein champ. `field` = clé de couleur de la
+ * palette (token), `ink` = "dark" (texte quasi-noir) ou "light" (texte clair).
+ */
+export const FEATURE_SLIDES: {
+  title: string;
+  body: string;
+  emoji: string;
+  field: "primary" | "secondary" | "foreground";
+  ink: "dark" | "light";
+}[] = [
   {
     emoji: "📅",
-    title: "Réserve en quelques taps",
-    body: "Les vraies disponibilités de chaque pro, 24/7. Choisis ton créneau sans appel ni DM.",
-    tint: "primary",
+    title: "Réserve en 3 taps",
+    body: "Les vraies disponibilités de chaque pro, 24/7. Pas d'appel, pas de DM.",
+    field: "primary",
+    ink: "dark",
   },
   {
     emoji: "🔔",
     title: "On te rappelle au bon moment",
-    body: "Une notification quand il est temps de refaire tes ongles chez ta pro préférée.",
-    tint: "info",
+    body: "Une notif quand il est temps de refaire tes ongles chez ta pro préférée.",
+    field: "secondary",
+    ink: "dark",
   },
   {
     emoji: "💬",
-    title: "Tout est au même endroit",
+    title: "Tout au même endroit",
     body: "Messages, historique, rappels de RDV : ton suivi nails complet dans l'app.",
-    tint: "secondary",
+    field: "foreground",
+    ink: "light",
   },
 ];
 
