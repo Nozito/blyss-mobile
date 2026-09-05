@@ -1,18 +1,16 @@
 /**
- * #34 — Onboarding client nails (passe 3b « poster editorial × DA »). Route top-level.
+ * #34 — Onboarding client nails (passe 3b « poster editorial »). Route top-level.
  * 7 étapes, skippable à tout moment. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
  *
- *   1 Bienvenue → 2 Comment ça marche → 3 Préférences → 4 Recos
- *   → 5 CTA premier RDV → 6 Notifications → 7 Comment tu as connu Blyss
+ *   1 Bienvenue → 2 Comment ça marche → 3 Préférences (style multi + ville)
+ *   → 4 Recos (+ ♥ favori) → 5 Notifications → 6 Comment tu as connu Blyss
+ *   → 7 CTA premier RDV (dernier — pour ne pas perdre 5/6 si la cliente part réserver)
  *
- * Système : zéro emoji ; titres bornes en fontWeight 900 capitales (SF Pro Black,
- * aucune police embarquée) ; 3 fonds pleins issus de la palette (rose / cream /
- * prune #3D1F2C) ; header = numéro géant + « Plus tard » ; boutons pilule ;
+ * Système : zéro emoji ; titres fontWeight 900 capitales (SF Pro Black, aucune
+ * police embarquée) ; 3 fonds pleins issus de la palette (rose / cream / prune
+ * #3D1F2C) ; header = numéro géant + « Plus tard » ; boutons pilule 1 ligne ;
  * ruban à rayures rose × prune qui balaie entre chaque écran. Dark mode via
- * useThemeColors.
- *
- * Entrée : router.replace("/client-onboarding?from=signup") après l'inscription,
- * ou "?from=settings" pour une reprise manuelle.
+ * useThemeColors. Le ♥ favori réutilise favoritesApi (table favorites).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -43,13 +41,12 @@ import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import {
   clientOnboardingApi,
+  favoritesApi,
   type NailStyle,
-  type NailService,
   type OnboardingRecommendation,
 } from "@/lib/api";
 import {
   NAIL_STYLE_OPTIONS,
-  NAIL_SERVICE_OPTIONS,
   ATTRIBUTION_OPTIONS,
   WELCOME,
   HOW_IT_WORKS,
@@ -98,12 +95,8 @@ function PillButton({
       <Pressable
         onPress={onPress}
         disabled={loading}
-        onPressIn={() =>
-          RNAnimated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start()
-        }
-        onPressOut={() =>
-          RNAnimated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start()
-        }
+        onPressIn={() => RNAnimated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start()}
+        onPressOut={() => RNAnimated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start()}
         accessibilityRole="button"
         accessibilityLabel={label}
         style={{
@@ -120,13 +113,7 @@ function PillButton({
         ) : (
           <Text
             numberOfLines={1}
-            style={{
-              color: fg,
-              fontSize: 13.5,
-              fontWeight: "700",
-              letterSpacing: 0.6,
-              textTransform: "uppercase",
-            }}
+            style={{ color: fg, fontSize: 13.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}
           >
             {label}
           </Text>
@@ -147,11 +134,7 @@ function useField(step: number, colors: ReturnType<typeof useThemeColors>) {
       case STEP.NOTIFICATIONS:
         return { bg: PRUNE, ink: CREAM, pill: { bg: CREAM, fg: PRUNE } };
       default:
-        return {
-          bg: colors.cream,
-          ink: colors.foreground,
-          pill: { bg: colors.foreground, fg: colors.background },
-        };
+        return { bg: colors.cream, ink: colors.foreground, pill: { bg: colors.foreground, fg: colors.background } };
     }
   }, [step, colors]);
 }
@@ -167,8 +150,7 @@ export default function ClientOnboardingScreen() {
   const reduceMotion = useReducedMotion();
 
   const [step, setStep] = useState<number>(STEP.WELCOME);
-  const [style, setStyle] = useState<NailStyle | null>(null);
-  const [services, setServices] = useState<NailService[]>([]);
+  const [styles, setStyles] = useState<NailStyle[]>([]);
   const [city, setCity] = useState("");
   const [cityFocused, setCityFocused] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -181,8 +163,8 @@ export default function ClientOnboardingScreen() {
   const field = useField(step, colors);
   const ink = field.ink;
 
-  // ── Ruban de transition ──────────────────────────────────────────────
-  const ribbonX = useSharedValue(1.5);
+  // ── Ruban de transition (largeur 2×écran, sort complètement à gauche) ──
+  const ribbonX = useSharedValue(1.1);
   const ribbonStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: ribbonX.value * width }, { skewX: "-9deg" }],
   }));
@@ -193,16 +175,12 @@ export default function ClientOnboardingScreen() {
         setStep(next);
         return;
       }
-      ribbonX.value = withTiming(
-        -0.18,
-        { duration: 200, easing: Easing.in(Easing.cubic) },
-        (finished) => {
-          if (!finished) return;
-          runOnJS(setStep)(next);
-          runOnJS(tap)(Haptics.ImpactFeedbackStyle.Light);
-          ribbonX.value = withTiming(-1.6, { duration: 320, easing: Easing.out(Easing.cubic) });
-        }
-      );
+      ribbonX.value = withTiming(-0.5, { duration: 200, easing: Easing.in(Easing.cubic) }, (finished) => {
+        if (!finished) return;
+        runOnJS(setStep)(next);
+        runOnJS(tap)(Haptics.ImpactFeedbackStyle.Light);
+        ribbonX.value = withTiming(-2.2, { duration: 320, easing: Easing.out(Easing.cubic) });
+      });
     },
     [reduceMotion, ribbonX]
   );
@@ -215,10 +193,7 @@ export default function ClientOnboardingScreen() {
   const progressStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
   const track = useCallback(
-    (
-      event: string,
-      props?: Record<string, string | number | boolean | null | string[] | number[]>
-    ) => {
+    (event: string, props?: Record<string, string | number | boolean | null | string[] | number[]>) => {
       posthog?.capture(event, props as Record<string, unknown> as never);
     },
     [posthog]
@@ -230,8 +205,8 @@ export default function ClientOnboardingScreen() {
       .getStatus()
       .then((res) => {
         if (res.success && res.data) {
-          if (res.data.style_nails) setStyle(res.data.style_nails);
-          if (res.data.services?.length) setServices(res.data.services);
+          if (res.data.styles?.length) setStyles(res.data.styles);
+          else if (res.data.style_nails) setStyles([res.data.style_nails]);
           if (res.data.acquisition_source) setAttribution(res.data.acquisition_source);
           if (fromSettings && res.data.current_step > 1 && !res.data.completed) {
             setStep(Math.min(res.data.current_step, STEP_COUNT));
@@ -242,11 +217,8 @@ export default function ClientOnboardingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // _notif_prompted quand l'écran notifications s'affiche
   useEffect(() => {
-    if (step === STEP.NOTIFICATIONS) {
-      track("onboarding_notif_prompted", { from: notifFrom.current });
-    }
+    if (step === STEP.NOTIFICATIONS) track("onboarding_notif_prompted", { from: notifFrom.current });
   }, [step, track]);
 
   const leave = useCallback(() => {
@@ -268,36 +240,25 @@ export default function ClientOnboardingScreen() {
   }, [track, leave]);
 
   const onHeaderSkip = () => {
-    if (step === STEP.ATTRIBUTION) {
-      finish();
-      return;
-    }
-    doSkip();
+    if (step === STEP.CTA) finish();
+    else if (step === STEP.ATTRIBUTION) go(STEP.CTA);
+    else doSkip();
   };
-  const skipLabel = fromSettings
-    ? "Fermer"
-    : step === STEP.ATTRIBUTION
-      ? "Passer"
-      : "Plus tard";
+  const skipLabel = fromSettings ? "Fermer" : step === STEP.ATTRIBUTION ? "Passer" : "Plus tard";
 
   const submitPreferences = async () => {
-    if (!style) return;
+    if (styles.length === 0) return;
     tap(Haptics.ImpactFeedbackStyle.Medium);
     setSavingPrefs(true);
-    const res = await clientOnboardingApi.setPreferences(
-      style,
-      city.trim() || undefined,
-      services.length ? services : undefined
-    );
+    const res = await clientOnboardingApi.setPreferences(styles, city.trim() || undefined);
     setSavingPrefs(false);
     if (!res.success) {
       showToast(res.error ?? "Impossible d'enregistrer", "error");
       return;
     }
     track("onboarding_preferences_selected", {
-      style_nails: style,
-      services,
-      services_count: services.length,
+      styles,
+      styles_count: styles.length,
       has_location: !!city.trim(),
       location: city.trim() || null,
     });
@@ -312,7 +273,7 @@ export default function ClientOnboardingScreen() {
     const list = res.success && res.data ? res.data.recommendations : [];
     setRecos(list);
     track("onboarding_recommendations_viewed", {
-      style_nails: style,
+      styles,
       style_filter_active: (res.success && res.data?.style_filter_active) || false,
       results_count: list.length,
       empty: list.length === 0,
@@ -325,6 +286,8 @@ export default function ClientOnboardingScreen() {
     tap(Haptics.ImpactFeedbackStyle.Medium);
     track("onboarding_cta_tapped", { pro_id: r.pro_id, position, from });
     clientOnboardingApi.tapCta().catch(() => {});
+    // Depuis le CTA (dernier écran), la cliente termine l'onboarding en partant réserver.
+    if (from === "cta_screen") clientOnboardingApi.complete().catch(() => {});
     router.push(`/specialist/${r.pro_id}` as never);
   };
 
@@ -334,9 +297,10 @@ export default function ClientOnboardingScreen() {
       const next = new Set(prev);
       if (next.has(r.pro_id)) {
         next.delete(r.pro_id);
+        favoritesApi.remove(r.pro_id).catch(() => {});
       } else {
         next.add(r.pro_id);
-        clientOnboardingApi.followPro(r.pro_id).catch(() => {});
+        favoritesApi.add(r.pro_id).catch(() => {});
         track("onboarding_pro_followed", { pro_id: r.pro_id, position });
       }
       return next;
@@ -345,7 +309,7 @@ export default function ClientOnboardingScreen() {
 
   const enableNotifs = async () => {
     tap(Haptics.ImpactFeedbackStyle.Medium);
-    let result: string = "denied";
+    let result = "denied";
     try {
       const { status } = await Notifications.requestPermissionsAsync();
       result = status === "granted" ? "granted" : "denied";
@@ -371,13 +335,10 @@ export default function ClientOnboardingScreen() {
   const topStyle = useMemo(() => recos?.[0] ?? null, [recos]);
   const isEmpty = !loadingRecos && recos !== null && recos.length === 0;
 
-  // ── Header : numéro géant + skip + filet ──────────────────────────────
   const Header = (
     <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <Text style={{ color: ink, fontWeight: "900", fontSize: 30, letterSpacing: -1.5 }}>
-          {pad2(step)}
-        </Text>
+        <Text style={{ color: ink, fontWeight: "900", fontSize: 30, letterSpacing: -1.5 }}>{pad2(step)}</Text>
         <Pressable onPress={onHeaderSkip} hitSlop={12} style={{ marginTop: 8 }}>
           <Text
             style={{
@@ -394,13 +355,7 @@ export default function ClientOnboardingScreen() {
         </Pressable>
       </View>
       <View
-        style={{
-          height: 2,
-          marginTop: 10,
-          borderRadius: 2,
-          backgroundColor: withAlpha(ink, 0.18),
-          overflow: "hidden",
-        }}
+        style={{ height: 2, marginTop: 10, borderRadius: 2, backgroundColor: withAlpha(ink, 0.18), overflow: "hidden" }}
       >
         <Reanimated.View style={[{ height: 2, borderRadius: 2, backgroundColor: ink }, progressStyle]} />
       </View>
@@ -411,7 +366,6 @@ export default function ClientOnboardingScreen() {
     <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>{children}</View>
   );
 
-  // ── Chip générique (style / service / attribution) ────────────────────
   const Chip = ({
     label,
     selected,
@@ -431,23 +385,27 @@ export default function ClientOnboardingScreen() {
         width: w as never,
         borderRadius: 12,
         borderWidth: 1.5,
-        paddingVertical: 10,
-        paddingHorizontal: 10,
+        paddingVertical: 11,
+        paddingHorizontal: 11,
         borderColor: selected ? colors.primary : withAlpha(ink, 0.18),
         backgroundColor: selected ? colors.primary : withAlpha(ink, 0.04),
       }}
     >
-      <Text
-        style={{
-          color: selected ? INK : ink,
-          fontSize: 11,
-          fontWeight: "800",
-          textTransform: "uppercase",
-          letterSpacing: 0.2,
-        }}
-      >
-        {label}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text
+          style={{
+            color: selected ? INK : ink,
+            fontSize: 11.5,
+            fontWeight: "800",
+            textTransform: "uppercase",
+            letterSpacing: 0.2,
+            flexShrink: 1,
+          }}
+        >
+          {label}
+        </Text>
+        {selected && <Ionicons name="checkmark-circle" size={16} color={INK} />}
+      </View>
       {sub ? (
         <Text
           style={{
@@ -468,35 +426,18 @@ export default function ClientOnboardingScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         {Header}
 
-        <Reanimated.View
-          key={step}
-          entering={reduceMotion ? undefined : FadeIn.duration(180)}
-          style={{ flex: 1 }}
-        >
+        <Reanimated.View key={step} entering={reduceMotion ? undefined : FadeIn.duration(180)} style={{ flex: 1 }}>
           {/* ── 1. Bienvenue ─────────────────────────────────────────── */}
           {step === STEP.WELCOME && (
             <>
               <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
-                <Text
-                  style={{
-                    color: ink,
-                    opacity: 0.7,
-                    fontSize: 11,
-                    fontWeight: "700",
-                    letterSpacing: 1.4,
-                    textTransform: "uppercase",
-                    marginBottom: 16,
-                  }}
-                >
-                  {WELCOME.eyebrow}
-                </Text>
-                <Text style={{ color: ink, fontWeight: "900", fontSize: 40, lineHeight: 40, letterSpacing: -1, textTransform: "uppercase" }}>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 44, lineHeight: 44, letterSpacing: -1.2, textTransform: "uppercase" }}>
                   {WELCOME.title}
                 </Text>
                 <View
                   style={{
                     alignSelf: "flex-start",
-                    marginTop: 16,
+                    marginTop: 18,
                     backgroundColor: INK,
                     paddingHorizontal: 9,
                     paddingVertical: 4,
@@ -508,7 +449,7 @@ export default function ClientOnboardingScreen() {
                     {WELCOME.sticker}
                   </Text>
                 </View>
-                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 20, maxWidth: 320 }}>
+                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 22, maxWidth: 320 }}>
                   {WELCOME.body}
                 </Text>
                 <Text style={{ color: ink, opacity: 0.72, fontSize: 12, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase", marginTop: 18 }}>
@@ -546,7 +487,7 @@ export default function ClientOnboardingScreen() {
             </>
           )}
 
-          {/* ── 3. Préférences (style + service + ville) ──────────────── */}
+          {/* ── 3. Préférences (style multi + ville) ──────────────────── */}
           {step === STEP.PREFERENCES && (
             <>
               <ScrollView
@@ -555,12 +496,11 @@ export default function ClientOnboardingScreen() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 24, letterSpacing: -0.5, textTransform: "uppercase" }}>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 25, letterSpacing: -0.5, textTransform: "uppercase" }}>
                   Dis-nous ce que tu aimes
                 </Text>
-
                 <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 16 }}>
-                  Le style — 1 choix
+                  Le style — plusieurs choix possibles
                 </Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {NAIL_STYLE_OPTIONS.map((o) => (
@@ -569,28 +509,10 @@ export default function ClientOnboardingScreen() {
                       label={o.label}
                       sub={o.code}
                       width="48%"
-                      selected={style === o.value}
+                      selected={styles.includes(o.value)}
                       onPress={() => {
                         Haptics.selectionAsync().catch(() => {});
-                        setStyle(o.value);
-                      }}
-                    />
-                  ))}
-                </View>
-
-                <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 18 }}>
-                  Ce que tu viens faire — plusieurs choix
-                </Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                  {NAIL_SERVICE_OPTIONS.map((o) => (
-                    <Chip
-                      key={o.value}
-                      label={o.label}
-                      width="31.5%"
-                      selected={services.includes(o.value)}
-                      onPress={() => {
-                        Haptics.selectionAsync().catch(() => {});
-                        setServices((prev) =>
+                        setStyles((prev) =>
                           prev.includes(o.value) ? prev.filter((v) => v !== o.value) : [...prev, o.value]
                         );
                       }}
@@ -598,7 +520,7 @@ export default function ClientOnboardingScreen() {
                   ))}
                 </View>
 
-                <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 20 }}>
+                <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 22 }}>
                   Où cherches-tu ?
                 </Text>
                 <TextInput
@@ -625,7 +547,7 @@ export default function ClientOnboardingScreen() {
                 <PillButton
                   label="Continuer →"
                   onPress={submitPreferences}
-                  bg={style ? field.pill.bg : withAlpha(ink, 0.25)}
+                  bg={styles.length ? field.pill.bg : withAlpha(ink, 0.25)}
                   fg={field.pill.fg}
                   loading={savingPrefs}
                 />
@@ -633,7 +555,7 @@ export default function ClientOnboardingScreen() {
             </>
           )}
 
-          {/* ── 4. Recos (+ ♥) / état vide ───────────────────────────── */}
+          {/* ── 4. Recos (+ ♥ favori) / état vide ─────────────────────── */}
           {step === STEP.RECOMMENDATIONS && (
             <>
               {isEmpty ? (
@@ -657,7 +579,7 @@ export default function ClientOnboardingScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 25, letterSpacing: -0.5, textTransform: "uppercase" }}>
-                    {style ? `Tes pros ${STYLE_LABEL[style]?.toLowerCase() ?? ""}` : "Tes pros"}
+                    {styles[0] ? `Tes pros ${STYLE_LABEL[styles[0]]?.toLowerCase() ?? ""}` : "Tes pros"}
                   </Text>
                   <Text style={{ color: ink, opacity: 0.6, fontSize: 10.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginTop: 6 }}>
                     {city.trim() ? `Autour de ${city.trim()} · ` : ""}
@@ -676,28 +598,12 @@ export default function ClientOnboardingScreen() {
                       return (
                         <View
                           key={r.pro_id}
-                          style={{
-                            flexDirection: "row",
-                            gap: 11,
-                            paddingVertical: 12,
-                            borderTopWidth: 1,
-                            borderTopColor: withAlpha(ink, 0.15),
-                          }}
+                          style={{ flexDirection: "row", gap: 11, paddingVertical: 12, borderTopWidth: 1, borderTopColor: withAlpha(ink, 0.15) }}
                         >
-                          <Pressable
-                            onPress={() => openPro(r, i + 1, "reco_card")}
-                            style={{ flexDirection: "row", gap: 11, flex: 1 }}
-                          >
+                          <Pressable onPress={() => openPro(r, i + 1, "reco_card")} style={{ flexDirection: "row", gap: 11, flex: 1 }}>
                             <Image
                               source={{ uri: r.banner_photo ?? r.profile_photo ?? undefined }}
-                              style={{
-                                width: 56,
-                                height: 56,
-                                borderRadius: 10,
-                                borderWidth: 1,
-                                borderColor: withAlpha(ink, 0.2),
-                                backgroundColor: withAlpha(ink, 0.06),
-                              }}
+                              style={{ width: 56, height: 56, borderRadius: 10, borderWidth: 1, borderColor: withAlpha(ink, 0.2), backgroundColor: withAlpha(ink, 0.06) }}
                               contentFit="cover"
                               transition={150}
                             />
@@ -707,10 +613,7 @@ export default function ClientOnboardingScreen() {
                                   ✦ Pour ton style
                                 </Text>
                               )}
-                              <Text
-                                numberOfLines={1}
-                                style={{ color: ink, fontSize: 16, fontWeight: "900", letterSpacing: -0.3, textTransform: "uppercase" }}
-                              >
+                              <Text numberOfLines={1} style={{ color: ink, fontSize: 16, fontWeight: "900", letterSpacing: -0.3, textTransform: "uppercase" }}>
                                 {r.name}
                               </Text>
                               <Text style={{ color: withAlpha(ink, 0.6), fontSize: 10, letterSpacing: 0.3, textTransform: "uppercase", marginTop: 3 }}>
@@ -730,7 +633,7 @@ export default function ClientOnboardingScreen() {
                             onPress={() => toggleFollow(r, i + 1)}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={isFollowed ? `Ne plus suivre ${r.name}` : `Suivre ${r.name}`}
+                            accessibilityLabel={isFollowed ? `Retirer ${r.name} des favoris` : `Ajouter ${r.name} aux favoris`}
                             style={{
                               width: 30,
                               height: 30,
@@ -742,11 +645,7 @@ export default function ClientOnboardingScreen() {
                               backgroundColor: isFollowed ? colors.primary : "transparent",
                             }}
                           >
-                            <Ionicons
-                              name={isFollowed ? "heart" : "heart-outline"}
-                              size={15}
-                              color={isFollowed ? INK : withAlpha(ink, 0.5)}
-                            />
+                            <Ionicons name={isFollowed ? "heart" : "heart-outline"} size={15} color={isFollowed ? INK : withAlpha(ink, 0.5)} />
                           </Pressable>
                         </View>
                       );
@@ -775,7 +674,7 @@ export default function ClientOnboardingScreen() {
                 ) : (
                   <PillButton
                     label="Continuer →"
-                    onPress={() => go(STEP.CTA)}
+                    onPress={() => go(STEP.NOTIFICATIONS)}
                     bg={field.pill.bg}
                     fg={field.pill.fg}
                     loading={loadingRecos}
@@ -785,43 +684,7 @@ export default function ClientOnboardingScreen() {
             </>
           )}
 
-          {/* ── 5. CTA premier RDV ───────────────────────────────────── */}
-          {step === STEP.CTA && (
-            <>
-              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
-                <Text style={{ color: ink, opacity: 0.7, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 14 }}>
-                  Réservation 24/7
-                </Text>
-                <Text style={{ color: ink, fontWeight: "900", fontSize: 38, lineHeight: 38, letterSpacing: -1, textTransform: "uppercase" }}>
-                  Premier rendez-vous ?
-                </Text>
-                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 16, maxWidth: 320 }}>
-                  {topStyle
-                    ? `${topStyle.name} a de la place. Ton créneau en quelques taps.`
-                    : "Choisis une pro et réserve ton créneau en quelques taps."}
-                </Text>
-              </View>
-              <Footer>
-                <View style={{ gap: 8 }}>
-                  {topStyle && (
-                    <PillButton
-                      label="Réserver mon RDV →"
-                      onPress={() => openPro(topStyle, 1, "cta_screen")}
-                      bg={field.pill.bg}
-                      fg={field.pill.fg}
-                    />
-                  )}
-                  <Pressable onPress={() => go(STEP.NOTIFICATIONS)} style={{ alignItems: "center", paddingVertical: 6 }}>
-                    <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
-                      Continuer sans réserver
-                    </Text>
-                  </Pressable>
-                </View>
-              </Footer>
-            </>
-          )}
-
-          {/* ── 6. Notifications ─────────────────────────────────────── */}
+          {/* ── 5. Notifications ─────────────────────────────────────── */}
           {step === STEP.NOTIFICATIONS && (
             <>
               <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
@@ -848,7 +711,7 @@ export default function ClientOnboardingScreen() {
             </>
           )}
 
-          {/* ── 7. Comment tu as connu Blyss ─────────────────────────── */}
+          {/* ── 6. Comment tu as connu Blyss ─────────────────────────── */}
           {step === STEP.ATTRIBUTION && (
             <>
               <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
@@ -860,18 +723,43 @@ export default function ClientOnboardingScreen() {
                 </Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
                   {ATTRIBUTION_OPTIONS.map((o) => (
-                    <Chip
-                      key={o.value}
-                      label={o.label}
-                      width="48%"
-                      selected={attribution === o.value}
-                      onPress={() => pickAttribution(o.value)}
-                    />
+                    <Chip key={o.value} label={o.label} width="48%" selected={attribution === o.value} onPress={() => pickAttribution(o.value)} />
                   ))}
                 </View>
               </View>
               <Footer>
-                <PillButton label="Terminer →" onPress={finish} bg={field.pill.bg} fg={field.pill.fg} />
+                <PillButton label="Continuer →" onPress={() => go(STEP.CTA)} bg={field.pill.bg} fg={field.pill.fg} />
+              </Footer>
+            </>
+          )}
+
+          {/* ── 7. CTA premier RDV (dernier) ─────────────────────────── */}
+          {step === STEP.CTA && (
+            <>
+              <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+                <Text style={{ color: ink, opacity: 0.7, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 14 }}>
+                  Réservation 24/7
+                </Text>
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 38, lineHeight: 38, letterSpacing: -1, textTransform: "uppercase" }}>
+                  Premier rendez-vous ?
+                </Text>
+                <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 16, maxWidth: 320 }}>
+                  {topStyle
+                    ? `${topStyle.name} a de la place. Ton créneau en quelques taps.`
+                    : "Choisis une pro et réserve ton créneau en quelques taps."}
+                </Text>
+              </View>
+              <Footer>
+                <View style={{ gap: 8 }}>
+                  {topStyle && (
+                    <PillButton label="Réserver mon RDV →" onPress={() => openPro(topStyle, 1, "cta_screen")} bg={field.pill.bg} fg={field.pill.fg} />
+                  )}
+                  <Pressable onPress={finish} style={{ alignItems: "center", paddingVertical: 6 }}>
+                    <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
+                      Explorer les pros
+                    </Text>
+                  </Pressable>
+                </View>
               </Footer>
             </>
           )}
@@ -882,18 +770,11 @@ export default function ClientOnboardingScreen() {
       <Reanimated.View
         pointerEvents="none"
         style={[
-          {
-            position: "absolute",
-            top: -60,
-            bottom: -60,
-            left: 0,
-            width: width * 1.6,
-            flexDirection: "row",
-          },
+          { position: "absolute", top: -80, bottom: -80, left: 0, width: width * 2, flexDirection: "row" },
           ribbonStyle,
         ]}
       >
-        {Array.from({ length: 18 }).map((_, i) => (
+        {Array.from({ length: 22 }).map((_, i) => (
           <View key={i} style={{ flex: 1, backgroundColor: i % 2 ? PRUNE : colors.primary }} />
         ))}
       </Reanimated.View>

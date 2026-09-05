@@ -27,35 +27,42 @@ génériques/IA → **passe 3b**. Artefact de revue :
 - **Cartes reco** = lignes éditoriales (filet 1 px, photo carrée arrondie duotone,
   nom en 900). Plus de carte à ombre. Bouton `♥` = suivre la pro sans quitter.
 - **Ruban de transition** : rayures diagonales rose × prune (façon rubalise) qui
-  balaie l'écran à chaque passage — ~520 ms, 2 temps (couvre → `setStep` →
-  découvre), haptique `Light` à la couverture, `useReducedMotion()` → `FadeIn`.
-  N'existe **que** pendant la transition.
+  balaie l'écran à chaque passage — ~520 ms, 2 temps (couvre à `translateX -0.5w`
+  → `setStep` → découvre à `-2.2w`, ruban large `2w` pour sortir complètement),
+  haptique `Light` à la couverture, `useReducedMotion()` → `FadeIn`. N'existe
+  **que** pendant la transition.
 - Aucune dépendance mobile ajoutée.
 
 ### Ordre des 7 écrans (revu côté comportemental)
 
 | # | Écran | Fond | Levier |
 |---|---|---|---|
-| 1 | Bienvenue | rose | ancrage valeur + preuve sociale |
+| 1 | Bienvenue (pas d'eyebrow, titre 44 pt) | rose | ancrage valeur + preuve sociale |
 | 2 | **Comment ça marche** (ex-carousel dissous) | prune | réciprocité — rassure (« tu payes à l'institut ») avant de demander |
-| 3 | Préférences (`nail_style` 1 choix · `services[]` multi · ville) — **défile** | cream | foot-in-the-door + effet IKEA |
-| 4 | Recos + `♥` (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté |
-| 5 | CTA premier RDV | rose | pic de conversion ; « continuer sans réserver » → 6 |
-| 6 | Notifications (pré-permission) | prune | l'ask au pic d'intention |
-| 7 | Comment tu as connu Blyss (`acquisition_source`) | cream | peak-end faible → dernier, skippable (« Passer ») |
+| 3 | Préférences (**style multi-choix** + ville) — défile | cream | foot-in-the-door + effet IKEA |
+| 4 | Recos + `♥` favori (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté |
+| 5 | Notifications (pré-permission) | prune | l'ask au pic d'intention |
+| 6 | Comment tu as connu Blyss (`acquisition_source`) | cream | valeur nulle → skippable (« Passer ») |
+| 7 | **CTA premier RDV — dernier** | rose | closer ; « Réserver » sort, « Explorer » → `/complete` |
 
-Le **carousel de features est supprimé** : messages redistribués (02, 06, vécus au CTA).
+**CTA en dernier** : si la cliente part réserver, elle a déjà vu notifications +
+attribution (concern produit). Tap sur une ligne reco à l'écran 4 reste possible
+(gros convertisseurs — relance notif contextuelle post-résa).
 
-### Dépendances backend blyss-app (1 petite PR à part)
+Le **carousel de features est supprimé** ; l'axe « prestation » (services) est
+abandonné. Le **`♥` favori réutilise `POST /api/favorites`** (table `favorites`
+existante) — pas une nouvelle notion.
 
-- `POST /api/client/onboarding/preferences` accepte `services[]` (enum
-  `nouvelle_pose|remplissage|depose|semi_permanent|capsules|soin_pieds`).
-- `POST /api/client/onboarding/follow` `{ pro_id }` (ou brancher le favori existant).
-- `POST /api/client/onboarding/attribution` `{ source }` → `client_onboarding.acquisition_source`.
-- `GET /status` renvoie `services` et `acquisition_source` pour la reprise.
+### Dépendances backend blyss-app (PR #38)
 
-Le mobile appelle ces routes en **best-effort** (`.catch(() => {})`) — pas de
-régression si le backend n'est pas encore déployé.
+- migration `20260909000001` : `client_preferences.styles nail_style[]`
+  (`style_nails` conservé = `styles[0]`), `client_onboarding.acquisition_source`,
+  `current_step` CHECK `0..7`.
+- `POST /preferences` accepte `styles[]` ; `/status` + `/recommendations`
+  renvoient `styles` ; reco matche sur `= ANY(styles)`.
+- `POST /attribution` `{ source }` → `acquisition_source`.
+
+`/attribution` est appelé en **best-effort** (`.catch(() => {})`).
 
 ---
 
@@ -268,14 +275,14 @@ Payloads détaillés = `docs/client-onboarding-tracking.md`.
 | Event | Déclencheur |
 |---|---|
 | `onboarding_started` / `onboarding_resumed` | montage écran (selon `from`) |
-| `onboarding_preferences_selected` | validation écran 3 — `style_nails`, **`services`** / `services_count`, `has_location`, `location` |
-| `onboarding_recommendations_viewed` | chargement recos (écran 4) — `results_count`, `empty`, `pro_ids`, `had_scarcity`, `style_filter_active` |
-| `onboarding_pro_followed` **▸ nouveau** | tap `♥` sur une ligne reco — `pro_id`, `position` |
-| `onboarding_cta_tapped` | tap ligne reco ou CTA écran 5 — `pro_id`, `position`, `from` |
-| `onboarding_notif_prompted` **▸ nouveau** | écran 6 affiché — `from` (`onboarding` / `empty_state`) |
+| `onboarding_preferences_selected` | validation écran 3 — **`styles`** / `styles_count`, `has_location`, `location` |
+| `onboarding_recommendations_viewed` | chargement recos (écran 4) — `results_count`, `empty`, `pro_ids`, `had_scarcity`, `style_filter_active`, `styles` |
+| `onboarding_pro_followed` **▸ nouveau** | tap `♥` sur une ligne reco — `pro_id`, `position` (double `POST /api/favorites`) |
+| `onboarding_notif_prompted` **▸ nouveau** | écran 5 affiché — `from` (`onboarding` / `empty_state`) |
 | `onboarding_notif_result` **▸ nouveau** | `granted` / `denied` / `later` / `error` |
-| `onboarding_attribution` **▸ nouveau** | tap d'une source à l'écran 7 — `source` |
-| `onboarding_completed` | écran 7 (Terminer / Passer) — `steps_seen` = 7 |
+| `onboarding_attribution` **▸ nouveau** | tap d'une source à l'écran 6 — `source` |
+| `onboarding_cta_tapped` | tap ligne reco ou CTA écran 7 (dernier) — `pro_id`, `position`, `from` |
+| `onboarding_completed` | écran 7 (Réserver / Explorer / Passer) — `steps_seen` = 7 |
 | `onboarding_skipped` | « Plus tard » / « Fermer » (`at_step`) |
 
 ---

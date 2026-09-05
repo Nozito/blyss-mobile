@@ -2,15 +2,15 @@
  * #34 — contenu statique de l'onboarding client nails (passe 3b « poster editorial × DA »).
  * 7 écrans, zéro emoji. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
  *
- *   1 Bienvenue → 2 Comment ça marche → 3 Préférences → 4 Recos
- *   → 5 CTA premier RDV → 6 Notifications → 7 Comment tu as connu Blyss
+ *   1 Bienvenue → 2 Comment ça marche → 3 Préférences (style multi + ville)
+ *   → 4 Recos (+ ♥) → 5 Notifications → 6 Comment tu as connu Blyss
+ *   → 7 CTA premier RDV (dernier)
  */
-import type { NailStyle, NailService } from "@/lib/api";
+import type { NailStyle } from "@/lib/api";
 
 /**
- * Écran 3 — groupe « Le style » (1 choix, enum nail_style). `code` = réf nuancier
- * (onboarding client). `emoji` conservé pour l'écran pro « Mes spécialités » qui
- * réutilise cette liste.
+ * Écran 3 — style(s), multi-choix (enum nail_style). `code` = réf nuancier.
+ * `emoji` conservé pour l'écran pro « Mes spécialités » qui réutilise la liste.
  */
 export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string; emoji: string }[] = [
   { value: "nail_art", label: "Nail art", code: "NL·01", emoji: "🎨" },
@@ -21,19 +21,8 @@ export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string
   { value: "autre", label: "Autre", code: "NL·06", emoji: "💅" },
 ];
 
-/** Écran 3 — groupe « Ce que tu viens faire » (multi, services[]). Axe prestation, aucun mot commun avec le style. */
-export const NAIL_SERVICE_OPTIONS: { value: NailService; label: string }[] = [
-  { value: "nouvelle_pose", label: "Nouvelle pose" },
-  { value: "remplissage", label: "Remplissage" },
-  { value: "depose", label: "Dépose" },
-  { value: "semi_permanent", label: "Semi-perm." },
-  { value: "capsules", label: "Capsules" },
-  { value: "soin_pieds", label: "Soin des pieds" },
-];
-
-/** Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo. */
+/** Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo, pas d'eyebrow. */
 export const WELCOME = {
-  eyebrow: "✦ Blyss · onglerie",
   title: "Tes ongles méritent mieux",
   sticker: "✦ 1 minute chrono",
   body: "Les meilleures prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos.",
@@ -53,7 +42,7 @@ export const HOW_IT_WORKS = {
   cta: "J'ai compris",
 };
 
-/** Écran 6 — pré-permission notifications, fond prune. */
+/** Écran 5 — pré-permission notifications, fond prune. */
 export const NOTIF = {
   eyebrow: "Presque fini",
   title: "On te prévient au bon moment",
@@ -62,7 +51,7 @@ export const NOTIF = {
   later: "plus tard",
 };
 
-/** Écran 7 — attribution (acquisition_source). 1 choix, skippable. */
+/** Écran 6 — attribution (acquisition_source). 1 choix, skippable. */
 export const ATTRIBUTION_OPTIONS: { value: string; label: string }[] = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
@@ -77,9 +66,9 @@ export const STEP = {
   HOW_IT_WORKS: 2,
   PREFERENCES: 3,
   RECOMMENDATIONS: 4,
-  CTA: 5,
-  NOTIFICATIONS: 6,
-  ATTRIBUTION: 7,
+  NOTIFICATIONS: 5,
+  ATTRIBUTION: 6,
+  CTA: 7,
 } as const;
 
 export const STEP_COUNT = 7;

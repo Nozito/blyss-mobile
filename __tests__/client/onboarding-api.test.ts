@@ -11,7 +11,7 @@ jest.mock("@/lib/storage", () => ({
   },
 }));
 
-import { clientOnboardingApi, proApi, NAIL_STYLES, NAIL_SERVICES } from "@/lib/api";
+import { clientOnboardingApi, proApi, NAIL_STYLES } from "@/lib/api";
 
 const mockFetch = jest.fn();
 (global as { fetch: unknown }).fetch = mockFetch;
@@ -34,42 +34,24 @@ describe("clientOnboardingApi", () => {
     expect(res.success && res.data?.current_step).toBe(2);
   });
 
-  it("setPreferences envoie style + city quand la ville est fournie", async () => {
-    mockFetch.mockReturnValueOnce(ok({ style_nails: "vernis_gel" }));
-    await clientOnboardingApi.setPreferences("vernis_gel", "Lyon");
+  it("setPreferences envoie styles[] + city quand la ville est fournie", async () => {
+    mockFetch.mockReturnValueOnce(ok({ styles: ["vernis_gel"], style_nails: "vernis_gel" }));
+    await clientOnboardingApi.setPreferences(["vernis_gel", "nail_art"], "Lyon");
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body).toEqual({ style_nails: "vernis_gel", city: "Lyon" });
+    expect(body).toEqual({ styles: ["vernis_gel", "nail_art"], city: "Lyon" });
   });
 
   it("setPreferences omet city quand absente", async () => {
-    mockFetch.mockReturnValueOnce(ok({ style_nails: "autre" }));
-    await clientOnboardingApi.setPreferences("autre");
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ style_nails: "autre" });
+    mockFetch.mockReturnValueOnce(ok({ styles: ["autre"], style_nails: "autre" }));
+    await clientOnboardingApi.setPreferences(["autre"]);
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["autre"] });
   });
 
-  it("setPreferences envoie services[] quand non vide, les omet sinon", async () => {
-    mockFetch.mockReturnValueOnce(ok({ style_nails: "nail_art" }));
-    await clientOnboardingApi.setPreferences("nail_art", "Lyon", ["nouvelle_pose", "depose"]);
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({
-      style_nails: "nail_art",
-      city: "Lyon",
-      services: ["nouvelle_pose", "depose"],
-    });
-
-    mockFetch.mockReturnValueOnce(ok({ style_nails: "nail_art" }));
-    await clientOnboardingApi.setPreferences("nail_art", undefined, []);
-    expect(JSON.parse(mockFetch.mock.calls[1][1].body)).toEqual({ style_nails: "nail_art" });
-  });
-
-  it("followPro / setAttribution → POST avec payload", async () => {
-    mockFetch.mockReturnValueOnce(ok(null));
-    await clientOnboardingApi.followPro(42);
-    expect(mockFetch.mock.calls[0][0]).toMatch(/\/api\/client\/onboarding\/follow$/);
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ pro_id: 42 });
-
+  it("setAttribution → POST avec payload", async () => {
     mockFetch.mockReturnValueOnce(ok(null));
     await clientOnboardingApi.setAttribution("instagram");
-    expect(JSON.parse(mockFetch.mock.calls[1][1].body)).toEqual({ source: "instagram" });
+    expect(mockFetch.mock.calls[0][0]).toMatch(/\/api\/client\/onboarding\/attribution$/);
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ source: "instagram" });
   });
 
   it("getRecommendations encode la ville en query param", async () => {
@@ -104,16 +86,5 @@ describe("proApi nail-styles", () => {
 
   it("NAIL_STYLES = taxonomie #34", () => {
     expect(NAIL_STYLES).toEqual(["nail_art", "french_nude", "couleurs_vives", "vernis_gel", "pose_resine", "autre"]);
-  });
-
-  it("NAIL_SERVICES = axe prestation #34 passe 3b", () => {
-    expect(NAIL_SERVICES).toEqual([
-      "nouvelle_pose",
-      "remplissage",
-      "depose",
-      "semi_permanent",
-      "capsules",
-      "soin_pieds",
-    ]);
   });
 });
