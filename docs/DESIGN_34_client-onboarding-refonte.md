@@ -40,7 +40,7 @@ génériques/IA → **passe 3b**. Artefact de revue :
 | 1 | Bienvenue (pas d'eyebrow, titre 44 pt, sticker « 1 minute chrono » sans étoile) | rose | ancrage valeur + preuve sociale |
 | 2 | **Comment ça marche** (ex-carousel dissous) | prune | réciprocité — rassure (« tu payes à l'institut ») avant de demander |
 | 3 | Préférences (**style multi-choix** + ville avec **aperçu carte** Apple géocodé) — défile | cream | foot-in-the-door + effet IKEA |
-| 4 | **« Notre sélection pour toi »** + `♥` favori (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté, proximité |
+| 4 | **« Choisies pour toi »** + `♥` favori (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté, proximité |
 | 5 | Notifications (pré-permission) | prune | l'ask au pic d'intention |
 | 6 | Comment tu as connu Blyss (`acquisition_source`) | cream | valeur nulle → skippable (« Passer ») |
 | 7 | **CTA premier RDV — dernier** | rose | closer ; « Réserver » sort, « Explorer » → `/complete` |
@@ -58,12 +58,12 @@ existante) — pas une nouvelle notion.
 iOS) non interactif, un pin, label ville. Les coords sont passées à
 `getRecommendations({ city, lat, lng })`.
 
-**Écran 4 — « Notre sélection pour toi »** : la reco backend classe par paliers
+**Écran 4 — « Choisies pour toi »** : la reco backend classe par paliers
 (style + région → région → style → mieux notées), « région » = ville qui matche
 ou pro à < 40 km du point géocodé (distance sur le point public, jamais
 l'adresse exacte). Chaque pro porte `in_region` + `distance_km` (affichée en km
-dans la ligne méta). Wording retenu « Notre sélection pour toi » ; alternatives :
-« Choisies pour toi », « Rien que pour toi ».
+dans la ligne méta). Wording retenu **« Choisies pour toi »** (aussi appliqué au
+header « Sélection Blyss » de la home cliente, pour l'unité).
 
 ### Dépendances backend blyss-app (PR #38)
 
