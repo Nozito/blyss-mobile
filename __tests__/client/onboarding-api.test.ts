@@ -54,10 +54,19 @@ describe("clientOnboardingApi", () => {
     expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ source: "instagram" });
   });
 
-  it("getRecommendations encode la ville en query param", async () => {
-    mockFetch.mockReturnValueOnce(ok({ style_nails: null, style_filter_active: false, recommendations: [] }));
-    await clientOnboardingApi.getRecommendations("Saint-Étienne");
-    expect(mockFetch.mock.calls[0][0]).toContain("?city=Saint-%C3%89tienne");
+  it("getRecommendations encode ville + lat/lng en query params", async () => {
+    mockFetch.mockReturnValueOnce(ok({ style_nails: null, styles: [], style_filter_active: false, recommendations: [] }));
+    await clientOnboardingApi.getRecommendations({ city: "Saint-Étienne", lat: 45.44, lng: 4.39 });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain("city=Saint-%C3%89tienne");
+    expect(url).toContain("lat=45.44");
+    expect(url).toContain("lng=4.39");
+  });
+
+  it("getRecommendations sans localisation → pas de query string", async () => {
+    mockFetch.mockReturnValueOnce(ok({ style_nails: null, styles: [], style_filter_active: false, recommendations: [] }));
+    await clientOnboardingApi.getRecommendations();
+    expect(mockFetch.mock.calls[0][0]).not.toContain("?");
   });
 
   it("tapCta / complete / skip → POST", async () => {

@@ -37,10 +37,10 @@ génériques/IA → **passe 3b**. Artefact de revue :
 
 | # | Écran | Fond | Levier |
 |---|---|---|---|
-| 1 | Bienvenue (pas d'eyebrow, titre 44 pt) | rose | ancrage valeur + preuve sociale |
+| 1 | Bienvenue (pas d'eyebrow, titre 44 pt, sticker « 1 minute chrono » sans étoile) | rose | ancrage valeur + preuve sociale |
 | 2 | **Comment ça marche** (ex-carousel dissous) | prune | réciprocité — rassure (« tu payes à l'institut ») avant de demander |
-| 3 | Préférences (**style multi-choix** + ville) — défile | cream | foot-in-the-door + effet IKEA |
-| 4 | Recos + `♥` favori (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté |
+| 3 | Préférences (**style multi-choix** + ville avec **aperçu carte** Apple géocodé) — défile | cream | foot-in-the-door + effet IKEA |
+| 4 | **« Notre sélection pour toi »** + `♥` favori (+ état vide « pas de pro à {ville} ») | cream | récompense : preuve sociale, rareté, proximité |
 | 5 | Notifications (pré-permission) | prune | l'ask au pic d'intention |
 | 6 | Comment tu as connu Blyss (`acquisition_source`) | cream | valeur nulle → skippable (« Passer ») |
 | 7 | **CTA premier RDV — dernier** | rose | closer ; « Réserver » sort, « Explorer » → `/complete` |
@@ -52,6 +52,18 @@ attribution (concern produit). Tap sur une ligne reco à l'écran 4 reste possib
 Le **carousel de features est supprimé** ; l'axe « prestation » (services) est
 abandonné. Le **`♥` favori réutilise `POST /api/favorites`** (table `favorites`
 existante) — pas une nouvelle notion.
+
+**Écran 3 — localisation** : le champ ville/CP est géocodé sur l'appareil
+(`Location.geocodeAsync`) → aperçu **`MapView` `PROVIDER_DEFAULT`** (Apple Maps
+iOS) non interactif, un pin, label ville. Les coords sont passées à
+`getRecommendations({ city, lat, lng })`.
+
+**Écran 4 — « Notre sélection pour toi »** : la reco backend classe par paliers
+(style + région → région → style → mieux notées), « région » = ville qui matche
+ou pro à < 40 km du point géocodé (distance sur le point public, jamais
+l'adresse exacte). Chaque pro porte `in_region` + `distance_km` (affichée en km
+dans la ligne méta). Wording retenu « Notre sélection pour toi » ; alternatives :
+« Choisies pour toi », « Rien que pour toi ».
 
 ### Dépendances backend blyss-app (PR #38)
 

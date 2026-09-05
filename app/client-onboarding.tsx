@@ -33,6 +33,8 @@ import Reanimated, {
   withTiming,
 } from "react-native-reanimated";
 import { Image } from "expo-image";
+import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { usePostHog } from "posthog-react-native";
@@ -153,6 +155,7 @@ export default function ClientOnboardingScreen() {
   const [styles, setStyles] = useState<NailStyle[]>([]);
   const [city, setCity] = useState("");
   const [cityFocused, setCityFocused] = useState(false);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [recos, setRecos] = useState<OnboardingRecommendation[] | null>(null);
   const [loadingRecos, setLoadingRecos] = useState(false);
@@ -207,6 +210,7 @@ export default function ClientOnboardingScreen() {
         if (res.success && res.data) {
           if (res.data.styles?.length) setStyles(res.data.styles);
           else if (res.data.style_nails) setStyles([res.data.style_nails]);
+          if (res.data.city) setCity(res.data.city);
           if (res.data.acquisition_source) setAttribution(res.data.acquisition_source);
           if (fromSettings && res.data.current_step > 1 && !res.data.completed) {
             setStep(Math.min(res.data.current_step, STEP_COUNT));
@@ -220,6 +224,28 @@ export default function ClientOnboardingScreen() {
   useEffect(() => {
     if (step === STEP.NOTIFICATIONS) track("onboarding_notif_prompted", { from: notifFrom.current });
   }, [step, track]);
+
+  // Géocodage de la ville / du code postal pour l'aperçu carte + la reco régionale.
+  useEffect(() => {
+    const q = city.trim();
+    if (q.length < 2) {
+      setCoords(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const [hit] = await Location.geocodeAsync(q);
+        if (!cancelled && hit) setCoords({ latitude: hit.latitude, longitude: hit.longitude });
+      } catch {
+        if (!cancelled) setCoords(null);
+      }
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [city]);
 
   const leave = useCallback(() => {
     router.replace("/(client)" as never);
@@ -268,7 +294,11 @@ export default function ClientOnboardingScreen() {
 
   const loadRecos = async () => {
     setLoadingRecos(true);
-    const res = await clientOnboardingApi.getRecommendations(city.trim() || undefined);
+    const res = await clientOnboardingApi.getRecommendations({
+      city: city.trim() || undefined,
+      lat: coords?.latitude,
+      lng: coords?.longitude,
+    });
     setLoadingRecos(false);
     const list = res.success && res.data ? res.data.recommendations : [];
     setRecos(list);
@@ -336,7 +366,7 @@ export default function ClientOnboardingScreen() {
   const isEmpty = !loadingRecos && recos !== null && recos.length === 0;
 
   const Header = (
-    <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
         <Text style={{ color: ink, fontWeight: "900", fontSize: 30, letterSpacing: -1.5 }}>{pad2(step)}</Text>
         <Pressable onPress={onHeaderSkip} hitSlop={12} style={{ marginTop: 8 }}>
@@ -542,6 +572,47 @@ export default function ClientOnboardingScreen() {
                     color: ink,
                   }}
                 />
+
+                {coords && (
+                  <View
+                    style={{
+                      marginTop: 14,
+                      height: 148,
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      borderWidth: 1,
+                      borderColor: withAlpha(ink, 0.12),
+                    }}
+                  >
+                    <MapView
+                      provider={PROVIDER_DEFAULT}
+                      style={{ flex: 1 }}
+                      pointerEvents="none"
+                      scrollEnabled={false}
+                      zoomEnabled={false}
+                      rotateEnabled={false}
+                      pitchEnabled={false}
+                      region={{ ...coords, latitudeDelta: 0.09, longitudeDelta: 0.09 }}
+                    >
+                      <Marker coordinate={coords} pinColor={colors.primary} />
+                    </MapView>
+                    <View
+                      style={{
+                        position: "absolute",
+                        left: 10,
+                        bottom: 10,
+                        backgroundColor: withAlpha(INK, 0.82),
+                        paddingHorizontal: 9,
+                        paddingVertical: 4,
+                        borderRadius: 999,
+                      }}
+                    >
+                      <Text style={{ color: CREAM, fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase" }}>
+                        {city.trim()}
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </ScrollView>
               <Footer>
                 <PillButton
@@ -579,11 +650,12 @@ export default function ClientOnboardingScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <Text style={{ color: ink, fontWeight: "900", fontSize: 24, lineHeight: 25, letterSpacing: -0.5, textTransform: "uppercase" }}>
-                    {styles[0] ? `Tes pros ${STYLE_LABEL[styles[0]]?.toLowerCase() ?? ""}` : "Tes pros"}
+                    Notre sélection pour toi
                   </Text>
                   <Text style={{ color: ink, opacity: 0.6, fontSize: 10.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginTop: 6 }}>
                     {city.trim() ? `Autour de ${city.trim()} · ` : ""}
-                    {recos?.length ?? 0} résultat{(recos?.length ?? 0) > 1 ? "s" : ""}
+                    {styles[0] ? `${STYLE_LABEL[styles[0]] ?? ""} · ` : ""}
+                    {recos?.length ?? 0} pro{(recos?.length ?? 0) > 1 ? "s" : ""}
                   </Text>
 
                   {loadingRecos && (
@@ -619,6 +691,7 @@ export default function ClientOnboardingScreen() {
                               <Text style={{ color: withAlpha(ink, 0.6), fontSize: 10, letterSpacing: 0.3, textTransform: "uppercase", marginTop: 3 }}>
                                 {r.reviews_count > 0 ? `★ ${r.rating.toFixed(1)} · ${r.reviews_count} avis` : "Nouvelle sur Blyss"}
                                 {r.city ? ` · ${r.city}` : ""}
+                                {r.distance_km != null ? ` · ${Math.round(r.distance_km)} km` : ""}
                               </Text>
                               {r.open_slots.this_week > 0 ? (
                                 <View style={{ alignSelf: "flex-start", marginTop: 6, backgroundColor: colors.primary, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>

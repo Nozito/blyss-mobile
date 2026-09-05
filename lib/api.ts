@@ -994,6 +994,7 @@ export interface ClientOnboardingStatus {
   style_nails: NailStyle | null;
   /** #34 passe 3b — style multi-choix. */
   styles?: NailStyle[];
+  city?: string | null;
   acquisition_source?: string | null;
 }
 
@@ -1008,6 +1009,9 @@ export interface OnboardingRecommendation {
   bookings_90d: number;
   has_availability: boolean;
   matches_style: boolean;
+  /** #34 passe 3b — pro dans la région saisie par la cliente. */
+  in_region: boolean;
+  distance_km: number | null;
   open_slots: { today: number; this_week: number; this_weekend: number };
 }
 
@@ -1029,14 +1033,23 @@ export const clientOnboardingApi = {
   setAttribution: (source: string): Promise<ApiResponse<void>> =>
     apiCall("/api/client/onboarding/attribution", { method: "POST", body: JSON.stringify({ source }) }),
 
-  getRecommendations: (city?: string): Promise<
+  getRecommendations: (location?: { city?: string; lat?: number; lng?: number }): Promise<
     ApiResponse<{
       style_nails: NailStyle | null;
       styles: NailStyle[];
       style_filter_active: boolean;
       recommendations: OnboardingRecommendation[];
     }>
-  > => apiCall(`/api/client/onboarding/recommendations${city ? `?city=${encodeURIComponent(city)}` : ""}`),
+  > => {
+    const q = new URLSearchParams();
+    if (location?.city) q.set("city", location.city);
+    if (location?.lat != null && location?.lng != null) {
+      q.set("lat", String(location.lat));
+      q.set("lng", String(location.lng));
+    }
+    const qs = q.toString();
+    return apiCall(`/api/client/onboarding/recommendations${qs ? `?${qs}` : ""}`);
+  },
 
   tapCta: (): Promise<ApiResponse<void>> =>
     apiCall("/api/client/onboarding/cta", { method: "POST" }),

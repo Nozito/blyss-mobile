@@ -24,7 +24,7 @@ export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string
 /** Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo, pas d'eyebrow. */
 export const WELCOME = {
   title: "Tes ongles méritent mieux",
-  sticker: "✦ 1 minute chrono",
+  sticker: "1 minute chrono",
   body: "Les meilleures prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos.",
   socialProof: "→ Des milliers de RDV nails / mois",
   cta: "On y va",
