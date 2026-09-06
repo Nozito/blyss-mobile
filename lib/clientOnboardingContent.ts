@@ -9,16 +9,37 @@
 import type { NailStyle } from "@/lib/api";
 
 /**
- * Écran 3 — style(s), multi-choix (enum nail_style). `code` = réf nuancier.
- * `emoji` conservé pour l'écran pro « Mes spécialités » qui réutilise la liste.
+ * Taxonomie nails v2 (enum nail_style, migration 20260910000001) — 12 familles,
+ * sans emoji. `code` = réf nuancier affichée en sous-titre des puces.
+ *
+ * - `NAIL_STYLE_OPTIONS` : les 12, pour l'écran pro « Mes spécialités ».
+ * - `CLIENT_NAIL_STYLE_OPTIONS` : sous-ensemble de 6, pour l'écran 3 de
+ *   l'onboarding client. Mêmes `value` des deux côtés → le matching reco
+ *   (pro.styles ∩ client.styles) fonctionne tel quel.
  */
-export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string; emoji: string }[] = [
-  { value: "nail_art", label: "Nail art", code: "NL·01", emoji: "🎨" },
-  { value: "french_nude", label: "French / nude", code: "NL·02", emoji: "🤍" },
-  { value: "couleurs_vives", label: "Couleurs vives", code: "NL·03", emoji: "🌈" },
-  { value: "vernis_gel", label: "Vernis gel", code: "NL·04", emoji: "✨" },
-  { value: "pose_resine", label: "Pose résine", code: "NL·05", emoji: "💎" },
-  { value: "autre", label: "Autre", code: "NL·06", emoji: "💅" },
+export const NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string }[] = [
+  { value: "manucure_soin", label: "Manucure & soin de l'ongle naturel", code: "NL·01" },
+  { value: "renforcement_ongle", label: "Renforcement de l'ongle naturel", code: "NL·02" },
+  { value: "pose_gel", label: "Pose gel", code: "NL·03" },
+  { value: "resine_acrylique", label: "Résine / acrylique", code: "NL·04" },
+  { value: "acrygel_polygel", label: "Acrygel / polygel", code: "NL·05" },
+  { value: "capsules_gelx", label: "Gel X / capsules", code: "NL·06" },
+  { value: "semi_permanent", label: "Vernis semi-permanent", code: "NL·07" },
+  { value: "french", label: "French", code: "NL·08" },
+  { value: "baby_boomer_ombre", label: "Baby boomer / ombré", code: "NL·09" },
+  { value: "nail_art", label: "Nail art", code: "NL·10" },
+  { value: "effets_finitions", label: "Effets & finitions", code: "NL·11" },
+  { value: "formes_sculptees", label: "Formes sculptées", code: "NL·12" },
+];
+
+/** Écran 3 onboarding client — 6 familles, libellés « cliente ». */
+export const CLIENT_NAIL_STYLE_OPTIONS: { value: NailStyle; label: string; code: string }[] = [
+  { value: "semi_permanent", label: "Semi-permanent", code: "NL·07" },
+  { value: "french", label: "French", code: "NL·08" },
+  { value: "baby_boomer_ombre", label: "Baby boomer / ombré", code: "NL·09" },
+  { value: "nail_art", label: "Nail art", code: "NL·10" },
+  { value: "effets_finitions", label: "Effets & finitions", code: "NL·11" },
+  { value: "formes_sculptees", label: "Formes sculptées", code: "NL·12" },
 ];
 
 /** Écran 1 — hero plein champ rose, voix affirmée. Pas d'offre promo, pas d'eyebrow. */

@@ -192,7 +192,8 @@ qualitative.
 ### Écran 2 — Préférences + localisation
 - Titre serif « Quel style tu préfères ? » + sous-titre justification (« ça nous
   aide à te présenter les bonnes pros » → effet de réciprocité / IKEA).
-- **Grille 2 colonnes** de 6 tuiles style (emoji + label), sélection **unique**
+- **Grille 2 colonnes** de 6 tuiles style (label seul, sans emoji — taxonomie v2
+  `CLIENT_NAIL_STYLE_OPTIONS`), sélection **unique**
   (contrat API `setPreferences(style, city)` inchangé), bordure + fond rose +
   ombre douce + ✓ animé quand sélectionné. `FadeInDown` en cascade (delay 40 ms).
 - Champ ville avec icône 📍, **anneau de focus rose** (`cityFocused`).

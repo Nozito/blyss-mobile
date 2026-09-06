@@ -50,6 +50,7 @@ import {
 } from "@/lib/api";
 import {
   NAIL_STYLE_OPTIONS,
+  CLIENT_NAIL_STYLE_OPTIONS,
   ATTRIBUTION_OPTIONS,
   WELCOME,
   HOW_IT_WORKS,
@@ -544,7 +545,7 @@ export default function ClientOnboardingScreen() {
                   Le style — plusieurs choix possibles
                 </Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                  {NAIL_STYLE_OPTIONS.map((o) => (
+                  {CLIENT_NAIL_STYLE_OPTIONS.map((o) => (
                     <Chip
                       key={o.value}
                       label={o.label}

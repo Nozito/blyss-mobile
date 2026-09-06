@@ -35,16 +35,16 @@ describe("clientOnboardingApi", () => {
   });
 
   it("setPreferences envoie styles[] + style_nails (compat) + city", async () => {
-    mockFetch.mockReturnValueOnce(ok({ styles: ["vernis_gel"], style_nails: "vernis_gel" }));
-    await clientOnboardingApi.setPreferences(["vernis_gel", "nail_art"], "Lyon");
+    mockFetch.mockReturnValueOnce(ok({ styles: ["semi_permanent"], style_nails: "semi_permanent" }));
+    await clientOnboardingApi.setPreferences(["semi_permanent", "nail_art"], "Lyon");
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body).toEqual({ styles: ["vernis_gel", "nail_art"], style_nails: "vernis_gel", city: "Lyon" });
+    expect(body).toEqual({ styles: ["semi_permanent", "nail_art"], style_nails: "semi_permanent", city: "Lyon" });
   });
 
   it("setPreferences omet city quand absente", async () => {
-    mockFetch.mockReturnValueOnce(ok({ styles: ["autre"], style_nails: "autre" }));
-    await clientOnboardingApi.setPreferences(["autre"]);
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["autre"], style_nails: "autre" });
+    mockFetch.mockReturnValueOnce(ok({ styles: ["nail_art"], style_nails: "nail_art" }));
+    await clientOnboardingApi.setPreferences(["nail_art"]);
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["nail_art"], style_nails: "nail_art" });
   });
 
   it("setAttribution → POST avec payload", async () => {
@@ -80,20 +80,33 @@ describe("clientOnboardingApi", () => {
 
 describe("proApi nail-styles", () => {
   it("getNailStyles → GET /api/pro/nail-styles", async () => {
-    mockFetch.mockReturnValueOnce(ok({ styles: ["nail_art", "french_nude"] }));
+    mockFetch.mockReturnValueOnce(ok({ styles: ["nail_art", "french"] }));
     const res = await proApi.getNailStyles();
     expect(mockFetch.mock.calls[0][0]).toMatch(/\/api\/pro\/nail-styles$/);
-    expect(res.success && res.data?.styles).toEqual(["nail_art", "french_nude"]);
+    expect(res.success && res.data?.styles).toEqual(["nail_art", "french"]);
   });
 
   it("setNailStyles → PUT avec { styles }", async () => {
-    mockFetch.mockReturnValueOnce(ok({ styles: ["pose_resine"] }));
-    await proApi.setNailStyles(["pose_resine"]);
+    mockFetch.mockReturnValueOnce(ok({ styles: ["resine_acrylique"] }));
+    await proApi.setNailStyles(["resine_acrylique"]);
     expect(mockFetch.mock.calls[0][1].method).toBe("PUT");
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["pose_resine"] });
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["resine_acrylique"] });
   });
 
   it("NAIL_STYLES = taxonomie #34", () => {
-    expect(NAIL_STYLES).toEqual(["nail_art", "french_nude", "couleurs_vives", "vernis_gel", "pose_resine", "autre"]);
+    expect(NAIL_STYLES).toEqual([
+      "manucure_soin",
+      "renforcement_ongle",
+      "pose_gel",
+      "resine_acrylique",
+      "acrygel_polygel",
+      "capsules_gelx",
+      "semi_permanent",
+      "french",
+      "baby_boomer_ombre",
+      "nail_art",
+      "effets_finitions",
+      "formes_sculptees",
+    ]);
   });
 });

@@ -150,7 +150,7 @@ export default function ProProfileScreen() {
   const accountItems: Array<{ icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; route: string }> = [
     { icon: "person-outline", label: "Modifier mon profil", route: "/(pro)/(profile)/settings" },
     { icon: "briefcase-outline", label: "Mes prestations", route: "/(pro)/(profile)/services" },
-    { icon: "color-palette-outline", label: "Mes spécialités nails", route: "/pro-nail-styles" },
+    { icon: "color-palette-outline", label: "Mes spécialités", route: "/pro-nail-styles" },
     { icon: "trending-up-outline", label: "Finance", route: "/(pro)/(profile)/finance" },
     { icon: "card-outline", label: "Encaissements", route: "/(pro)/(profile)/payments" },
     { icon: "star-outline", label: "Mes avis", route: "/(pro)/(profile)/reviews" },

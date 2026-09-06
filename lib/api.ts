@@ -1031,13 +1031,21 @@ export const clientApi = {
 
 // ── Onboarding client (#34) ───────────────────────────────────────────────────
 
+// Taxonomie nails v2 — alignée sur l'ENUM Postgres `nail_style`
+// (blyss-app, migration 20260910000001) et `NAIL_STYLES` de son validate.ts.
 export const NAIL_STYLES = [
+  "manucure_soin",
+  "renforcement_ongle",
+  "pose_gel",
+  "resine_acrylique",
+  "acrygel_polygel",
+  "capsules_gelx",
+  "semi_permanent",
+  "french",
+  "baby_boomer_ombre",
   "nail_art",
-  "french_nude",
-  "couleurs_vives",
-  "vernis_gel",
-  "pose_resine",
-  "autre",
+  "effets_finitions",
+  "formes_sculptees",
 ] as const;
 export type NailStyle = (typeof NAIL_STYLES)[number];
 

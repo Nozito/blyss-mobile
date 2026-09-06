@@ -1,5 +1,5 @@
 /**
- * #34 — « Mes spécialités nails » (profil pro). Multi-select des styles
+ * #34 — « Mes spécialités » (profil pro). Multi-select des styles
  * déclarés, utilisés par la reco de l'onboarding client.
  * Route top-level, navigable via router.push("/pro-nail-styles").
  */
@@ -75,7 +75,7 @@ export default function ProNailStylesScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.foreground} />
         </AnimatedIconButton>
         <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "800" }}>
-          Mes spécialités nails
+          Mes spécialités
         </Text>
       </View>
 
@@ -118,7 +118,6 @@ export default function ProNailStylesScreen() {
                       backgroundColor: on ? withAlpha(colors.primary, 0.08) : colors.card,
                     }}
                   >
-                    <Text style={{ fontSize: 20 }}>{opt.emoji}</Text>
                     <Text style={{ flex: 1, color: colors.foreground, fontSize: 15, fontWeight: "600" }}>
                       {opt.label}
                     </Text>
