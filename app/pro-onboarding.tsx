@@ -1,29 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
+import { View, Text, Image, StyleSheet, Dimensions, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import Reanimated, { FadeIn } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { withAlpha } from "@/constants/colors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
-import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { buildOnboardingSlides } from "@/lib/proOnboardingContent";
+import { PillButton, Ribbon, StepHeader, fieldColors, useRibbon } from "@/components/onboarding/kit";
 
 const STORAGE_KEY = "pro_onboarding_done";
 
-// The device-mockup PNGs are tall (~0.49 aspect ratio) — sizing them by
-// *width* let their height balloon past the caption's share of the screen,
-// pushing the description text under the progress dots on smaller phones.
-// Capping by a fraction of screen height instead keeps a fixed, predictable
-// budget for the caption regardless of device size or description length.
+// Les PNG de mockup sont hauts (~0.49) : on les borne par une fraction de la
+// hauteur d'écran pour garder un budget fixe à la légende quel que soit l'appareil.
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const MOCKUP_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
 
@@ -33,24 +26,20 @@ function isRCPlan(value: string | undefined): value is RCPlan {
 
 export default function ProOnboardingScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { width } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(), []);
   const params = useLocalSearchParams<{ plan?: string; previousPlan?: string; preview?: string }>();
   const { activePlan, refreshActivePlan } = useRevenueCat();
   const { showTransition, hideTransition } = useAppTransition();
+  const ribbon = useRibbon();
 
   const isPreview = params.preview === "1";
-  // Arrivée directe depuis l'écran de succès d'un achat (pas un rebond
-  // automatique "onboarding jamais vu") : on connaît le plan acheté et,
-  // le cas échéant, le plan précédent — donc pas de vérification du flag.
   const isPurchaseFlow = !isPreview && isRCPlan(params.plan);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [ready, setReady] = useState(isPreview || isPurchaseFlow);
 
-  // Entrée "à froid" (ouverture de l'app / dashboard sans onboarding vu) —
-  // seul cas où on consulte encore le flag pour décider d'afficher ou non.
   useEffect(() => {
     if (isPreview || isPurchaseFlow) return;
     AsyncStorage.getItem(STORAGE_KEY).then((done) => {
@@ -60,6 +49,7 @@ export default function ProOnboardingScreen() {
         setReady(true);
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreview, isPurchaseFlow]);
 
   const slides = useMemo(() => {
@@ -72,13 +62,12 @@ export default function ProOnboardingScreen() {
       const plan = isRCPlan(params.plan) ? params.plan : "signature";
       return buildOnboardingSlides(plan, null, colors);
     }
-    // Entrée à froid : on ne connaît pas le contexte d'achat, on part du
-    // plan actif (ou "start" par défaut) comme si c'était la 1re fois.
     return buildOnboardingSlides(activePlan ?? "start", null, colors);
   }, [isPurchaseFlow, isPreview, params.plan, params.previousPlan, activePlan, colors]);
 
   const isLast = currentSlide === slides.length - 1;
   const slide = slides[currentSlide] ?? slides[0];
+  const field = slide ? fieldColors(slide.tone, colors) : null;
 
   const finish = async () => {
     if (isPreview) {
@@ -88,178 +77,115 @@ export default function ProOnboardingScreen() {
       return;
     }
     await AsyncStorage.setItem(STORAGE_KEY, "true");
-    // Ensure activePlan is up-to-date before entering the pro tabs
     await refreshActivePlan();
     showTransition();
     router.replace("/(pro)/dashboard");
     hideTransition();
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (!isLast) {
-      setCurrentSlide((p) => p + 1);
+    if (isLast) {
+      void finish();
     } else {
-      await finish();
+      ribbon.go(() => setCurrentSlide((p) => p + 1));
     }
   };
 
-  const handleSkip = async () => {
-    await finish();
-  };
+  if (!ready || !slide || !field) return null;
 
-  if (!ready || !slide) return null;
+  const ink = field.ink;
 
   return (
-    <View style={[styles.container, { backgroundColor: slide.bg }]}>
-      {isPreview && (
-        <View style={[styles.previewBadge, { top: insets.top + 12 }]}>
-          <Text style={styles.previewBadgeText}>Aperçu admin</Text>
-        </View>
-      )}
+    <View style={{ flex: 1, backgroundColor: field.bg }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <StepHeader
+          step={currentSlide + 1}
+          total={slides.length}
+          ink={ink}
+          onBack={currentSlide > 0 ? () => setCurrentSlide((p) => p - 1) : undefined}
+          right={
+            <Text
+              onPress={() => void finish()}
+              style={{ color: ink, opacity: 0.62, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 8 }}
+            >
+              Passer
+            </Text>
+          }
+        />
 
-      {/* Skip */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <AnimatedPressable onPress={handleSkip} style={styles.skipBtn}>
-          <Text style={[styles.skipText, { color: `${slide.color}80` }]}>Passer</Text>
-        </AnimatedPressable>
-      </View>
-
-      {/* Slide content */}
-      <View style={styles.slideContent}>
-        {slide.image ? (
-          // Mockups already bake in their own phone frame + drop shadow —
-          // no card chrome here, or we'd get a screenshot-inside-a-screenshot.
-          <View style={styles.mockupImageWrap}>
-            <Image source={slide.image} style={styles.mockupImage} resizeMode="contain" />
-          </View>
-        ) : (
-          <View style={styles.mockupFrame}>
-            <View style={[styles.mockupPlaceholder, { backgroundColor: `${slide.color}0C` }]}>
-              <View style={[styles.mockupIconWrap, { backgroundColor: `${slide.color}18` }]}>
-                <Ionicons name={slide.icon} size={44} color={slide.color} />
-              </View>
-            </View>
+        {isPreview && (
+          <View style={[styles.previewBadge, { borderColor: withAlpha(ink, 0.4) }]}>
+            <Text style={[styles.previewBadgeText, { color: ink }]}>Aperçu admin</Text>
           </View>
         )}
 
-        <View style={styles.caption}>
-          <Text style={[styles.title, { color: colors.foreground }]}>{slide.title}</Text>
-          <Text style={[styles.description, { color: colors.mutedForeground }]}>
-            {slide.description}
-          </Text>
-        </View>
-      </View>
-
-      {/* Footer */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 28 }]}>
-        {/* Progress dots */}
-        <View style={styles.dots}>
-          {slides.map((_, i) => (
-            <AnimatedPressable
-              key={i}
-              onPress={() => setCurrentSlide(i)}
-              hitSlop={8}
-              accessibilityLabel={`Aller à l'étape ${i + 1}`}
-            >
-              <View
-                style={[
-                  styles.dot,
-                  {
-                    width: i === currentSlide ? 22 : 7,
-                    backgroundColor:
-                      i === currentSlide ? slide.color : `${slide.color}35`,
-                  },
-                ]}
-              />
-            </AnimatedPressable>
-          ))}
-        </View>
-
-        {/* CTA */}
-        <AnimatedPressable
-          onPress={handleNext}
-          style={[
-            styles.cta,
-            {
-              backgroundColor: slide.color,
-              shadowColor: slide.color,
-            },
-          ]}
+        <Reanimated.View
+          key={currentSlide}
+          entering={ribbon.reduceMotion ? undefined : FadeIn.duration(200)}
+          style={styles.slideContent}
         >
-          <Text style={styles.ctaText}>
-            {isLast ? "C'est parti !" : "Suivant"}
-          </Text>
-          <Ionicons
-            name={isLast ? "rocket-outline" : "arrow-forward"}
-            size={20}
-            color="#FFFFFF"
+          {slide.image ? (
+            <View style={styles.mockupImageWrap}>
+              <Image source={slide.image} style={styles.mockupImage} resizeMode="contain" />
+            </View>
+          ) : (
+            <View style={[styles.iconFrame, { borderColor: withAlpha(ink, 0.25) }]}>
+              <Ionicons name={slide.icon} size={52} color={slide.color} />
+            </View>
+          )}
+
+          <View style={styles.caption}>
+            {slide.tierLabel ? (
+              <View style={[styles.tierPill, { backgroundColor: slide.color }]}>
+                <Text style={styles.tierPillText}>{slide.tierLabel} débloqué</Text>
+              </View>
+            ) : null}
+            <Text style={[styles.title, { color: ink }]}>{slide.title}</Text>
+            <Text style={[styles.description, { color: ink }]}>{slide.description}</Text>
+          </View>
+        </Reanimated.View>
+
+        <View style={styles.footer}>
+          <PillButton
+            label={isLast ? "C'est parti →" : "Suivant →"}
+            onPress={handleNext}
+            bg={field.pill.bg}
+            fg={field.pill.fg}
           />
-        </AnimatedPressable>
-      </View>
+        </View>
+      </SafeAreaView>
+
+      <Ribbon x={ribbon.x} width={width} rose={colors.primary} />
     </View>
   );
 }
 
-function createStyles(colors: ReturnType<typeof useThemeColors>) {
+function createStyles() {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-    },
     previewBadge: {
-      position: "absolute",
-      left: 24,
-      zIndex: 1,
-      backgroundColor: "#0A0A0F",
+      alignSelf: "center",
+      borderWidth: 1,
       borderRadius: 999,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 5,
+      marginBottom: 4,
     },
     previewBadgeText: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: "700",
-      color: "#FFFFFF",
-      letterSpacing: 0.3,
-    },
-    header: {
-      alignItems: "flex-end",
-      paddingHorizontal: 24,
-      paddingBottom: 8,
-    },
-    skipBtn: {
-      paddingVertical: 6,
-      paddingHorizontal: 4,
-    },
-    skipText: {
-      fontSize: 14,
-      fontWeight: "600",
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
     },
     slideContent: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: 28,
-      gap: 20,
-    },
-    mockupFrame: {
-      width: "82%",
-      aspectRatio: 0.82,
-      borderRadius: 32,
-      overflow: "hidden",
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.border,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 14 },
-      shadowOpacity: 0.1,
-      shadowRadius: 24,
-      elevation: 6,
+      paddingHorizontal: 24,
+      gap: 24,
     },
     mockupImageWrap: {
       height: MOCKUP_IMAGE_HEIGHT,
-      // Matches the trimmed device-mockup PNGs' own aspect ratio (~606×1226)
-      // — width derives from height so it never eats into the caption's
-      // vertical space, unlike sizing by width did.
       aspectRatio: 0.494,
       alignSelf: "center",
     },
@@ -267,65 +193,47 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       width: "100%",
       height: "100%",
     },
-    mockupPlaceholder: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    mockupIconWrap: {
-      width: 84,
-      height: 84,
-      borderRadius: 24,
+    iconFrame: {
+      width: 120,
+      height: 120,
+      borderWidth: 1.5,
       alignItems: "center",
       justifyContent: "center",
     },
     caption: {
-      alignItems: "center",
-      paddingHorizontal: 8,
-      gap: 8,
+      alignItems: "flex-start",
+      alignSelf: "stretch",
+      gap: 10,
+    },
+    tierPill: {
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    tierPillText: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
     },
     title: {
-      fontSize: 22,
+      fontSize: 30,
       fontWeight: "900",
-      textAlign: "center",
-      letterSpacing: -0.4,
+      letterSpacing: -1,
+      textTransform: "uppercase",
+      lineHeight: 31,
     },
     description: {
       fontSize: 14,
-      textAlign: "center",
-      lineHeight: 20,
+      lineHeight: 21,
+      opacity: 0.9,
+      maxWidth: 340,
     },
     footer: {
-      paddingHorizontal: 24,
-      paddingTop: 16,
-      gap: 20,
-    },
-    dots: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: 8,
-    },
-    dot: {
-      height: 7,
-      borderRadius: 4,
-    },
-    cta: {
-      height: 58,
-      borderRadius: 18,
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "row",
-      gap: 10,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.28,
-      shadowRadius: 14,
-      elevation: 5,
-    },
-    ctaText: {
-      color: "#FFFFFF",
-      fontWeight: "800",
-      fontSize: 17,
+      paddingHorizontal: 22,
+      paddingBottom: 10,
+      paddingTop: 8,
     },
   });
 }

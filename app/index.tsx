@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Doit rester aligné sur ONBOARDING_KEY dans app/(auth)/onboarding.tsx.
+const ONBOARDING_KEY = "onboarding_seen";
 
 export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -10,7 +14,11 @@ export default function Index() {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      router.replace("/(auth)/welcome");
+      AsyncStorage.getItem(ONBOARDING_KEY)
+        .then((seen) => {
+          router.replace(seen === "true" ? "/(auth)/welcome" : "/(auth)/onboarding");
+        })
+        .catch(() => router.replace("/(auth)/welcome"));
       return;
     }
 

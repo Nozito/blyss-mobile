@@ -1,18 +1,16 @@
 /**
  * Intro premier lancement — 3 slides au style « poster » (kit onboarding).
- * NB : aujourd'hui pas dans le flux de navigation (index.tsx va direct à
- * /(auth)/welcome). Conservé prêt à l'emploi si on rebranche un gating
- * premier-lancement sur ONBOARDING_KEY.
+ * Affichée par app/index.tsx tant que ONBOARDING_KEY n'est pas posé, juste
+ * avant l'accueil. Toujours skippable ; se termine sur /(auth)/welcome.
  */
 import React, { useCallback, useState } from "react";
-import { View, Text, Pressable, useWindowDimensions } from "react-native";
+import { View, Text, useWindowDimensions } from "react-native";
 import Reanimated, { FadeIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { withAlpha } from "@/constants/colors";
 import { PillButton, Ribbon, StepHeader, fieldColors, useRibbon, type FieldTone } from "@/components/onboarding/kit";
 
 export const ONBOARDING_KEY = "onboarding_seen";
@@ -37,20 +35,20 @@ export default function IntroScreen() {
 
   const markSeen = useCallback(() => AsyncStorage.setItem(ONBOARDING_KEY, "true").catch(() => {}), []);
 
-  const skip = useCallback(() => {
-    Haptics.selectionAsync().catch(() => {});
+  const leave = useCallback(() => {
     void markSeen();
     router.replace("/(auth)/welcome");
   }, [markSeen, router]);
 
-  const goRole = useCallback(
-    (role: "client" | "pro") => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-      void markSeen();
-      router.push(`/(auth)/register?role=${role}` as never);
-    },
-    [markSeen, router]
-  );
+  const skip = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
+    leave();
+  }, [leave]);
+
+  const enter = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    leave();
+  }, [leave]);
 
   return (
     <View style={{ flex: 1, backgroundColor: field.bg }}>
@@ -79,21 +77,12 @@ export default function IntroScreen() {
         </Reanimated.View>
 
         <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
-          {isLast ? (
-            <View style={{ gap: 8 }}>
-              <PillButton label="Je suis cliente →" onPress={() => goRole("client")} bg={field.pill.bg} fg={field.pill.fg} />
-              <Pressable
-                onPress={() => goRole("pro")}
-                style={{ borderWidth: 1.5, borderColor: withAlpha(ink, 0.3), borderRadius: 999, paddingVertical: 15, alignItems: "center" }}
-              >
-                <Text style={{ color: ink, fontSize: 13.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
-                  Je suis prothésiste →
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
-            <PillButton label="Suivant →" onPress={() => ribbon.go(() => setIndex((i) => i + 1))} bg={field.pill.bg} fg={field.pill.fg} />
-          )}
+          <PillButton
+            label={isLast ? "Découvrir Blyss →" : "Suivant →"}
+            onPress={isLast ? enter : () => ribbon.go(() => setIndex((i) => i + 1))}
+            bg={field.pill.bg}
+            fg={field.pill.fg}
+          />
         </View>
       </SafeAreaView>
 
