@@ -18,7 +18,8 @@ const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
-const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+// Salon fermé le dimanche — grille lun→sam, comme le calendrier pro.
+const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
 export interface Slot {
   id: number;
@@ -58,7 +59,7 @@ function CalendarGrid({
   const screenWidth = Dimensions.get("window").width;
   // Screen paddingH: 20, card paddingH: 20 → 80 total → available = screenWidth - 80
   const calendarWidth = screenWidth - 80;
-  const cellSize = Math.floor(calendarWidth / 7);
+  const cellSize = Math.floor(calendarWidth / 6);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -84,11 +85,14 @@ function CalendarGrid({
   const getDays = (): (Date | null)[] => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
+    // Grille lun→sam : offset depuis lundi, et le dimanche n'est pas placé.
+    const firstDayJS = new Date(year, month, 1).getDay();
+    const startOffset = firstDayJS === 0 ? 0 : firstDayJS - 1;
     const lastDate = new Date(year, month + 1, 0).getDate();
-    const days: (Date | null)[] = Array(firstDay).fill(null);
+    const days: (Date | null)[] = Array(startOffset).fill(null);
     for (let d = 1; d <= lastDate; d++) {
-      days.push(new Date(year, month, d));
+      const date = new Date(year, month, d);
+      if (date.getDay() !== 0) days.push(date);
     }
     return days;
   };
@@ -109,11 +113,6 @@ function CalendarGrid({
     d.setHours(0, 0, 0, 0);
     return d < today;
   };
-
-  // Salon fermé le dimanche — non réservable côté cliente, quelle que soit
-  // la donnée renvoyée par l'API (même règle que le calendrier pro, qui
-  // exclut déjà le dimanche de sa propre grille).
-  const isSunday = (date: Date) => date.getDay() === 0;
 
   const days = getDays();
 
@@ -180,8 +179,7 @@ function CalendarGrid({
           }
 
           const past = isPast(date);
-          const sunday = isSunday(date);
-          const available = !sunday && availableDates.has(toLocalDateStr(date));
+          const available = availableDates.has(toLocalDateStr(date));
           const selected = isSelected(date);
           const today_ = isToday(date);
           const selectable = !past && available;
