@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
 import { authErrorMessage } from "@/lib/authErrors";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
@@ -137,6 +138,7 @@ export default function RegisterScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const totalSteps = formData.role === "pro" ? 9 : 6;
 
@@ -235,12 +237,34 @@ export default function RegisterScreen() {
     setStep(98); // interstitiel « on prépare ton compte » → 99
   }, [formData, signup]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setNotice(null);
-    if (step === 4 && !VALIDATION.EMAIL_REGEX.test(formData.email.trim())) {
-      setNotice("Email invalide");
-      return;
+
+    // Vérif de disponibilité sur l'étape concernée, pas à la fin du parcours.
+    if (step === 3) {
+      const cleanPhone = formData.phone.replace(/\s/g, "");
+      setChecking(true);
+      const { phone_taken } = await authApi.checkAvailability({ phone_number: cleanPhone });
+      setChecking(false);
+      if (phone_taken) {
+        setNotice("Ce numéro de téléphone est déjà utilisé");
+        return;
+      }
+    }
+    if (step === 4) {
+      const email = formData.email.trim();
+      if (!VALIDATION.EMAIL_REGEX.test(email)) {
+        setNotice("Email invalide");
+        return;
+      }
+      setChecking(true);
+      const { email_taken } = await authApi.checkAvailability({ email });
+      setChecking(false);
+      if (email_taken) {
+        setNotice("Cet email est déjà utilisé");
+        return;
+      }
     }
     if (step === 5 && getAge(formData.birthDate) < VALIDATION.MIN_AGE) {
       setNotice("Tu dois avoir au moins 16 ans");
@@ -597,11 +621,11 @@ export default function RegisterScreen() {
             <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
               <PillButton
                 label={ctaLabel}
-                onPress={handleNext}
+                onPress={() => void handleNext()}
                 bg={isStepValid() ? field.pill.bg : withAlpha(ink, 0.25)}
                 fg={field.pill.fg}
-                loading={isLoading}
-                disabled={!isStepValid()}
+                loading={isLoading || checking}
+                disabled={!isStepValid() || checking}
               />
               <Pressable onPress={() => router.push("/(auth)/login")} style={{ alignItems: "center", paddingVertical: 10 }}>
                 <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" }}>

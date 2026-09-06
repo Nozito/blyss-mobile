@@ -363,6 +363,21 @@ export const authApi = {
     }
   },
 
+  /** Disponibilité email / téléphone pendant la saisie du signup. Best-effort. */
+  checkAvailability: async (
+    fields: { email?: string; phone_number?: string }
+  ): Promise<{ email_taken?: boolean; phone_taken?: boolean }> => {
+    try {
+      const { response, json } = await rawApiCall<{
+        success: boolean;
+        data?: { email_taken?: boolean; phone_taken?: boolean };
+      }>("/api/auth/check-availability", { method: "POST", body: JSON.stringify(fields) });
+      return response.ok && json?.success && json.data ? json.data : {};
+    } catch {
+      return {};
+    }
+  },
+
   getProfile: async (): Promise<ApiResponse<User>> => apiCall("/api/auth/profile"),
 
   updateProfile: async (data: Partial<User>): Promise<ApiResponse<User>> =>
