@@ -68,7 +68,9 @@ export interface SignupData {
 
 export type SignupErrorCode =
   | "email_exists"
+  | "phone_exists"
   | "weak_password"
+  | "invalid_password"
   | "age_restriction"
   | "invalid_phone"
   | "invalid_email"

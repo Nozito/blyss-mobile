@@ -29,7 +29,7 @@ export default function ProNailStylesScreen() {
     queryKey: ["pro-nail-styles"],
     queryFn: async () => {
       const res = await proApi.getNailStyles();
-      if (!res.success || !res.data) throw new Error(res.error ?? "Chargement impossible");
+      if (!res.success || !res.data) throw new Error("Chargement impossible");
       return res.data.styles;
     },
   });
@@ -49,14 +49,14 @@ export default function ProNailStylesScreen() {
   const save = useMutation({
     mutationFn: async () => {
       const res = await proApi.setNailStyles([...selected]);
-      if (!res.success) throw new Error(res.error ?? "Enregistrement impossible");
+      if (!res.success) throw new Error("Enregistrement impossible");
       return res.data?.styles ?? [];
     },
     onSuccess: (styles) => {
       qc.setQueryData(["pro-nail-styles"], styles);
       showToast("Spécialités enregistrées", "success");
     },
-    onError: (e) => showToast(e instanceof Error ? e.message : "Erreur", "error"),
+    onError: () => showToast("Enregistrement impossible, réessaie", "error"),
   });
 
   const toggle = (v: NailStyle) => {
