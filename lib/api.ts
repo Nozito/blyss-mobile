@@ -520,6 +520,17 @@ export interface ProReview {
   flagged_by_me: boolean;
 }
 
+export interface ClientReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  pro_id: number;
+  pro_name: string;
+  pro_activity_name: string | null;
+  pro_profile_photo: string | null;
+}
+
 export const reviewsApi = {
   create: (specialistId: string, data: { rating: number; comment: string }): Promise<ApiResponse<unknown>> =>
     apiCall("/api/reviews", { method: "POST", body: JSON.stringify({ pro_id: Number(specialistId), ...data }) }),
@@ -529,6 +540,9 @@ export const reviewsApi = {
 
   // Pro's own reviews, with whether she already flagged each one.
   getMine: (): Promise<ApiResponse<ProReview[]>> => apiCall("/api/pro/reviews"),
+
+  // Avis émis par la cliente connectée.
+  getMineAsClient: (): Promise<ApiResponse<ClientReview[]>> => apiCall("/api/client/reviews"),
 
   flag: (reviewId: number, reason?: string): Promise<ApiResponse<void>> =>
     apiCall(`/api/reviews/${reviewId}/flag`, { method: "POST", body: JSON.stringify({ reason }) }),
