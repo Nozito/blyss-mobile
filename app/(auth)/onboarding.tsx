@@ -1,19 +1,16 @@
 /**
- * Intro premier lancement — 3 slides au style « poster » (kit onboarding).
- * Affichée par app/index.tsx tant que ONBOARDING_KEY n'est pas posé, juste
- * avant l'accueil. Toujours skippable ; se termine sur /(auth)/welcome.
+ * Intro — 3 slides au style « poster » (kit onboarding). Affichée par
+ * app/index.tsx à chaque lancement non connecté, juste avant l'accueil.
+ * Toujours skippable ; se termine sur /(auth)/welcome.
  */
 import React, { useCallback, useState } from "react";
 import { View, Text, useWindowDimensions } from "react-native";
 import Reanimated, { FadeIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { PillButton, Ribbon, StepHeader, fieldColors, useRibbon, type FieldTone } from "@/components/onboarding/kit";
-
-export const ONBOARDING_KEY = "onboarding_seen";
 
 const SLIDES: { tone: FieldTone; title: string; body: string }[] = [
   { tone: "rose", title: "Trouve la main qui fera tes ongles", body: "Les prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos." },
@@ -33,12 +30,7 @@ export default function IntroScreen() {
   const ink = field.ink;
   const isLast = index === SLIDES.length - 1;
 
-  const markSeen = useCallback(() => AsyncStorage.setItem(ONBOARDING_KEY, "true").catch(() => {}), []);
-
-  const leave = useCallback(() => {
-    void markSeen();
-    router.replace("/(auth)/welcome");
-  }, [markSeen, router]);
+  const leave = useCallback(() => router.replace("/(auth)/welcome"), [router]);
 
   const skip = useCallback(() => {
     Haptics.selectionAsync().catch(() => {});
