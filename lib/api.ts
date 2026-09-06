@@ -482,6 +482,31 @@ export const specialistsApi = {
 
   getGalleryByPro: (proId: number) =>
     apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>(`/api/gallery/pro/${proId}`),
+
+  /**
+   * Disponibilités calculées côté serveur pour la réservation cliente
+   * (route publique, anonyme). Remplace les anciens endpoints
+   * `/api/slots/available*` qui lisaient la table `slots` précréée — vide
+   * pour toutes les pros passées sur le moteur de dispo (chantier 4). Le
+   * moteur gère aussi le cas des rares pros legacy via son adaptateur, donc
+   * cet endpoint est la source de vérité unique.
+   * Query : ?service_ids=10,11&from=YYYY-MM-DD&to=YYYY-MM-DD (plage ≤ 62 j).
+   */
+  getPublicAvailability: (params: {
+    proId: number;
+    serviceIds: number[];
+    fromDate: string;
+    toDate: string;
+    timezone?: string;
+  }): Promise<ApiResponse<AvailabilityResponse>> => {
+    const q = new URLSearchParams({
+      service_ids: params.serviceIds.join(","),
+      from: params.fromDate,
+      to: params.toDate,
+      ...(params.timezone ? { timezone: params.timezone } : {}),
+    });
+    return apiCall(`/api/availability/${params.proId}?${q.toString()}`);
+  },
 };
 
 // ── Reviews API ───────────────────────────────────────────────────────────────
@@ -962,7 +987,7 @@ export const clientApi = {
     apiCall(`/api/client/booking-detail/${id}`),
   cancelReservationWithPolicy: (reservationId: number): Promise<ApiResponse<{ reservation_id: number; deadline?: string }>> =>
     apiCall(`/api/reservations/${reservationId}/cancel`, { method: "POST" }),
-  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id: number }): Promise<ApiResponse<void>> =>
+  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id?: number }): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/my-booking/${id}/reschedule`, { method: "PATCH", body: JSON.stringify(data) }),
   getAvailableSlots: (proId: number, date: string): Promise<ApiResponse<Array<{ id: number; time: string }>>> =>
     apiCall(`/api/slots/available/${proId}/${date}`),

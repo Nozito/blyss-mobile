@@ -24,6 +24,8 @@ export interface Slot {
   id: number;
   time: string;
   duration: number;
+  /** Instant ISO exact renvoyé par le moteur de dispo — départ visible du RDV. */
+  startISO?: string;
 }
 
 interface Props {
@@ -273,7 +275,7 @@ export function DateTimeSelector({
             availableDates={availableDates}
             onMonthChange={onMonthChange}
           />
-          {/* Sans ce message, un mois sans aucun créneau publié affichait un
+          {/* Sans ce message, un mois sans aucune disponibilité affichait un
               calendrier entièrement grisé sans aucune explication — la
               cliente ne pouvait rien sélectionner et ne savait pas pourquoi. */}
           {!isLoadingDates && availableDates.size === 0 && (
@@ -283,7 +285,7 @@ export function DateTimeSelector({
             }}>
               <Ionicons name="calendar-clear-outline" size={18} color={colors.mutedForeground} />
               <Text style={{ flex: 1, fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
-                Aucun créneau publié ce mois-ci pour cette pro. Essaie un autre mois ou reviens un peu plus tard.
+                Aucune disponibilité ce mois-ci pour cette pro. Essaie un autre mois ou reviens un peu plus tard.
               </Text>
             </View>
           )}
