@@ -176,7 +176,11 @@ export default function ClientOnboardingScreen() {
 
   const go = useCallback(
     (next: number) => {
-      if (reduceMotion) {
+      // L'écran recos est un ScrollView + chargement async : le balayage du
+      // ruban se ferait interrompre par le montage/résolution → on passe en
+      // fondu simple pour toute transition qui entre ou sort de cet écran.
+      const skipRibbon = reduceMotion || next === STEP.RECOMMENDATIONS || step === STEP.RECOMMENDATIONS;
+      if (skipRibbon) {
         setStep(next);
         return;
       }
@@ -187,7 +191,7 @@ export default function ClientOnboardingScreen() {
         ribbonX.value = withTiming(-2.2, { duration: 320, easing: Easing.out(Easing.cubic) });
       });
     },
-    [reduceMotion, ribbonX]
+    [reduceMotion, ribbonX, step]
   );
 
   // ── Filet de progression ─────────────────────────────────────────────
@@ -688,7 +692,7 @@ export default function ClientOnboardingScreen() {
                         >
                           <Pressable onPress={() => openPro(r, i + 1, "reco_card")} style={{ flexDirection: "row", gap: 11, flex: 1 }}>
                             <Image
-                              source={{ uri: resolveMediaUrl(r.banner_photo ?? r.profile_photo) }}
+                              source={{ uri: resolveMediaUrl(r.profile_photo ?? r.banner_photo) }}
                               style={{ width: 56, height: 56, borderRadius: 10, borderWidth: 1, borderColor: withAlpha(ink, 0.2), backgroundColor: withAlpha(ink, 0.06) }}
                               contentFit="cover"
                               transition={150}
