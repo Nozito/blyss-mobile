@@ -32,6 +32,7 @@ import {
   useRibbon,
   type FieldTone,
 } from "@/components/onboarding/kit";
+import { AccountPreparing } from "@/components/onboarding/AccountPreparing";
 
 // ── Constantes (miroir du web) ────────────────────────────────────────────
 const VALIDATION = {
@@ -145,7 +146,7 @@ export default function RegisterScreen() {
   }, []);
 
   const tone: FieldTone = useMemo(() => {
-    if (step === 99 || step === 1) return "rose"; // bienvenue / succès
+    if (step === 99 || step === 98 || step === 1) return "rose"; // bienvenue / préparation / succès
     const lastStep = formData.role === "pro" ? 9 : 6;
     if (step === lastStep) return "prune"; // mot de passe : ton posé, pas le rose vif
     return "cream";
@@ -231,7 +232,7 @@ export default function RegisterScreen() {
       else if (res.error === "phone_exists" || res.error === "invalid_phone") setStep(3);
       return;
     }
-    setStep(99);
+    setStep(98); // interstitiel « on prépare ton compte » → 99
   }, [formData, signup]);
 
   const handleNext = useCallback(() => {
@@ -311,6 +312,7 @@ export default function RegisterScreen() {
       );
     }
 
+    if (step === 98) return <AccountPreparing ink={ink} onDone={() => setStep(99)} />;
     if (step === 99) return <RegisterSuccess onPress={() => ribbon.go(leaveToNext)} />;
 
     // Étapes formulaire — même gabarit
@@ -584,14 +586,14 @@ export default function RegisterScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: field.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        {step !== 99 && <StepHeader step={step} total={totalSteps} ink={ink} right={headerRight} onBack={handleBack} />}
+        {step < 90 && <StepHeader step={step} total={totalSteps} ink={ink} right={headerRight} onBack={handleBack} />}
 
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={12}>
           <Reanimated.View key={step} entering={ribbon.reduceMotion ? undefined : FadeIn.duration(180)} style={{ flex: 1 }}>
             {renderStep()}
           </Reanimated.View>
 
-          {step !== 99 && (
+          {step < 90 && (
             <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
               <PillButton
                 label={ctaLabel}
