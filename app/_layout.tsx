@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, runOnJS } from "react-native-reanimated";
 import { SplashOverlay } from "@/components/ui/SplashOverlay";
-import { Stack, usePathname } from "expo-router";
+import { Stack, usePathname, router } from "expo-router";
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -26,6 +26,7 @@ import { ActionSheetProvider } from "@/components/ui/ActionSheet";
 import { TransitionProvider } from "@/contexts/TransitionContext";
 import { validateEnv, ENV } from "@/lib/env";
 import { markStartup, logStartupReport } from "@/lib/startupMetrics";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 validateEnv();
 markStartup("module_eval");
@@ -166,6 +167,7 @@ function AppContent() {
     <>
       <StatusBar style="auto" />
       <PostHogTracking />
+      <ErrorBoundary onReset={() => { try { router.back(); } catch { /* rien à dépiler */ } }}>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -207,6 +209,7 @@ function AppContent() {
           options={{ presentation: "card", animation: "slide_from_bottom" }}
         />
       </Stack>
+      </ErrorBoundary>
       {splashVisible && (
         <LaunchSplash
           revealed={nativeHidden}
