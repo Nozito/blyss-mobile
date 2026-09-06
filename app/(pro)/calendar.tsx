@@ -399,6 +399,118 @@ function AptCard({ apt, onPress }: { apt: Appointment; onPress: () => void }) {
   );
 }
 
+// ─── CRÉNEAUX LIBRES ─────────────────────────────────────────────────────────
+// Regroupés en plages repliables (matin / après-midi / fin de journée). Une
+// journée d'ouverture large produisait 20+ lignes qui remplissaient l'écran ;
+// ici la carte reste courte, chaque plage annonce son nombre de créneaux et
+// on déplie celle qu'on veut détailler.
+
+const slotHHMM = (iso: string) =>
+  new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+type SlotRange = { key: "morning" | "afternoon" | "evening"; label: string; slots: AvailabilitySlot[] };
+
+function splitSlotRanges(slots: AvailabilitySlot[]): SlotRange[] {
+  const buckets: Record<SlotRange["key"], AvailabilitySlot[]> = { morning: [], afternoon: [], evening: [] };
+  for (const s of slots) {
+    const h = new Date(s.start).getHours();
+    buckets[h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"].push(s);
+  }
+  const labels: Record<SlotRange["key"], string> = {
+    morning: "Matin",
+    afternoon: "Après-midi",
+    evening: "Fin de journée",
+  };
+  return (["morning", "afternoon", "evening"] as const)
+    .filter((k) => buckets[k].length > 0)
+    .map((k) => ({ key: k, label: labels[k], slots: buckets[k] }));
+}
+
+function FreeSlotsCard({ slots }: { slots: AvailabilitySlot[] }) {
+  const colors = useThemeColors();
+  const ranges = useMemo(() => splitSlotRanges(slots), [slots]);
+  const [openKey, setOpenKey] = useState<SlotRange["key"] | null>(ranges[0]?.key ?? null);
+
+  // La date affichée peut changer sous nos pieds — garder ouverte une plage
+  // qui existe toujours, sinon retomber sur la première.
+  useEffect(() => {
+    setOpenKey((cur) => (ranges.some((r) => r.key === cur) ? cur : ranges[0]?.key ?? null));
+  }, [ranges]);
+
+  const earliest = slots[0]?.start;
+
+  return (
+    <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 14, ...Shadows.card, marginBottom: 16, gap: 8 }}>
+      {earliest && (
+        <View style={{ backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", color: withAlpha(colors.onColor, 0.85) }}>
+            Au plus tôt
+          </Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: colors.onColor, marginTop: 2 }}>
+            {slotHHMM(earliest)}
+          </Text>
+        </View>
+      )}
+
+      {ranges.map((r) => {
+        const open = openKey === r.key;
+        const span = `${slotHHMM(r.slots[0].start)} – ${slotHHMM(r.slots[r.slots.length - 1].start)}`;
+        return (
+          <View key={r.key}>
+            <AnimatedPressable
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setOpenKey(open ? null : r.key);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${r.label}, ${r.slots.length} créneaux libres`}
+              accessibilityState={{ expanded: open }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderWidth: 1,
+                borderRadius: 13,
+                paddingHorizontal: 13,
+                paddingVertical: 12,
+                borderColor: open ? colors.primary : colors.border,
+                backgroundColor: open ? colors.primaryLight : "transparent",
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>{r.label}</Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
+                {span} · {r.slots.length}
+              </Text>
+            </AnimatedPressable>
+
+            {open && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingTop: 8 }}>
+                {r.slots.map((s) => (
+                  <View
+                    key={s.start}
+                    style={{
+                      width: "31.5%",
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 12,
+                      paddingVertical: 9,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.foreground }}>
+                      {slotHHMM(s.start)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ─── MAIN SCREEN ─────────────────────────────────────────────────────────────
 
 export default function ProCalendarScreen() {
@@ -1308,24 +1420,7 @@ export default function ProCalendarScreen() {
               <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Selon tes horaires d'ouverture et tes absences.</Text>
             </View>
           ) : (
-            <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card, marginBottom: 16 }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
-                Créneaux libres ({(engineSlots ?? []).length})
-              </Text>
-              {(engineSlots ?? []).map((s, i) => {
-                const start = new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-                const end = new Date(s.end).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-                return (
-                  <View key={s.start}>
-                    {i > 0 && <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }} />}
-                    <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} />
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>{start} – {end}</Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
+            <FreeSlotsCard slots={engineSlots ?? []} />
           )
         ) : (
           <>
