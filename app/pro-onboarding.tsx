@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, Image, StyleSheet, Dimensions, useWindowDimensions } from "react-native";
+import { View, Text, Image, StyleSheet, Dimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Reanimated, { FadeIn } from "react-native-reanimated";
+import Reanimated, { FadeIn, useReducedMotion } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -12,7 +12,7 @@ import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { requestAndRegisterPush } from "@/contexts/NotificationContext";
 import { buildOnboardingSlides } from "@/lib/proOnboardingContent";
-import { PillButton, Ribbon, StepHeader, fieldColors, useRibbon } from "@/components/onboarding/kit";
+import { PillButton, StepHeader, fieldColors } from "@/components/onboarding/kit";
 
 const STORAGE_KEY = "pro_onboarding_done";
 
@@ -28,12 +28,11 @@ function isRCPlan(value: string | undefined): value is RCPlan {
 export default function ProOnboardingScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { width } = useWindowDimensions();
   const styles = useMemo(() => createStyles(), []);
   const params = useLocalSearchParams<{ plan?: string; previousPlan?: string; preview?: string }>();
   const { activePlan, refreshActivePlan } = useRevenueCat();
   const { showTransition, hideTransition } = useAppTransition();
-  const ribbon = useRibbon();
+  const reduceMotion = useReducedMotion();
 
   const isPreview = params.preview === "1";
   const isPurchaseFlow = !isPreview && isRCPlan(params.plan);
@@ -92,7 +91,10 @@ export default function ProOnboardingScreen() {
     if (isLast) {
       void finish();
     } else {
-      ribbon.go(() => setCurrentSlide((p) => p + 1));
+      // Fondu simple entre slides : chaque slide charge un PNG, le balayage du
+      // ruban se ferait couper par le décodage de l'image (même souci que
+      // l'écran recos de l'onboarding client).
+      setCurrentSlide((p) => p + 1);
     }
   };
 
@@ -126,7 +128,7 @@ export default function ProOnboardingScreen() {
 
         <Reanimated.View
           key={currentSlide}
-          entering={ribbon.reduceMotion ? undefined : FadeIn.duration(200)}
+          entering={reduceMotion ? undefined : FadeIn.duration(200)}
           style={styles.slideContent}
         >
           {slide.image ? (
@@ -159,8 +161,6 @@ export default function ProOnboardingScreen() {
           />
         </View>
       </SafeAreaView>
-
-      <Ribbon x={ribbon.x} width={width} rose={colors.primary} />
     </View>
   );
 }
