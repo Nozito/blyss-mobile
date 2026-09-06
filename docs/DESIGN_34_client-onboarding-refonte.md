@@ -26,6 +26,12 @@ génériques/IA → **passe 3b**. Artefact de revue :
   ligne** (`numberOfLines={1}`).
 - **Cartes reco** = lignes éditoriales (filet 1 px, photo carrée arrondie duotone,
   nom en 900). Plus de carte à ombre. Bouton `♥` = suivre la pro sans quitter.
+- **Erreurs** : aucun code technique affiché. Notification flottante
+  `FloatingNotice` — **exactement la capsule Liquid Glass de `OfflineBanner`**
+  (matériau commun extrait dans `NoticeCapsule`), même position, même animation,
+  auto-fermeture 4 s. Copies courtes et impératives : « On n'a pas pu enregistrer,
+  réessaie », « On n'a pas pu charger les pros, réessaie ». Côté serveur, le
+  middleware `validate()` renvoie désormais un `message` FR lisible.
 - **Ruban de transition** : rayures diagonales rose × prune (façon rubalise) qui
   balaie l'écran à chaque passage — ~520 ms, 2 temps (couvre à `translateX -0.5w`
   → `setStep` → découvre à `-2.2w`, ruban large `2w` pour sortir complètement),

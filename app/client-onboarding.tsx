@@ -56,7 +56,7 @@ import {
   STEP,
   STEP_COUNT,
 } from "@/lib/clientOnboardingContent";
-import { useToast } from "@/components/ui/Toast";
+import { FloatingNotice } from "@/components/ui/FloatingNotice";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 
@@ -144,7 +144,6 @@ function useField(step: number, colors: ReturnType<typeof useThemeColors>) {
 export default function ClientOnboardingScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { showToast } = useToast();
   const posthog = usePostHog();
   const params = useLocalSearchParams<{ from?: string }>();
   const fromSettings = params.from === "settings";
@@ -161,6 +160,7 @@ export default function ClientOnboardingScreen() {
   const [loadingRecos, setLoadingRecos] = useState(false);
   const [followed, setFollowed] = useState<Set<number>>(new Set());
   const [attribution, setAttribution] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const notifFrom = useRef<"onboarding" | "empty_state">("onboarding");
 
   const field = useField(step, colors);
@@ -279,7 +279,7 @@ export default function ClientOnboardingScreen() {
     const res = await clientOnboardingApi.setPreferences(styles, city.trim() || undefined);
     setSavingPrefs(false);
     if (!res.success) {
-      showToast(res.error ?? "Impossible d'enregistrer", "error");
+      setNotice("On n'a pas pu enregistrer, réessaie");
       return;
     }
     track("onboarding_preferences_selected", {
@@ -300,6 +300,9 @@ export default function ClientOnboardingScreen() {
       lng: coords?.longitude,
     });
     setLoadingRecos(false);
+    if (!res.success) {
+      setNotice("On n'a pas pu charger les pros, réessaie");
+    }
     const list = res.success && res.data ? res.data.recommendations : [];
     setRecos(list);
     track("onboarding_recommendations_viewed", {
@@ -851,6 +854,8 @@ export default function ClientOnboardingScreen() {
           <View key={i} style={{ flex: 1, backgroundColor: i % 2 ? PRUNE : colors.primary }} />
         ))}
       </Reanimated.View>
+
+      <FloatingNotice message={notice} onHide={() => setNotice(null)} />
     </View>
   );
 }
