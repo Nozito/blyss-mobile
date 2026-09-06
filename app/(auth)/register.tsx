@@ -19,7 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppTransition } from "@/contexts/TransitionContext";
-import { useThemeColors } from "@/hooks/useThemeColors";
+import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 import { FloatingNotice } from "@/components/ui/FloatingNotice";
 import {
@@ -47,7 +47,7 @@ const VALIDATION = {
 const ERROR_CODES: Record<string, string> = {
   email_exists: "Cet email est déjà utilisé",
   phone_exists: "Ce numéro de téléphone est déjà utilisé",
-  weak_password: "Mot de passe trop faible : 8 caractères, une majuscule, un chiffre, un caractère spécial",
+  weak_password: "Mot de passe trop faible (8 car., 1 majuscule, 1 chiffre, 1 caractère spécial)",
   invalid_password: "Mot de passe trop long (128 caractères max.)",
   age_restriction: "Tu dois avoir au moins 16 ans",
   invalid_phone: "Numéro de téléphone invalide",
@@ -179,6 +179,7 @@ function RegisterSuccess({ onPress }: { onPress: () => void }) {
 export default function RegisterScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const isDark = useIsDarkMode();
   const { signup, isLoading } = useAuth();
   const { showTransition, hideTransition } = useAppTransition();
   const { width } = useWindowDimensions();
@@ -213,11 +214,9 @@ export default function RegisterScreen() {
   }, []);
 
   const tone: FieldTone = useMemo(() => {
-    if (step === 99) return "rose";
-    if (step === 1) return "rose";
-    if (step === 5) return "prune";
+    if (step === 99 || step === 1) return "rose"; // bienvenue / succès
     const lastStep = formData.role === "pro" ? 9 : 6;
-    if (step === lastStep) return "rose";
+    if (step === lastStep) return "prune"; // mot de passe : ton posé, pas le rose vif
     return "cream";
   }, [step, formData.role]);
   const field = fieldColors(tone, colors);
@@ -274,7 +273,7 @@ export default function RegisterScreen() {
       return;
     }
     if (!VALIDATION.PASSWORD_REGEX.test(formData.password)) {
-      setNotice("8 caractères min., une majuscule, un chiffre, un caractère spécial");
+      setNotice("8 car. min., 1 majuscule, 1 chiffre, 1 caractère spécial");
       return;
     }
     if (!formData.acceptedTerms) {
@@ -350,6 +349,9 @@ export default function RegisterScreen() {
                     update({ role: r });
                   }}
                   style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
                     borderRadius: 14,
                     borderWidth: 1.5,
                     padding: 16,
@@ -357,15 +359,19 @@ export default function RegisterScreen() {
                     backgroundColor: on ? INK : withAlpha(ink, 0.04),
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flex: 1 }}>
                     <Text style={{ color: on ? CREAM : ink, fontSize: 15, fontWeight: "800", textTransform: "uppercase" }}>
                       {r === "client" ? "Cliente" : "Prothésiste"}
                     </Text>
-                    {on && <Ionicons name="checkmark-circle" size={18} color={CREAM} />}
+                    <Text style={{ color: on ? withAlpha(CREAM, 0.75) : withAlpha(ink, 0.6), fontSize: 12, marginTop: 5 }}>
+                      {r === "client" ? "Je réserve mes soins des ongles" : "Agenda, réservations, paiements — tout en un"}
+                    </Text>
                   </View>
-                  <Text style={{ color: on ? withAlpha(CREAM, 0.75) : withAlpha(ink, 0.6), fontSize: 12, marginTop: 5 }}>
-                    {r === "client" ? "Je réserve mes soins des ongles" : "Agenda, réservations, paiements — tout en un"}
-                  </Text>
+                  <Ionicons
+                    name={on ? "checkmark-circle" : "ellipse-outline"}
+                    size={20}
+                    color={on ? CREAM : withAlpha(ink, 0.3)}
+                  />
                 </Pressable>
               );
             })}
@@ -471,14 +477,23 @@ export default function RegisterScreen() {
             <Ionicons name="calendar-outline" size={18} color={withAlpha(ink, 0.6)} />
           </Pressable>
           {datePickerOpen && (
-            <View style={{ marginTop: 14, backgroundColor: CREAM, borderRadius: 16, padding: 8 }}>
+            <View
+              style={{
+                marginTop: 14,
+                backgroundColor: colors.card,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: withAlpha(ink, 0.1),
+                padding: 8,
+              }}
+            >
               <RNDateTimePicker
                 mode="date"
                 display="spinner"
                 value={formData.birthDate ?? maxDate}
                 maximumDate={maxDate}
                 locale="fr-FR"
-                themeVariant="light"
+                themeVariant={isDark ? "dark" : "light"}
                 style={{ height: 180 }}
                 onChange={(_e: DateTimePickerEvent, d?: Date) => {
                   if (d) update({ birthDate: d });
@@ -490,7 +505,7 @@ export default function RegisterScreen() {
                   onPress={() => setDatePickerOpen(false)}
                   style={{ alignSelf: "center", paddingVertical: 8, paddingHorizontal: 20 }}
                 >
-                  <Text style={{ color: INK, fontWeight: "700", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Valider
                   </Text>
                 </Pressable>
@@ -591,19 +606,19 @@ export default function RegisterScreen() {
                 marginTop: 1,
                 alignItems: "center",
                 justifyContent: "center",
-                borderColor: formData.acceptedTerms ? INK : withAlpha(ink, 0.35),
-                backgroundColor: formData.acceptedTerms ? INK : "transparent",
+                borderColor: formData.acceptedTerms ? colors.primary : withAlpha(ink, 0.4),
+                backgroundColor: formData.acceptedTerms ? colors.primary : "transparent",
               }}
             >
-              {formData.acceptedTerms && <Ionicons name="checkmark" size={13} color={CREAM} />}
+              {formData.acceptedTerms && <Ionicons name="checkmark" size={13} color={INK} />}
             </View>
             <Text style={{ flex: 1, color: ink, fontSize: 12, lineHeight: 17 }}>
               J'accepte les{" "}
-              <Text style={{ textDecorationLine: "underline", fontWeight: "700" }} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>
+              <Text style={{ textDecorationLine: "underline", fontWeight: "700", color: colors.primary }} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>
                 conditions générales
               </Text>{" "}
               et la{" "}
-              <Text style={{ textDecorationLine: "underline", fontWeight: "700" }} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>
+              <Text style={{ textDecorationLine: "underline", fontWeight: "700", color: colors.primary }} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>
                 politique de confidentialité
               </Text>
             </Text>
