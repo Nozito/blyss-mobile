@@ -320,7 +320,7 @@ export default function RegisterScreen() {
                       {r === "client" ? "Cliente" : "Prothésiste"}
                     </Text>
                     <Text style={{ color: on ? withAlpha(CREAM, 0.75) : withAlpha(ink, 0.6), fontSize: 12, marginTop: 5 }}>
-                      {r === "client" ? "Je réserve mes soins des ongles" : "Agenda, réservations, paiements — tout en un"}
+                      {r === "client" ? "Je prends RDV avec les meilleures prothésistes près de chez moi" : "Agenda, réservations, paiements — tout en un"}
                     </Text>
                   </View>
                   <Ionicons
