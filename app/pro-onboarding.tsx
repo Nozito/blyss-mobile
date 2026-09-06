@@ -42,13 +42,12 @@ export default function ProOnboardingScreen() {
 
   useEffect(() => {
     if (isPreview || isPurchaseFlow) return;
-    AsyncStorage.getItem(STORAGE_KEY).then((done) => {
-      if (done === "true") {
-        router.replace("/(pro)/dashboard");
-      } else {
-        setReady(true);
-      }
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((done) => {
+        if (done === "true") router.replace("/(pro)/dashboard");
+        else setReady(true);
+      })
+      .catch(() => setReady(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreview, isPurchaseFlow]);
 
@@ -76,8 +75,10 @@ export default function ProOnboardingScreen() {
       hideTransition();
       return;
     }
-    await AsyncStorage.setItem(STORAGE_KEY, "true");
-    await refreshActivePlan();
+    // Un échec de persistance ou de refresh ne doit jamais bloquer l'entrée
+    // dans l'espace pro — au pire l'onboarding se re-proposera.
+    await AsyncStorage.setItem(STORAGE_KEY, "true").catch(() => {});
+    await refreshActivePlan().catch(() => {});
     showTransition();
     router.replace("/(pro)/dashboard");
     hideTransition();
