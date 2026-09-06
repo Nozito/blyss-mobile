@@ -59,6 +59,7 @@ function getBaseSlides(colors: ThemeColors): OnboardingSlide[] {
       color: colors.primary,
       bg: colors.primaryLight,
       tone: "rose",
+      image: require("@/assets/onboarding/payment.png"),
     },
   ];
 }
