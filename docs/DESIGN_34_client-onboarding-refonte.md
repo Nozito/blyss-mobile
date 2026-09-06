@@ -5,6 +5,26 @@
 > (`expo-blur`, `expo-haptics`, `react-native-reanimated`, `expo-linear-gradient`,
 > `expo-image`). Onboarding **skippable partout**, jamais bloquant, centré nails.
 
+## Extension — création de compte au même style (2026-09-06)
+
+`app/(auth)/register.tsx` (wizard 6 étapes client / 9 pro) est réécrit sur le
+même système, pour que **inscription → onboarding** soit un seul parcours visuel.
+Kit partagé : `components/onboarding/kit.tsx` (`INK/CREAM/PRUNE`, `PillButton`,
+`Ribbon` + `useRibbon`, `StepHeader`, `fieldColors`).
+
+- Logique auth **inchangée** : `FormData`, validations (regex tél/email, règles
+  mot de passe, 16 ans), `signup()`, codes d'erreur, branche pro, `?role=`.
+- Étapes : `01` rôle (rose) · `02` nom · `03` tél · `04` email (cream) · `05`
+  date de naissance (prune) · `06` mot de passe + conditions (rose). Pro :
+  `06-08` activité/ville/insta (cream) · `09` mot de passe (rose).
+- Champs `PosterField` : filet inférieur sur fond de couleur, `autoComplete` /
+  `textContentType` conservés (autofill iOS + « enregistrer le mot de passe »).
+- Date de naissance : `RNDateTimePicker` `spinner` dans une carte cream inline.
+- Erreurs → `FloatingNotice` (capsule identique à « hors connexion »).
+- Succès → ruban → `client-onboarding?from=signup` (client) ou dashboard (pro).
+- Onboarding client : adoptera le kit dans une passe de cleanup (aujourd'hui
+  copies inline, comportement identique).
+
 ## Direction retenue — « poster editorial × DA » (passe 3b, validée 2026-09-06)
 
 Historique : passe 1 « fluid glass » puis passe 2 « B ancré » jugées trop
