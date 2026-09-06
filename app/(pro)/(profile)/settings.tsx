@@ -77,6 +77,7 @@ export default function ProSettingsScreen() {
     defaultValues: {
       first_name:        user?.first_name ?? "",
       last_name:         user?.last_name ?? "",
+      email:             user?.email ?? "",
       phone_number:      user?.phone_number ?? "",
       activity_name:     user?.activity_name ?? "",
       city:              user?.city ?? "",
@@ -104,7 +105,20 @@ export default function ProSettingsScreen() {
       if (bioErr) { setError(bioErr); return; }
     }
 
-    const changingPassword = !!(currentPassword || newPassword || newPasswordConfirm);
+    const cleanEmail = (data.email ?? "").trim().toLowerCase();
+    const changingEmail = cleanEmail !== (user?.email ?? "").toLowerCase();
+    if (changingEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        setError("Ton adresse email n'est pas valide.");
+        return;
+      }
+      if (!currentPassword) {
+        setError("Renseigne ton mot de passe actuel pour changer d'email.");
+        return;
+      }
+    }
+
+    const changingPassword = !!(newPassword || newPasswordConfirm);
     if (changingPassword) {
       if (!currentPassword) { setError("Renseigne ton ancien mot de passe pour le modifier."); return; }
       if (!validatePassword(newPassword)) { setError("Ton nouveau mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre."); return; }
@@ -118,6 +132,10 @@ export default function ProSettingsScreen() {
       if (changingPassword) {
         payload.currentPassword = currentPassword;
         payload.newPassword = newPassword;
+      }
+      if (changingEmail) {
+        payload.email = cleanEmail;
+        payload.currentPassword = currentPassword;
       }
 
       const res = await usersApi.update(payload);
@@ -241,6 +259,28 @@ export default function ProSettingsScreen() {
                 )}
               />
             </View>
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label="Email"
+                  value={value ?? ""}
+                  onChangeText={onChange}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  leftIcon="mail-outline"
+                  placeholder="ton@email.com"
+                />
+              )}
+            />
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 16 }}>
+              Changer d'email demande ton mot de passe actuel (section Sécurité).
+            </Text>
           </View>
 
           <Controller
