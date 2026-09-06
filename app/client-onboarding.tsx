@@ -371,7 +371,9 @@ export default function ClientOnboardingScreen() {
     track("onboarding_attribution", { source });
   };
 
-  const topStyle = useMemo(() => recos?.[0] ?? null, [recos]);
+  // Proposition de l'écran final : la 1re reco qui matche un style déclaré,
+  // sinon la mieux classée (recos est déjà trié par style ∩ région puis note).
+  const topPro = useMemo(() => recos?.find((r) => r.matches_style) ?? recos?.[0] ?? null, [recos]);
   const isEmpty = !loadingRecos && recos !== null && recos.length === 0;
 
   const Header = (
@@ -844,15 +846,15 @@ export default function ClientOnboardingScreen() {
                   Premier rendez-vous ?
                 </Text>
                 <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 16, maxWidth: 320 }}>
-                  {topStyle
-                    ? `${topStyle.name} a de la place. Ton créneau en quelques taps.`
+                  {topPro
+                    ? `${topPro.name} a de la place. Ton créneau en quelques taps.`
                     : "Choisis une pro et réserve ton créneau en quelques taps."}
                 </Text>
               </View>
               <Footer>
                 <View style={{ gap: 8 }}>
-                  {topStyle && (
-                    <PillButton label="Réserver mon RDV →" onPress={() => openPro(topStyle, 1, "cta_screen")} bg={field.pill.bg} fg={field.pill.fg} />
+                  {topPro && (
+                    <PillButton label="Réserver mon RDV →" onPress={() => openPro(topPro, 1, "cta_screen")} bg={field.pill.bg} fg={field.pill.fg} />
                   )}
                   <Pressable onPress={finish} style={{ alignItems: "center", paddingVertical: 6 }}>
                     <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
