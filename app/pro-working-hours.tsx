@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import * as Sentry from "@sentry/react-native";
 import { proApi, type WorkingHoursDay, type WorkingHoursRange } from "@/lib/api";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -31,12 +32,24 @@ export default function ProWorkingHoursScreen() {
   const { showToast } = useToast();
   const qc = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["working-hours"],
     queryFn: async () => {
       const res = await proApi.getWorkingHours();
       if (!res.success || !res.data) throw new Error(res.error ?? "Chargement impossible");
-      return res.data.days;
+      // Tolérance de forme : selon la version du backend, les jours arrivent
+      // soit dans `data.days`, soit directement dans `data`.
+      const raw = res.data as unknown;
+      if (Array.isArray(raw)) return raw as WorkingHoursDay[];
+      if (raw && Array.isArray((raw as { days?: unknown }).days)) {
+        return (raw as { days: WorkingHoursDay[] }).days;
+      }
+      // Forme inattendue : on ne crashe pas, mais on veut le savoir.
+      Sentry.captureMessage("working-hours: payload sans `days`", {
+        level: "warning",
+        extra: { keys: raw && typeof raw === "object" ? Object.keys(raw) : typeof raw },
+      });
+      return [];
     },
   });
 
@@ -47,12 +60,15 @@ export default function ProWorkingHoursScreen() {
   const [draft, setDraft] = useState<WorkingHoursRange>({ start_time: "09:00", end_time: "18:00" });
 
   useEffect(() => {
-    if (!data) return;
-    const byWeekday = new Map(data.map((d) => [d.weekday, d.ranges]));
+    if (!Array.isArray(data)) return;
+    const byWeekday = new Map(
+      data.map((d) => [d.weekday, Array.isArray(d.ranges) ? d.ranges : []])
+    );
     setWeek(DAY_ORDER.map((weekday) => ({ weekday, ranges: byWeekday.get(weekday) ?? [] })));
   }, [data]);
 
-  const dayOf = (weekday: number) => week.find((d) => d.weekday === weekday)!;
+  const dayOf = (weekday: number): WorkingHoursDay =>
+    week.find((d) => d.weekday === weekday) ?? { weekday, ranges: [] };
 
   const setRanges = (weekday: number, ranges: WorkingHoursRange[]) => {
     setError(null);
@@ -142,6 +158,10 @@ export default function ProWorkingHoursScreen() {
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : isError ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
+          <ErrorMessage message="Impossible de charger tes horaires. Vérifie ta connexion et réessaie." inline={false} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 20, gap: 10, paddingBottom: 40 }}>

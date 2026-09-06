@@ -68,7 +68,9 @@ export interface SignupData {
 
 export type SignupErrorCode =
   | "email_exists"
+  | "phone_exists"
   | "weak_password"
+  | "invalid_password"
   | "age_restriction"
   | "invalid_phone"
   | "invalid_email"
@@ -361,6 +363,21 @@ export const authApi = {
     }
   },
 
+  /** Disponibilité email / téléphone pendant la saisie du signup. Best-effort. */
+  checkAvailability: async (
+    fields: { email?: string; phone_number?: string }
+  ): Promise<{ email_taken?: boolean; phone_taken?: boolean }> => {
+    try {
+      const { response, json } = await rawApiCall<{
+        success: boolean;
+        data?: { email_taken?: boolean; phone_taken?: boolean };
+      }>("/api/auth/check-availability", { method: "POST", body: JSON.stringify(fields) });
+      return response.ok && json?.success && json.data ? json.data : {};
+    } catch {
+      return {};
+    }
+  },
+
   getProfile: async (): Promise<ApiResponse<User>> => apiCall("/api/auth/profile"),
 
   updateProfile: async (data: Partial<User>): Promise<ApiResponse<User>> =>
@@ -465,6 +482,31 @@ export const specialistsApi = {
 
   getGalleryByPro: (proId: number) =>
     apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>(`/api/gallery/pro/${proId}`),
+
+  /**
+   * Disponibilités calculées côté serveur pour la réservation cliente
+   * (route publique, anonyme). Remplace les anciens endpoints
+   * `/api/slots/available*` qui lisaient la table `slots` précréée — vide
+   * pour toutes les pros passées sur le moteur de dispo (chantier 4). Le
+   * moteur gère aussi le cas des rares pros legacy via son adaptateur, donc
+   * cet endpoint est la source de vérité unique.
+   * Query : ?service_ids=10,11&from=YYYY-MM-DD&to=YYYY-MM-DD (plage ≤ 62 j).
+   */
+  getPublicAvailability: (params: {
+    proId: number;
+    serviceIds: number[];
+    fromDate: string;
+    toDate: string;
+    timezone?: string;
+  }): Promise<ApiResponse<AvailabilityResponse>> => {
+    const q = new URLSearchParams({
+      service_ids: params.serviceIds.join(","),
+      from: params.fromDate,
+      to: params.toDate,
+      ...(params.timezone ? { timezone: params.timezone } : {}),
+    });
+    return apiCall(`/api/availability/${params.proId}?${q.toString()}`);
+  },
 };
 
 // ── Reviews API ───────────────────────────────────────────────────────────────
@@ -478,6 +520,17 @@ export interface ProReview {
   flagged_by_me: boolean;
 }
 
+export interface ClientReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  pro_id: number;
+  pro_name: string;
+  pro_activity_name: string | null;
+  pro_profile_photo: string | null;
+}
+
 export const reviewsApi = {
   create: (specialistId: string, data: { rating: number; comment: string }): Promise<ApiResponse<unknown>> =>
     apiCall("/api/reviews", { method: "POST", body: JSON.stringify({ pro_id: Number(specialistId), ...data }) }),
@@ -487,6 +540,9 @@ export const reviewsApi = {
 
   // Pro's own reviews, with whether she already flagged each one.
   getMine: (): Promise<ApiResponse<ProReview[]>> => apiCall("/api/pro/reviews"),
+
+  // Avis émis par la cliente connectée.
+  getMineAsClient: (): Promise<ApiResponse<ClientReview[]>> => apiCall("/api/client/reviews"),
 
   flag: (reviewId: number, reason?: string): Promise<ApiResponse<void>> =>
     apiCall(`/api/reviews/${reviewId}/flag`, { method: "POST", body: JSON.stringify({ reason }) }),
@@ -815,6 +871,12 @@ export const proApi = {
     };
   },
 
+  // #34 — spécialités nails déclarées par la pro (taxonomie de reco).
+  getNailStyles: (): Promise<ApiResponse<{ styles: NailStyle[] }>> =>
+    apiCall("/api/pro/nail-styles"),
+  setNailStyles: (styles: NailStyle[]): Promise<ApiResponse<{ styles: NailStyle[] }>> =>
+    apiCall("/api/pro/nail-styles", { method: "PUT", body: JSON.stringify({ styles }) }),
+
   updateReservationStatus: (id: number, status: "completed" | "cancelled") =>
     apiCall(`/api/pro/reservations/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
 
@@ -939,7 +1001,7 @@ export const clientApi = {
     apiCall(`/api/client/booking-detail/${id}`),
   cancelReservationWithPolicy: (reservationId: number): Promise<ApiResponse<{ reservation_id: number; deadline?: string }>> =>
     apiCall(`/api/reservations/${reservationId}/cancel`, { method: "POST" }),
-  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id: number }): Promise<ApiResponse<void>> =>
+  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id?: number }): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/my-booking/${id}/reschedule`, { method: "PATCH", body: JSON.stringify(data) }),
   getAvailableSlots: (proId: number, date: string): Promise<ApiResponse<Array<{ id: number; time: string }>>> =>
     apiCall(`/api/slots/available/${proId}/${date}`),
@@ -965,6 +1027,106 @@ export const clientApi = {
     apiCall(`/api/client/reschedule-requests/${id}/accept`, { method: "PATCH" }),
   declineRescheduleRequest: (id: number): Promise<ApiResponse<{ reservationId: number }>> =>
     apiCall(`/api/client/reschedule-requests/${id}/decline`, { method: "PATCH" }),
+};
+
+// ── Onboarding client (#34) ───────────────────────────────────────────────────
+
+// Taxonomie nails v2 — alignée sur l'ENUM Postgres `nail_style`
+// (blyss-app, migration 20260910000001) et `NAIL_STYLES` de son validate.ts.
+export const NAIL_STYLES = [
+  "manucure_soin",
+  "renforcement_ongle",
+  "pose_gel",
+  "resine_acrylique",
+  "acrygel_polygel",
+  "capsules_gelx",
+  "semi_permanent",
+  "french",
+  "baby_boomer_ombre",
+  "nail_art",
+  "effets_finitions",
+  "formes_sculptees",
+] as const;
+export type NailStyle = (typeof NAIL_STYLES)[number];
+
+export interface ClientOnboardingStatus {
+  current_step: number;
+  completed: boolean;
+  completed_at: string | null;
+  skipped: boolean;
+  /** Style « principal » = styles[0] (rétro-compat). */
+  style_nails: NailStyle | null;
+  /** #34 passe 3b — style multi-choix. */
+  styles?: NailStyle[];
+  city?: string | null;
+  acquisition_source?: string | null;
+}
+
+export interface OnboardingRecommendation {
+  pro_id: number;
+  name: string;
+  city: string | null;
+  profile_photo: string | null;
+  banner_photo: string | null;
+  rating: number;
+  reviews_count: number;
+  bookings_90d: number;
+  has_availability: boolean;
+  matches_style: boolean;
+  /** #34 passe 3b — pro dans la région saisie par la cliente. */
+  in_region: boolean;
+  distance_km: number | null;
+  open_slots: { today: number; this_week: number; this_weekend: number };
+}
+
+export const clientOnboardingApi = {
+  getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
+    apiCall("/api/client/onboarding/status"),
+
+  /**
+   * #34 passe 3b — style multi-choix (styles[0] = « principal »).
+   * On envoie aussi `style_nails` = styles[0] pour rester compatible avec un
+   * backend pas encore à jour (avant le déploiement de la reco régionale).
+   */
+  setPreferences: (
+    styles: NailStyle[],
+    city?: string
+  ): Promise<ApiResponse<{ styles: NailStyle[]; style_nails: NailStyle }>> =>
+    apiCall("/api/client/onboarding/preferences", {
+      method: "POST",
+      body: JSON.stringify({ styles, style_nails: styles[0], ...(city ? { city } : {}) }),
+    }),
+
+  /** #34 passe 3b — écran « comment tu as connu Blyss » (best-effort). */
+  setAttribution: (source: string): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/attribution", { method: "POST", body: JSON.stringify({ source }) }),
+
+  getRecommendations: (location?: { city?: string; lat?: number; lng?: number }): Promise<
+    ApiResponse<{
+      style_nails: NailStyle | null;
+      styles: NailStyle[];
+      style_filter_active: boolean;
+      recommendations: OnboardingRecommendation[];
+    }>
+  > => {
+    const q = new URLSearchParams();
+    if (location?.city) q.set("city", location.city);
+    if (location?.lat != null && location?.lng != null) {
+      q.set("lat", String(location.lat));
+      q.set("lng", String(location.lng));
+    }
+    const qs = q.toString();
+    return apiCall(`/api/client/onboarding/recommendations${qs ? `?${qs}` : ""}`);
+  },
+
+  tapCta: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/cta", { method: "POST" }),
+
+  complete: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/complete", { method: "POST" }),
+
+  skip: (): Promise<ApiResponse<void>> =>
+    apiCall("/api/client/onboarding/skip", { method: "POST" }),
 };
 
 // ── Payments API ──────────────────────────────────────────────────────────────

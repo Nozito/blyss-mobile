@@ -20,6 +20,8 @@ import { resolveMediaUrl } from "@/lib/media";
 // Groupe compte
 const ACCOUNT_ITEMS = [
   { icon: "settings-outline" as const, label: "Paramètres", route: "/(client)/(profile)/settings" },
+  { icon: "color-palette-outline" as const, label: "Mes préférences", route: "/(client)/(profile)/preferences" },
+  { icon: "star-outline" as const, label: "Mes avis", route: "/(client)/(profile)/reviews" },
 ] as const;
 
 // Groupe support

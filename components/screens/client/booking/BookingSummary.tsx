@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
 import { withAlpha } from "@/constants/colors";
@@ -131,7 +131,7 @@ export function BookingSummary({
   });
 
   return (
-    <View style={{ gap: 20 }}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 20, paddingBottom: 24 }}>
       {/* Header */}
       <View style={{ gap: 4 }}>
         <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
@@ -366,6 +366,6 @@ export function BookingSummary({
           </View>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
