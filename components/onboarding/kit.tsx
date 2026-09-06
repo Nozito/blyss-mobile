@@ -1,11 +1,19 @@
 /**
- * Kit visuel « poster editorial » partagé par la création de compte
- * (app/(auth)/register.tsx) et l'onboarding client (app/client-onboarding.tsx) :
- * champs de couleur pleins, titres 900 capitales, bouton pilule, ruban de
- * transition à rayures. Cf. docs/DESIGN_34_client-onboarding-refonte.md.
+ * Kit visuel « poster editorial » partagé par tout le tunnel d'entrée
+ * (app/(auth)/* + app/client-onboarding.tsx) : champs de couleur pleins, titres
+ * 900 capitales, bouton pilule, champ à filet, ruban de transition à rayures.
+ * Cf. docs/DESIGN_34_client-onboarding-refonte.md.
  */
-import React, { useCallback, useRef } from "react";
-import { Animated as RNAnimated, Pressable, Text, View, ActivityIndicator } from "react-native";
+import React, { useCallback, useRef, useState } from "react";
+import {
+  Animated as RNAnimated,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  ActivityIndicator,
+  type TextInputProps,
+} from "react-native";
 import Reanimated, {
   Easing,
   runOnJS,
@@ -88,6 +96,63 @@ export function PillButton({
         )}
       </Pressable>
     </RNAnimated.View>
+  );
+}
+
+/** Champ texte « poster » : filet inférieur sur un fond de couleur. */
+export function PosterField({
+  label,
+  ink,
+  accent,
+  right,
+  ...input
+}: {
+  label: string;
+  ink: string;
+  accent: string;
+  right?: React.ReactNode;
+} & TextInputProps) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={{ marginBottom: 4 }}>
+      <Text
+        style={{
+          color: ink,
+          opacity: 0.72,
+          fontSize: 11,
+          fontWeight: "700",
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          borderBottomWidth: 1.5,
+          borderBottomColor: focused ? accent : withAlpha(ink, 0.25),
+        }}
+      >
+        <TextInput
+          {...input}
+          onFocus={(e) => {
+            setFocused(true);
+            input.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            input.onBlur?.(e);
+          }}
+          placeholderTextColor={withAlpha(ink, 0.4)}
+          style={{ flex: 1, paddingVertical: 10, fontSize: 16, color: ink }}
+        />
+        {right}
+      </View>
+    </View>
   );
 }
 

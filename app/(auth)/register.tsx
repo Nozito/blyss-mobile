@@ -6,8 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  TextInput,
-  type TextInputProps,
   useWindowDimensions,
 } from "react-native";
 import Reanimated, { FadeIn } from "react-native-reanimated";
@@ -26,6 +24,7 @@ import {
   CREAM,
   INK,
   PillButton,
+  PosterField,
   Ribbon,
   StepHeader,
   fieldColors,
@@ -95,63 +94,6 @@ function getAge(birthDate: Date | undefined): number {
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-// ── Champ texte « poster » : filet inférieur sur fond de couleur ───────────
-function PosterField({
-  label,
-  ink,
-  accent,
-  right,
-  ...input
-}: {
-  label: string;
-  ink: string;
-  accent: string;
-  right?: React.ReactNode;
-} & TextInputProps) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={{ marginBottom: 4 }}>
-      <Text
-        style={{
-          color: ink,
-          opacity: 0.72,
-          fontSize: 11,
-          fontWeight: "700",
-          letterSpacing: 1,
-          textTransform: "uppercase",
-          marginBottom: 6,
-        }}
-      >
-        {label}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 8,
-          borderBottomWidth: 1.5,
-          borderBottomColor: focused ? accent : withAlpha(ink, 0.25),
-        }}
-      >
-        <TextInput
-          {...input}
-          onFocus={(e) => {
-            setFocused(true);
-            input.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            input.onBlur?.(e);
-          }}
-          placeholderTextColor={withAlpha(ink, 0.4)}
-          style={{ flex: 1, paddingVertical: 10, fontSize: 16, color: ink }}
-        />
-        {right}
-      </View>
-    </View>
-  );
 }
 
 // ── Écran de succès ───────────────────────────────────────────────────────

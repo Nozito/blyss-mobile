@@ -1,184 +1,143 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useThemeColors } from "@/hooks/useThemeColors";
+import * as Haptics from "expo-haptics";
 import { authApi } from "@/lib/api";
-import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { withAlpha } from "@/constants/colors";
+import { FloatingNotice } from "@/components/ui/FloatingNotice";
+import { PillButton, PosterField } from "@/components/onboarding/kit";
 import { safeBack } from "@/lib/navigation";
+
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,128}$/;
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const ink = colors.foreground;
   const { token } = useLocalSearchParams<{ token?: string }>();
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPwd, setShowPwd] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [success, setSuccess]     = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,128}$/;
-
-  const handleReset = async () => {
-    setError(null);
-    if (!password || !PASSWORD_REGEX.test(password)) {
-      setError("Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (!@#$%^&*).");
+  const handleReset = useCallback(async () => {
+    setNotice(null);
+    if (!PASSWORD_REGEX.test(password)) {
+      setNotice("8 car. min., 1 majuscule, 1 chiffre, 1 caractère spécial");
       return;
     }
     if (password !== confirm) {
-      setError("Les mots de passe ne correspondent pas.");
+      setNotice("Les mots de passe ne correspondent pas");
       return;
     }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsLoading(true);
     try {
-      // apiCall() ne rejette jamais sa promesse — sans vérifier res.success,
-      // un lien invalide/expiré affichait quand même "mot de passe mis à
-      // jour", laissant croire à l'utilisateur que son mot de passe avait
-      // changé alors que rien ne s'était passé côté serveur.
       const res = await authApi.resetPassword({ token: token ?? "", password });
       if (!res.success) {
-        setError(res.error ?? "Lien invalide ou expiré. Demande un nouveau lien.");
+        setNotice(res.error ?? "Lien invalide ou expiré, demande un nouveau lien");
         return;
       }
       setSuccess(true);
-      setTimeout(() => router.replace("/(auth)/login"), 1500);
+      setTimeout(() => router.replace("/(auth)/login"), 1400);
     } catch {
-      setError("Lien invalide ou expiré. Demande un nouveau lien.");
+      setNotice("Lien invalide ou expiré, demande un nouveau lien");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [password, confirm, token, router]);
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 40, paddingHorizontal: 24 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View>
-          <AnimatedIconButton
-            onPress={() => safeBack(router)}
-            accessibilityLabel="Retour"
-            className="w-10 h-10 rounded-xl items-center justify-center mb-8"
-            style={{ backgroundColor: colors.muted }}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
-          </AnimatedIconButton>
-
-          <View className="w-16 h-16 rounded-2xl items-center justify-center mb-6" style={{ backgroundColor: `${colors.primary}1A` }}>
-            <Ionicons name="lock-closed-outline" size={28} color={colors.primary} />
-          </View>
-
-          <Text className="text-3xl font-bold mb-2" style={{ color: colors.foreground }}>
-            Nouveau mot de passe
-          </Text>
-          <Text className="text-sm mb-8 leading-relaxed" style={{ color: colors.mutedForeground }}>
-            Choisis un mot de passe sécurisé d'au moins 8 caractères.
-          </Text>
-
-          {/* Password field */}
-          <View className="mb-4">
-            <Text className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: colors.mutedForeground }}>
-              Nouveau mot de passe
-            </Text>
-            <View className="flex-row items-center border rounded-2xl px-4 h-14" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
-              <TextInput
-                className="flex-1 ml-3 text-sm"
-                style={{ color: colors.foreground }}
-                placeholder="Min. 8 caractères"
-                placeholderTextColor={colors.mutedForeground}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPwd}
-                autoCapitalize="none"
-              />
-              <Pressable
-                onPress={() => setShowPwd((p) => !p)}
-                accessibilityRole="button"
-                accessibilityLabel={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                accessibilityState={{ checked: showPwd }}
-              >
-                <Ionicons
-                  name={showPwd ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={colors.mutedForeground}
-                />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Confirm field */}
-          <View className="mb-8">
-            <Text className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: colors.mutedForeground }}>
-              Confirmer le mot de passe
-            </Text>
-            <View className="flex-row items-center border rounded-2xl px-4 h-14" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
-              <TextInput
-                className="flex-1 ml-3 text-sm"
-                style={{ color: colors.foreground }}
-                placeholder="Répète ton mot de passe"
-                placeholderTextColor={colors.mutedForeground}
-                value={confirm}
-                onChangeText={setConfirm}
-                secureTextEntry={!showConfirm}
-                autoCapitalize="none"
-              />
-              <Pressable
-                onPress={() => setShowConfirm((p) => !p)}
-                accessibilityRole="button"
-                accessibilityLabel={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                accessibilityState={{ checked: showConfirm }}
-              >
-                <Ionicons
-                  name={showConfirm ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={colors.mutedForeground}
-                />
-              </Pressable>
-            </View>
-          </View>
-
-          {error && <View className="mb-4"><ErrorMessage message={error} /></View>}
-          {success && (
-            <View className="mb-4 p-4 rounded-2xl border" style={{ backgroundColor: `${colors.success}1A`, borderColor: `${colors.success}4D` }}>
-              <Text className="font-semibold text-center" style={{ color: colors.success }}>Mot de passe mis à jour ! Redirection…</Text>
-            </View>
-          )}
-
-          <Pressable
-            onPress={handleReset}
-            disabled={isLoading || success}
-            className="rounded-2xl h-14 items-center justify-center"
-            style={{ backgroundColor: colors.primary, opacity: isLoading ? 0.7 : 1 }}
-          >
-            <Text className="font-bold text-base" style={{ color: colors.onColor }}>
-              {isLoading ? "Enregistrement..." : "Enregistrer le mot de passe"}
-            </Text>
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
+          <Pressable onPress={() => safeBack(router)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Retour">
+            <Text style={{ color: ink, fontSize: 22, opacity: 0.7 }}>←</Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+          {success ? (
+            <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+              <Text style={{ color: ink, fontWeight: "900", fontSize: 32, lineHeight: 33, letterSpacing: -1, textTransform: "uppercase" }}>
+                Mot de passe{"\n"}mis à jour
+              </Text>
+              <Text style={{ color: ink, opacity: 0.65, fontSize: 13, marginTop: 12 }}>Redirection vers la connexion…</Text>
+            </View>
+          ) : (
+            <>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 16 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={{ color: ink, fontWeight: "900", fontSize: 30, lineHeight: 31, letterSpacing: -0.8, textTransform: "uppercase" }}>
+                  Nouveau mot de passe
+                </Text>
+                <Text style={{ color: ink, opacity: 0.65, fontSize: 13, marginTop: 8, marginBottom: 22 }}>
+                  8 caractères minimum, une majuscule, un chiffre, un caractère spécial.
+                </Text>
+                <PosterField
+                  label="Nouveau mot de passe"
+                  ink={ink}
+                  accent={colors.primary}
+                  value={password}
+                  onChangeText={(v) => {
+                    setPassword(v);
+                    setNotice(null);
+                  }}
+                  secureTextEntry={!showPwd}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                  autoCapitalize="none"
+                  placeholder="8 caractères minimum"
+                  right={
+                    <Pressable onPress={() => setShowPwd((s) => !s)} hitSlop={10}>
+                      <Ionicons name={showPwd ? "eye-off-outline" : "eye-outline"} size={18} color={withAlpha(ink, 0.6)} />
+                    </Pressable>
+                  }
+                />
+                <View style={{ marginTop: 14 }}>
+                  <PosterField
+                    label="Confirmer"
+                    ink={ink}
+                    accent={colors.primary}
+                    value={confirm}
+                    onChangeText={(v) => {
+                      setConfirm(v);
+                      setNotice(null);
+                    }}
+                    secureTextEntry={!showPwd}
+                    autoComplete="new-password"
+                    textContentType="newPassword"
+                    autoCapitalize="none"
+                    placeholder="Répète ton mot de passe"
+                  />
+                </View>
+              </ScrollView>
+              <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
+                <PillButton
+                  label="Enregistrer →"
+                  onPress={handleReset}
+                  bg={password && confirm ? ink : withAlpha(ink, 0.25)}
+                  fg={colors.background}
+                  loading={isLoading}
+                  disabled={!password || !confirm}
+                />
+              </View>
+            </>
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      <FloatingNotice message={notice} onHide={() => setNotice(null)} />
+    </View>
   );
 }

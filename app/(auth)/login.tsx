@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Animated,
-  ActivityIndicator,
-  Image,
-  StyleSheet,
 } from "react-native";
+import Reanimated, { FadeIn } from "react-native-reanimated";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,96 +18,60 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 import { storage } from "@/lib/storage";
-import { Input } from "@/components/ui/Input";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
-import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { withAlpha } from "@/constants/colors";
+import { FloatingNotice } from "@/components/ui/FloatingNotice";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { emailSchema, getZodError } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { useAppTransition } from "@/contexts/TransitionContext";
+import { CREAM, PRUNE, PillButton, PosterField } from "@/components/onboarding/kit";
 
 function parseLoginError(raw: string): string {
   const r = raw.toLowerCase();
   if (r.includes("invalid login") || r.includes("invalid credentials") || r.includes("incorrect"))
     return "Email ou mot de passe incorrect";
-  if (r.includes("email not confirmed"))
-    return "Email non confirmé — vérifie ta boîte mail";
-  if (r.includes("too many") || r.includes("rate limit"))
-    return "Trop de tentatives — réessaie dans quelques minutes";
-  if (r.includes("network") || r === "server_error")
-    return "Pas de connexion — vérifie ton internet";
+  if (r.includes("email not confirmed")) return "Email non confirmé — vérifie ta boîte mail";
+  if (r.includes("too many") || r.includes("rate limit")) return "Trop de tentatives — réessaie plus tard";
+  if (r.includes("network") || r === "server_error") return "Pas de connexion — vérifie ton internet";
   return raw;
 }
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const isDark = useIsDarkMode();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
   const { login, refreshProfile } = useAuth();
   const { showTransition, hideTransition } = useAppTransition();
 
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | undefined>(undefined);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting]     = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
-  const [isBioLoading, setIsBioLoading]     = useState(false);
+  const [isBioLoading, setIsBioLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [appleAvailable, setAppleAvailable] = useState(false);
-  const [bioAvailable,   setBioAvailable]   = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
   const [bioType, setBioType] = useState<"face" | "fingerprint">("face");
 
-  const [showRoleModal, setShowRoleModal]   = useState(false);
-  const [loggedName, setLoggedName]         = useState("");
-  const [loggedRole, setLoggedRole]         = useState<"pro" | "client">("client");
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [loggedName, setLoggedName] = useState("");
+  const [loggedRole, setLoggedRole] = useState<"pro" | "client">("client");
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-  const reduceMotion = useReducedMotion();
-  const formOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const formTranslateY = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(formOpacity, { toValue: 1, duration: 340, useNativeDriver: true }),
-      Animated.timing(formTranslateY, { toValue: 0, duration: 340, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const shake = useCallback(() => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 8,  duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 5,  duration: 45, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -5, duration: 45, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
-    ]).start();
-  }, [shakeAnim]);
-
-  // ── Check capabilities ───────────────────────────────────────────────────
   useEffect(() => {
     const check = async () => {
-      // Apple Sign In — iOS only
       if (Platform.OS === "ios") {
-        const available = await AppleAuthentication.isAvailableAsync().catch(() => false);
-        setAppleAvailable(available);
+        setAppleAvailable(await AppleAuthentication.isAvailableAsync().catch(() => false));
       }
-
-      // Biometrics — only if user has a stored token AND explicitly opted in
-      // from their account settings (BiometricToggle) — no silent opt-in.
       const token = await storage.getAccessToken();
       if (!token) return;
-      const optedIn = await storage.getBiometricEnabled();
-      if (!optedIn) return;
-
+      if (!(await storage.getBiometricEnabled())) return;
       const hasHardware = await LocalAuthentication.hasHardwareAsync().catch(() => false);
-      const isEnrolled  = await LocalAuthentication.isEnrolledAsync().catch(() => false);
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync().catch(() => false);
       if (hasHardware && isEnrolled) {
         setBioAvailable(true);
         const types = await LocalAuthentication.supportedAuthenticationTypesAsync().catch(() => [] as number[]);
@@ -121,19 +82,12 @@ export default function LoginScreen() {
     void check();
   }, []);
 
-  // ── Real-time email validation ────────────────────────────────────────────
   const handleEmailChange = useCallback((v: string) => {
     setEmail(v);
-    setSubmitError(null);
-    if (v.length > 0) {
-      const err = getZodError(emailSchema, v);
-      setEmailError(err ?? undefined);
-    } else {
-      setEmailError(undefined);
-    }
+    setNotice(null);
+    setEmailError(v.length > 0 ? (getZodError(emailSchema, v) ?? undefined) : undefined);
   }, []);
 
-  // ── Navigate after login ──────────────────────────────────────────────────
   const navigateAfterLogin = useCallback(
     (user: { role: string; is_admin: boolean; first_name?: string }) => {
       if (user.is_admin) {
@@ -143,45 +97,38 @@ export default function LoginScreen() {
         return;
       }
       showTransition();
-      if (user.role === "pro") {
-        router.replace("/(pro)/dashboard");
-      } else {
-        router.replace("/(client)");
-      }
+      router.replace(user.role === "pro" ? "/(pro)/dashboard" : "/(client)");
       hideTransition();
     },
     [router, showTransition, hideTransition]
   );
 
-  // ── Email/password login ──────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     if (!email.trim() || !password) return;
     const emailErr = getZodError(emailSchema, email.trim());
     if (emailErr) {
       setEmailError(emailErr);
-      shake();
+      setNotice(emailErr);
       return;
     }
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsSubmitting(true);
-    setSubmitError(null);
+    setNotice(null);
     try {
       const res = await login({ email: email.trim().toLowerCase(), password });
       if (!res.success) {
-        setSubmitError(parseLoginError(res.error ?? "Erreur de connexion"));
-        shake();
+        setNotice(parseLoginError(res.error ?? "Erreur de connexion"));
       } else if (res.data?.user) {
         navigateAfterLogin(res.data.user);
       }
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, password, login, navigateAfterLogin, shake]);
+  }, [email, password, login, navigateAfterLogin]);
 
-  // ── Apple Sign In ─────────────────────────────────────────────────────────
   const handleAppleLogin = useCallback(async () => {
     setIsAppleLoading(true);
-    setSubmitError(null);
+    setNotice(null);
     try {
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -189,45 +136,33 @@ export default function LoginScreen() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-
       if (!credential.identityToken || !credential.authorizationCode) {
-        setSubmitError("Apple Sign In a échoué — réessaie");
+        setNotice("Apple Sign In a échoué — réessaie");
         return;
       }
-
       const res = await authApi.loginWithApple({
         identityToken: credential.identityToken,
         authorizationCode: credential.authorizationCode,
         email: credential.email,
         fullName: credential.fullName,
       });
-
       if (!res.success) {
-        setSubmitError(res.error ?? "Erreur Apple Sign In");
-        shake();
+        setNotice(res.error ?? "Erreur Apple Sign In");
       } else if (res.data?.user) {
-        // authApi.loginWithApple() stocke les tokens mais ne passe pas par
-        // AuthContext.login() — sans ce refresh, `user` restait `null` dans le
-        // contexte après une connexion Apple réussie (greeting figé, requêtes
-        // dépendant de `user` désactivées, risque de renvoi vers /welcome).
         await refreshProfile();
         navigateAfterLogin(res.data.user);
       }
     } catch (e: unknown) {
-      if (e instanceof Error && "code" in e && (e as { code: string }).code === "ERR_REQUEST_CANCELED") {
-        // user cancelled — silently ignore
-        return;
-      }
-      setSubmitError("Apple Sign In a échoué — réessaie");
+      if (e instanceof Error && "code" in e && (e as { code: string }).code === "ERR_REQUEST_CANCELED") return;
+      setNotice("Apple Sign In a échoué — réessaie");
     } finally {
       setIsAppleLoading(false);
     }
-  }, [navigateAfterLogin, shake, refreshProfile]);
+  }, [navigateAfterLogin, refreshProfile]);
 
-  // ── Biometric login ───────────────────────────────────────────────────────
   const handleBiometric = useCallback(async () => {
     setIsBioLoading(true);
-    setSubmitError(null);
+    setNotice(null);
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: "Identifie-toi pour accéder à Blyss",
@@ -235,200 +170,149 @@ export default function LoginScreen() {
         fallbackLabel: "Mot de passe",
         disableDeviceFallback: false,
       });
-
-      if (!result.success) {
-        // user cancelled or failed — no anxious message
-        return;
-      }
-
-      // Token already stored — call getProfile to restore session
+      if (!result.success) return;
       const profile = await authApi.getProfile();
       if (profile.success && profile.data) {
-        // Même trou que pour Apple Sign In : ce flow ne passe pas par
-        // AuthContext.login(), donc `user` restait `null` dans le contexte
-        // sans ce refresh explicite.
         await refreshProfile();
         navigateAfterLogin(profile.data);
       } else {
-        setSubmitError("Session expirée — connecte-toi avec ton mot de passe");
+        setNotice("Session expirée — connecte-toi avec ton mot de passe");
       }
     } catch {
-      // biometrics unavailable — silent fallback, no message
+      /* biométrie indisponible — silencieux */
     } finally {
       setIsBioLoading(false);
     }
   }, [navigateAfterLogin, refreshProfile]);
 
-  // ── Role modal (admin) ────────────────────────────────────────────────────
-  const handleRoleSelection = useCallback((selectedRole: AdminRole) => {
-    setShowRoleModal(false);
-    const routes: Record<AdminRole, string> = {
-      client: "/(client)",
-      pro: "/(pro)/dashboard",
-      admin: "/(admin)/dashboard",
-    };
-    showTransition();
-    router.replace(routes[selectedRole] as Parameters<typeof router.replace>[0]);
-    hideTransition();
-  }, [router, showTransition, hideTransition]);
+  const handleRoleSelection = useCallback(
+    (selectedRole: AdminRole) => {
+      setShowRoleModal(false);
+      const routes: Record<AdminRole, string> = {
+        client: "/(client)",
+        pro: "/(pro)/dashboard",
+        admin: "/(admin)/dashboard",
+      };
+      showTransition();
+      router.replace(routes[selectedRole] as Parameters<typeof router.replace>[0]);
+      hideTransition();
+    },
+    [router, showTransition, hideTransition]
+  );
 
-  const isSubmitDisabled = isSubmitting || !email.trim() || !password || !!emailError;
+  const disabled = isSubmitting || !email.trim() || !password || !!emailError;
+  const busy = isSubmitting || isAppleLoading || isBioLoading;
 
   return (
-    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Back */}
-          <AnimatedIconButton onPress={() => safeBack(router)} accessibilityLabel="Retour" style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color={colors.foreground} />
-          </AnimatedIconButton>
+    <View style={{ flex: 1, backgroundColor: PRUNE }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Pressable onPress={() => safeBack(router)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Retour">
+            <Text style={{ color: CREAM, fontSize: 22, opacity: 0.75 }}>←</Text>
+          </Pressable>
+          <Text style={{ color: CREAM, opacity: 0.55, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" }}>Connexion</Text>
+        </View>
 
-          <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}>
-          {/* Logo */}
-          <View style={styles.logoBlock}>
-            <Image
-              source={require("@/assets/logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* Title */}
-          <View style={styles.titleBlock}>
-            <Text style={styles.title}>Bon retour</Text>
-            <Text style={styles.subtitle}>Connecte-toi pour continuer sur Blyss</Text>
-          </View>
-
-          {/* Error banner */}
-          {submitError && (
-            <Animated.View style={{ transform: [{ translateX: shakeAnim }], marginBottom: 16 }}>
-              <ErrorMessage message={submitError} />
-            </Animated.View>
-          )}
-
-          {/* Form */}
-          <View style={styles.form}>
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={handleEmailChange}
-              placeholder="ton@email.com"
-              keyboardType="email-address"
-              autoComplete="email"
-              autoCapitalize="none"
-              leftIcon="mail-outline"
-              error={emailError}
-            />
-
-            <View>
-              <View style={styles.passwordHeader}>
-                <Text style={styles.fieldLabel}>Mot de passe</Text>
-                <Pressable onPress={() => router.push("/(auth)/forgot-password")} hitSlop={8}>
-                  <Text style={styles.forgotLink}>Mot de passe oublié ?</Text>
-                </Pressable>
-              </View>
-              <Input
-                value={password}
-                onChangeText={(v) => { setPassword(v); setSubmitError(null); }}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                leftIcon="lock-closed-outline"
-                secure
-              />
-            </View>
-          </View>
-
-          {/* CTA */}
-          <AnimatedPressable
-            onPress={handleSubmit}
-            disabled={isSubmitDisabled}
-            style={[styles.ctaBtn, isSubmitDisabled && styles.ctaBtnDisabled]}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.onColor} />
-            ) : (
-              <Text style={styles.ctaBtnText}>Se connecter</Text>
-            )}
-          </AnimatedPressable>
-
-          {/* Biometric */}
-          {bioAvailable && (
-            <Pressable
-              onPress={handleBiometric}
-              disabled={isBioLoading}
-              style={styles.bioBtn}
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={12}>
+          <Reanimated.View entering={reduceMotion ? undefined : FadeIn.duration(220)} style={{ flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 16 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              {isBioLoading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <>
-                  <Ionicons
-                    name={bioType === "face" ? "scan-outline" : "finger-print-outline"}
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.bioBtnText}>
-                    {bioType === "face" ? "Se connecter avec Face ID" : "Se connecter avec Touch ID"}
+              <Text style={{ color: CREAM, fontWeight: "900", fontSize: 40, lineHeight: 40, letterSpacing: -1.2, textTransform: "uppercase" }}>
+                Bon retour
+              </Text>
+              <Text style={{ color: CREAM, opacity: 0.75, fontSize: 13, marginTop: 8, marginBottom: 24 }}>
+                Connecte-toi pour continuer.
+              </Text>
+
+              <PosterField
+                label="Email"
+                ink={CREAM}
+                accent={colors.primary}
+                value={email}
+                onChangeText={handleEmailChange}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                textContentType="username"
+                placeholder="ton@email.com"
+              />
+
+              <View style={{ marginTop: 14 }}>
+                <PosterField
+                  label="Mot de passe"
+                  ink={CREAM}
+                  accent={colors.primary}
+                  value={password}
+                  onChangeText={(v) => {
+                    setPassword(v);
+                    setNotice(null);
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoComplete="current-password"
+                  textContentType="password"
+                  placeholder="••••••••"
+                  right={
+                    <Pressable onPress={() => setShowPassword((s) => !s)} hitSlop={10}>
+                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color={withAlpha(CREAM, 0.6)} />
+                    </Pressable>
+                  }
+                />
+              </View>
+
+              <Pressable onPress={() => router.push("/(auth)/forgot-password")} hitSlop={8} style={{ alignSelf: "flex-end", marginTop: 10 }}>
+                <Text style={{ color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase" }}>
+                  Mot de passe oublié ?
+                </Text>
+              </Pressable>
+            </ScrollView>
+
+            <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8, gap: 8 }}>
+              <PillButton label="Se connecter →" onPress={handleSubmit} bg={CREAM} fg={PRUNE} loading={isSubmitting} disabled={disabled} />
+
+              {bioAvailable && (
+                <Pressable onPress={handleBiometric} disabled={busy} style={{ alignItems: "center", paddingVertical: 6 }}>
+                  <Text style={{ color: CREAM, opacity: 0.7, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
+                    {bioType === "face" ? "Face ID" : "Touch ID"}
                   </Text>
-                </>
+                </Pressable>
               )}
-            </Pressable>
-          )}
 
-          {/* Separator */}
-          <View style={styles.separator}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>ou</Text>
-            <View style={styles.separatorLine} />
-          </View>
+              {appleAvailable && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                  cornerRadius={999}
+                  style={{ height: 48 }}
+                  onPress={handleAppleLogin}
+                />
+              )}
 
-          {/* Apple Sign In */}
-          {appleAvailable && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={isDark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={16}
-              style={styles.appleBtn}
-              onPress={handleAppleLogin}
-            />
-          )}
+              <Pressable onPress={() => router.push("/(auth)/register")} style={{ alignItems: "center", paddingVertical: 8 }}>
+                <Text style={{ color: CREAM, opacity: 0.7, fontSize: 11, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                  Pas encore de compte ? S'inscrire
+                </Text>
+              </Pressable>
 
-          {isAppleLoading && (
-            <View style={styles.appleLoading}>
-              <ActivityIndicator size="small" color={colors.mutedForeground} />
+              <Text style={{ color: withAlpha(CREAM, 0.45), fontSize: 10, textAlign: "center", lineHeight: 15 }}>
+                En continuant tu acceptes nos{" "}
+                <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>
+                  CGU
+                </Text>{" "}
+                et la{" "}
+                <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>
+                  politique de confidentialité
+                </Text>
+              </Text>
             </View>
-          )}
+          </Reanimated.View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
-          {/* Register link */}
-          <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Pas encore de compte ? </Text>
-            <Pressable onPress={() => router.push("/(auth)/register")}>
-              <Text style={styles.registerLink}>S'inscrire</Text>
-            </Pressable>
-          </View>
-
-          {/* Legal */}
-          <Text style={styles.legal}>
-            {"En continuant, tu acceptes nos "}
-            <Text style={styles.legalLink} onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>
-              CGU
-            </Text>
-            {" et la "}
-            <Text style={styles.legalLink} onPress={() => void WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>
-              Politique de confidentialité
-            </Text>
-          </Text>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <FloatingNotice message={notice} onHide={() => setNotice(null)} />
 
       <RoleSelectionModal
         visible={showRoleModal}
@@ -440,97 +324,6 @@ export default function LoginScreen() {
           router.replace(loggedRole === "pro" ? "/(pro)/dashboard" : "/(client)");
         }}
       />
-    </SafeAreaView>
+    </View>
   );
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-function createStyles(colors: ReturnType<typeof useThemeColors>) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.background },
-
-    scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
-
-    backBtn: { paddingTop: 8, paddingBottom: 0, marginLeft: -8 },
-
-    logoBlock: { alignItems: "center", marginTop: 16, marginBottom: 8 },
-    logo: { width: 90, height: 90 },
-
-    titleBlock: { marginBottom: 24 },
-    title: { fontSize: 28, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 },
-    subtitle: { fontSize: 14, color: colors.mutedForeground, marginTop: 6, lineHeight: 20 },
-
-    form: { gap: 12, marginBottom: 24 },
-
-    passwordHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 6,
-    },
-    fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground },
-    forgotLink: { fontSize: 12, fontWeight: "600", color: colors.primary },
-
-    ctaBtn: {
-      height: 56,
-      borderRadius: 18,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.35,
-      shadowRadius: 14,
-      elevation: 6,
-      marginBottom: 12,
-    },
-    ctaBtnDisabled: { backgroundColor: colors.disabled, shadowOpacity: 0, elevation: 0 },
-    ctaBtnText: { fontSize: 16, fontWeight: "700", color: colors.onColor },
-
-    bioBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      height: 48,
-      borderRadius: 14,
-      borderWidth: 1.5,
-      borderColor: colors.border,
-      backgroundColor: colors.white,
-      marginBottom: 4,
-    },
-    bioBtnText: { fontSize: 14, fontWeight: "600", color: colors.primary },
-
-    separator: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      marginVertical: 20,
-    },
-    separatorLine: { flex: 1, height: 1, backgroundColor: colors.border },
-    separatorText: { fontSize: 12, color: colors.mutedForeground, fontWeight: "500" },
-
-    appleBtn: { height: 52, borderRadius: 16, marginBottom: 8 },
-    appleLoading: { alignItems: "center", paddingVertical: 8 },
-
-    registerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 24,
-      marginBottom: 16,
-    },
-    registerText: { fontSize: 13, color: colors.mutedForeground },
-    registerLink: { fontSize: 13, fontWeight: "700", color: colors.primary },
-
-    legal: {
-      fontSize: 11,
-      color: colors.mutedForeground,
-      textAlign: "center",
-      lineHeight: 18,
-      paddingHorizontal: 8,
-    },
-    legalLink: { color: colors.primary, fontWeight: "600" },
-  });
 }
