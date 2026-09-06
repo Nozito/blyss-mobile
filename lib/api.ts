@@ -1032,7 +1032,7 @@ export const clientApi = {
 // ── Onboarding client (#34) ───────────────────────────────────────────────────
 
 // Taxonomie nails v2 — alignée sur l'ENUM Postgres `nail_style`
-// (blyss-app, migration 20260910000001) et `NAIL_STYLES` de son validate.ts.
+// (blyss-app, migration 20260911000001) et `NAIL_STYLES` de son validate.ts.
 export const NAIL_STYLES = [
   "manucure_soin",
   "renforcement_ongle",

@@ -9,7 +9,7 @@
 import type { NailStyle } from "@/lib/api";
 
 /**
- * Taxonomie nails v2 (enum nail_style, migration 20260910000001) — 12 familles,
+ * Taxonomie nails v2 (enum nail_style, migration 20260911000001) — 12 familles,
  * sans emoji. `code` = réf nuancier affichée en sous-titre des puces.
  *
  * - `NAIL_STYLE_OPTIONS` : les 12, pour l'écran pro « Mes spécialités ».
