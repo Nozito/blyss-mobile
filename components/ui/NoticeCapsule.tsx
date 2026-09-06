@@ -24,18 +24,22 @@ export function NoticeCapsule({
   const surface = isDark ? "rgba(28,28,30,0.72)" : "rgba(255,255,255,0.72)";
   const hairline = isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.07)";
 
+  // Message court (hors connexion) → pilule 1 ligne. Message long (erreur) → le
+  // texte passe à la ligne et la capsule s'agrandit, jamais tronqué.
+  const oneLine = text.length <= 32;
+
   return (
     <BlurView
       intensity={Platform.OS === "ios" ? 40 : 20}
       tint={isDark ? "dark" : "light"}
       style={{
         flexDirection: "row",
-        alignItems: "center",
+        alignItems: oneLine ? "center" : "flex-start",
         gap: 8,
-        maxWidth: "90%",
-        paddingVertical: 9,
+        maxWidth: "92%",
+        paddingVertical: oneLine ? 9 : 11,
         paddingHorizontal: 16,
-        borderRadius: 999,
+        borderRadius: oneLine ? 999 : 18,
         overflow: "hidden",
         borderWidth: 1,
         borderColor: hairline,
@@ -47,11 +51,16 @@ export function NoticeCapsule({
         elevation: 6,
       }}
     >
-      <Ionicons name={icon} size={15} color={colors.foreground} />
+      <Ionicons
+        name={icon}
+        size={15}
+        color={colors.foreground}
+        style={{ marginTop: oneLine ? 0 : 2 }}
+      />
       <Text
         accessibilityRole="alert"
-        numberOfLines={1}
-        style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}
+        numberOfLines={3}
+        style={{ flexShrink: 1, fontSize: 13, fontWeight: "600", lineHeight: 18, color: colors.foreground }}
       >
         {text}
       </Text>

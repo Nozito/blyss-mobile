@@ -1019,14 +1019,18 @@ export const clientOnboardingApi = {
   getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
     apiCall("/api/client/onboarding/status"),
 
-  /** #34 passe 3b — style multi-choix (styles[0] = « principal »). */
+  /**
+   * #34 passe 3b — style multi-choix (styles[0] = « principal »).
+   * On envoie aussi `style_nails` = styles[0] pour rester compatible avec un
+   * backend pas encore à jour (avant le déploiement de la reco régionale).
+   */
   setPreferences: (
     styles: NailStyle[],
     city?: string
   ): Promise<ApiResponse<{ styles: NailStyle[]; style_nails: NailStyle }>> =>
     apiCall("/api/client/onboarding/preferences", {
       method: "POST",
-      body: JSON.stringify({ styles, ...(city ? { city } : {}) }),
+      body: JSON.stringify({ styles, style_nails: styles[0], ...(city ? { city } : {}) }),
     }),
 
   /** #34 passe 3b — écran « comment tu as connu Blyss » (best-effort). */

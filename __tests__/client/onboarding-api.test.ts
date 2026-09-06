@@ -34,17 +34,17 @@ describe("clientOnboardingApi", () => {
     expect(res.success && res.data?.current_step).toBe(2);
   });
 
-  it("setPreferences envoie styles[] + city quand la ville est fournie", async () => {
+  it("setPreferences envoie styles[] + style_nails (compat) + city", async () => {
     mockFetch.mockReturnValueOnce(ok({ styles: ["vernis_gel"], style_nails: "vernis_gel" }));
     await clientOnboardingApi.setPreferences(["vernis_gel", "nail_art"], "Lyon");
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body).toEqual({ styles: ["vernis_gel", "nail_art"], city: "Lyon" });
+    expect(body).toEqual({ styles: ["vernis_gel", "nail_art"], style_nails: "vernis_gel", city: "Lyon" });
   });
 
   it("setPreferences omet city quand absente", async () => {
     mockFetch.mockReturnValueOnce(ok({ styles: ["autre"], style_nails: "autre" }));
     await clientOnboardingApi.setPreferences(["autre"]);
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["autre"] });
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["autre"], style_nails: "autre" });
   });
 
   it("setAttribution → POST avec payload", async () => {
