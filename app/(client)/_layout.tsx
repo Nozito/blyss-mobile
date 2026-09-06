@@ -1,15 +1,13 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { NativeTabs, Icon, Badge, VectorIcon } from "expo-router/unstable-native-tabs";
+import { NativeTabs, Icon, VectorIcon } from "expo-router/unstable-native-tabs";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNotifications } from "@/contexts/NotificationContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors } from "@/constants/colors";
 
 export default function ClientLayout() {
   const { user, isLoading } = useAuth();
-  const { unreadCount } = useNotifications();
 
   if (isLoading) return <LoadingSpinner fullScreen />;
   if (!user) return <Redirect href="/(auth)/welcome" />;
@@ -48,7 +46,6 @@ export default function ClientLayout() {
           default: <VectorIcon family={Ionicons} name="notifications-outline" />,
           selected: <VectorIcon family={Ionicons} name="notifications" />,
         }} />
-        <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)" options={{ title: "" }}>
