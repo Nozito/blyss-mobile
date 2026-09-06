@@ -53,6 +53,38 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? "";
 
+/** Enregistre le token push si la permission est DÉJÀ accordée — ne demande rien. */
+async function registerPushTokenIfGranted(): Promise<void> {
+  if (Platform.OS === "web") return;
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== "granted") return;
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  if (!projectId) return;
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+  await notificationsApi.savePushToken(tokenData.data);
+}
+
+/**
+ * Déclenche la demande de permission OS (si encore possible) puis enregistre le
+ * token. À n'appeler que depuis une action explicite de l'utilisateur
+ * (bouton « Activer les notifs » de l'onboarding, réglages…), jamais au boot.
+ */
+export async function requestAndRegisterPush(): Promise<"granted" | "denied" | "error"> {
+  if (Platform.OS === "web") return "denied";
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    let status = current.status;
+    if (status !== "granted" && current.canAskAgain) {
+      status = (await Notifications.requestPermissionsAsync()).status;
+    }
+    if (status !== "granted") return "denied";
+    await registerPushTokenIfGranted();
+    return "granted";
+  } catch {
+    return "error";
+  }
+}
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -159,21 +191,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || Platform.OS === "web") return;
 
-    const registerPushToken = async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== "granted") return;
-
-      try {
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-        if (!projectId) return;
-        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-        await notificationsApi.savePushToken(tokenData.data);
-      } catch {
-        // Non-fatal
-      }
-    };
-
-    void registerPushToken();
+    // Au boot : on n'affiche JAMAIS la pop-up système. On enregistre seulement
+    // le token si la permission a déjà été accordée. La demande se fait depuis
+    // l'onboarding (« Activer les notifs ») via requestAndRegisterPush().
+    void registerPushTokenIfGranted().catch(() => {});
   }, [isAuthenticated]);
 
   // Notif reçue en foreground via APNs (hors WS) → resync la liste depuis le serveur

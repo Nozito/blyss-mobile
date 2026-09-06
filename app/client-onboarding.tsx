@@ -40,7 +40,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { usePostHog } from "posthog-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import * as Notifications from "expo-notifications";
+import { requestAndRegisterPush } from "@/contexts/NotificationContext";
+import { resolveMediaUrl } from "@/lib/media";
 import {
   clientOnboardingApi,
   favoritesApi,
@@ -348,13 +349,8 @@ export default function ClientOnboardingScreen() {
 
   const enableNotifs = async () => {
     tap(Haptics.ImpactFeedbackStyle.Medium);
-    let result = "denied";
-    try {
-      const { status } = await Notifications.requestPermissionsAsync();
-      result = status === "granted" ? "granted" : "denied";
-    } catch {
-      result = "error";
-    }
+    // Déclenche la pop-up système + enregistre le token push côté serveur.
+    const result = await requestAndRegisterPush();
     track("onboarding_notif_result", { result });
     go(STEP.ATTRIBUTION);
   };
@@ -692,7 +688,7 @@ export default function ClientOnboardingScreen() {
                         >
                           <Pressable onPress={() => openPro(r, i + 1, "reco_card")} style={{ flexDirection: "row", gap: 11, flex: 1 }}>
                             <Image
-                              source={{ uri: r.banner_photo ?? r.profile_photo ?? undefined }}
+                              source={{ uri: resolveMediaUrl(r.banner_photo ?? r.profile_photo) }}
                               style={{ width: 56, height: 56, borderRadius: 10, borderWidth: 1, borderColor: withAlpha(ink, 0.2), backgroundColor: withAlpha(ink, 0.06) }}
                               contentFit="cover"
                               transition={150}

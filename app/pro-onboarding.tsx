@@ -10,6 +10,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAppTransition } from "@/contexts/TransitionContext";
+import { requestAndRegisterPush } from "@/contexts/NotificationContext";
 import { buildOnboardingSlides } from "@/lib/proOnboardingContent";
 import { PillButton, Ribbon, StepHeader, fieldColors, useRibbon } from "@/components/onboarding/kit";
 
@@ -78,6 +79,8 @@ export default function ProOnboardingScreen() {
     // Un échec de persistance ou de refresh ne doit jamais bloquer l'entrée
     // dans l'espace pro — au pire l'onboarding se re-proposera.
     await AsyncStorage.setItem(STORAGE_KEY, "true").catch(() => {});
+    // Dernière étape franchie : on demande les notifs pour ne pas rater de résa.
+    await requestAndRegisterPush().catch(() => {});
     await refreshActivePlan().catch(() => {});
     showTransition();
     router.replace("/(pro)/dashboard");
