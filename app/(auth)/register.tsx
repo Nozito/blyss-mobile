@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
+import { authErrorMessage } from "@/lib/authErrors";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
@@ -42,18 +43,6 @@ const VALIDATION = {
   EMAIL_MAX: 254,
   MIN_AGE: 16,
 } as const;
-
-const ERROR_CODES: Record<string, string> = {
-  email_exists: "Cet email est déjà utilisé",
-  phone_exists: "Ce numéro de téléphone est déjà utilisé",
-  weak_password: "Mot de passe trop faible (8 car., 1 majuscule, 1 chiffre, 1 caractère spécial)",
-  invalid_password: "Mot de passe trop long (128 caractères max.)",
-  age_restriction: "Tu dois avoir au moins 16 ans",
-  invalid_phone: "Numéro de téléphone invalide",
-  invalid_email: "Email invalide",
-  missing_fields: "Il manque des informations",
-  data_too_long: "Un champ est trop long",
-};
 
 type Role = "client" | "pro";
 
@@ -236,7 +225,7 @@ export default function RegisterScreen() {
       instagram_account: formData.instagramAccount.trim() || null,
     });
     if (!res.success) {
-      setNotice(res.error ? (ERROR_CODES[res.error] ?? res.message ?? "Création impossible, réessaie") : "Création impossible, réessaie");
+      setNotice(authErrorMessage(res.error ?? res.message, "Création impossible, réessaie"));
       // renvoie sur le champ concerné pour corriger
       if (res.error === "email_exists" || res.error === "invalid_email") setStep(4);
       else if (res.error === "phone_exists" || res.error === "invalid_phone") setStep(3);

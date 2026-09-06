@@ -27,16 +27,7 @@ import { emailSchema, getZodError } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { CREAM, PRUNE, PillButton, PosterField } from "@/components/onboarding/kit";
-
-function parseLoginError(raw: string): string {
-  const r = raw.toLowerCase();
-  if (r.includes("invalid login") || r.includes("invalid credentials") || r.includes("incorrect"))
-    return "Email ou mot de passe incorrect";
-  if (r.includes("email not confirmed")) return "Email non confirmé — vérifie ta boîte mail";
-  if (r.includes("too many") || r.includes("rate limit")) return "Trop de tentatives — réessaie plus tard";
-  if (r.includes("network") || r === "server_error") return "Pas de connexion — vérifie ton internet";
-  return raw;
-}
+import { authErrorMessage } from "@/lib/authErrors";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -117,7 +108,7 @@ export default function LoginScreen() {
     try {
       const res = await login({ email: email.trim().toLowerCase(), password });
       if (!res.success) {
-        setNotice(parseLoginError(res.error ?? "Erreur de connexion"));
+        setNotice(authErrorMessage(res.error, "Connexion impossible, réessaie"));
       } else if (res.data?.user) {
         navigateAfterLogin(res.data.user);
       }
@@ -147,7 +138,7 @@ export default function LoginScreen() {
         fullName: credential.fullName,
       });
       if (!res.success) {
-        setNotice(res.error ?? "Erreur Apple Sign In");
+        setNotice(authErrorMessage(res.error, "Apple Sign In a échoué — réessaie"));
       } else if (res.data?.user) {
         await refreshProfile();
         navigateAfterLogin(res.data.user);

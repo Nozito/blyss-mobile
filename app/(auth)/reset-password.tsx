@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { authApi } from "@/lib/api";
+import { authErrorMessage } from "@/lib/authErrors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 import { FloatingNotice } from "@/components/ui/FloatingNotice";
@@ -41,7 +42,7 @@ export default function ResetPasswordScreen() {
     try {
       const res = await authApi.resetPassword({ token: token ?? "", password });
       if (!res.success) {
-        setNotice(res.error ?? "Lien invalide ou expiré, demande un nouveau lien");
+        setNotice(authErrorMessage(res.error, "Lien invalide ou expiré, demande un nouveau lien"));
         return;
       }
       setSuccess(true);
