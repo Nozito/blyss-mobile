@@ -46,7 +46,9 @@ const VALIDATION = {
 
 const ERROR_CODES: Record<string, string> = {
   email_exists: "Cet email est déjà utilisé",
+  phone_exists: "Ce numéro de téléphone est déjà utilisé",
   weak_password: "Mot de passe trop faible : 8 caractères, une majuscule, un chiffre, un caractère spécial",
+  invalid_password: "Mot de passe trop long (128 caractères max.)",
   age_restriction: "Tu dois avoir au moins 16 ans",
   invalid_phone: "Numéro de téléphone invalide",
   invalid_email: "Email invalide",
@@ -294,6 +296,9 @@ export default function RegisterScreen() {
     });
     if (!res.success) {
       setNotice(res.error ? (ERROR_CODES[res.error] ?? res.message ?? "Création impossible, réessaie") : "Création impossible, réessaie");
+      // renvoie sur le champ concerné pour corriger
+      if (res.error === "email_exists" || res.error === "invalid_email") setStep(4);
+      else if (res.error === "phone_exists" || res.error === "invalid_phone") setStep(3);
       return;
     }
     setStep(99);
