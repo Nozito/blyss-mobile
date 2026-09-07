@@ -179,7 +179,10 @@ export function Ribbon({ x, width, rose }: { x: SharedValue<number>; width: numb
  */
 export function useRibbon() {
   const reduceMotion = useReducedMotion();
-  const x = useSharedValue(1.1);
+  // Positions de repos : le ruban est incliné (-9°) et déborde de 80 px en
+  // haut/bas, ce qui décale ses coins de ~75 px — il faut donc le garer bien
+  // au-delà du bord (1.1 / -2.2 laissaient un liseré visible en diagonale).
+  const x = useSharedValue(1.45);
 
   const go = useCallback(
     (onCover: () => void) => {
@@ -190,7 +193,7 @@ export function useRibbon() {
       x.value = withTiming(-0.5, { duration: 200, easing: Easing.in(Easing.cubic) }, (finished) => {
         if (!finished) return;
         runOnJS(onCover)();
-        x.value = withTiming(-2.2, { duration: 320, easing: Easing.out(Easing.cubic) });
+        x.value = withTiming(-2.7, { duration: 340, easing: Easing.out(Easing.cubic) });
       });
     },
     [reduceMotion, x]

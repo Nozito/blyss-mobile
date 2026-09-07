@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Reanimated, {
   Easing,
   FadeIn,
-  FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -82,20 +81,20 @@ export default function ProSubscriptionSuccessScreen() {
 
   // Deux temps forts : la rubalise découvre l'écran, puis « CONFIRMÉ »
   // s'écrase comme un tampon (léger dépassement + tic haptique lourd).
-  const ribbonX = useSharedValue(reduceMotion ? -2.2 : -0.16);
+  const ribbonX = useSharedValue(reduceMotion ? -2.7 : -0.5);
   const stamp = useSharedValue(reduceMotion ? 1 : 0);
   const bar = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
     if (reduceMotion) return;
-    ribbonX.value = withDelay(110, withTiming(-2.2, { duration: 480, easing: Easing.in(Easing.cubic) }));
+    ribbonX.value = withDelay(110, withTiming(-2.7, { duration: 500, easing: Easing.in(Easing.cubic) }));
     stamp.value = withDelay(
       430,
-      withTiming(1, { duration: 300, easing: Easing.bezier(0.2, 1.6, 0.3, 1) }, (finished) => {
+      withTiming(1, { duration: 300, easing: Easing.bezier(0.2, 1.35, 0.3, 1) }, (finished) => {
         if (finished) runOnJS(thunk)();
       })
     );
-    bar.value = withDelay(660, withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }));
+    bar.value = withDelay(640, withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -121,14 +120,11 @@ export default function ProSubscriptionSuccessScreen() {
   const stampStyle = useAnimatedStyle(() => ({
     opacity: interpolate(stamp.value, [0, 0.12, 1], [0, 1, 1]),
     transform: [
-      { scale: interpolate(stamp.value, [0, 1], [1.55, 1]) },
-      { rotate: `${interpolate(stamp.value, [0, 1], [-5, 0])}deg` },
+      { scale: interpolate(stamp.value, [0, 1], [1.4, 1]) },
+      { rotate: `${interpolate(stamp.value, [0, 1], [-3, 0])}deg` },
     ],
   }));
   const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: bar.value }] }));
-
-  const listBase = 720;
-  const listStep = 85;
 
   return (
     <View style={{ flex: 1, backgroundColor: PRUNE }}>
@@ -163,34 +159,19 @@ export default function ProSubscriptionSuccessScreen() {
               : "Dès ton 1er rendez-vous, ton abonnement est remboursé."}
           </Reanimated.Text>
 
-          <Reanimated.Text
-            entering={reduceMotion ? undefined : FadeIn.delay(listBase - 60).duration(280)}
-            style={s.recapLabel}
-          >
-            {isUpgrade ? "Ce que tu débloques" : "Ce que ça change pour toi"}
-          </Reanimated.Text>
-
-          {items.map((it, i) => (
-            <Reanimated.View
-              key={it}
-              entering={
-                reduceMotion
-                  ? undefined
-                  : FadeInDown.delay(listBase + i * listStep).duration(320).springify().damping(16)
-              }
-              style={[s.row, i > 0 && s.rowLine]}
-            >
-              <View style={[s.dot, { backgroundColor: colors.primary }]} />
-              <Text style={s.rowText}>{it}</Text>
-            </Reanimated.View>
-          ))}
+          <Reanimated.View entering={reduceMotion ? undefined : FadeIn.delay(660).duration(320)}>
+            <Text style={s.recapLabel}>
+              {isUpgrade ? "Ce que tu débloques" : "Ce que ça change pour toi"}
+            </Text>
+            {items.map((it, i) => (
+              <View key={it} style={[s.row, i > 0 && s.rowLine]}>
+                <Text style={s.rowText}>{it}</Text>
+              </View>
+            ))}
+          </Reanimated.View>
         </View>
 
-        <Reanimated.View
-          entering={
-            reduceMotion ? undefined : FadeInDown.delay(listBase + items.length * listStep + 120).duration(320)
-          }
-        >
+        <Reanimated.View entering={reduceMotion ? undefined : FadeIn.delay(760).duration(320)}>
           <PillButton
             label={isUpgrade ? "Voir ce qui change →" : "Configurer mon agenda →"}
             onPress={goNext}
@@ -262,24 +243,15 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 9,
+    paddingVertical: 11,
   },
   rowLine: {
     borderTopWidth: 1,
-    borderTopColor: withAlpha(CREAM, 0.12),
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    borderTopColor: withAlpha(CREAM, 0.14),
   },
   rowText: {
     color: CREAM,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "600",
-    flex: 1,
   },
 });
