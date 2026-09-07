@@ -147,12 +147,10 @@ export default function SubscriptionScreen() {
   }, [isAnnual, packages, purchase, qc, router, refreshProfile, refreshActivePlan, activePlan]);
 
   const screenTitle = activePlan ? "Modifier ta formule" : "Choisis ta formule";
-  const screenSubtitle = activePlan
-    ? `Formule actuelle : ${PLAN_CONFIG[activePlan].label}`
-    : "Gère ton plan Blyss Pro";
+  const screenSubtitle = activePlan ? `Formule actuelle : ${PLAN_CONFIG[activePlan].label}` : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <Stack.Screen options={{
         gestureEnabled: hasActiveSubscription,
         headerBackVisible: false,
@@ -182,10 +180,12 @@ export default function SubscriptionScreen() {
             </AnimatedIconButton>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.6, textTransform: "uppercase" }}>
               {screenTitle}
             </Text>
-            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{screenSubtitle}</Text>
+            {screenSubtitle && (
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 2 }}>{screenSubtitle}</Text>
+            )}
           </View>
         </View>
 
@@ -209,17 +209,23 @@ export default function SubscriptionScreen() {
             {!hasActiveSubscription && (
               <View style={{ marginBottom: 24 }}>
                 <Text style={{
-                  fontSize: 26, fontWeight: "900", color: colors.foreground,
-                  letterSpacing: -0.8, lineHeight: 33, marginBottom: 8,
+                  fontSize: 28, fontWeight: "900", color: colors.foreground,
+                  letterSpacing: -0.9, lineHeight: 34, marginBottom: 14,
                 }}>
                   Ton activité mérite{"\n"}
                   <Text style={{ color: colors.primary, fontFamily: Fonts.serifItalic }}>
                     mieux qu'un agenda papier
                   </Text>
                 </Text>
-                <Text style={{ fontSize: 14, color: colors.mutedForeground, lineHeight: 22, marginBottom: 16 }}>
-                  1 rendez-vous suffit à rentabiliser ton abonnement mensuel.
-                </Text>
+                <View style={{
+                  alignSelf: "flex-start", backgroundColor: colors.foreground,
+                  paddingHorizontal: 9, paddingVertical: 4, borderRadius: 5,
+                  transform: [{ rotate: "-3deg" }],
+                }}>
+                  <Text style={{ color: colors.primary, fontSize: 11, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase" }}>
+                    1 RDV rembourse ton abonnement
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -271,7 +277,7 @@ export default function SubscriptionScreen() {
                     disponibles uniquement une fois le backend synchronisé */}
                 {subscription && (
                   <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
-                    <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
+                    <View style={{ flex: 1, backgroundColor: colors.muted, borderRadius: 12, padding: 10 }}>
                       <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
                         Membre depuis
                       </Text>
@@ -279,7 +285,7 @@ export default function SubscriptionScreen() {
                         {new Date(subscription.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                       </Text>
                     </View>
-                    <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 12, padding: 10 }}>
+                    <View style={{ flex: 1, backgroundColor: colors.muted, borderRadius: 12, padding: 10 }}>
                       <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
                         Facturation
                       </Text>
@@ -373,7 +379,7 @@ export default function SubscriptionScreen() {
             {!isReady ? (
               <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={{ fontSize: 14, color: colors.mutedForeground }}>Chargement des offres...</Text>
+                <Text style={{ fontSize: 14, color: colors.mutedForeground }}>Chargement des offres…</Text>
               </View>
             ) : (
               (Object.keys(PLAN_CONFIG) as RCPlan[]).map((planKey) => {

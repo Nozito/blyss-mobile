@@ -16,8 +16,8 @@ export type OnboardingSlide = {
   bg: string;
   /** Fond « poster » du slide dans le carrousel pro. */
   tone: FieldTone;
-  /** Libellé du palier affiché en pastille quand le slide en débloque un. */
-  tierLabel?: string;
+  /** `"hero"` = slide de clôture : grand titre plein cadre, sans mockup. */
+  variant?: "hero";
   /**
    * Mockup/capture de la fonctionnalité, affiché en plein cadre sur le
    * slide du carrousel d'onboarding. Non renseigné pour l'instant — le
@@ -79,7 +79,6 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
         color: colors.pro,
         bg: withAlpha(colors.pro, 0.12),
         tone: "cream",
-        tierLabel: "Sérénité",
         image: require("@/assets/onboarding/portfolio.png"),
       },
       {
@@ -89,7 +88,6 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
         color: colors.pro,
         bg: withAlpha(colors.pro, 0.12),
         tone: "cream",
-        tierLabel: "Sérénité",
         image: require("@/assets/onboarding/stats.png"),
       },
     ],
@@ -102,7 +100,6 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
         color: colors.secondary,
         bg: colors.secondaryLight,
         tone: "prune",
-        tierLabel: "Signature",
         image: require("@/assets/onboarding/finance.png"),
       },
       {
@@ -112,7 +109,6 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
         color: colors.secondary,
         bg: colors.secondaryLight,
         tone: "prune",
-        tierLabel: "Signature",
         image: require("@/assets/onboarding/analytics.png"),
       },
     ],
@@ -120,25 +116,15 @@ function getTierSlides(colors: ThemeColors): Partial<Record<RCPlan, OnboardingSl
 }
 
 function closingSlide(isUpgrade: boolean, colors: ThemeColors): OnboardingSlide {
-  return isUpgrade
-    ? {
-        icon: "rocket-outline",
-        title: "Fonctionnalités activées",
-        description: "Elles sont disponibles dès maintenant dans ton espace pro.",
-        color: colors.primary,
-        bg: colors.primaryLight,
-        tone: "cream",
-      }
-    : {
-        icon: "rocket-outline",
-        title: "Ton compte Pro est prêt",
-        description:
-          "Commence à recevoir des réservations dès aujourd'hui. 1 rendez-vous rembourse ton abonnement.",
-        color: colors.primary,
-        bg: colors.primaryLight,
-        tone: "rose",
-        image: require("@/assets/onboarding/ready.png"),
-      };
+  return {
+    icon: "rocket-outline",
+    title: isUpgrade ? "Tout est\nactivé" : "À toi\nde jouer",
+    description: isUpgrade ? "" : "1 rendez-vous rembourse ton abonnement.",
+    color: colors.primary,
+    bg: colors.primaryLight,
+    tone: "rose",
+    variant: "hero",
+  };
 }
 
 /**

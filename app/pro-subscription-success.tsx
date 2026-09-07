@@ -1,23 +1,29 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View, Text, StyleSheet, useWindowDimensions } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import Reanimated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { PLAN_RANK } from "@/constants/plans";
 import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
-import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { hasNewFeatures, buildOnboardingSlides } from "@/lib/proOnboardingContent";
+import { CREAM, PRUNE, PillButton, Ribbon } from "@/components/onboarding/kit";
+import { hasNewFeatures } from "@/lib/proOnboardingContent";
 
 function isRCPlan(value: string | undefined): value is RCPlan {
   return value === "start" || value === "serenite" || value === "signature";
-}
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const rows: T[][] = [];
-  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
-  return rows;
 }
 
 const PLAN_LABELS: Record<RCPlan, string> = {
@@ -26,228 +32,254 @@ const PLAN_LABELS: Record<RCPlan, string> = {
   signature: "Signature",
 };
 
-// Alignées sur les icônes/couleurs déjà utilisées pour ces formules dans
-// subscription.tsx — même identité visuelle partout dans l'app.
-const PLAN_ICON: Record<RCPlan, keyof typeof Ionicons.glyphMap> = {
-  start: "flash-outline",
-  serenite: "heart-outline",
-  signature: "sparkles-outline",
+// Ce que l'abonnement rapporte, formulé en gains pour l'activité d'une
+// prothésiste — pas en noms de fonctionnalités (cf. voix « zéro lapin »).
+const TIER_GAINS: Record<RCPlan, string[]> = {
+  start: [
+    "Un agenda qui se remplit en ligne",
+    "Zéro lapin, zéro relance",
+    "Payée d'avance, à chaque résa",
+  ],
+  serenite: [
+    "De nouvelles clientes via ton portfolio",
+    "Tes chiffres d'activité chaque semaine",
+  ],
+  signature: [
+    "Ton chiffre d'affaires prévu à l'avance",
+    "Un rapport clair chaque semaine",
+  ],
 };
+const TIER_ORDER: RCPlan[] = ["start", "serenite", "signature"];
 
-function getPlanColor(colors: ReturnType<typeof useThemeColors>): Record<RCPlan, string> {
-  return {
-    start: colors.primary,
-    serenite: colors.pro,
-    signature: colors.secondary,
-  };
+/** 1re souscription → le socle (ce que ça change concrètement).
+ *  Upgrade → seulement les gains que le passage vient d'ouvrir. */
+function gains(plan: RCPlan, previousPlan: RCPlan | null): string[] {
+  if (!previousPlan) return TIER_GAINS.start;
+  const to = PLAN_RANK[plan];
+  const from = PLAN_RANK[previousPlan];
+  const out: string[] = [];
+  for (const tier of TIER_ORDER) {
+    if (PLAN_RANK[tier] > from && PLAN_RANK[tier] <= to) out.push(...TIER_GAINS[tier]);
+  }
+  return out.slice(0, 4);
 }
-
-const PLAN_NEXT_STEP: Record<RCPlan, string> = {
-  start: "Ajoute tes premiers créneaux pour commencer à recevoir des réservations.",
-  serenite: "Configure ton agenda et importe tes clientes régulières.",
-  signature: "Configure ton agenda, tes services et mets ta page en avant.",
-};
 
 export default function ProSubscriptionSuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ plan?: string; previousPlan?: string; preview?: string }>();
   const plan = isRCPlan(params.plan) ? params.plan : "start";
   const previousPlan = isRCPlan(params.previousPlan) ? params.previousPlan : null;
   const isPreview = params.preview === "1";
+  const isUpgrade = previousPlan !== null;
   const { refreshActivePlan } = useRevenueCat();
   const reduceMotion = useReducedMotion();
-  const badgeScale = useRef(new Animated.Value(reduceMotion ? 1 : 0.6)).current;
-  const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const planColor = getPlanColor(colors)[plan];
 
-  // Aperçu concret de ce qui arrive juste après, plutôt qu'un badge décoratif —
-  // ça prépare la pro à l'onboarding qui suit au lieu de la surprendre.
-  const upcomingSlides = useMemo(() => {
-    if (isPreview) return buildOnboardingSlides(plan, null, colors).slice(0, -1);
-    if (!hasNewFeatures(plan, previousPlan)) return [];
-    return buildOnboardingSlides(plan, previousPlan, colors).slice(0, -1);
-  }, [isPreview, plan, previousPlan, colors]);
+  const planLabel = PLAN_LABELS[plan];
+  const items = useMemo(() => gains(plan, previousPlan), [plan, previousPlan]);
+
+  // Deux temps forts : la rubalise découvre l'écran, puis « CONFIRMÉ »
+  // s'écrase comme un tampon (léger dépassement + tic haptique lourd).
+  const ribbonX = useSharedValue(reduceMotion ? -2.2 : -0.16);
+  const stamp = useSharedValue(reduceMotion ? 1 : 0);
+  const bar = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(badgeScale, { toValue: 1, friction: 7, tension: 90, useNativeDriver: true }),
-      Animated.timing(contentOpacity, { toValue: 1, duration: 380, useNativeDriver: true }),
-    ]).start();
-  }, [badgeScale, contentOpacity]);
+    if (reduceMotion) return;
+    ribbonX.value = withDelay(110, withTiming(-2.2, { duration: 480, easing: Easing.in(Easing.cubic) }));
+    stamp.value = withDelay(
+      430,
+      withTiming(1, { duration: 300, easing: Easing.bezier(0.2, 1.6, 0.3, 1) }, (finished) => {
+        if (finished) runOnJS(thunk)();
+      })
+    );
+    bar.value = withDelay(660, withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Pas de redirection automatique — la pro avance elle-même via le CTA,
-  // le temps de lire ce qui vient d'être activé.
   useEffect(() => {
     if (isPreview) return;
     refreshActivePlan();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreview]);
 
+  const thunk = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+
+  const goNext = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (isPreview) {
+      router.replace({ pathname: "/pro-onboarding", params: { plan, preview: "1" } });
+    } else if (hasNewFeatures(plan, previousPlan)) {
+      router.replace({ pathname: "/pro-onboarding", params: { plan, previousPlan: previousPlan ?? "" } });
+    } else {
+      router.replace("/(pro)/dashboard");
+    }
+  };
+
+  const stampStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(stamp.value, [0, 0.12, 1], [0, 1, 1]),
+    transform: [
+      { scale: interpolate(stamp.value, [0, 1], [1.55, 1]) },
+      { rotate: `${interpolate(stamp.value, [0, 1], [-5, 0])}deg` },
+    ],
+  }));
+  const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: bar.value }] }));
+
+  const listBase = 720;
+  const listStep = 85;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View
-        style={[
-          styles.content,
-          { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 40, opacity: contentOpacity },
-        ]}
+    <View style={{ flex: 1, backgroundColor: PRUNE }}>
+      <View
+        style={{
+          flex: 1,
+          paddingTop: insets.top + 20,
+          paddingBottom: insets.bottom + 16,
+          paddingHorizontal: 24,
+        }}
       >
-        <Animated.View
-          style={[
-            styles.badge,
-            { backgroundColor: planColor, shadowColor: planColor, transform: [{ scale: badgeScale }] },
-          ]}
-        >
-          <Ionicons name={PLAN_ICON[plan]} size={26} color="#FFFFFF" />
-        </Animated.View>
-
-        <Text style={[styles.eyebrow, { color: planColor }]}>Abonnement confirmé</Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Formule {PLAN_LABELS[plan]} activée
-        </Text>
-        <Text style={[styles.body, { color: colors.mutedForeground }]}>
-          {PLAN_NEXT_STEP[plan]}
-        </Text>
-
-        {upcomingSlides.length > 0 && (
-          <View style={styles.upcoming}>
-            <Text style={styles.upcomingLabel}>À découvrir juste après</Text>
-            {chunk(upcomingSlides, 3).map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.upcomingRow}>
-                {row.map((s, i) => (
-                  <View key={i} style={styles.upcomingItem}>
-                    <View style={[styles.upcomingIcon, { backgroundColor: withAlpha(s.color, 0.14) }]}>
-                      <Ionicons name={s.icon} size={17} color={s.color} />
-                    </View>
-                    <Text style={styles.upcomingText} numberOfLines={2}>
-                      {s.title}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ))}
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <View style={{ flexDirection: "row" }}>
+            <View style={s.tag}>
+              <Text style={s.tagText}>{planLabel} · Actif</Text>
+            </View>
           </View>
-        )}
 
-        <AnimatedPressable
-          onPress={() => {
-            if (isPreview) {
-              router.replace({ pathname: "/pro-onboarding", params: { plan, preview: "1" } });
-            } else if (hasNewFeatures(plan, previousPlan)) {
-              router.replace({
-                pathname: "/pro-onboarding",
-                params: { plan, previousPlan: previousPlan ?? "" },
-              });
-            } else {
-              router.replace("/(pro)/dashboard");
-            }
-          }}
-          style={[styles.cta, { backgroundColor: planColor }]}
+          <Text style={s.kicker}>C'est</Text>
+          <Reanimated.Text style={[s.stampWord, stampStyle]}>Confirmé</Reanimated.Text>
+
+          <Reanimated.View
+            style={[s.bar, { backgroundColor: colors.primary }, barStyle]}
+          />
+
+          <Reanimated.Text
+            entering={reduceMotion ? undefined : FadeIn.delay(560).duration(320)}
+            style={s.lede}
+          >
+            {isUpgrade
+              ? `Formule ${planLabel}, dès maintenant.`
+              : "Dès ton 1er rendez-vous, ton abonnement est remboursé."}
+          </Reanimated.Text>
+
+          <Reanimated.Text
+            entering={reduceMotion ? undefined : FadeIn.delay(listBase - 60).duration(280)}
+            style={s.recapLabel}
+          >
+            {isUpgrade ? "Ce que tu débloques" : "Ce que ça change pour toi"}
+          </Reanimated.Text>
+
+          {items.map((it, i) => (
+            <Reanimated.View
+              key={it}
+              entering={
+                reduceMotion
+                  ? undefined
+                  : FadeInDown.delay(listBase + i * listStep).duration(320).springify().damping(16)
+              }
+              style={[s.row, i > 0 && s.rowLine]}
+            >
+              <View style={[s.dot, { backgroundColor: colors.primary }]} />
+              <Text style={s.rowText}>{it}</Text>
+            </Reanimated.View>
+          ))}
+        </View>
+
+        <Reanimated.View
+          entering={
+            reduceMotion ? undefined : FadeInDown.delay(listBase + items.length * listStep + 120).duration(320)
+          }
         >
-          <Text style={styles.ctaText}>
-            {isPreview || upcomingSlides.length > 0 ? "Découvrir les nouveautés" : "Aller au dashboard"}
-          </Text>
-        </AnimatedPressable>
-      </Animated.View>
+          <PillButton
+            label={isUpgrade ? "Voir ce qui change →" : "Configurer mon agenda →"}
+            onPress={goNext}
+            bg={CREAM}
+            fg={PRUNE}
+          />
+        </Reanimated.View>
+      </View>
+
+      <Ribbon x={ribbonX} width={width} rose={colors.primary} />
     </View>
   );
 }
 
-function createStyles(colors: ReturnType<typeof useThemeColors>) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    content: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 32,
-    },
-    badge: {
-      width: 56,
-      height: 56,
-      borderRadius: 18,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 24,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.24,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    eyebrow: {
-      fontSize: 12,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-      textTransform: "uppercase",
-      marginBottom: 10,
-    },
-    title: {
-      fontSize: 26,
-      fontWeight: "900",
-      textAlign: "center",
-      marginBottom: 12,
-      letterSpacing: -0.4,
-    },
-    body: {
-      fontSize: 15,
-      textAlign: "center",
-      lineHeight: 22,
-      marginBottom: 32,
-      maxWidth: 280,
-    },
-    upcoming: {
-      width: "100%",
-      marginBottom: 32,
-    },
-    upcomingLabel: {
-      fontSize: 11,
-      fontWeight: "700",
-      letterSpacing: 0.6,
-      textTransform: "uppercase",
-      color: colors.mutedForeground,
-      textAlign: "center",
-      marginBottom: 14,
-    },
-    upcomingRow: {
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 14,
-      marginBottom: 14,
-    },
-    upcomingItem: {
-      alignItems: "center",
-      width: 76,
-      gap: 8,
-    },
-    upcomingIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 13,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    upcomingText: {
-      fontSize: 11,
-      fontWeight: "600",
-      color: colors.mutedForeground,
-      textAlign: "center",
-      lineHeight: 14,
-    },
-    cta: {
-      height: 52,
-      paddingHorizontal: 28,
-      borderRadius: 14,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    ctaText: {
-      color: "#FFFFFF",
-      fontWeight: "700",
-      fontSize: 15,
-    },
-  });
-}
+const s = StyleSheet.create({
+  tag: {
+    backgroundColor: CREAM,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 16,
+  },
+  tagText: {
+    color: PRUNE,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  kicker: {
+    color: withAlpha(CREAM, 0.85),
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: -1,
+    textTransform: "uppercase",
+    lineHeight: 30,
+  },
+  stampWord: {
+    color: CREAM,
+    fontSize: 58,
+    fontWeight: "900",
+    letterSpacing: -2.6,
+    lineHeight: 56,
+    textTransform: "uppercase",
+    alignSelf: "flex-start",
+  },
+  bar: {
+    height: 6,
+    width: 72,
+    borderRadius: 3,
+    marginTop: 16,
+    alignSelf: "flex-start",
+  },
+  lede: {
+    color: CREAM,
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22,
+    marginTop: 18,
+    maxWidth: 320,
+  },
+  recapLabel: {
+    color: withAlpha(CREAM, 0.5),
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginTop: 26,
+    marginBottom: 2,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 9,
+  },
+  rowLine: {
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(CREAM, 0.12),
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  rowText: {
+    color: CREAM,
+    fontSize: 14.5,
+    fontWeight: "600",
+    flex: 1,
+  },
+});

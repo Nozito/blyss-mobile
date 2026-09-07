@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, Image, StyleSheet, Dimensions } from "react-native";
+import { View, Text, Image, StyleSheet, Dimensions, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +12,7 @@ import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { requestAndRegisterPush } from "@/contexts/NotificationContext";
 import { buildOnboardingSlides } from "@/lib/proOnboardingContent";
-import { PillButton, StepHeader, fieldColors } from "@/components/onboarding/kit";
+import { PillButton, StepHeader, Ribbon, useRibbon, fieldColors } from "@/components/onboarding/kit";
 
 const STORAGE_KEY = "pro_onboarding_done";
 
@@ -33,6 +33,8 @@ export default function ProOnboardingScreen() {
   const { activePlan, refreshActivePlan } = useRevenueCat();
   const { showTransition, hideTransition } = useAppTransition();
   const reduceMotion = useReducedMotion();
+  const { width } = useWindowDimensions();
+  const ribbon = useRibbon();
 
   const isPreview = params.preview === "1";
   const isPurchaseFlow = !isPreview && isRCPlan(params.plan);
@@ -90,11 +92,17 @@ export default function ProOnboardingScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (isLast) {
       void finish();
+      return;
+    }
+    const next = currentSlide + 1;
+    // Fondu simple entre les slides de contenu (chacun décode un mockup PNG —
+    // un balayage de ruban à chaque « Suivant » couperait le décodage et serait
+    // répétitif sur 7 slides). Le ruban est gardé pour le seul temps fort : le
+    // passage vers le slide de clôture, sans mockup.
+    if (slides[next]?.variant === "hero") {
+      ribbon.go(() => setCurrentSlide(next));
     } else {
-      // Fondu simple entre slides : chaque slide charge un PNG, le balayage du
-      // ruban se ferait couper par le décodage de l'image (même souci que
-      // l'écran recos de l'onboarding client).
-      setCurrentSlide((p) => p + 1);
+      setCurrentSlide(next);
     }
   };
 
@@ -129,27 +137,33 @@ export default function ProOnboardingScreen() {
         <Reanimated.View
           key={currentSlide}
           entering={reduceMotion ? undefined : FadeIn.duration(200)}
-          style={styles.slideContent}
+          style={slide.variant === "hero" ? styles.heroContent : styles.slideContent}
         >
-          {slide.image ? (
-            <View style={styles.mockupImageWrap}>
-              <Image source={slide.image} style={styles.mockupImage} resizeMode="contain" />
-            </View>
+          {slide.variant === "hero" ? (
+            <>
+              <Text style={[styles.heroTitle, { color: ink }]}>{slide.title}</Text>
+              {slide.description ? (
+                <Text style={[styles.heroSub, { color: ink }]}>{slide.description}</Text>
+              ) : null}
+            </>
           ) : (
-            <View style={[styles.iconFrame, { borderColor: withAlpha(ink, 0.25) }]}>
-              <Ionicons name={slide.icon} size={52} color={slide.color} />
-            </View>
-          )}
+            <>
+              {slide.image ? (
+                <View style={styles.mockupImageWrap}>
+                  <Image source={slide.image} style={styles.mockupImage} resizeMode="contain" />
+                </View>
+              ) : (
+                <View style={[styles.iconFrame, { borderColor: withAlpha(ink, 0.25) }]}>
+                  <Ionicons name={slide.icon} size={52} color={slide.color} />
+                </View>
+              )}
 
-          <View style={styles.caption}>
-            {slide.tierLabel ? (
-              <View style={[styles.tierPill, { backgroundColor: slide.color }]}>
-                <Text style={styles.tierPillText}>{slide.tierLabel} débloqué</Text>
+              <View style={styles.caption}>
+                <Text style={[styles.title, { color: ink }]}>{slide.title}</Text>
+                <Text style={[styles.description, { color: ink }]}>{slide.description}</Text>
               </View>
-            ) : null}
-            <Text style={[styles.title, { color: ink }]}>{slide.title}</Text>
-            <Text style={[styles.description, { color: ink }]}>{slide.description}</Text>
-          </View>
+            </>
+          )}
         </Reanimated.View>
 
         <View style={styles.footer}>
@@ -161,6 +175,8 @@ export default function ProOnboardingScreen() {
           />
         </View>
       </SafeAreaView>
+
+      <Ribbon x={ribbon.x} width={width} rose={colors.primary} />
     </View>
   );
 }
@@ -188,6 +204,25 @@ function createStyles() {
       paddingHorizontal: 24,
       gap: 24,
     },
+    heroContent: {
+      flex: 1,
+      justifyContent: "center",
+      paddingHorizontal: 24,
+    },
+    heroTitle: {
+      fontSize: 52,
+      fontWeight: "900",
+      letterSpacing: -2.4,
+      lineHeight: 50,
+      textTransform: "uppercase",
+    },
+    heroSub: {
+      fontSize: 13,
+      fontWeight: "600",
+      letterSpacing: 0.2,
+      opacity: 0.8,
+      marginTop: 16,
+    },
     mockupImageWrap: {
       height: MOCKUP_IMAGE_HEIGHT,
       aspectRatio: 0.494,
@@ -208,18 +243,6 @@ function createStyles() {
       alignItems: "flex-start",
       alignSelf: "stretch",
       gap: 10,
-    },
-    tierPill: {
-      borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
-    tierPillText: {
-      color: "#FFFFFF",
-      fontSize: 10,
-      fontWeight: "800",
-      letterSpacing: 0.6,
-      textTransform: "uppercase",
     },
     title: {
       fontSize: 30,
