@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
-import Purchases, { type PurchasesPackage, type CustomerInfo } from "react-native-purchases";
+import Purchases, { LOG_LEVEL, type PurchasesPackage, type CustomerInfo } from "react-native-purchases";
 import { Platform } from "react-native";
 import { proApi } from "@/lib/api";
 import { useAuth } from "./AuthContext";
@@ -80,6 +80,12 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Réduit le bruit console du SDK (INFO/DEBUG). Les "offerings empty" restent
+    // en ERROR — c'est une config App Store Connect / StoreKit, pas un bug appli :
+    // agreement "Paid Applications" actif, in-app purchases "Ready to Submit"
+    // avec des product IDs identiques dans RevenueCat, offering marquée "Current",
+    // et (simulateur) fichier Blyss.storekit sélectionné dans le scheme Xcode.
+    void Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.WARN : LOG_LEVEL.ERROR);
     Purchases.configure({ apiKey });
 
     (async () => {
@@ -89,6 +95,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
           Purchases.getCustomerInfo(),
         ]);
         setCustomerInfo(info);
+        if (!offerings.current || offerings.current.availablePackages.length === 0) {
+          // Offerings vides : le SDK a répondu mais ASC/StoreKit n'a renvoyé
+          // aucun produit. L'écran d'abonnement bascule sur ses prix de repli.
+          console.warn(
+            "[RevenueCat] Offerings vides — vérifier App Store Connect / StoreKit (cf. commentaire ci-dessus).",
+          );
+        }
 
         const current = offerings.current;
         if (current) {
