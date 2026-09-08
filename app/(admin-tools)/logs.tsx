@@ -170,7 +170,7 @@ export default function AdminLogsScreen() {
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.info }} />
-          <Text style={{ fontSize: 22, fontWeight: "700", color: TEXT1, letterSpacing: -0.5 }}>Logs Système</Text>
+          <Text style={{ fontSize: 26, fontWeight: "900", color: TEXT1, letterSpacing: -1.2, textTransform: "uppercase" }}>Logs Système</Text>
         </View>
         <Text style={{ fontSize: 13, color: TEXT2, marginBottom: 16, paddingLeft: 14 }}>{filtered.length} événement(s)</Text>
 

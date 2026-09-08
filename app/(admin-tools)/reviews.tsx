@@ -141,7 +141,7 @@ export default function ReviewsScreen() {
         >
           <Ionicons name="arrow-back" size={18} color={TEXT1} />
         </AnimatedIconButton>
-        <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.6 }}>Avis</Text>
+        <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>Avis</Text>
         {!isLoading && reviews.length > 0 && (
           <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
             <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{reviews.length}</Text>

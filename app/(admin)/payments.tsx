@@ -197,6 +197,7 @@ export default function AdminPaymentsScreen() {
   const caMois   = revenueAgg?.month_revenue ?? thisMonth.reduce((s, t) => s + Number(t.amount), 0);
   const netTotal = succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0);
   const pending  = transactions.filter((t) => t.status === "pending" || t.status === "processing").length;
+  const failed   = transactions.filter((t) => t.status === "failed").length;
 
   const confirmRefund = (tx: AdminPayment) => {
     setPaymentError(null);
@@ -337,44 +338,40 @@ export default function AdminPaymentsScreen() {
         ListHeaderComponent={
           <>
             {/* Page title */}
-            <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.5, marginBottom: 16 }}>Paiements</Text>
+            <Text style={{ ...ADMIN.type.display, color: TEXT1, marginBottom: 16 }}>Paiements</Text>
             {paymentError && <View style={{ marginBottom: 12 }}><ErrorMessage message={paymentError} /></View>}
 
-            {/* Hero CA total */}
-            <View style={{ borderRadius: ADMIN.cardRadius, padding: 20, marginBottom: 14, backgroundColor: ADMIN.surface, borderWidth: 1, borderColor: ADMIN.border }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CA total</Text>
-              <Text style={{ fontSize: 40, fontWeight: "700", color: TEXT1, letterSpacing: -1 }}>
-                {caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+            {/* Hero — encaissé dans l'app, aplat rose */}
+            <View style={{ padding: 20, marginBottom: 16, backgroundColor: ADMIN.accent }}>
+              <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>Encaissé dans l'app · total</Text>
+              <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>
+                {caTotal.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+                <Text style={{ fontSize: 18 }}> €</Text>
               </Text>
-              <View style={{ flexDirection: "row", marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: ADMIN.border }}>
+              <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginTop: 16 }}>
                 {[
-                  { label: "Ce mois",      value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-                  { label: partiallyLoaded ? "Net (chargé)" : "Net total", value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
+                  { label: "Ce mois",      value: `${caMois.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €` },
+                  { label: partiallyLoaded ? "Net (chargé)" : "Net", value: `${netTotal.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €` },
                   { label: "Transactions", value: String(totalTransactions ?? transactions.length) },
-                ].map(({ label, value }, i) => (
-                  <React.Fragment key={label}>
-                    {i > 0 && <View style={{ width: 1, backgroundColor: ADMIN.border, marginHorizontal: 14 }} />}
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 10, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>{label}</Text>
-                      <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>{value}</Text>
-                    </View>
-                  </React.Fragment>
+                ].map(({ label, value }) => (
+                  <View key={label}>
+                    <Text style={{ fontSize: 18, fontWeight: "900", letterSpacing: -0.6, color: ADMIN.accentInk }}>{value}</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub, marginTop: 3 }}>{label}</Text>
+                  </View>
                 ))}
               </View>
             </View>
 
-            {/* 3 mini-cards */}
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
-              {[
-                { label: "Ce mois",    value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.pro },
-                { label: partiallyLoaded ? "Net (chargé)" : "Net total", value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
-                { label: partiallyLoaded ? "Attente (chargé)" : "En attente", value: String(pending), color: Colors.warning },
-              ].map(({ label, value, color }) => (
-                <View key={label} style={{ flex: 1, backgroundColor: ADMIN.surface, borderRadius: ADMIN.cardRadius, padding: 14, borderWidth: 1, borderColor: ADMIN.border }}>
-                  <Text style={{ fontSize: 10, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>{label}</Text>
-                  <Text style={{ fontSize: 17, fontWeight: "700", color, letterSpacing: -0.3 }}>{value}</Text>
-                </View>
-              ))}
+            {/* Bandeau : en attente / échecs */}
+            <View style={{ flexDirection: "row", marginBottom: 20, borderWidth: 1, borderColor: ADMIN.border }}>
+              <View style={{ flex: 1, padding: 14, borderRightWidth: 1, borderRightColor: ADMIN.border }}>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.warning }}>{pending}</Text>
+                <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 3 }}>{partiallyLoaded ? "Attente (chargé)" : "En attente"}</Text>
+              </View>
+              <View style={{ flex: 1, padding: 14 }}>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.danger }}>{failed}</Text>
+                <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 3 }}>Échecs</Text>
+              </View>
             </View>
 
             {/* Section header + search + export */}

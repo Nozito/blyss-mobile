@@ -307,7 +307,7 @@ export default function AdminAnalyticsScreen() {
           <Ionicons name="chevron-back" size={18} color={ACCENT} />
           <Text style={{ fontSize: 15, fontWeight: "600", color: ACCENT }}>Retour</Text>
         </AnimatedPressable>
-        <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>
           Analytics
         </Text>
         <Text style={{ fontSize: 13, color: TEXT2, marginTop: 2 }}>

@@ -438,7 +438,7 @@ export default function AdminCouponsScreen() {
         <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
         <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
       </AnimatedPressable>
-      <Text style={{ fontSize: 28, fontWeight: "700", color: TEXT1, letterSpacing: -0.5, marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
+      <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase", marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
       {couponError && <View style={{ marginBottom: 8 }}><ErrorMessage message={couponError} /></View>}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
