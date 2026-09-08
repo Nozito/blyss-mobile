@@ -300,7 +300,7 @@ export default function AdminNotificationsScreen() {
                 }}
               >
                 <Ionicons name={opt.icon} size={16} color={active ? opt.color : TEXT2} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: active ? opt.color : TEXT2 }}>{opt.label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? opt.color : TEXT2 }}>{opt.label}</Text>
               </AnimatedPressable>
             );
           })}
@@ -352,14 +352,14 @@ export default function AdminNotificationsScreen() {
       {(title || body) && (
         <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
           <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 12 }}>Aperçu push</Text>
-          <View style={{ backgroundColor: MUTED, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: BORDER }}>
+          <View style={{ backgroundColor: MUTED, borderRadius: 4, padding: 14, borderWidth: 1, borderColor: BORDER }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="notifications" size={14} color={Colors.white} />
+              <View style={{ width: 26, height: 26, borderRadius: 4, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="notifications" size={14} color={ADMIN.accentInk} />
               </View>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT2 }}>Blyss · maintenant</Text>
+              <Text style={{ ...ADMIN.type.label, color: TEXT2 }}>Blyss · maintenant</Text>
             </View>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1 }} numberOfLines={1}>{title || "Titre…"}</Text>
+            <Text style={{ ...ADMIN.type.name, fontSize: 13, color: TEXT1 }} numberOfLines={1}>{title || "Titre…"}</Text>
             <Text style={{ fontSize: 12, color: TEXT2, marginTop: 2 }} numberOfLines={2}>{body || "Message…"}</Text>
           </View>
         </View>
@@ -377,14 +377,14 @@ export default function AdminNotificationsScreen() {
         disabled={sendMut.isPending || !canSend}
         accessibilityLabel="Envoyer la notification push"
         style={{
-          height: 56, borderRadius: 18, backgroundColor: ADMIN.accent,
+          height: 56, backgroundColor: ADMIN.accent,
           alignItems: "center", justifyContent: "center",
           flexDirection: "row", gap: 10,
           opacity: (sendMut.isPending || !canSend) ? 0.4 : 1,
         }}
       >
-        <Ionicons name="send-outline" size={20} color={Colors.white} />
-        <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.white }}>
+        <Ionicons name="send-outline" size={18} color={ADMIN.accentInk} />
+        <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accentInk }}>
           {target === "all" ? "Envoyer à tous"
             : target === "pros" ? "Envoyer aux pros"
             : target === "clients" ? "Envoyer aux clients"

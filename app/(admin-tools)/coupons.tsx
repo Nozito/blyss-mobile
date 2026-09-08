@@ -158,14 +158,14 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             </View>
 
             <Text style={styles.label}>Type de réduction</Text>
-            <View style={{ flexDirection: "row", backgroundColor: MUTED, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
-              {(["percent", "fixed"] as DiscountType[]).map((t) => {
+            <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.xl }}>
+              {(["percent", "fixed"] as DiscountType[]).map((t, ti) => {
                 const active = discountType === t;
                 return (
                   <Pressable key={t}
                     onPress={() => { setDiscountType(t); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                    style={{ flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: "center", backgroundColor: active ? ADMIN.accent : "transparent" }}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: active ? Colors.white : TEXT2 }}>
+                    style={{ flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: active ? ADMIN.accent : "transparent", borderLeftWidth: ti > 0 ? 1 : 0, borderLeftColor: ADMIN.border }}>
+                    <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accentInk : TEXT2 }}>
                       {t === "percent" ? "Pourcentage %" : "Montant fixe €"}
                     </Text>
                   </Pressable>
@@ -180,7 +180,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               placeholder={discountType === "percent" ? "20" : "5.00"}
               placeholderTextColor={TEXT3}
               keyboardType="decimal-pad"
-              style={[inputStyle, { fontSize: 20, fontWeight: "700", marginBottom: ADMIN.space.xl }]}
+              style={[inputStyle, { ...ADMIN.type.display, fontSize: 22, marginBottom: ADMIN.space.xl }]}
             />
 
             <Text style={styles.label}>Plans concernés</Text>
@@ -216,7 +216,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             >
               {createMut.isPending
                 ? <ActivityIndicator size="small" color={Colors.white} />
-                : <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Créer le coupon</Text>}
+                : <Text style={{ ...ADMIN.type.label, color: ADMIN.accentInk }}>Créer le coupon</Text>}
             </AnimatedPressable>
           </ScrollView>
         </Animated.View>
@@ -445,9 +445,9 @@ export default function AdminCouponsScreen() {
           return (
             <AnimatedPressable key={f.key}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f.key); }}
-              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+              style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 3, borderWidth: 1,
                 backgroundColor: active ? withAlpha(f.color, 0.16) : MUTED, borderColor: active ? f.color : BORDER }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? f.color : TEXT2 }}>{f.label}</Text>
+              <Text style={{ ...ADMIN.type.label, color: active ? f.color : TEXT2 }}>{f.label}</Text>
             </AnimatedPressable>
           );
         })}

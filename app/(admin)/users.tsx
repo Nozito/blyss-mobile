@@ -115,7 +115,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
             <Avatar name={`${user.first_name} ${user.last_name}`} photo={user.profile_photo} size={40} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...ADMIN.type.title, color: ADMIN.text }}>Offrir un abonnement</Text>
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>pour {user.first_name} {user.last_name}</Text>
+              <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>pour {user.first_name} {user.last_name}</Text>
             </View>
             <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={styles.closeBtn}>
               <Ionicons name="close" size={18} color={ADMIN.textSub} />
@@ -123,15 +123,14 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           </View>
 
           <Text style={styles.label}>Plan</Text>
-          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
-            {PLAN_OPTS.map((p) => (
+          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.xl }}>
+            {PLAN_OPTS.map((p, i) => (
               <Pressable key={p}
                 onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: "center",
-                  backgroundColor: plan === p ? ADMIN.accent : "transparent",
+                  flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: plan === p ? ADMIN.accent : "transparent", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
                 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: plan === p ? Colors.white : ADMIN.textSub }}>
+                <Text style={{ ...ADMIN.type.label, color: plan === p ? ADMIN.accentInk : ADMIN.textSub }}>
                   {PLAN_LABELS[p]}
                 </Text>
               </Pressable>
@@ -139,15 +138,14 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           </View>
 
           <Text style={styles.label}>Durée</Text>
-          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.xxl }}>
-            {MONTHS_OPTS.map((m) => (
+          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.xxl }}>
+            {MONTHS_OPTS.map((m, i) => (
               <Pressable key={m}
                 onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: "center",
-                  backgroundColor: months === m ? ADMIN.accent : "transparent",
+                  flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: months === m ? ADMIN.accent : "transparent", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
                 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: months === m ? Colors.white : ADMIN.textSub }}>{m}m</Text>
+                <Text style={{ ...ADMIN.type.label, color: months === m ? ADMIN.accentInk : ADMIN.textSub }}>{m}m</Text>
               </Pressable>
             ))}
           </View>
@@ -259,7 +257,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               </View>
               <AnimatedPressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Ionicons name="mail-outline" size={13} color={ADMIN.textMuted} />
-                <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>{full.email}</Text>
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>{full.email}</Text>
                 <Ionicons name="share-outline" size={12} color={ADMIN.textMuted} />
               </AnimatedPressable>
               <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
@@ -329,14 +327,14 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                     ))}
                   </Card>
                 ) : (
-                  <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>Aucun signalement reçu.</Text>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }}>Aucun signalement reçu.</Text>
                 )}
 
                 {(full.reports?.made.length ?? 0) > 0 && (
                   <>
                     <View style={{ height: ADMIN.space.md }} />
                     <SectionLabel>{`Signalements effectués (${full.reports?.made.length ?? 0})`}</SectionLabel>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }}>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }}>
                       {`${full.reports?.made_justified_count ?? 0} fondé(s) · ${full.reports?.made_dismissed_count ?? 0} infondé(s) de bonne foi · ${full.reports?.made_abusive_count ?? 0} abusif(s)`}
                     </Text>
                     <Card style={{ padding: 0 }}>
@@ -495,7 +493,7 @@ function BannedUserCard({ item, onPress, onReactivate, reactivating }: {
         <Avatar name={name} photo={item.profile_photo} size={44} />
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ ...ADMIN.type.name, color: ADMIN.text }} numberOfLines={1}>{name}</Text>
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
         </View>
         <AnimatedPressable
           onPress={onReactivate}
@@ -662,21 +660,22 @@ export default function AdminUsersScreen() {
       </View>
 
       <View style={{ paddingBottom: ADMIN.space.md }}>
-        {/* Segmented tabs — one control, not a scrolling row of pills */}
-        <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
-          {FILTERS.map(({ value, label }) => {
+        {/* Segmented tabs — un bloc rose vif pour l'onglet actif */}
+        <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.md }}>
+          {FILTERS.map(({ value, label }, idx) => {
             const active = roleFilter === value;
             return (
               <Pressable
                 key={value}
                 onPress={() => { setRoleFilter(value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{
-                  flex: 1, paddingVertical: 8, borderRadius: 9,
+                  flex: 1, paddingVertical: 10,
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
                   backgroundColor: active ? ADMIN.accent : "transparent",
+                  borderLeftWidth: idx > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: active ? Colors.white : ADMIN.textSub }}>{label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accentInk : ADMIN.textSub }}>{label}</Text>
                 {value === "banned" && bannedCount > 0 && (
                   <View style={{ minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3, backgroundColor: active ? withAlpha(Colors.white, 0.3) : ADMIN.danger, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{bannedCount}</Text>
@@ -767,7 +766,7 @@ export default function AdminUsersScreen() {
                     {i > 0 && <View style={{ width: 1, backgroundColor: ADMIN.border, marginHorizontal: ADMIN.space.sm }} />}
                     <View style={{ flex: 1, alignItems: "center" }}>
                       <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{value}</Text>
-                      <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }} numberOfLines={1}>{label}</Text>
+                      <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }} numberOfLines={1}>{label}</Text>
                     </View>
                   </React.Fragment>
                 ))}

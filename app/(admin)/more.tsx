@@ -112,10 +112,18 @@ export default function AdminMoreScreen() {
   const initials = fullName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
   const photoUri = resolveMediaUrl(user?.profile_photo);
 
+  // Le CA plateforme = abonnements pros (MRR), pas les paiements de réservations
+  // (ça, c'est "encaissé dans l'app", l'argent des pros). Fallback CA résa si
+  // le backend ne renvoie pas encore subMrr.
+  const eur0 = (v?: number) => (v == null ? "—" : `${Math.round(v).toLocaleString("fr-FR")} €`);
   const stats = [
-    { label: "Utilisateurs", value: dashStats?.totalUsers ?? "—", symbol: "person.2.fill",   icon: "people-outline"   as const, route: "/(admin)/users" },
-    { label: "RDV du mois",  value: dashStats?.monthBookings ?? "—", symbol: "calendar.circle.fill", icon: "calendar-outline" as const, route: "/(admin)/bookings" },
-    { label: "CA du mois",   value: dashStats?.monthRevenue ? `${Number(dashStats.monthRevenue).toFixed(0)}€` : "—", symbol: "banknote.fill", icon: "wallet-outline" as const, route: "/(admin-tools)/analytics" },
+    { label: "Utilisateurs", value: dashStats?.totalUsers ?? "—", route: "/(admin)/users" as const },
+    { label: "Abos actifs",  value: dashStats?.subsActive ?? "—", route: "/(admin-tools)/analytics" as const },
+    {
+      label: dashStats?.subMrr ? "MRR abos" : "Encaissé (mois)",
+      value: dashStats?.subMrr ? eur0(dashStats.subMrr) : eur0(dashStats?.collectedThisMonth || dashStats?.monthRevenue),
+      route: "/(admin-tools)/analytics" as const,
+    },
   ];
 
   return (

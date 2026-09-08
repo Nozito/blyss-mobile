@@ -202,11 +202,11 @@ export default function AdminLogsScreen() {
               <AnimatedPressable
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setTypeFilter(f.id); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 3, borderWidth: 1,
                   backgroundColor: active ? ADMIN.accentBg : MUTED,
                   borderColor: active ? ADMIN.accent : BORDER }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
               </AnimatedPressable>
             );
           })}
@@ -220,11 +220,11 @@ export default function AdminLogsScreen() {
               <AnimatedPressable
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setDateFilter(f.id); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 3, borderWidth: 1,
                   backgroundColor: active ? ADMIN.accentBg : MUTED,
                   borderColor: active ? ADMIN.accent : BORDER }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
               </AnimatedPressable>
             );
           })}
