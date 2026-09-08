@@ -27,13 +27,12 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
 import { Avatar } from "@/components/admin/Avatar";
+import { GrantSubscriptionModal } from "@/components/admin/GrantSubscriptionModal";
 import { formatEUR, formatNumberFR } from "@/lib/format";
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
-const PLAN_OPTS   = ["start", "serenite", "signature"] as const;
 const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérénité", signature: "Signature" };
-const MONTHS_OPTS = [1, 3, 6, 12];
 
 function roleName(user: Pick<AdminUser, "is_admin" | "role">) {
   if (user.is_admin) return "Admin";
@@ -77,97 +76,6 @@ function UserSkeleton() {
         </View>
       ))}
     </View>
-  );
-}
-
-// ── Grant bottom sheet ────────────────────────────────────────────────────────
-function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
-  const qc = useQueryClient();
-  const [plan, setPlan]       = useState<typeof PLAN_OPTS[number]>("serenite");
-  const [months, setMonths]   = useState(1);
-  const [grantError, setGrantError] = useState<string | null>(null);
-
-  const grantMut = useMutation({
-    mutationFn: () => adminApi.grantSubscription(user.id, { plan, months }),
-    onSuccess: () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      qc.invalidateQueries({ queryKey: ["admin-user", user.id] });
-      onClose();
-    },
-    onError: () => setGrantError("Impossible d'accorder l'abonnement."),
-  });
-
-  return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable
-          style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }}
-          onPress={onClose}
-        />
-        <View style={{
-          backgroundColor: ADMIN.surface,
-          borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius,
-          paddingHorizontal: ADMIN.space.xl, paddingBottom: ADMIN.space.xxl, paddingTop: ADMIN.space.md,
-        }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ADMIN.sheetHandle, alignSelf: "center", marginBottom: ADMIN.space.xl }} />
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.xl }}>
-            <Avatar name={`${user.first_name} ${user.last_name}`} photo={user.profile_photo} size={40} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...ADMIN.type.title, color: ADMIN.text }}>Offrir un abonnement</Text>
-              <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>pour {user.first_name} {user.last_name}</Text>
-            </View>
-            <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color={ADMIN.textSub} />
-            </AnimatedIconButton>
-          </View>
-
-          <Text style={styles.label}>Plan</Text>
-          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.xl }}>
-            {PLAN_OPTS.map((p, i) => (
-              <Pressable key={p}
-                onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                style={{
-                  flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: plan === p ? ADMIN.accent : "transparent", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
-                }}>
-                <Text style={{ ...ADMIN.type.label, color: plan === p ? ADMIN.accentInk : ADMIN.textSub }}>
-                  {PLAN_LABELS[p]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.label}>Durée</Text>
-          <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.xxl }}>
-            {MONTHS_OPTS.map((m, i) => (
-              <Pressable key={m}
-                onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                style={{
-                  flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: months === m ? ADMIN.accent : "transparent", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
-                }}>
-                <Text style={{ ...ADMIN.type.label, color: months === m ? ADMIN.accentInk : ADMIN.textSub }}>{m}m</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {grantError && <View style={{ marginBottom: ADMIN.space.md }}><ErrorMessage message={grantError} /></View>}
-
-          <AnimatedPressable
-            onPress={() => { setGrantError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
-            disabled={grantMut.isPending}
-            style={{
-              height: 50, borderRadius: 4, backgroundColor: ADMIN.accent,
-              alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8,
-              opacity: grantMut.isPending ? 0.7 : 1,
-            }}>
-            {grantMut.isPending
-              ? <ActivityIndicator size="small" color={Colors.white} />
-              : <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Accorder l'abonnement</Text>}
-          </AnimatedPressable>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -794,7 +702,7 @@ export default function AdminUsersScreen() {
           onClose={() => setSelectedUser(null)}
         />
       )}
-      {grantTarget && <GrantModal user={grantTarget} onClose={() => setGrantTarget(null)} />}
+      {grantTarget && <GrantSubscriptionModal user={grantTarget} onClose={() => setGrantTarget(null)} />}
 
       <ConfirmDialog
         visible={!!confirmTarget}
@@ -819,14 +727,3 @@ export default function AdminUsersScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  closeBtn: {
-    width: 32, height: 32, borderRadius: 4,
-    backgroundColor: ADMIN.surfaceHover,
-    alignItems: "center", justifyContent: "center",
-  },
-  label: {
-    ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 10,
-  },
-});

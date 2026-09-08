@@ -6,14 +6,14 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { TodayOverview } from "@/components/admin/TodayOverview";
 import { SectionLabel } from "@/components/admin/SectionLabel";
 import { Card } from "@/components/admin/Card";
+import { TriageQueue } from "@/components/admin/TriageQueue";
+import { GrantSubscriptionModal } from "@/components/admin/GrantSubscriptionModal";
 import { useScrollToTop } from "@react-navigation/native";
 import { syncAdminDashboardWidgets } from "@/lib/widgetSync";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [showGrant, setShowGrant] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
 
@@ -69,6 +70,15 @@ export default function AdminDashboard() {
     staleTime: 5 * 60_000,
   });
   const analytics = analyticsData?.data ?? null;
+  const { data: signupsData } = useQuery({
+    queryKey: ["admin-analytics-users", "month"],
+    queryFn: () => adminApi.getUsersAnalytics("month"),
+    staleTime: 5 * 60_000,
+  });
+  const signupPoints = useMemo(
+    () => ((signupsData?.data ?? []) as Array<{ new_users: number }>).map((r) => Number(r.new_users) || 0),
+    [signupsData],
+  );
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
@@ -78,7 +88,6 @@ export default function AdminDashboard() {
   const pendingBookings = stats?.bookingsByStatus?.pending ?? 0;
   const flaggedReviews  = (reviewsData?.data as unknown[] | undefined)?.length ?? 0;
   const flaggedThreads  = (threadsData?.data as unknown[] | undefined)?.length ?? 0;
-  const urgentCount = pendingBookings + flaggedReviews + flaggedThreads;
 
   const maxSpark = useMemo(() => Math.max(1, ...sparkData), [sparkData]);
   const totalSparkRevenue = useMemo(() => sparkData.reduce((s, v) => s + v, 0), [sparkData]);
@@ -156,6 +165,7 @@ export default function AdminDashboard() {
   );
 
   return (
+    <>
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: ADMIN.bg }}
@@ -201,21 +211,8 @@ export default function AdminDashboard() {
         </View>
       </View>
 
-      {/* ── À traiter — détail opérationnel du verdict ci-dessus ── */}
-      {urgentCount > 0 && (
-        <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
-          <SectionLabel>À traiter</SectionLabel>
-          <Card>
-            <TodayOverview
-              items={[
-                { label: "réservations à confirmer",      count: pendingBookings, tone: "warning", onPress: () => router.push("/(admin)/bookings") },
-                { label: "avis signalés",                  count: flaggedReviews,  tone: "danger",  onPress: () => router.push("/(admin-tools)/reviews") },
-                { label: "conversations signalées",        count: flaggedThreads,  tone: "danger",  onPress: () => router.push("/(admin-tools)/messages") },
-              ]}
-            />
-          </Card>
-        </View>
-      )}
+      {/* ── À traiter — file actionnable (confirmer / lever un signalement) ── */}
+      <TriageQueue />
 
       {/* ── Répartition abonnements ── */}
       {subsTotal > 0 && (
@@ -242,25 +239,22 @@ export default function AdminDashboard() {
         </View>
       )}
 
-      {/* ── Accès rapides — cockpit : chaque outil admin à un tap ── */}
+      {/* ── Piloter — les outils sans onglet dédié, un tap chacun ── */}
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
         <SectionLabel>Piloter</SectionLabel>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ADMIN.space.md }}>
           {([
-            { label: "Utilisateurs", icon: "people-outline"        as const, badge: 0,            onPress: () => router.push("/(admin)/users") },
-            { label: "Réservations", icon: "calendar-outline"      as const, badge: pendingBookings, onPress: () => router.push("/(admin)/bookings") },
-            { label: "Paiements",    icon: "card-outline"          as const, badge: 0,            onPress: () => router.push("/(admin)/payments") },
-            { label: "Analytics",    icon: "stats-chart-outline"   as const, badge: 0,            onPress: () => router.push("/(admin-tools)/analytics") },
-            { label: "Coupons",      icon: "pricetag-outline"      as const, badge: 0,            onPress: () => router.push("/(admin-tools)/coupons") },
-            { label: "Notifier",     icon: "notifications-outline" as const, badge: 0,            onPress: () => router.push("/(admin-tools)/notifications") },
-            { label: "Avis",         icon: "star-outline"          as const, badge: flaggedReviews, onPress: () => router.push("/(admin-tools)/reviews") },
-            { label: "Messages",     icon: "chatbubbles-outline"   as const, badge: flaggedThreads, onPress: () => router.push("/(admin-tools)/messages") },
-            { label: "Journal",      icon: "receipt-outline"       as const, badge: 0,            onPress: () => router.push("/(admin-tools)/logs") },
+            { label: "Analytics", icon: "stats-chart-outline"   as const, badge: 0,             onPress: () => router.push("/(admin-tools)/analytics") },
+            { label: "Avis",      icon: "star-outline"           as const, badge: flaggedReviews, onPress: () => router.push("/(admin-tools)/reviews") },
+            { label: "Messages",  icon: "chatbubbles-outline"    as const, badge: flaggedThreads, onPress: () => router.push("/(admin-tools)/messages") },
+            { label: "Coupons",   icon: "pricetag-outline"       as const, badge: 0,             onPress: () => router.push("/(admin-tools)/coupons") },
+            { label: "Notifier",  icon: "notifications-outline"  as const, badge: 0,             onPress: () => router.push("/(admin-tools)/notifications") },
+            { label: "Journal",   icon: "receipt-outline"        as const, badge: 0,             onPress: () => router.push("/(admin-tools)/logs") },
           ]).map(({ label, icon, badge, onPress }) => (
             <AnimatedPressable
               key={label}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress(); }}
-              style={{ width: `${(100 - 6) / 3}%` }}
+              style={{ width: "31%", flexGrow: 1 }}
             >
               <Card style={{ alignItems: "center", gap: ADMIN.space.sm, paddingVertical: ADMIN.space.md, paddingHorizontal: 4 }}>
                 <View style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
@@ -276,6 +270,25 @@ export default function AdminDashboard() {
             </AnimatedPressable>
           ))}
         </View>
+
+        {/* Offrir un abonnement — raccourci vers l'octroi (recherche du pro dans la modale) */}
+        <AnimatedPressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowGrant(true); }}
+          style={{
+            marginTop: ADMIN.space.md, flexDirection: "row", alignItems: "center", gap: 14,
+            padding: 14, borderRadius: ADMIN.cardRadius,
+            backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder,
+          }}
+        >
+          <View style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="gift-outline" size={18} color={ADMIN.accentInk} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...ADMIN.type.name, color: ADMIN.text }}>Offrir un abonnement</Text>
+            <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub, marginTop: 1 }}>à un pro, sans passer par sa fiche</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={15} color={ADMIN.accent} />
+        </AnimatedPressable>
       </View>
 
       {/* ── Croissance — KPI réels sur 30 jours ── */}
@@ -375,6 +388,33 @@ export default function AdminDashboard() {
           </Card>
         </View>
       )}
+
+      {/* ── Inscriptions 30 jours ── */}
+      {signupPoints.length > 1 && (
+        <View style={{ paddingHorizontal: ADMIN.space.xl, marginTop: ADMIN.space.xl }}>
+          <SectionLabel trailing="30 jours">Inscriptions</SectionLabel>
+          <Card>
+            <Text style={{ ...ADMIN.type.display, fontSize: 20, color: ADMIN.text, marginBottom: ADMIN.space.md }} numberOfLines={1}>
+              {formatNumberFR(signupPoints.reduce((s, v) => s + v, 0))} nouveaux
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 56 }}>
+              {signupPoints.map((v, i) => {
+                const max = Math.max(1, ...signupPoints);
+                return (
+                  <View key={i} style={{
+                    flex: 1, height: Math.max((v / max) * 52, v > 0 ? 3 : 1),
+                    borderRadius: 2,
+                    backgroundColor: i === signupPoints.length - 1 ? ADMIN.accent : ADMIN.surfaceHover,
+                  }} />
+                );
+              })}
+            </View>
+          </Card>
+        </View>
+      )}
+
     </ScrollView>
+    {showGrant && <GrantSubscriptionModal onClose={() => setShowGrant(false)} />}
+    </>
   );
 }

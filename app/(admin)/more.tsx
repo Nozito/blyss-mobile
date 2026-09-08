@@ -5,17 +5,16 @@ import {
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { AdminIcon } from "@/components/admin/AdminIcon";
 import { resolveMediaUrl } from "@/lib/media";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
 import { formatEUR, formatNumberFR } from "@/lib/format";
@@ -26,68 +25,11 @@ const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
 const ACCENT = ADMIN.accent;
 
-const TOOLS = [
-  { key: "coupons",    label: "Coupons",          sub: "Codes promo",       symbol: "tag.fill",             androidIcon: "pricetag-outline"        as const, color: Colors.warning,    route: "/(admin-tools)/coupons" },
-  { key: "reviews",    label: "Avis",             sub: "Modération",        symbol: "text.bubble.fill",     androidIcon: "chatbubble-outline"      as const, color: Colors.destructive, route: "/(admin-tools)/reviews" },
-  { key: "messages",   label: "Messages",         sub: "Conversations signalées", symbol: "flag.fill",     androidIcon: "flag-outline"            as const, color: Colors.destructive, route: "/(admin-tools)/messages" },
-  { key: "analytics",  label: "Analytics",        sub: "Métriques & revenus", symbol: "chart.bar.fill",     androidIcon: "bar-chart-outline"       as const, color: Colors.pro,        route: "/(admin-tools)/analytics" },
-  { key: "logs",       label: "Logs",             sub: "Événements système", symbol: "waveform",            androidIcon: "pulse-outline"           as const, color: Colors.info,       route: "/(admin-tools)/logs" },
-  { key: "notifs",     label: "Notifs",           sub: "Push ciblées",      symbol: "bell.fill",            androidIcon: "notifications-outline"   as const, color: Colors.success,    route: "/(admin-tools)/notifications" },
-];
-
 const INFO_ROWS = [
   { label: "Application", value: "Blyss Admin",                         icon: "apps-outline"           as const },
   { label: "Plateforme",  value: "React Native / Expo",                  icon: "phone-portrait-outline" as const },
   { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—", icon: "server-outline"         as const },
 ] as const;
-
-// ─── ToolRow ──────────────────────────────────────────────────────────────────
-
-function ToolRow({
-  tool, isLast,
-}: {
-  tool: typeof TOOLS[number]; isLast: boolean;
-}) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  return (
-    <Link href={tool.route as any} asChild>
-      <Pressable
-        onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
-        onPressIn={() =>
-          Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
-        }
-        onPressOut={() =>
-          Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()
-        }
-    >
-      <Animated.View style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: ADMIN.border,
-        transform: [{ scale }],
-      }}>
-        <View style={{
-          width: 40, height: 40, borderRadius: 4,
-          backgroundColor: withAlpha(tool.color, 0.14),
-          alignItems: "center", justifyContent: "center",
-        }}>
-          <AdminIcon ios={tool.symbol as any} android={tool.androidIcon} size={19} color={tool.color} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ ...ADMIN.type.name, color: TEXT1 }}>{tool.label}</Text>
-          <Text style={{ fontSize: 12, color: TEXT3, marginTop: 1 }}>{tool.sub}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={TEXT3} />
-      </Animated.View>
-    </Pressable>
-    </Link>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -117,12 +59,11 @@ export default function AdminMoreScreen() {
   // (ça, c'est "encaissé dans l'app", l'argent des pros). Fallback CA résa si
   // le backend ne renvoie pas encore subMrr.
   const stats = [
-    { label: "Utilisateurs", value: formatNumberFR(dashStats?.totalUsers), route: "/(admin)/users" as const },
-    { label: "Abos actifs",  value: formatNumberFR(dashStats?.subsActive), route: "/(admin-tools)/analytics" as const },
+    { label: "Utilisateurs", value: formatNumberFR(dashStats?.totalUsers) },
+    { label: "Abos actifs",  value: formatNumberFR(dashStats?.subsActive) },
     {
       label: dashStats?.subMrr ? "MRR abos" : "Encaissé (mois)",
       value: dashStats?.subMrr ? formatEUR(dashStats.subMrr) : formatEUR(dashStats?.collectedThisMonth || dashStats?.monthRevenue),
-      route: "/(admin-tools)/analytics" as const,
     },
   ];
 
@@ -167,21 +108,16 @@ export default function AdminMoreScreen() {
           borderWidth: 1, borderColor: ADMIN.border,
           flexDirection: "row",
         }}>
-          {stats.map(({ label, value, route }, i) => (
+          {stats.map(({ label, value }, i) => (
             <React.Fragment key={label}>
-              <Link href={route as any} asChild>
-              <AnimatedPressable
-                onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
-                style={{ flex: 1, paddingVertical: 16, paddingHorizontal: 12 }}
-              >
+              <View style={{ flex: 1, paddingVertical: 16, paddingHorizontal: 12 }}>
                 <Text style={{ ...ADMIN.type.display, fontSize: 22, color: TEXT1 }} numberOfLines={1}>
                   {value}
                 </Text>
                 <Text style={{ ...ADMIN.type.label, color: TEXT3, marginTop: 4 }} numberOfLines={1}>
                   {label}
                 </Text>
-              </AnimatedPressable>
-              </Link>
+              </View>
               {i < stats.length - 1 && (
                 <View style={{ width: 1, backgroundColor: ADMIN.border }} />
               )}
@@ -226,30 +162,9 @@ export default function AdminMoreScreen() {
             <Ionicons name="chevron-forward" size={15} color={ACCENT} />
           </AnimatedPressable>
 
-          {/* ── Outils Admin ── */}
-          <Text style={{
-            ...ADMIN.type.label, color: TEXT3,
-            marginBottom: 10,
-            marginTop: 28,
-          }}>
-            Outils Admin
-          </Text>
-
-          <View style={{
-            backgroundColor: ADMIN.surface,
-            borderRadius: ADMIN.cardRadius,
-            borderWidth: 1,
-            borderColor: ADMIN.border,
-            overflow: "hidden",
-          }}>
-            {TOOLS.map((tool, i) => (
-              <ToolRow
-                key={tool.key}
-                tool={tool}
-                isLast={i === TOOLS.length - 1}
-              />
-            ))}
-          </View>
+          {/* Les outils (Analytics, Avis, Messages, Coupons, Notifier, Journal)
+              vivent sur le dashboard — section « Piloter » — pour éviter le
+              doublon de navigation. */}
 
           {/* ── Bouton déconnexion ── */}
           <Pressable
