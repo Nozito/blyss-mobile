@@ -504,6 +504,8 @@ export interface ChatThreadSummary {
   other_name: string;
   other_photo: string | null;
   reservation_status: string | null;
+  /** ISO — début du RDV épinglé, pour masquer la bannière si passé. */
+  reservation_start: string | null;
 }
 
 export interface ChatMessage {
@@ -522,6 +524,8 @@ export interface ChatThreadDetail {
   otherPhoto: string | null;
   lastReservationId: number | null;
   reservationStatus: string | null;
+  /** ISO — début du RDV épinglé, pour masquer la bannière si passé. */
+  reservationStart: string | null;
   isLocked: boolean;
   messages: ChatMessage[];
 }
