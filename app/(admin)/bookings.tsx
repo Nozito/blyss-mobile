@@ -40,7 +40,7 @@ type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 type StatusFilter  = "all" | BookingStatus;
 
 const STATUS_CFG: Record<BookingStatus, { label: string }> = {
-  pending:   { label: "En attente" },
+  pending:   { label: "En attente de paiement" },
   confirmed: { label: "Confirmée" },
   completed: { label: "Terminée" },
   cancelled: { label: "Annulée" },
@@ -52,7 +52,7 @@ const STATUS_TONE: Record<BookingStatus, StatusTone> = {
 
 const FILTERS: Array<{ key: StatusFilter; label: string }> = [
   { key: "all",       label: "Tous" },
-  { key: "pending",   label: "Attente" },
+  { key: "pending",   label: "Paiement" },
   { key: "confirmed", label: "Confirmée" },
   { key: "completed", label: "Terminée" },
   { key: "cancelled", label: "Annulée" },
@@ -265,8 +265,8 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
 
   // Single-word labels only — two words in a 4-column card wraps to a second line.
   const metrics = [
-    { label: "CA",         value: formatEUR(revenue) },
-    { label: "Attente",    value: formatNumberFR(counts.pending) },
+    { label: "Volume",     value: formatEUR(revenue) },
+    { label: "Paiement",   value: formatNumberFR(counts.pending) },
     { label: "Confirmées", value: formatNumberFR(counts.confirmed) },
     { label: "Terminées",  value: formatNumberFR(counts.completed) },
   ];

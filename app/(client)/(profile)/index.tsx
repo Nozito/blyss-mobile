@@ -17,6 +17,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
+import { switchRole } from "@/lib/roleSwitch";
 
 // Groupe compte
 const ACCOUNT_ITEMS = [
@@ -41,15 +42,7 @@ export default function ProfileScreen() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showRoleSwitch, setShowRoleSwitch] = useState(false);
 
-  const goToRole = (role: AdminRole) => {
-    setShowRoleSwitch(false);
-    const routes: Record<AdminRole, string> = {
-      client: "/(client)",
-      pro: "/(pro)/dashboard",
-      admin: "/(admin)/dashboard",
-    };
-    router.replace(routes[role] as never);
-  };
+  const goToRole = (role: AdminRole) => { setShowRoleSwitch(false); switchRole(role); };
   const showActionSheet = useActionSheet();
 
   const pickFromGallery = async () => {
