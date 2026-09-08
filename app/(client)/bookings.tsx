@@ -65,6 +65,15 @@ const fmtRelativeDay = (s: string): string | null => {
   return null;
 };
 
+// Annulation / report : possible uniquement tant que le délai de prévenance
+// fixé par la pro n'est pas dépassé. Passé cette limite, la cliente ne peut plus
+// ni annuler ni reporter (le backend applique la même règle côté API).
+const canModifyBooking = (b: Booking): boolean => {
+  const deadline =
+    new Date(b.start_datetime).getTime() - (b.cancellation_notice_hours ?? 24) * 3_600_000;
+  return Date.now() < deadline;
+};
+
 // ── Reschedule Modal ──────────────────────────────────────────────────────────
 
 function RescheduleModal({
@@ -573,14 +582,17 @@ export default function MyBookingsScreen() {
   const activeList = activeTab === "upcoming" ? upcoming : activeTab === "past" ? past : cancelled;
   const hasOnlyPastBookings = upcoming.length === 0 && (past.length > 0 || cancelled.length > 0);
 
-  const renderItem = useCallback(({ item }: { item: Booking }) => (
-    <BookingCard
-      booking={item}
-      isUpcoming={activeTab === "upcoming"}
-      onReschedule={activeTab === "upcoming" ? setRescheduleBooking : undefined}
-      onCancel={activeTab === "upcoming" ? handleCancel : undefined}
-    />
-  ), [activeTab, handleCancel]);
+  const renderItem = useCallback(({ item }: { item: Booking }) => {
+    const modifiable = activeTab === "upcoming" && canModifyBooking(item);
+    return (
+      <BookingCard
+        booking={item}
+        isUpcoming={activeTab === "upcoming"}
+        onReschedule={modifiable ? setRescheduleBooking : undefined}
+        onCancel={modifiable ? handleCancel : undefined}
+      />
+    );
+  }, [activeTab, handleCancel]);
 
   const listHeader = (
     <View>

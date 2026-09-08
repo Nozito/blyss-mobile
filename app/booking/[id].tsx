@@ -58,6 +58,17 @@ interface BookingDetailData {
    * the pro's exact address stays private otherwise, even from this client. */
   address_line?: string | null;
   postal_code?: string | null;
+  /** Délai de prévenance (heures) fixé par la pro. Passé cette limite avant le
+   * RDV, la cliente ne peut plus annuler ni reporter. */
+  cancellation_notice_hours?: number | null;
+}
+
+// Annulation / report possibles seulement tant que le délai de prévenance
+// fixé par la pro n'est pas dépassé (le backend applique la même règle).
+function canModifyBooking(b: BookingDetailData): boolean {
+  const deadline =
+    new Date(b.start_datetime).getTime() - (b.cancellation_notice_hours ?? 24) * 3_600_000;
+  return Date.now() < deadline;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -511,8 +522,9 @@ export default function BookingDetailScreen() {
           </FadeCard>
         )}
 
-        {/* Annulation — uniquement pour une réservation à venir non encore honorée */}
-        {(booking.status === "confirmed" || booking.status === "pending") && (
+        {/* Annulation — uniquement pour une réservation à venir non encore honorée,
+            et seulement tant que le délai d'annulation de la pro n'est pas dépassé */}
+        {(booking.status === "confirmed" || booking.status === "pending") && canModifyBooking(booking) && (
           <FadeCard delay={300}>
             <Pressable
               style={styles.cancelBookingBtn}
