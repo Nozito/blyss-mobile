@@ -69,12 +69,12 @@ function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
             {user.first_name} {user.last_name}
           </Text>
           <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${roleColor}20` }}>
-            <Text style={{ fontSize: 9, fontWeight: "700", color: roleColor, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <Text style={{ ...ADMIN.type.label, fontSize: 9, letterSpacing: 1, color: roleColor }}>
               {user.role}
             </Text>
           </View>
           <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: `${statusColor}18` }}>
-            <Text style={{ fontSize: 9, fontWeight: "700", color: statusColor, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <Text style={{ ...ADMIN.type.label, fontSize: 9, letterSpacing: 1, color: statusColor }}>
               {user.is_active ? "Actif" : "Inactif"}
             </Text>
           </View>

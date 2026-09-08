@@ -66,7 +66,7 @@ function ThreadSkeleton() {
   return (
     <View style={{ paddingHorizontal: 16, gap: 10, paddingTop: 12 }}>
       {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, gap: 10 }}>
+        <View key={i} style={{ backgroundColor: CARD, borderRadius: 4, padding: 16, borderWidth: 1, borderColor: BORDER, gap: 10 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <SkeletonBox width={40} height={40} borderRadius={12} />
             <View style={{ flex: 1, gap: 6 }}>
@@ -229,7 +229,7 @@ export default function AdminMessagesScreen() {
         <View style={{ flex: 1, paddingHorizontal: 20 }}>
           {listHeader}
           <View style={{ alignItems: "center", paddingVertical: 80, gap: 12 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les conversations</Text>
+            <Text style={{ ...ADMIN.type.name, color: TEXT1 }}>Impossible de charger les conversations</Text>
             <Text style={{ fontSize: 13, color: TEXT2, textAlign: "center", paddingHorizontal: 20 }}>Vérifie ta connexion et réessaie.</Text>
             <AnimatedPressable onPress={onRefresh}>
               <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
@@ -269,7 +269,7 @@ export default function AdminMessagesScreen() {
             )
           }
           renderItem={({ item }) => (
-            <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
+            <View style={{ backgroundColor: CARD, borderRadius: 4, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
                 <View style={{ width: 40, height: 40, borderRadius: 4, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="chatbubbles-outline" size={17} color={Colors.destructive} />
@@ -370,7 +370,7 @@ export default function AdminMessagesScreen() {
             >
               <Ionicons name="close" size={18} color={TEXT1} />
             </AnimatedIconButton>
-            <Text style={{ fontSize: 17, fontWeight: "700", color: TEXT1 }} numberOfLines={1}>
+            <Text style={{ ...ADMIN.type.name, color: TEXT1 }} numberOfLines={1}>
               {detailThread ? `${detailThread.client_name} ↔ ${detailThread.pro_name}` : ""}
             </Text>
           </View>
@@ -382,7 +382,7 @@ export default function AdminMessagesScreen() {
             <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
               {detailFlags.length > 0 && (
                 <View style={{ backgroundColor: CARD, borderRadius: 4, padding: 14, borderWidth: 1, borderColor: BORDER, gap: 10, marginBottom: 4 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: TEXT1 }}>Historique des signalements</Text>
+                  <Text style={{ ...ADMIN.type.title, fontSize: 12, color: TEXT1 }}>Historique des signalements</Text>
                   {detailFlags.map((f) => {
                     const outcomeBadge = reportOutcome(f.status, f.outcome);
                     return (
@@ -421,7 +421,7 @@ export default function AdminMessagesScreen() {
                     borderWidth: 1, borderColor: BORDER, borderRadius: 4, padding: photoUri ? 8 : 12, gap: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3, textTransform: "uppercase" }}>
+                  <Text style={{ ...ADMIN.type.label, color: TEXT3 }}>
                     {m.sender_role === "pro" ? "Pro" : m.sender_role === "client" ? "Cliente" : "Compte supprimé"}
                   </Text>
                   {photoUri && (
@@ -450,7 +450,7 @@ export default function AdminMessagesScreen() {
       <Modal visible={!!ignoreTarget} transparent animationType="fade" onRequestClose={() => setIgnoreTarget(null)}>
         <View style={{ flex: 1, backgroundColor: ADMIN.overlay, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
           <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => setIgnoreTarget(null)} />
-          <View style={{ backgroundColor: CARD, borderRadius: 20, padding: 20, width: "100%", borderWidth: 1, borderColor: BORDER, gap: 14 }}>
+          <View style={{ backgroundColor: CARD, borderRadius: 4, padding: 20, width: "100%", borderWidth: 1, borderColor: BORDER, gap: 14 }}>
             <Text style={{ fontSize: 17, fontWeight: "800", color: TEXT1 }}>Classer ce signalement</Text>
             <Text style={{ fontSize: 13, color: TEXT3, lineHeight: 18 }}>
               {ignoreTarget ? `${ignoreTarget.client_name} ↔ ${ignoreTarget.pro_name}` : ""} — le contenu n'est pas effacé.

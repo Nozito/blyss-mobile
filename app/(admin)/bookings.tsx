@@ -388,7 +388,7 @@ function BookingFiltersModal({
             </AnimatedIconButton>
           </View>
 
-          <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Date</Text>
+          <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 10 }}>Date</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
             <AnimatedPressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onChangeDate(new Date()); }}
@@ -419,7 +419,7 @@ function BookingFiltersModal({
             <RNDateTimePicker mode="date" value={date ?? new Date()} onChange={handleDateChange} />
           )}
 
-          <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Client ou pro</Text>
+          <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 10 }}>Client ou pro</Text>
           <ClientPicker selected={client} onSelect={onChangeClient} />
         </View>
       </View>

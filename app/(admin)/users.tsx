@@ -766,7 +766,7 @@ export default function AdminUsersScreen() {
                     {i > 0 && <View style={{ width: 1, backgroundColor: ADMIN.border, marginHorizontal: ADMIN.space.sm }} />}
                     <View style={{ flex: 1, alignItems: "center" }}>
                       <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{value}</Text>
-                      <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }} numberOfLines={1}>{label}</Text>
+                      <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 2 }} numberOfLines={1}>{label}</Text>
                     </View>
                   </React.Fragment>
                 ))}

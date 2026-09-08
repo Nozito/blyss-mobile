@@ -60,8 +60,8 @@ function LogRow({ log }: { log: Log }) {
             <Text style={{ ...ADMIN.type.title, fontSize: 13, color: TEXT1, flex: 1, marginRight: 10 }} numberOfLines={2}>
               {log.action}
             </Text>
-            <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: cfg.bg }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
+            <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 3, backgroundColor: cfg.bg }}>
+              <Text style={{ ...ADMIN.type.label, color: cfg.color }}>{cfg.label}</Text>
             </View>
           </View>
           <Text style={{ fontSize: 12, color: TEXT2, lineHeight: 18, marginBottom: 8 }} numberOfLines={2}>
@@ -83,7 +83,7 @@ function LogRow({ log }: { log: Log }) {
             {log.ip_address && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <Ionicons name="globe-outline" size={11} color={TEXT3} />
-                <Text style={{ fontSize: 11, color: TEXT2 }}>{log.ip_address}</Text>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 11, fontWeight: "500", color: TEXT2 }}>{log.ip_address}</Text>
               </View>
             )}
           </View>
@@ -96,7 +96,7 @@ function LogRow({ log }: { log: Log }) {
 function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
     <View style={{ borderRadius: 4, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: BORDER }}>
-      <Text style={{ fontSize: 10, color, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
+      <Text style={{ ...ADMIN.type.label, color, marginBottom: 3 }}>{label}</Text>
       <Text style={{ ...ADMIN.type.display, fontSize: 22, color }}>{value}</Text>
     </View>
   );
@@ -263,17 +263,17 @@ export default function AdminLogsScreen() {
             </View>
           ) : loadError ? (
             <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: 64, height: 64, borderRadius: 4, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="cloud-offline-outline" size={32} color={TEXT3} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les logs</Text>
+              <Text style={{ ...ADMIN.type.name, color: TEXT1 }}>Impossible de charger les logs</Text>
               <AnimatedPressable onPress={fetchLogs} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accent }}>
                 <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
               </AnimatedPressable>
             </View>
           ) : (
             <View style={{ alignItems: "center", paddingVertical: 60 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 4, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                 <Ionicons name="pulse-outline" size={32} color={TEXT3} />
               </View>
               <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1, marginBottom: 6 }}>Aucun log trouvé</Text>

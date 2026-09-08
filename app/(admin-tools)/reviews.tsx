@@ -41,7 +41,7 @@ function ReviewSkeleton() {
   return (
     <View style={{ paddingHorizontal: 16, gap: 10, paddingTop: 12 }}>
       {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, gap: 10 }}>
+        <View key={i} style={{ backgroundColor: CARD, borderRadius: 4, padding: 16, borderWidth: 1, borderColor: BORDER, gap: 10 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <SkeletonBox width={40} height={40} borderRadius={12} />
             <View style={{ flex: 1, gap: 6 }}>
@@ -187,7 +187,7 @@ export default function ReviewsScreen() {
         <View style={{ flex: 1, paddingHorizontal: 20 }}>
           {listHeader}
           <View style={{ alignItems: "center", paddingVertical: 80, gap: 12 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les avis</Text>
+            <Text style={{ ...ADMIN.type.name, color: TEXT1 }}>Impossible de charger les avis</Text>
             <Text style={{ fontSize: 13, color: TEXT2, textAlign: "center", paddingHorizontal: 20 }}>Vérifie ta connexion et réessaie.</Text>
             <AnimatedPressable onPress={onRefresh}>
               <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
@@ -220,7 +220,7 @@ export default function ReviewsScreen() {
             )
           }
           renderItem={({ item }) => (
-            <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
+            <View style={{ backgroundColor: CARD, borderRadius: 4, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
               {/* Author + rating */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
                 <View style={{ width: 40, height: 40, borderRadius: 4, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
@@ -229,7 +229,7 @@ export default function ReviewsScreen() {
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT1, marginBottom: 3 }}>{item.author_name}</Text>
+                  <Text style={{ ...ADMIN.type.name, fontSize: 14, color: TEXT1, marginBottom: 3 }}>{item.author_name}</Text>
                   <StarRow rating={item.rating} />
                 </View>
                 {tab === "flagged" ? (
