@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import { View, Text, ScrollView, RefreshControl } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -44,6 +45,7 @@ function DashboardSkeleton({ top }: { top: number }) {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [showGrant, setShowGrant] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -70,14 +72,15 @@ export default function AdminDashboard() {
     staleTime: 5 * 60_000,
   });
   const analytics = analyticsData?.data ?? null;
-  const { data: signupsData } = useQuery({
-    queryKey: ["admin-analytics-users", "month"],
-    queryFn: () => adminApi.getUsersAnalytics("month"),
+  const { data: bookingsTrendData } = useQuery({
+    queryKey: ["admin-analytics-bookings", "month"],
+    queryFn: () => adminApi.getBookingsAnalytics("month"),
     staleTime: 5 * 60_000,
   });
-  const signupPoints = useMemo(
-    () => ((signupsData?.data ?? []) as Array<{ new_users: number }>).map((r) => Number(r.new_users) || 0),
-    [signupsData],
+  const bookingTrend = useMemo(
+    () => ((bookingsTrendData?.data ?? []) as Array<{ total: number; revenue: number }>)
+      .map((r) => ({ total: Number(r.total) || 0, revenue: Number(r.revenue) || 0 })),
+    [bookingsTrendData],
   );
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
@@ -89,7 +92,6 @@ export default function AdminDashboard() {
   const flaggedReviews  = (reviewsData?.data as unknown[] | undefined)?.length ?? 0;
   const flaggedThreads  = (threadsData?.data as unknown[] | undefined)?.length ?? 0;
 
-  const maxSpark = useMemo(() => Math.max(1, ...sparkData), [sparkData]);
   const totalSparkRevenue = useMemo(() => sparkData.reduce((s, v) => s + v, 0), [sparkData]);
   const todayRevenue = sparkData.length > 0 ? sparkData[sparkData.length - 1] : 0;
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -169,7 +171,7 @@ export default function AdminDashboard() {
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: ADMIN.bg }}
-      contentContainerStyle={{ paddingBottom: ADMIN.space.xxl }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
       showsVerticalScrollIndicator={false}
       automaticallyAdjustContentInsets={false}
       contentInsetAdjustmentBehavior="never"
@@ -311,26 +313,12 @@ export default function AdminDashboard() {
         </View>
       )}
 
-      {/* ── Revenu du jour ── */}
-      <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
-        <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View style={{ gap: 4 }}>
-            <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }}>Revenu du jour</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ADMIN.success }} />
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{formatNumberFR(stats.todayBookings)} rdv aujourd'hui</Text>
-            </View>
-          </View>
-          <Text style={{ ...ADMIN.type.display, fontSize: 26, color: ADMIN.text }} numberOfLines={1}>{formatEUR(todayRevenue)}</Text>
-        </Card>
-      </View>
-
-      {/* ── Deux faits ── */}
+      {/* ── Aujourd'hui — pouls opérationnel, sans montant ── */}
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl, flexDirection: "row", gap: ADMIN.space.md }}>
         <Card style={{ flex: 1 }}>
-          <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Complétion</Text>
-          <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{formatPercentFR(completionRate)}</Text>
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>terminées</Text>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>RDV aujourd'hui</Text>
+          <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.todayBookings)}</Text>
+          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>{formatPercentFR(completionRate)} terminées</Text>
         </Card>
         <Card style={{ flex: 1 }}>
           <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Utilisateurs</Text>
@@ -367,51 +355,35 @@ export default function AdminDashboard() {
         </View>
       )}
 
-      {/* ── Revenus 30 jours ── */}
-      {sparkData.length > 1 && (
-        <View style={{ paddingHorizontal: ADMIN.space.xl }}>
-          <SectionLabel trailing="30 jours">Revenus</SectionLabel>
-          <Card>
-            <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: ADMIN.space.md }}>
-              <Text style={{ ...ADMIN.type.display, fontSize: 20, color: ADMIN.text }} numberOfLines={1}>{formatEUR(totalSparkRevenue)}</Text>
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }} numberOfLines={1}>CA du mois : {formatEUR(stats.monthRevenue)}</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 56 }}>
-              {sparkData.map((v, i) => (
-                <View key={i} style={{
-                  flex: 1, height: Math.max((v / maxSpark) * 52, v > 0 ? 3 : 1),
-                  borderRadius: 2,
-                  backgroundColor: i === sparkData.length - 1 ? ADMIN.accent : ADMIN.surfaceHover,
-                }} />
-              ))}
-            </View>
-          </Card>
-        </View>
-      )}
-
-      {/* ── Inscriptions 30 jours ── */}
-      {signupPoints.length > 1 && (
-        <View style={{ paddingHorizontal: ADMIN.space.xl, marginTop: ADMIN.space.xl }}>
-          <SectionLabel trailing="30 jours">Inscriptions</SectionLabel>
-          <Card>
-            <Text style={{ ...ADMIN.type.display, fontSize: 20, color: ADMIN.text, marginBottom: ADMIN.space.md }} numberOfLines={1}>
-              {formatNumberFR(signupPoints.reduce((s, v) => s + v, 0))} nouveaux
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 56 }}>
-              {signupPoints.map((v, i) => {
-                const max = Math.max(1, ...signupPoints);
-                return (
+      {/* ── Activité 30 jours — volume de réservations, le signal le plus parlant ── */}
+      {bookingTrend.length > 1 && (() => {
+        const totalResa = bookingTrend.reduce((s, p) => s + p.total, 0);
+        const totalRev = bookingTrend.reduce((s, p) => s + p.revenue, 0);
+        const maxDay = Math.max(1, ...bookingTrend.map((p) => p.total));
+        return (
+          <View style={{ paddingHorizontal: ADMIN.space.xl }}>
+            <SectionLabel trailing="30 jours">Activité</SectionLabel>
+            <Card>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: ADMIN.space.md, marginBottom: ADMIN.space.md, flexWrap: "wrap" }}>
+                <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(totalResa)}</Text>
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }} numberOfLines={1}>réservations</Text>
+                <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginLeft: "auto" }} numberOfLines={1}>
+                  {formatNumberFR(analytics?.users.new_last_30d ?? 0)} inscrits · {formatEUR(totalRev)} encaissés
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 56 }}>
+                {bookingTrend.map((p, i) => (
                   <View key={i} style={{
-                    flex: 1, height: Math.max((v / max) * 52, v > 0 ? 3 : 1),
+                    flex: 1, height: Math.max((p.total / maxDay) * 52, p.total > 0 ? 3 : 1),
                     borderRadius: 2,
-                    backgroundColor: i === signupPoints.length - 1 ? ADMIN.accent : ADMIN.surfaceHover,
+                    backgroundColor: i === bookingTrend.length - 1 ? ADMIN.accent : ADMIN.surfaceHover,
                   }} />
-                );
-              })}
-            </View>
-          </Card>
-        </View>
-      )}
+                ))}
+              </View>
+            </Card>
+          </View>
+        );
+      })()}
 
     </ScrollView>
     {showGrant && <GrantSubscriptionModal onClose={() => setShowGrant(false)} />}
