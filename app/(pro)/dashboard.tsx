@@ -336,7 +336,7 @@ export default function ProDashboard() {
 
   if (isLoading) { // BLYSS-FIX: 2.3 — shimmer skeletons replacing static boxes
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: Math.max(insets.top - 12, 12) }}>
         <View style={{ padding: 20, gap: 16 }}>
           {/* Hero gradient area */}
           <SkeletonBox height={160} borderRadius={20} />
@@ -364,7 +364,7 @@ export default function ProDashboard() {
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top,
+        paddingTop: Math.max(insets.top - 12, 12),
         paddingBottom: insets.bottom + 100,
         paddingHorizontal: 20,
         gap: 16,

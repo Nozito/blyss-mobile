@@ -186,7 +186,7 @@ export default function ProProfileScreen() {
       ref={scrollRef}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top,
+        paddingTop: Math.max(insets.top - 12, 12),
         paddingBottom: insets.bottom + 24,
         paddingHorizontal: 20,
       }}

@@ -63,6 +63,12 @@ export default function AdminDashboard() {
     queryFn: () => adminApi.getMessageThreads({ flagged: true, limit: 50 }),
     staleTime: 60_000,
   });
+  const { data: analyticsData } = useQuery({
+    queryKey: ["admin-analytics"],
+    queryFn: () => adminApi.getAnalytics(),
+    staleTime: 5 * 60_000,
+  });
+  const analytics = analyticsData?.data ?? null;
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await refetch(); setRefreshing(false); }, [refetch]);
 
@@ -236,26 +242,61 @@ export default function AdminDashboard() {
         </View>
       )}
 
-      {/* ── Accès rapides ── */}
-      <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl, flexDirection: "row", gap: ADMIN.space.md }}>
-        {[
-          { label: "Coupon",         icon: "pricetag-outline"       as const, onPress: () => router.push("/(admin-tools)/coupons") },
-          { label: "Notifier",       icon: "notifications-outline"  as const, onPress: () => router.push("/(admin-tools)/notifications") },
-        ].map(({ label, icon, onPress }) => (
-          <AnimatedPressable
-            key={label}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress(); }}
-            style={{ flex: 1 }}
-          >
-            <Card style={{ alignItems: "center", gap: ADMIN.space.sm, paddingVertical: ADMIN.space.md }}>
-              <View style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name={icon} size={17} color={ADMIN.textSub} />
-              </View>
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.text, fontWeight: "600", textAlign: "center" }} numberOfLines={1}>{label}</Text>
-            </Card>
-          </AnimatedPressable>
-        ))}
+      {/* ── Accès rapides — cockpit : chaque outil admin à un tap ── */}
+      <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
+        <SectionLabel>Piloter</SectionLabel>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ADMIN.space.md }}>
+          {([
+            { label: "Utilisateurs", icon: "people-outline"        as const, badge: 0,            onPress: () => router.push("/(admin)/users") },
+            { label: "Réservations", icon: "calendar-outline"      as const, badge: pendingBookings, onPress: () => router.push("/(admin)/bookings") },
+            { label: "Paiements",    icon: "card-outline"          as const, badge: 0,            onPress: () => router.push("/(admin)/payments") },
+            { label: "Analytics",    icon: "stats-chart-outline"   as const, badge: 0,            onPress: () => router.push("/(admin-tools)/analytics") },
+            { label: "Coupons",      icon: "pricetag-outline"      as const, badge: 0,            onPress: () => router.push("/(admin-tools)/coupons") },
+            { label: "Notifier",     icon: "notifications-outline" as const, badge: 0,            onPress: () => router.push("/(admin-tools)/notifications") },
+            { label: "Avis",         icon: "star-outline"          as const, badge: flaggedReviews, onPress: () => router.push("/(admin-tools)/reviews") },
+            { label: "Messages",     icon: "chatbubbles-outline"   as const, badge: flaggedThreads, onPress: () => router.push("/(admin-tools)/messages") },
+            { label: "Journal",      icon: "receipt-outline"       as const, badge: 0,            onPress: () => router.push("/(admin-tools)/logs") },
+          ]).map(({ label, icon, badge, onPress }) => (
+            <AnimatedPressable
+              key={label}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress(); }}
+              style={{ width: `${(100 - 6) / 3}%` }}
+            >
+              <Card style={{ alignItems: "center", gap: ADMIN.space.sm, paddingVertical: ADMIN.space.md, paddingHorizontal: 4 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name={icon} size={17} color={ADMIN.textSub} />
+                  {badge > 0 && (
+                    <View style={{ position: "absolute", top: -5, right: -5, minWidth: 15, height: 15, paddingHorizontal: 3, borderRadius: 2, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontSize: 9, fontWeight: "900", color: ADMIN.accentInk }}>{badge > 99 ? "99" : badge}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ ...ADMIN.type.caption, color: ADMIN.text, fontWeight: "600", textAlign: "center" }} numberOfLines={1}>{label}</Text>
+              </Card>
+            </AnimatedPressable>
+          ))}
+        </View>
       </View>
+
+      {/* ── Croissance — KPI réels sur 30 jours ── */}
+      {analytics && (
+        <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
+          <SectionLabel trailing="30 jours">Croissance</SectionLabel>
+          <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+            {[
+              { k: "Nouveaux", v: formatNumberFR(analytics.users.new_last_30d), s: "inscrits" },
+              { k: "Réservations", v: formatNumberFR(analytics.bookings.last_30d), s: "sur 30j" },
+              { k: "Pros / Clients", v: `${formatNumberFR(analytics.users.total_pros)} / ${formatNumberFR(analytics.users.total_clients)}`, s: "base" },
+            ].map(({ k, v, s }) => (
+              <Card key={k} style={{ flex: 1 }}>
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>{k}</Text>
+                <Text style={{ ...ADMIN.type.display, fontSize: 20, color: ADMIN.text }} numberOfLines={1}>{v}</Text>
+                <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>{s}</Text>
+              </Card>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* ── Revenu du jour ── */}
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
