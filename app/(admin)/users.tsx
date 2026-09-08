@@ -86,7 +86,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"ban" | "delete" | null>(null);
 
-  const { data: fullData } = useQuery({
+  const { data: fullData, isLoading: detailLoading } = useQuery({
     queryKey: ["admin-user", user.id],
     queryFn:  () => adminApi.getUser(user.id),
     staleTime: 60_000,
@@ -94,6 +94,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
   const full    = (fullData?.data as AdminUser | undefined) ?? user;
   const stats   = full.stats;
   const planStr = getActivePlan(full);
+  // fullData existe mais success=false → l'endpoint détail a échoué (500, DB…).
+  const detailError = fullData && !fullData.success ? (fullData.error ?? "Erreur inconnue") : null;
 
   const banMut = useMutation({
     mutationFn: () => adminApi.banUser(user.id),
@@ -173,6 +175,21 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 <Ionicons name="close" size={18} color={ADMIN.textSub} />
               </AnimatedIconButton>
             </View>
+
+            {detailLoading && !fullData && (
+              <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <ActivityIndicator size="small" color={ADMIN.textMuted} />
+                <Text style={{ ...ADMIN.type.body, color: ADMIN.textSub }}>Chargement de la fiche…</Text>
+              </View>
+            )}
+            {detailError && (
+              <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg }}>
+                <View style={{ borderWidth: 1, borderColor: ADMIN.dangerBorder, backgroundColor: ADMIN.dangerBg, padding: 12 }}>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.danger, marginBottom: 4 }}>Fiche détaillée indisponible</Text>
+                  <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>{detailError}</Text>
+                </View>
+              </View>
+            )}
 
             {/* Activité pro — agrégats métier (avis, résa réalisées, clientèle, abo) */}
             {full.role === "pro" && full.pro_activity && (() => {
