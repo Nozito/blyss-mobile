@@ -191,4 +191,21 @@ describe('ProDashboard', () => {
     // Falls back to empty state
     await findByText('Aucune cliente prévue');
   });
+
+  it('ligne tendance/CTA : conteneur peut passer à la ligne (anti-chevauchement)', async () => {
+    mockGetDashboard.mockResolvedValue({ success: true, data: BASE_DASHBOARD });
+    const { findByText } = renderDashboard();
+    const trend = await findByText(/% vs semaine dernière/);
+    expect(trend.props.style).toEqual(expect.objectContaining({ flexShrink: 1 }));
+    // Un ancêtre proche porte flexWrap:"wrap" → tendance et CTA peuvent
+    // se répartir sur deux lignes au lieu de se chevaucher.
+    const flatten = (s: any) => (Array.isArray(s) ? Object.assign({}, ...s.flat(Infinity)) : s ?? {});
+    let node: any = trend.parent;
+    let found = false;
+    for (let i = 0; i < 5 && node; i++) {
+      if (flatten(node.props?.style).flexWrap === 'wrap') { found = true; break; }
+      node = node.parent;
+    }
+    expect(found).toBe(true);
+  });
 });

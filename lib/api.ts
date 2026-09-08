@@ -622,10 +622,9 @@ export const proApi = {
 
   getClients: () => apiCall<unknown[]>("/api/pro/clients"),
 
-  // Unlike getClients (only clients who already have a reservation with this
-  // pro), this searches every app client — used to pick a client when the
-  // pro manually creates an appointment for someone booking with her for
-  // the first time.
+  // RGPD — recherche filtrée côté serveur, STRICTEMENT bornée aux clientes
+  // ayant déjà une réservation confirmed/completed avec cette pro. Pas de
+  // flux "nouvelle cliente" / contact exact.
   searchClients: (q: string) =>
     apiCall<{ id: number; first_name: string; last_name: string; phone_number: string | null; email: string; profile_photo: string | null }[]>(
       `/api/pro/clients/search?q=${encodeURIComponent(q)}`

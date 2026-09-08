@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, ScrollView, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { DateField } from "@/components/ui/DateField";
 import { withAlpha } from "@/constants/colors";
-import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
 import { proApi, type AvailabilitySlot, type ManualOverrideMode } from "@/lib/api";
@@ -65,7 +65,6 @@ export function NewAppointmentSheet({
   editing?: EditableAppointment | null;
 }) {
   const colors = useThemeColors();
-  const isDark = useIsDarkMode();
   const { user } = useAuth();
   const isEditing = !!editing;
 
@@ -82,7 +81,7 @@ export function NewAppointmentSheet({
   const [selectedPrestation, setSelectedPrestation] = useState<Prestation | null>(null);
 
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [time, setTime] = useState("09:00");
   const [earlyExecutionAccepted, setEarlyExecutionAccepted] = useState(false);
   const [initiatedVia, setInitiatedVia] = useState<"app" | "phone">("app");
@@ -332,12 +331,14 @@ export function NewAppointmentSheet({
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 18, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
           {step === 1 && !isEditing && (
             <View style={{ gap: 12 }}>
+              {/* RGPD — recherche STRICTEMENT bornée aux clientes de la pro
+                  (réservation confirmed/completed). Pas de flux "nouvelle cliente". */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.muted, borderRadius: 12, paddingHorizontal: 14, height: 46 }}>
                 <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
                 <TextInput
                   value={clientQuery}
                   onChangeText={setClientQuery}
-                  placeholder="Nom, téléphone ou email"
+                  placeholder="Rechercher parmi mes clientes"
                   placeholderTextColor={colors.mutedForeground}
                   style={{ flex: 1, fontSize: 14, color: colors.foreground }}
                   autoCapitalize="none"
@@ -348,14 +349,19 @@ export function NewAppointmentSheet({
                 <View style={{ padding: 20, alignItems: "center" }}><ActivityIndicator size="small" color={colors.primary} /></View>
               ) : clientResults.length === 0 ? (
                 <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center", paddingVertical: 12 }}>
-                  {debouncedClientQuery ? "Aucune cliente trouvée" : "Recherche une cliente déjà inscrite sur l'app"}
+                  {debouncedClientQuery
+                    ? "Aucune cliente à ce nom parmi les tiennes"
+                    : "Seules tes clientes ayant déjà eu un rendez-vous avec toi apparaissent ici."}
                 </Text>
               ) : (
                 <View style={{ gap: 8 }}>
                   {clientResults.map((c) => (
                     <AnimatedPressable
                       key={c.id}
-                      onPress={() => { setSelectedClient(c); setStep(2); }}
+                      onPress={() => {
+                        setSelectedClient(c);
+                        setStep(2);
+                      }}
                       style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.white, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: colors.border }}
                     >
                       <Avatar uri={c.profile_photo} name={`${c.first_name} ${c.last_name}`} size={40} />
@@ -424,32 +430,13 @@ export function NewAppointmentSheet({
                 <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{selectedPrestation.name}</Text>
               </AnimatedPressable>
 
-              <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8 }}>Date</Text>
-                <AnimatedPressable
-                  onPress={() => setShowDatePicker(true)}
-                  style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: showDatePicker ? colors.primary : colors.border, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground, textTransform: "capitalize" }}>
-                    {date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
-                  </Text>
-                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                </AnimatedPressable>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "default"}
-                    minimumDate={new Date()}
-                    onChange={(_, d) => {
-                      if (Platform.OS === "android") setShowDatePicker(false);
-                      if (d) setDate(d);
-                    }}
-                    themeVariant={isDark ? "dark" : "light"}
-                    accentColor={colors.primary}
-                  />
-                )}
-              </View>
+              <DateField
+                label="Date"
+                value={date}
+                onChange={(d) => { setDate(d); setSelectedSlotStart(null); }}
+                minimumDate={new Date()}
+                formatValue={(d) => d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+              />
 
               <View>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
@@ -499,7 +486,7 @@ export function NewAppointmentSheet({
                     )}
 
                     <AnimatedPressable
-                      onPress={() => { setSelectedSlotStart(null); setShowDatePicker(false); }}
+                      onPress={() => { setSelectedSlotStart(null); }}
                       style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
                     >
                       <Ionicons name={selectedSlotStart ? "ellipse-outline" : "radio-button-on"} size={15} color={colors.primary} />

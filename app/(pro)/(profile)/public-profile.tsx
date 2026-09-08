@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  Platform,
   Share,
   Alert,
 } from "react-native";
@@ -289,7 +290,10 @@ export default function ProPublicProfileScreen() {
   }, [isLoading, reduceMotion, contentOpacity]);
 
   const handleShare = async () => {
-    if (!user?.id) return;
+    // Id du profil réellement affiché (source: /api/users) — et non user.id du
+    // contexte d'auth, qui peut diverger pour un compte migré (ex. Sophie #75).
+    const shareId = profileData?.id ?? user?.id;
+    if (!shareId) return;
     if (!isPublic) {
       setShowPreview(false);
       Alert.alert(
@@ -298,14 +302,12 @@ export default function ProPublicProfileScreen() {
       );
       return;
     }
-    const url = `https://blyssapp.fr/s/${user.id}`;
-    const name = activityName || "mon activité";
+    const url = `https://blyssapp.fr/s/${shareId}`;
     try {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await Share.share({
-        message: `Réserve directement chez moi sur Blyss — ${name} : ${url}`,
-        url,
-      });
+      // Juste le lien, aucun texte : iOS affiche une belle carte de lien via
+      // `url`, Android n'accepte que `message`.
+      await Share.share(Platform.OS === "ios" ? { url } : { message: url });
     } catch {
       // partage annulé ou indisponible, rien à faire
     }

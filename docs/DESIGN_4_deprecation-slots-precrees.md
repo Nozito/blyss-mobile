@@ -215,3 +215,13 @@ Maquette (vue semaine, 7 lignes) :
 4. **Indisponibilité "récurrente"** (ex. "fermé tous les mercredis après-midi") :
    dans le périmètre de cet écran (une 4ᵉ plage "pause") ou plus tard ? Le modèle
    `working_hours` actuel le gère nativement (il suffit de ne pas créer la plage).
+
+---
+
+## 6. État d'avancement
+
+| Lot | État |
+|---|---|
+| 4.1 – 4.5 | livrés (mergés). |
+| **Bascule des 16 pros (4.6b)** | **faite le 2026-09-04.** Aucune n'avait de `working_hours` → seed d'horaires par défaut (lun→sam 09:00–19:00) puis `uses_availability_engine = TRUE`, une transaction, sur la base de prod. Script `backend/migrate-16-pros.ts` + `docs/RUNBOOK_migration-16-pros.md` (blyss-app, PR #30). Vérifié : 16/16 sur le moteur, 0 restante, 96 lignes `working_hours` (6 par pro), 57 slots `available` futurs de Sophie #75 supprimés (snapshotés), réservations inchangées (1032), aucun revert. |
+| 4.6 — **suppression `slots` / `reservations.slot_id` / flag** | **encore bloqué.** La migration `20260904000002_drop_reservations_slot_id.sql` (blyss-app) est auto-gardée : elle échoue tant que des réservations non annulées référencent un `slot_id` → **836** au 2026-09-04. Prérequis restants : (a) délier / `NULL` `reservations.slot_id` sur ces 836 lignes (bornées par `blocked_start/end_datetime` depuis 3.2), (b) retirer les ~53 références à `slot_id` dans le code booking/reschedule/cancellation **et redéployer** le backend, (c) exécuter `cleanup-legacy-slots.ts`, (d) retirer le skip CI de `20260904000002`. Suivi : blyss-app #26 (reste ouvert). |

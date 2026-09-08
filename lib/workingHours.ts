@@ -25,8 +25,8 @@ export const WORKING_HOURS_TIMES: string[] = (() => {
 })();
 
 export function timeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
+  const [h, m] = String(t ?? "").split(":").map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
 }
 
 /**
