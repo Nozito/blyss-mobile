@@ -342,7 +342,6 @@ export default function AdminMoreScreen() {
       <RoleSelectionModal
         visible={showSwitchModal}
         userName={fullName || "Admin"}
-        userInitials={initials || "A"}
         onSelectRole={(role: AdminRole) => {
           setShowSwitchModal(false);
           const routes: Record<AdminRole, string> = {

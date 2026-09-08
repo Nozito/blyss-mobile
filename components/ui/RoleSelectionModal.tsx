@@ -19,7 +19,6 @@ export type AdminRole = "client" | "pro" | "admin";
 interface Props {
   visible: boolean;
   userName: string;
-  userInitials: string;
   onSelectRole: (role: AdminRole) => void;
   onClose: () => void;
 }
@@ -94,7 +93,7 @@ function RoleRow({
 }
 
 export default function RoleSelectionModal({
-  visible, userName, userInitials, onSelectRole, onClose,
+  visible, userName, onSelectRole, onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
 
