@@ -9,11 +9,14 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import * as Application from "expo-application";
 import { adminApi } from "@/lib/api";
 import { withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
+import { EditProfileSheet } from "@/components/admin/EditProfileSheet";
+import { switchRole } from "@/lib/roleSwitch";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
@@ -25,8 +28,12 @@ const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
 const ACCENT = ADMIN.accent;
 
+const APP_VERSION = Application.nativeApplicationVersion ?? "—";
+const APP_BUILD = Application.nativeBuildVersion ?? null;
+
 const INFO_ROWS = [
-  { label: "Application", value: "Blyss Admin",                         icon: "apps-outline"           as const },
+  { label: "Version",     value: APP_BUILD ? `${APP_VERSION} (${APP_BUILD})` : APP_VERSION, icon: "pricetag-outline"      as const },
+  { label: "Application", value: "Blyss_App",                            icon: "apps-outline"           as const },
   { label: "Plateforme",  value: "React Native / Expo",                  icon: "phone-portrait-outline" as const },
   { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—", icon: "server-outline"         as const },
 ] as const;
@@ -40,6 +47,7 @@ export default function AdminMoreScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   const { data: dashData } = useQuery({
     queryKey: ["admin-dashboard"],
@@ -100,6 +108,13 @@ export default function AdminMoreScreen() {
               {user?.email} · Accès total
             </Text>
           </View>
+          <AnimatedPressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowEditProfile(true); }}
+            accessibilityLabel="Modifier mon compte"
+            style={{ width: 40, height: 40, borderRadius: 4, borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons name="create-outline" size={18} color={TEXT2} />
+          </AnimatedPressable>
         </View>
 
         {/* ── Stats strip — filet, chiffres 900 ── */}
@@ -259,15 +274,12 @@ export default function AdminMoreScreen() {
         userName={fullName || "Admin"}
         onSelectRole={(role: AdminRole) => {
           setShowSwitchModal(false);
-          const routes: Record<AdminRole, string> = {
-            client: "/(client)",
-            pro:    "/(pro)/dashboard",
-            admin:  "/(admin)/dashboard",
-          };
-          router.replace(routes[role] as any);
+          switchRole(role);
         }}
         onClose={() => setShowSwitchModal(false)}
       />
+
+      {showEditProfile && <EditProfileSheet onClose={() => setShowEditProfile(false)} />}
     </View>
   );
 }

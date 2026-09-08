@@ -21,6 +21,7 @@ import { proApi, usersApi, type User } from "@/lib/api";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { resolveMediaUrl } from "@/lib/media";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
+import { switchRole } from "@/lib/roleSwitch";
 
 function calculateProfileCompleteness(user: User | null | undefined): number {
   if (!user) return 0;
@@ -143,15 +144,7 @@ export default function ProProfileScreen() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showRoleSwitch, setShowRoleSwitch] = useState(false);
 
-  const goToRole = (role: AdminRole) => {
-    setShowRoleSwitch(false);
-    const routes: Record<AdminRole, string> = {
-      client: "/(client)",
-      pro: "/(pro)/dashboard",
-      admin: "/(admin)/dashboard",
-    };
-    router.replace(routes[role] as never);
-  };
+  const goToRole = (role: AdminRole) => { setShowRoleSwitch(false); switchRole(role); };
 
   const handleLogout = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -573,50 +566,31 @@ export default function ProProfileScreen() {
 
       {/* Admin switcher — admin only */}
       {user?.is_admin && (
-        <View style={{ marginBottom: 16, gap: 8 }}>
-          <AnimatedPressable
-            onPress={() => setShowRoleSwitch(true)}
-            style={{
-              flexDirection: "row", alignItems: "center", gap: 14,
-              backgroundColor: colors.white,
-              borderRadius: 20, padding: 16,
-              borderWidth: 1, borderColor: withAlpha(colors.admin, 0.28),
-            }}
-          >
-            <View style={{
-              width: 40, height: 40, borderRadius: 12,
-              backgroundColor: withAlpha(colors.admin, 0.1),
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name="shield-checkmark" size={18} color={colors.admin} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Vue administrateur</Text>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
-                Basculer vers Client, Pro ou Admin
-              </Text>
-            </View>
-            <Ionicons name="swap-horizontal" size={18} color={colors.admin} />
-          </AnimatedPressable>
-
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/pro-subscription-success" as any,
-                params: { plan: "signature", preview: "1" },
-              })
-            }
-            style={{
-              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-              paddingVertical: 10,
-            }}
-          >
-            <Ionicons name="play-outline" size={14} color={colors.mutedForeground} />
-            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>
-              Aperçu onboarding (confirmation → fin)
+        <AnimatedPressable
+          onPress={() => setShowRoleSwitch(true)}
+          style={{
+            marginBottom: 16,
+            flexDirection: "row", alignItems: "center", gap: 14,
+            backgroundColor: colors.white,
+            borderRadius: 20, padding: 16,
+            borderWidth: 1, borderColor: withAlpha(colors.admin, 0.28),
+          }}
+        >
+          <View style={{
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: withAlpha(colors.admin, 0.1),
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Ionicons name="shield-checkmark" size={18} color={colors.admin} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Vue administrateur</Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+              Basculer vers Client, Pro ou Admin
             </Text>
-          </Pressable>
-        </View>
+          </View>
+          <Ionicons name="swap-horizontal" size={18} color={colors.admin} />
+        </AnimatedPressable>
       )}
 
       {/* Menu — zone danger */}
