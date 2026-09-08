@@ -73,5 +73,16 @@ module.exports = tseslint.config(
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },
+  },
+  {
+    // Setup jest (CommonJS + globals jest)
+    files: ["jest.*.setup.js"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: { ...nodeGlobals, jest: "readonly" },
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
   }
 );

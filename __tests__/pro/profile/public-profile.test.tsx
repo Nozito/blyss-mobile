@@ -21,12 +21,6 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'Images' },
 }));
 
-jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn(),
-  notificationAsync: jest.fn(),
-  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
-  NotificationFeedbackType: { Success: 'success' },
-}));
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -59,12 +53,6 @@ jest.mock('@/components/ui/Input', () => ({
   },
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress, className }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/components/ui/ErrorMessage', () => ({
   ErrorMessage: ({ message }: any) => {
@@ -97,6 +85,11 @@ jest.mock('@/lib/api', () => ({
     updateProfile: (...args: any[]) => mockUpdateProfile(...args),
     uploadGallery: (...args: any[]) => mockUploadGallery(...args),
     deleteGallery: (...args: any[]) => mockDeleteGallery(...args),
+    getCancellationPolicy: jest.fn().mockResolvedValue({
+      success: true,
+      data: { cancellation_notice_hours: 24 },
+    }),
+    updateCancellationPolicy: jest.fn().mockResolvedValue({ success: true }),
   },
   usersApi: {
     uploadBannerPhoto: (...args: any[]) => mockUploadBannerPhoto(...args),

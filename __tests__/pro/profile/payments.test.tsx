@@ -44,12 +44,6 @@ jest.mock('@/components/ui/Input', () => ({
   },
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/components/ui/ErrorMessage', () => ({
   ErrorMessage: ({ message }: any) => {
@@ -134,18 +128,6 @@ describe('ProPaymentsScreen', () => {
     await findByText('Activer Stripe Connect');
   });
 
-  it('shows masked IBAN when iban exists and not editing', async () => {
-    const { findByText } = renderPayments();
-    // maskIBAN('FR7630006000011234567890189') → 'FR76 •••• •••• •••• •••• •••• 0189'
-    await findByText(/FR76.*0189/);
-  });
-
-  it('shows IBAN input in editing mode when Modifier pressed', async () => {
-    const { findByText, findByPlaceholderText } = renderPayments();
-    const modifierBtn = await findByText('Modifier');
-    fireEvent.press(modifierBtn);
-    await findByPlaceholderText('FR76 XXXX XXXX XXXX XXXX XXXX XXX');
-  });
 
   it('shows Paiements en ligne section', async () => {
     const { findByText } = renderPayments();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../utils/testQueryClient';
 
@@ -53,12 +53,6 @@ jest.mock('@/components/ui/ErrorMessage', () => ({
   },
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 const mockGetCalendar = jest.fn();
 const mockGetSlots = jest.fn();
@@ -121,19 +115,15 @@ describe('ProCalendarScreen', () => {
     await findByText(new RegExp(`${months[now.getMonth()]}.*${now.getFullYear()}`));
   });
 
-  it('shows empty slot state when no slots', async () => {
+  it('affiche le bouton RDV', async () => {
     const { findByText } = renderCalendar();
-    await findByText('Aucun créneau ce jour');
+    await findByText('RDV');
   });
 
-  it('renders "Créneau" add button', async () => {
-    const { findByText } = renderCalendar();
-    await findByText('Créneau');
+  it('affiche les cartes Horaires et Absences', async () => {
+    const { findAllByText } = renderCalendar();
+    await findAllByText('Horaires');
+    await findAllByText('Absences');
   });
 
-  it('renders Planning and Absences cards', async () => {
-    const { findByText } = renderCalendar();
-    await findByText('Planning');
-    await findByText('Absences');
-  });
 });

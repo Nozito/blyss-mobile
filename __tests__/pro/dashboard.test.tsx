@@ -136,7 +136,7 @@ describe('ProDashboard', () => {
   it('renders empty upcoming clients message when no clients', async () => {
     mockGetDashboard.mockResolvedValue({ success: true, data: BASE_DASHBOARD });
     const { findByText } = renderDashboard();
-    await findByText('Aucune cliente prévue');
+    await findByText(/Aucun rendez-vous/);
   });
 
   it('renders upcoming client names when clients present', async () => {
@@ -189,7 +189,7 @@ describe('ProDashboard', () => {
     mockGetDashboard.mockResolvedValue({ success: false, data: null });
     const { findByText } = renderDashboard();
     // Falls back to empty state
-    await findByText('Aucune cliente prévue');
+    await findByText(/Aucun rendez-vous/);
   });
 
   it('ligne tendance/CTA : conteneur peut passer à la ligne (anti-chevauchement)', async () => {

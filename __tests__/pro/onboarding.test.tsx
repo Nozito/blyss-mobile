@@ -52,7 +52,7 @@ jest.mock('@/lib/api', () => ({}));
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderOnboarding() {
-  const ProOnboardingScreen = require('../../app/(pro)/onboarding').default;
+  const ProOnboardingScreen = require('../../app/pro-onboarding').default;
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
       <ProOnboardingScreen />
@@ -78,7 +78,7 @@ describe('ProOnboardingScreen', () => {
 
   it('renders Suivant button on first slide', async () => {
     const { findByText } = renderOnboarding();
-    await findByText('Suivant');
+    await findByText('Suivant →');
   });
 
   it('renders Passer skip button', async () => {
@@ -88,20 +88,21 @@ describe('ProOnboardingScreen', () => {
 
   it('navigates to next slide when pressing Suivant', async () => {
     const { findByText } = renderOnboarding();
-    const nextBtn = await findByText('Suivant');
+    const nextBtn = await findByText('Suivant →');
     fireEvent.press(nextBtn);
     await findByText('Tes clientes');
   });
 
-  it('shows C\'est parti! on last slide and calls router.replace on press', async () => {
+  it('shows C\'est parti sur le dernier slide et redirige vers le dashboard', async () => {
     const { findByText } = renderOnboarding();
-    // Navigate to last slide (slide index 2)
-    const nextBtn1 = await findByText('Suivant');
-    fireEvent.press(nextBtn1);
-    const nextBtn2 = await findByText('Suivant');
-    fireEvent.press(nextBtn2);
-    const ctaBtn = await findByText("C'est parti !");
-    expect(ctaBtn).toBeTruthy();
+    // start (1re souscription) = 3 slides de base + 1 slide de clôture
+    for (let i = 0; i < 3; i++) {
+      const next = await findByText('Suivant →');
+      await act(async () => {
+        fireEvent.press(next);
+      });
+    }
+    const ctaBtn = await findByText("C'est parti →");
     await act(async () => {
       fireEvent.press(ctaBtn);
     });

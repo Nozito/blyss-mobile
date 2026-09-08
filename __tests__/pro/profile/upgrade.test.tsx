@@ -87,9 +87,9 @@ describe('ProUpgradeScreen', () => {
   it('renders feature list for Sérénité plan', () => {
     const { getByText } = renderUpgrade();
     expect(getByText('Tout Start inclus')).toBeTruthy();
-    expect(getByText('Module finance & statistiques')).toBeTruthy();
+    expect(getByText('Statistiques détaillées')).toBeTruthy();
     expect(getByText('Portfolio photos')).toBeTruthy();
-    expect(getByText('Rappels automatiques')).toBeTruthy();
+    expect(getByText('Export CSV / Excel')).toBeTruthy();
   });
 
   it('renders Passer au plan Sérénité CTA', () => {

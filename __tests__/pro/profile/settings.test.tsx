@@ -30,12 +30,6 @@ jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn(),
-  notificationAsync: jest.fn(),
-  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
-  NotificationFeedbackType: { Success: 'success' },
-}));
 
 const mockRefreshProfile = jest.fn().mockResolvedValue(undefined);
 
@@ -67,12 +61,6 @@ jest.mock('@/components/ui/Input', () => ({
   },
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/components/ui/ErrorMessage', () => ({
   ErrorMessage: ({ message }: any) => {

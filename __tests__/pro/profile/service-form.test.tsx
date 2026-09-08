@@ -49,12 +49,6 @@ jest.mock('@/components/ui/Input', () => ({
   },
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/components/ui/ErrorMessage', () => ({
   ErrorMessage: ({ message }: any) => {
