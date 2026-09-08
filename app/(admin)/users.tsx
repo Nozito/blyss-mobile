@@ -220,8 +220,9 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               );
             })()}
 
-            {/* Stats — two rows of stat cards, same shape as the dashboard's "Deux faits" */}
-            {stats && full.role !== "pro" && (
+            {/* Stats génériques — pour un client, ou en repli si le backend ne
+                renvoie pas encore pro_activity (déploiement en cours). */}
+            {stats && !(full.role === "pro" && full.pro_activity) && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg, gap: ADMIN.space.md }}>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
