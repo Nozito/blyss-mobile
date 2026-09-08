@@ -1291,6 +1291,7 @@ export interface AdminProActivity {
   subscription: {
     plan: string;
     status: string;
+    start_date: string | null;
     end_date: string | null;
     is_granted: boolean;
   } | null;

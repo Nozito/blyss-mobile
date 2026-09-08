@@ -10,7 +10,7 @@ import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tansta
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { adminApi, AdminUser, REPORT_REASONS } from "@/lib/api";
+import { adminApi, AdminUser, AdminMessageReport, REPORT_REASONS } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Colors, withAlpha } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
@@ -21,7 +21,6 @@ import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedP
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { SectionLabel } from "@/components/admin/SectionLabel";
-import { Row } from "@/components/admin/Row";
 import { ActionGrid } from "@/components/admin/ActionGrid";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
@@ -55,6 +54,51 @@ function reportOutcome(status: "pending" | "reviewed", outcome: "upheld" | "dism
   if (outcome === "abusive") return { label: "Abusif", tone: "danger" };
   if (outcome === "dismissed") return { label: "Classé sans suite", tone: "neutral" };
   return { label: "Confirmé", tone: "warning" };
+}
+
+const MAX_REPORTS_SHOWN = 3;
+
+// Une ligne de signalement — carte multi-lignes, pas un Row à sous-titre géant.
+function ReportRow({ r, dir, showDivider }: {
+  r: AdminMessageReport;
+  dir: "against" | "made";
+  showDivider: boolean;
+}) {
+  const oc = reportOutcome(r.status, r.outcome);
+  const who = dir === "against" ? r.flagged_by_name : r.reported_user_name;
+  return (
+    <View style={{ padding: 12, borderBottomWidth: showDivider ? 1 : 0, borderBottomColor: ADMIN.border, gap: 3 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <Text style={{ ...ADMIN.type.name, fontSize: 13, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{reasonLabel(r.reason_code)}</Text>
+        <StatusBadge label={oc.label} tone={oc.tone} />
+      </View>
+      <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }} numberOfLines={1}>
+        {dir === "against" ? "Par" : "Contre"} {who ?? "—"} · {new Date(r.created_at).toLocaleDateString("fr-FR")}
+      </Text>
+      {!!r.reason && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={2}>{r.reason}</Text>}
+      {!!r.admin_note && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, fontStyle: "italic" }} numberOfLines={2}>Note : {r.admin_note}</Text>}
+    </View>
+  );
+}
+
+function ReportBlock({ label, items, dir }: { label: string; items: AdminMessageReport[]; dir: "against" | "made" }) {
+  const shown = items.slice(0, MAX_REPORTS_SHOWN);
+  const rest = items.length - shown.length;
+  return (
+    <>
+      <SectionLabel>{`${label} (${items.length})`}</SectionLabel>
+      <Card style={{ padding: 0 }}>
+        {shown.map((r, i) => (
+          <ReportRow key={r.id} r={r} dir={dir} showDivider={i < shown.length - 1} />
+        ))}
+      </Card>
+      {rest > 0 && (
+        <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 6 }}>
+          + {rest} autre{rest > 1 ? "s" : ""} — voir Modération
+        </Text>
+      )}
+    </>
+  );
 }
 
 // ── Skeleton — same card shape as the real rows, so the layout doesn't jump ──
@@ -219,11 +263,16 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                     </View>
                     <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ADMIN.space.md }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }}>Abonnement</Text>
                         <Text style={{ ...ADMIN.type.name, color: ADMIN.text }} numberOfLines={1}>
-                          {pa.subscription ? (PLAN_LABELS[pa.subscription.plan] ?? pa.subscription.plan) : "Aucun"}
-                          {pa.subscription?.end_date ? ` · fin ${new Date(pa.subscription.end_date).toLocaleDateString("fr-FR")}` : ""}
+                          {pa.subscription
+                            ? `Abonnement ${PLAN_LABELS[pa.subscription.plan] ?? pa.subscription.plan}`
+                            : "Aucun abonnement"}
                         </Text>
+                        {pa.subscription?.start_date && (
+                          <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 3 }} numberOfLines={1}>
+                            depuis {new Date(pa.subscription.start_date).toLocaleDateString("fr-FR", { month: "2-digit", year: "numeric" })}
+                          </Text>
+                        )}
                       </View>
                       {pa.subscription && (
                         <StatusBadge
@@ -264,65 +313,19 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               </View>
             )}
 
-            {/* Subscription history — one card, rows inside */}
-            {(full.subscription_history ?? []).length > 0 && (
+            {/* Signalements — dans les deux sens, pour décider d'un bannissement
+                d'un coup d'œil. Listes plafonnées à 3, le détail est dans Modération. */}
+            {(full.reports?.against.length ?? 0) > 0 && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
-                <SectionLabel>Abonnements</SectionLabel>
-                <Card style={{ padding: 0 }}>
-                  {(full.subscription_history ?? []).slice(0, 4).map((sub, i, arr) => (
-                    <Row
-                      key={sub.id}
-                      title={PLAN_LABELS[sub.plan] ?? sub.plan}
-                      subtitle={new Date(sub.start_date).toLocaleDateString("fr-FR")}
-                      trailing={<StatusBadge label={sub.status === "active" ? "Actif" : sub.status} tone={sub.status === "active" ? "success" : "neutral"} />}
-                      showDivider={i < arr.length - 1}
-                    />
-                  ))}
-                </Card>
+                <ReportBlock label="Signalements reçus" items={full.reports!.against} dir="against" />
               </View>
             )}
-
-            {/* Signalements — historique complet, traités ou non, dans les deux
-                sens, pour décider d'un bannissement en un coup d'œil. */}
-            {((full.reports?.against.length ?? 0) > 0 || (full.reports?.made.length ?? 0) > 0) && (
+            {(full.reports?.made.length ?? 0) > 0 && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
-                <SectionLabel>{`Signalements reçus (${full.reports?.against.length ?? 0})`}</SectionLabel>
-                {(full.reports?.against.length ?? 0) > 0 ? (
-                  <Card style={{ padding: 0 }}>
-                    {(full.reports?.against ?? []).map((r, i, arr) => (
-                      <Row
-                        key={r.id}
-                        title={reasonLabel(r.reason_code)}
-                        subtitle={`Par ${r.flagged_by_name} · ${new Date(r.created_at).toLocaleDateString("fr-FR")}${r.reason ? ` — ${r.reason}` : ""}${r.admin_note ? ` · Note: ${r.admin_note}` : ""}`}
-                        trailing={<StatusBadge label={reportOutcome(r.status, r.outcome).label} tone={reportOutcome(r.status, r.outcome).tone} />}
-                        showDivider={i < arr.length - 1}
-                      />
-                    ))}
-                  </Card>
-                ) : (
-                  <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }}>Aucun signalement reçu.</Text>
-                )}
-
-                {(full.reports?.made.length ?? 0) > 0 && (
-                  <>
-                    <View style={{ height: ADMIN.space.md }} />
-                    <SectionLabel>{`Signalements effectués (${full.reports?.made.length ?? 0})`}</SectionLabel>
-                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }}>
-                      {`${full.reports?.made_justified_count ?? 0} fondé(s) · ${full.reports?.made_dismissed_count ?? 0} infondé(s) de bonne foi · ${full.reports?.made_abusive_count ?? 0} abusif(s)`}
-                    </Text>
-                    <Card style={{ padding: 0 }}>
-                      {(full.reports?.made ?? []).map((r, i, arr) => (
-                        <Row
-                          key={r.id}
-                          title={reasonLabel(r.reason_code)}
-                          subtitle={`Contre ${r.reported_user_name} · ${new Date(r.created_at).toLocaleDateString("fr-FR")}${r.admin_note ? ` · Note: ${r.admin_note}` : ""}`}
-                          trailing={<StatusBadge label={reportOutcome(r.status, r.outcome).label} tone={reportOutcome(r.status, r.outcome).tone} />}
-                          showDivider={i < arr.length - 1}
-                        />
-                      ))}
-                    </Card>
-                  </>
-                )}
+                <ReportBlock label="Signalements effectués" items={full.reports!.made} dir="made" />
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 6 }}>
+                  {`${full.reports?.made_abusive_count ?? 0} abusif(s)`}
+                </Text>
               </View>
             )}
 
