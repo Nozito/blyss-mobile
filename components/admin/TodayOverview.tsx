@@ -39,15 +39,15 @@ export function TodayOverview({ items }: { items: OverviewItem[] }) {
             onPress={item.onPress}
             accessibilityLabel={`${item.count} ${item.label}`}
             style={{
-              flexDirection: "row", alignItems: "center", gap: ADMIN.space.sm,
-              paddingVertical: ADMIN.space.sm,
+              flexDirection: "row", alignItems: "center", gap: ADMIN.space.md,
+              paddingVertical: ADMIN.space.md,
               borderTopWidth: i > 0 ? 1 : 0, borderTopColor: ADMIN.border,
             }}
           >
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: DOT_COLOR[item.tone] }} />
-            <Text style={{ ...ADMIN.type.body, color: ADMIN.text, flex: 1 }}>
-              <Text style={{ fontWeight: "700" }}>{item.count}</Text> {item.label}
+            <Text style={{ fontSize: 22, fontWeight: "900", letterSpacing: -1, width: 34, color: DOT_COLOR[item.tone] }}>
+              {item.count}
             </Text>
+            <Text style={{ ...ADMIN.type.body, fontWeight: "700", color: ADMIN.text, flex: 1 }}>{item.label}</Text>
             {item.onPress && <Ionicons name="chevron-forward" size={14} color={ADMIN.textMuted} />}
           </Wrapper>
         );

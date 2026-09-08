@@ -106,31 +106,37 @@ export default function AdminDashboard() {
       .slice(0, 4);
   }, [byStatus]);
 
-  // Verdict — the one headline that says what today actually looks like.
-  const hero = useMemo(() => {
-    if (urgentCount === 0) {
+  const eur = (v: number) => Math.round(v).toLocaleString("fr-FR");
+  const plan = stats?.subsByPlan ?? { start: 0, serenite: 0, signature: 0 };
+  const subsTotal = plan.signature + plan.serenite + plan.start;
+
+  // Métrique phare : le vrai CA plateforme = abonnements pros (MRR). Si le
+  // backend ne le renvoie pas encore, on retombe sur le CA de réservations.
+  const heroMetric = useMemo(() => {
+    const s = stats;
+    if (s && s.subMrr > 0) {
       return {
-        headline: "Rien à signaler\naujourd'hui",
-        sub: "Aucune action en attente sur les réservations, les pros ou les avis.",
-        ctaLabel: "Voir les utilisateurs",
-        onPressCta: () => router.push("/(admin)/users"),
-      };
-    }
-    if (urgentCount <= 3) {
-      return {
-        headline: "Quelques tâches\nà traiter",
-        sub: `${urgentCount} élément${urgentCount > 1 ? "s" : ""} en attente de votre validation.`,
-        ctaLabel: "Traiter",
-        onPressCta: () => router.push("/(admin)/bookings"),
+        label: "Revenu mensuel · abonnements",
+        value: eur(s.subMrr),
+        change: s.subsChange,
+        stats: [
+          { k: "Abos actifs", v: s.subsActive },
+          { k: "Pris ce mois", v: s.subsThisMonth },
+          { k: "Encaissé app", v: `${eur(s.collectedThisMonth)} €` },
+        ],
       };
     }
     return {
-      headline: `${urgentCount} éléments\nà traiter`,
-      sub: "Le volume en attente est élevé — commencez par les réservations.",
-      ctaLabel: "Voir les réservations",
-      onPressCta: () => router.push("/(admin)/bookings"),
+      label: "Revenu du mois",
+      value: eur(s?.monthRevenue ?? 0),
+      change: s?.revenueChange ?? null,
+      stats: [
+        { k: "RDV auj.", v: s?.todayBookings ?? 0 },
+        { k: "Actifs", v: s?.activeUsers ?? 0 },
+        { k: "Terminées", v: `${completionRate}%` },
+      ],
     };
-  }, [urgentCount, router]);
+  }, [stats, completionRate]);
 
   if (isLoading) return <DashboardSkeleton top={60} />;
   if (!stats) return (
@@ -157,38 +163,35 @@ export default function AdminDashboard() {
         subtitle={`${today.charAt(0).toUpperCase()}${today.slice(1)}`}
       />
 
-      {/* ── Hero — le verdict du jour, pas une liste de métriques ── */}
-      <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
-        <Card elevated>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: ADMIN.space.lg }}>
-            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: ADMIN.surfaceHover }}>
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, textTransform: "uppercase", letterSpacing: 0.6 }}>Aujourd'hui</Text>
+      {/* ── Métrique phare — aplat rose plein largeur ── */}
+      <View style={{ backgroundColor: ADMIN.accent, paddingHorizontal: ADMIN.space.xl, paddingVertical: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>
+            {heroMetric.label}
+          </Text>
+          {heroMetric.change !== null && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name={heroMetric.change >= 0 ? "trending-up" : "trending-down"} size={13} color={ADMIN.accentInk} />
+              <Text style={{ fontSize: 12, fontWeight: "900", color: ADMIN.accentInk }}>
+                {heroMetric.change >= 0 ? "+" : ""}{heroMetric.change}%
+              </Text>
             </View>
-            {stats.revenueChange !== null && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Ionicons name={stats.revenueChange >= 0 ? "trending-up" : "trending-down"} size={13} color={stats.revenueChange >= 0 ? ADMIN.success : ADMIN.danger} />
-                <Text style={{ ...ADMIN.type.caption, fontWeight: "700", color: stats.revenueChange >= 0 ? ADMIN.success : ADMIN.danger }}>
-                  {stats.revenueChange >= 0 ? "+" : ""}{stats.revenueChange}%
-                </Text>
-              </View>
-            )}
-          </View>
+          )}
+        </View>
 
-          <Text style={{ ...ADMIN.type.display, fontSize: 24, lineHeight: 30, color: ADMIN.text }}>{hero.headline}</Text>
-          <Text style={{ ...ADMIN.type.body, color: ADMIN.textSub, marginTop: ADMIN.space.sm }}>{hero.sub}</Text>
+        <Text style={{ ...ADMIN.type.hero, fontSize: 56, lineHeight: 54, color: ADMIN.accentInk, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>
+          {heroMetric.value}
+          <Text style={{ fontSize: 20 }}> €</Text>
+        </Text>
 
-          <View style={{ height: 1, backgroundColor: ADMIN.border, marginVertical: ADMIN.space.lg }} />
-
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>vs période précédente</Text>
-            <AnimatedPressable
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); hero.onPressCta(); }}
-              style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: ADMIN.accent }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.white }}>{hero.ctaLabel}</Text>
-            </AnimatedPressable>
-          </View>
-        </Card>
+        <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginTop: ADMIN.space.lg }}>
+          {heroMetric.stats.map((s) => (
+            <View key={s.k}>
+              <Text style={{ fontSize: 20, fontWeight: "900", letterSpacing: -0.8, color: ADMIN.accentInk }}>{s.v}</Text>
+              <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub, marginTop: 3 }}>{s.k}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       {/* ── À traiter — détail opérationnel du verdict ci-dessus ── */}
@@ -203,6 +206,31 @@ export default function AdminDashboard() {
                 { label: "conversations signalées",        count: flaggedThreads,  tone: "danger",  onPress: () => router.push("/(admin-tools)/messages") },
               ]}
             />
+          </Card>
+        </View>
+      )}
+
+      {/* ── Répartition abonnements ── */}
+      {subsTotal > 0 && (
+        <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
+          <SectionLabel trailing={`${subsTotal} actifs`}>Abonnements</SectionLabel>
+          <Card style={{ gap: ADMIN.space.md }}>
+            {([
+              { key: "signature", label: "Signature", count: plan.signature },
+              { key: "serenite", label: "Sérénité", count: plan.serenite },
+              { key: "start", label: "Start", count: plan.start },
+            ]).map((p) => {
+              const pct = subsTotal > 0 ? Math.round((p.count / subsTotal) * 100) : 0;
+              return (
+                <View key={p.key} style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md }}>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.text, width: 74 }}>{p.label}</Text>
+                  <View style={{ flex: 1, height: 8, backgroundColor: ADMIN.surfaceHover, overflow: "hidden" }}>
+                    <View style={{ width: `${pct}%`, height: "100%", backgroundColor: ADMIN.accent }} />
+                  </View>
+                  <Text style={{ ...ADMIN.type.mono, fontSize: 13, color: ADMIN.text, width: 46, textAlign: "right" }}>{p.count}</Text>
+                </View>
+              );
+            })}
           </Card>
         </View>
       )}

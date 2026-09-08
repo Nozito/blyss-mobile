@@ -12,6 +12,15 @@ export interface AdminDashboardStats {
   monthRevenue: number;
   bookingsByStatus: Record<string, number>;
   revenueChange: number | null;
+  // Abonnements pros = le vrai CA plateforme. Optionnels : un backend pas
+  // encore déployé ne les renvoie pas → 0 / null, le hero retombe sur le CA
+  // de réservations.
+  subMrr: number;
+  subsActive: number;
+  subsThisMonth: number;
+  subsChange: number | null;
+  collectedThisMonth: number;
+  subsByPlan: { start: number; serenite: number; signature: number };
 }
 
 export function normalizeAdminDashboardStats(raw: unknown): AdminDashboardStats | null {
@@ -25,5 +34,15 @@ export function normalizeAdminDashboardStats(raw: unknown): AdminDashboardStats 
     monthRevenue:  r.revenue_month   ?? r.month_revenue   ?? r.monthRevenue   ?? 0,
     bookingsByStatus: (r.bookings_by_status ?? r.bookingsByStatus ?? {}) as Record<string, number>,
     revenueChange: r.changes?.revenue ?? null,
+    subMrr:             Number(r.sub_mrr ?? r.subMrr ?? 0),
+    subsActive:         Number(r.subs_active ?? r.subsActive ?? 0),
+    subsThisMonth:      Number(r.subs_this_month ?? r.subsThisMonth ?? 0),
+    subsChange:         r.changes?.subscriptions ?? null,
+    collectedThisMonth: Number(r.collected_this_month ?? r.collectedThisMonth ?? 0),
+    subsByPlan: {
+      start:     Number(r.subs_by_plan?.start     ?? r.subsByPlan?.start     ?? 0),
+      serenite:  Number(r.subs_by_plan?.serenite  ?? r.subsByPlan?.serenite  ?? 0),
+      signature: Number(r.subs_by_plan?.signature ?? r.subsByPlan?.signature ?? 0),
+    },
   };
 }

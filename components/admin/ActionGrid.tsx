@@ -23,7 +23,7 @@ function ActionTile({ icon, tone, label, onPress, loading }: ActionTileData) {
       accessibilityLabel={label}
       style={{ flex: 1, alignItems: "center", gap: ADMIN.space.sm, opacity: loading ? 0.5 : 1 }}
     >
-      <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: 48, height: 48, borderRadius: 4, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
         {loading ? <ActivityIndicator size="small" color={color} /> : <Ionicons name={icon} size={20} color={color} />}
       </View>
       <Text style={{ ...ADMIN.type.caption, color: ADMIN.text, textAlign: "center" }} numberOfLines={1}>{label}</Text>
