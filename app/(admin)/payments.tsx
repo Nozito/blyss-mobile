@@ -17,6 +17,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -73,7 +74,7 @@ function TxCard({
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
             <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT1, flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
             <Text style={{ fontSize: 16, fontWeight: "700", color: isSucceeded ? Colors.success : TEXT1, letterSpacing: -0.3, marginLeft: 8 }}>
-              {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+              {formatEUR(tx.amount, { cents: true })}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -91,12 +92,12 @@ function TxCard({
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 12, paddingTop: 2, gap: 12, borderTopWidth: 1, borderTopColor: ADMIN.border }}>
           {tx.fee != null && (
             <Text style={{ fontSize: 11, color: TEXT2 }}>
-              Frais : {Number(tx.fee).toFixed(2)} €
+              Frais : {formatEUR(tx.fee, { cents: true })}
             </Text>
           )}
           {tx.net_amount != null && (
             <Text style={{ fontSize: 11, color: TEXT2 }}>
-              Net : {Number(tx.net_amount).toFixed(2)} €
+              Net : {formatEUR(tx.net_amount, { cents: true })}
             </Text>
           )}
           {isSucceeded && (
@@ -228,14 +229,14 @@ export default function AdminPaymentsScreen() {
       });
 
       const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-      const total = monthTx.reduce((s, t) => s + Number(t.amount), 0).toFixed(2);
+      const totalNum = monthTx.reduce((s, t) => s + Number(t.amount), 0);
 
       const rows = monthTx.map((tx) => `
         <tr>
           <td>${tx.client_name}</td>
           <td>${tx.pro_name}</td>
           <td>${new Date(tx.created_at).toLocaleDateString("fr-FR")}</td>
-          <td style="text-align:right;font-weight:700;color:#22C55E">${Number(tx.amount).toFixed(2)} €</td>
+          <td style="text-align:right;font-weight:700;color:#22C55E">${formatEUR(tx.amount, { cents: true })}</td>
           <td>${tx.status}</td>
         </tr>
       `).join("");
@@ -259,7 +260,7 @@ export default function AdminPaymentsScreen() {
           <thead><tr><th>Client</th><th>Pro</th><th>Date</th><th style="text-align:right">Montant</th><th>Statut</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <p class="total">Total : ${total} €</p>
+        <p class="total">Total : ${formatEUR(totalNum, { cents: true })}</p>
         <p class="footer">Généré par Blyss Admin · ${new Date().toLocaleString("fr-FR")}</p>
         </body></html>
       `;
@@ -304,7 +305,7 @@ export default function AdminPaymentsScreen() {
             <>
               {"Rembourser "}
               <Text style={{ fontWeight: "700", color: ADMIN.danger }}>
-                {Number(refundTarget.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+                {formatEUR(refundTarget.amount, { cents: true })}
               </Text>
               {` à ${refundTarget.client_name} ?\n\nCette action est irréversible.`}
             </>
@@ -345,14 +346,14 @@ export default function AdminPaymentsScreen() {
             <View style={{ padding: 20, marginBottom: 16, backgroundColor: ADMIN.accent }}>
               <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>Encaissé dans l'app · total</Text>
               <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>
-                {caTotal.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+                {formatNumberFR(caTotal)}
                 <Text style={{ fontSize: 18 }}> €</Text>
               </Text>
               <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginTop: 16 }}>
                 {[
-                  { label: "Ce mois",      value: `${caMois.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €` },
-                  { label: partiallyLoaded ? "Net (chargé)" : "Net", value: `${netTotal.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €` },
-                  { label: "Transactions", value: String(totalTransactions ?? transactions.length) },
+                  { label: "Ce mois",      value: formatEUR(caMois) },
+                  { label: partiallyLoaded ? "Net (chargé)" : "Net", value: formatEUR(netTotal) },
+                  { label: "Transactions", value: formatNumberFR(totalTransactions ?? transactions.length) },
                 ].map(({ label, value }) => (
                   <View key={label}>
                     <Text style={{ fontSize: 18, fontWeight: "900", letterSpacing: -0.6, color: ADMIN.accentInk }}>{value}</Text>
@@ -365,11 +366,11 @@ export default function AdminPaymentsScreen() {
             {/* Bandeau : en attente / échecs */}
             <View style={{ flexDirection: "row", marginBottom: 20, borderWidth: 1, borderColor: ADMIN.border }}>
               <View style={{ flex: 1, padding: 14, borderRightWidth: 1, borderRightColor: ADMIN.border }}>
-                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.warning }}>{pending}</Text>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.warning }}>{formatNumberFR(pending)}</Text>
                 <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 3 }}>{partiallyLoaded ? "Attente (chargé)" : "En attente"}</Text>
               </View>
               <View style={{ flex: 1, padding: 14 }}>
-                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.danger }}>{failed}</Text>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.danger }}>{formatNumberFR(failed)}</Text>
                 <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 3 }}>Échecs</Text>
               </View>
             </View>

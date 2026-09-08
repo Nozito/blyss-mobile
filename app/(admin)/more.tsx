@@ -18,6 +18,7 @@ import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { resolveMediaUrl } from "@/lib/media";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -115,13 +116,12 @@ export default function AdminMoreScreen() {
   // Le CA plateforme = abonnements pros (MRR), pas les paiements de réservations
   // (ça, c'est "encaissé dans l'app", l'argent des pros). Fallback CA résa si
   // le backend ne renvoie pas encore subMrr.
-  const eur0 = (v?: number) => (v == null ? "—" : `${Math.round(v).toLocaleString("fr-FR")} €`);
   const stats = [
-    { label: "Utilisateurs", value: dashStats?.totalUsers ?? "—", route: "/(admin)/users" as const },
-    { label: "Abos actifs",  value: dashStats?.subsActive ?? "—", route: "/(admin-tools)/analytics" as const },
+    { label: "Utilisateurs", value: formatNumberFR(dashStats?.totalUsers), route: "/(admin)/users" as const },
+    { label: "Abos actifs",  value: formatNumberFR(dashStats?.subsActive), route: "/(admin-tools)/analytics" as const },
     {
       label: dashStats?.subMrr ? "MRR abos" : "Encaissé (mois)",
-      value: dashStats?.subMrr ? eur0(dashStats.subMrr) : eur0(dashStats?.collectedThisMonth || dashStats?.monthRevenue),
+      value: dashStats?.subMrr ? formatEUR(dashStats.subMrr) : formatEUR(dashStats?.collectedThisMonth || dashStats?.monthRevenue),
       route: "/(admin-tools)/analytics" as const,
     },
   ];

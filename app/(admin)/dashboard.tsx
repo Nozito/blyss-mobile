@@ -15,9 +15,9 @@ import { TodayOverview } from "@/components/admin/TodayOverview";
 import { SectionLabel } from "@/components/admin/SectionLabel";
 import { Card } from "@/components/admin/Card";
 import { useScrollToTop } from "@react-navigation/native";
-import { toNumber as n } from "@/lib/bookingUtils";
 import { syncAdminDashboardWidgets } from "@/lib/widgetSync";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
+import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";
 
 function DashboardSkeleton({ top }: { top: number }) {
   return (
@@ -106,7 +106,6 @@ export default function AdminDashboard() {
       .slice(0, 4);
   }, [byStatus]);
 
-  const eur = (v: number) => Math.round(v).toLocaleString("fr-FR");
   const plan = stats?.subsByPlan ?? { start: 0, serenite: 0, signature: 0 };
   const subsTotal = plan.signature + plan.serenite + plan.start;
 
@@ -119,23 +118,23 @@ export default function AdminDashboard() {
     if (s && s.subMrr > 0) {
       return {
         label: "Revenu mensuel · abonnements",
-        value: eur(s.subMrr),
+        value: formatNumberFR(s.subMrr),
         change: s.subsChange,
         stats: [
-          { k: "Abos actifs", v: s.subsActive },
-          { k: "Pris ce mois", v: s.subsThisMonth },
-          { k: "Encaissé app", v: `${eur(s.collectedThisMonth)} €` },
+          { k: "Abos actifs", v: formatNumberFR(s.subsActive) },
+          { k: "Pris ce mois", v: formatNumberFR(s.subsThisMonth) },
+          { k: "Encaissé app", v: formatEUR(s.collectedThisMonth) },
         ],
       };
     }
     return {
       label: "Encaissé dans l'app · ce mois",
-      value: eur(s?.monthRevenue ?? 0),
+      value: formatNumberFR(s?.monthRevenue ?? 0),
       change: s?.revenueChange ?? null,
       stats: [
-        { k: "Utilisateurs", v: s?.totalUsers ?? 0 },
-        { k: "RDV ce mois", v: s?.monthBookings ?? 0 },
-        { k: "Terminées", v: `${completionRate}%` },
+        { k: "Utilisateurs", v: formatNumberFR(s?.totalUsers ?? 0) },
+        { k: "RDV ce mois", v: formatNumberFR(s?.monthBookings ?? 0) },
+        { k: "Terminées", v: formatPercentFR(completionRate) },
       ],
     };
   }, [stats, completionRate]);
@@ -215,7 +214,7 @@ export default function AdminDashboard() {
       {/* ── Répartition abonnements ── */}
       {subsTotal > 0 && (
         <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
-          <SectionLabel trailing={`${subsTotal} actifs`}>Abonnements</SectionLabel>
+          <SectionLabel trailing={`${formatNumberFR(subsTotal)} actifs`}>Abonnements</SectionLabel>
           <Card style={{ gap: ADMIN.space.md }}>
             {([
               { key: "signature", label: "Signature", count: plan.signature },
@@ -229,7 +228,7 @@ export default function AdminDashboard() {
                   <View style={{ flex: 1, height: 8, backgroundColor: ADMIN.surfaceHover, overflow: "hidden" }}>
                     <View style={{ width: `${pct}%`, height: "100%", backgroundColor: ADMIN.accent }} />
                   </View>
-                  <Text style={{ ...ADMIN.type.mono, fontSize: 13, color: ADMIN.text, width: 46, textAlign: "right" }}>{p.count}</Text>
+                  <Text style={{ ...ADMIN.type.mono, fontSize: 13, color: ADMIN.text, width: 46, textAlign: "right" }}>{formatNumberFR(p.count)}</Text>
                 </View>
               );
             })}
@@ -265,10 +264,10 @@ export default function AdminDashboard() {
             <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }}>Revenu du jour</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ADMIN.success }} />
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{stats.todayBookings} rdv aujourd'hui</Text>
+              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{formatNumberFR(stats.todayBookings)} rdv aujourd'hui</Text>
             </View>
           </View>
-          <Text style={{ ...ADMIN.type.display, fontSize: 26, color: ADMIN.text }} numberOfLines={1}>{n(todayRevenue).toLocaleString("fr-FR")} €</Text>
+          <Text style={{ ...ADMIN.type.display, fontSize: 26, color: ADMIN.text }} numberOfLines={1}>{formatEUR(todayRevenue)}</Text>
         </Card>
       </View>
 
@@ -276,13 +275,13 @@ export default function AdminDashboard() {
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl, flexDirection: "row", gap: ADMIN.space.md }}>
         <Card style={{ flex: 1 }}>
           <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Complétion</Text>
-          <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{completionRate}%</Text>
+          <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{formatPercentFR(completionRate)}</Text>
           <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>terminées</Text>
         </Card>
         <Card style={{ flex: 1 }}>
           <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Utilisateurs</Text>
-          <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{stats.activeUsers}</Text>
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>actifs sur {stats.totalUsers}</Text>
+          <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.activeUsers)}</Text>
+          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>actifs sur {formatNumberFR(stats.totalUsers)}</Text>
         </Card>
       </View>
 
@@ -302,7 +301,7 @@ export default function AdminDashboard() {
                       </View>
                       <Text style={{ ...ADMIN.type.body, fontSize: 13, color: ADMIN.text }}>{s.label}</Text>
                     </View>
-                    <Text style={{ ...ADMIN.type.caption, fontWeight: "700", color: ADMIN.text }}>{pct}%</Text>
+                    <Text style={{ ...ADMIN.type.caption, fontWeight: "700", color: ADMIN.text }}>{formatPercentFR(pct)}</Text>
                   </View>
                   <View style={{ height: 6, borderRadius: 3, backgroundColor: ADMIN.surfaceHover, overflow: "hidden" }}>
                     <View style={{ height: "100%", width: `${pct}%`, borderRadius: 3, backgroundColor: ADMIN.accent }} />
@@ -320,8 +319,8 @@ export default function AdminDashboard() {
           <SectionLabel trailing="30 jours">Revenus</SectionLabel>
           <Card>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: ADMIN.space.md }}>
-              <Text style={{ ...ADMIN.type.display, fontSize: 20, color: ADMIN.text }} numberOfLines={1}>{totalSparkRevenue.toLocaleString("fr-FR")} €</Text>
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }} numberOfLines={1}>CA du mois : {n(stats.monthRevenue).toLocaleString("fr-FR")} €</Text>
+              <Text style={{ ...ADMIN.type.display, fontSize: 20, color: ADMIN.text }} numberOfLines={1}>{formatEUR(totalSparkRevenue)}</Text>
+              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }} numberOfLines={1}>CA du mois : {formatEUR(stats.monthRevenue)}</Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 56 }}>
               {sparkData.map((v, i) => (

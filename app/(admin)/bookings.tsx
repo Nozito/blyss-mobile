@@ -25,6 +25,7 @@ import { Card } from "@/components/admin/Card";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/admin/Avatar";
 import { toNumber } from "@/lib/bookingUtils";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
@@ -82,7 +83,7 @@ function BookingCard({
   const time       = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const dateLabel  = dt.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   const clientName = booking.client_name ?? `#${booking.id}`;
-  const meta       = `${price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"} · ${dateLabel} ${time}`;
+  const meta       = `${price > 0 ? formatEUR(price, { cents: true }) : "—"} · ${dateLabel} ${time}`;
 
   const canConfirm = booking.status === "pending";
   const canCancel  = booking.status === "pending" || booking.status === "confirmed";
@@ -227,7 +228,7 @@ function BookingDetailSheet({
                 <DetailRow label="Professionnel" value={booking.pro_name ?? "—"} />
                 <DetailRow label="Date"          value={dateLabel} />
                 <DetailRow label="Heure"         value={time} />
-                <DetailRow label="Prix"          value={price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"} emphasize showDivider={false} />
+                <DetailRow label="Prix"          value={price > 0 ? formatEUR(price, { cents: true }) : "—"} emphasize showDivider={false} />
               </Card>
             </View>
 
@@ -264,10 +265,10 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
 
   // Single-word labels only — two words in a 4-column card wraps to a second line.
   const metrics = [
-    { label: "CA",         value: `${revenue.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-    { label: "Attente",    value: String(counts.pending) },
-    { label: "Confirmées", value: String(counts.confirmed) },
-    { label: "Terminées",  value: String(counts.completed) },
+    { label: "CA",         value: formatEUR(revenue) },
+    { label: "Attente",    value: formatNumberFR(counts.pending) },
+    { label: "Confirmées", value: formatNumberFR(counts.confirmed) },
+    { label: "Terminées",  value: formatNumberFR(counts.completed) },
   ];
 
   return (

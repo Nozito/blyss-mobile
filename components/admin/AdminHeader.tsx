@@ -21,7 +21,10 @@ export function AdminHeader({ title, subtitle, action, safeTop = true }: AdminHe
   const insets = useSafeAreaInsets();
   return (
     <View style={{
-      paddingTop: (safeTop ? insets.top : ADMIN.space.sm) + 2,
+      // Le titre est calé à gauche, hors de la Dynamic Island : on peut
+      // remonter sous la safe-area complète (≈ hauteur de la status bar + marge)
+      // au lieu de la respecter entièrement, sinon un vide énorme sur iPhone Pro.
+      paddingTop: safeTop ? Math.max(insets.top - 22, ADMIN.space.md) : ADMIN.space.sm,
       paddingHorizontal: ADMIN.space.xl,
       paddingBottom: ADMIN.space.md,
       backgroundColor: ADMIN.bg,

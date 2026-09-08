@@ -19,6 +19,7 @@ import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { syncAdminAnalyticsWidgets } from "@/lib/widgetSync";
+import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -150,7 +151,7 @@ function KPICard({
         {label}
       </Text>
       <Text style={{ ...ADMIN.type.display, fontSize: 24, color: TEXT1, marginBottom: 2 }}>
-        {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
+        {typeof value === "number" ? formatNumberFR(value) : value}
       </Text>
       {sub && (
         <Text style={{ fontSize: 11, color: TEXT3 }}>{sub}</Text>
@@ -322,21 +323,21 @@ export default function AdminAnalyticsScreen() {
             <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>CA total (réservations)</Text>
             {growth != null && (
               <Text style={{ fontSize: 12, fontWeight: "900", color: ADMIN.accentInk }}>
-                {growth >= 0 ? "↑" : "↓"} {Math.abs(growth).toFixed(1)}%
+                {growth >= 0 ? "↑" : "↓"} {formatPercentFR(Math.abs(growth), 1)}
               </Text>
             )}
           </View>
 
           <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginBottom: 16 }} numberOfLines={1} adjustsFontSizeToFit>
-            {Number(a.revenue.total_revenue).toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+            {formatNumberFR(a.revenue.total_revenue)}
             <Text style={{ fontSize: 18 }}> €</Text>
           </Text>
 
           <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginBottom: 16 }}>
             {[
-              { k: "Ce mois", v: `${Number(a.revenue.month_revenue).toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €` },
-              { k: "Utilisateurs", v: Number(a.users.total_users).toLocaleString("fr-FR") },
-              { k: "Réservations", v: Number(a.bookings.total).toLocaleString("fr-FR") },
+              { k: "Ce mois", v: formatEUR(a.revenue.month_revenue) },
+              { k: "Utilisateurs", v: formatNumberFR(a.users.total_users) },
+              { k: "Réservations", v: formatNumberFR(a.bookings.total) },
             ].map((s) => (
               <View key={s.k}>
                 <Text style={{ fontSize: 17, fontWeight: "900", letterSpacing: -0.6, color: ADMIN.accentInk }}>{s.v}</Text>
@@ -401,14 +402,14 @@ export default function AdminAnalyticsScreen() {
           <View style={{ flexDirection: "row", gap: 10 }}>
             <KPICard
               label="CA total"
-              value={`${Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €`}
+              value={formatEUR(a.revenue.total_revenue)}
               color={ACCENT}
               symbol="banknote"
               androidIcon="cash-outline"
             />
             <KPICard
               label="CA du mois"
-              value={`${Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €`}
+              value={formatEUR(a.revenue.month_revenue)}
               color={Colors.success}
               symbol="checkmark.seal.fill"
               androidIcon="checkmark-circle-outline"
@@ -442,7 +443,7 @@ export default function AdminAnalyticsScreen() {
           androidIcon="trending-up-outline"
           title="Revenus"
           color={ACCENT}
-          badge={`${revenuePoints.reduce((s, v) => s + v, 0).toLocaleString("fr-FR")} €`}
+          badge={formatEUR(revenuePoints.reduce((s, v) => s + v, 0))}
         />
         {revenuePoints.length > 1 ? (
           <Sparkline data={revenuePoints} color={ACCENT} width={chartWidth} height={72} />
@@ -532,10 +533,10 @@ export default function AdminAnalyticsScreen() {
                   <Text style={{ fontSize: 13, color: TEXT1, fontWeight: "500" }}>{label}</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={{ fontSize: 13, color, fontWeight: "700" }}>
-                      {Number(value).toLocaleString("fr-FR")}
+                      {formatNumberFR(value)}
                     </Text>
                     <Text style={{ fontSize: 11, color: TEXT2 }}>
-                      {pct.toFixed(0)}%
+                      {formatPercentFR(pct)}
                     </Text>
                   </View>
                 </View>

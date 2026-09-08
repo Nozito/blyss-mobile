@@ -27,6 +27,7 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
 import { Avatar } from "@/components/admin/Avatar";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
@@ -271,21 +272,21 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
                     <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Réservations</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.total_bookings}</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.total_bookings)}</Text>
                   </Card>
                   <Card style={{ flex: 1 }}>
                     <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Terminées</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.completed}</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.completed)}</Text>
                   </Card>
                 </View>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
                     <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Annulées</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.cancelled}</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.cancelled)}</Text>
                   </Card>
                   <Card style={{ flex: 1 }}>
                     <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Dépensé</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{Number(stats.total_spent ?? 0).toFixed(0)} €</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatEUR(stats.total_spent)}</Text>
                   </Card>
                 </View>
               </View>

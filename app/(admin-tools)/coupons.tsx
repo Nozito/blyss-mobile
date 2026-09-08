@@ -15,6 +15,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import { formatEUR, formatPercentFR } from "@/lib/format";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -309,7 +310,7 @@ function CouponCard({
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
           <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}>
             <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>
-              -{coupon.discount_value}{coupon.discount_type === "percent" ? "%" : "€"}
+              {coupon.discount_type === "percent" ? `-${formatPercentFR(coupon.discount_value)}` : `-${formatEUR(coupon.discount_value, { cents: true })}`}
             </Text>
           </View>
           {coupon.applicable_plans.map((p: string) => (
