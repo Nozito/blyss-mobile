@@ -32,12 +32,6 @@ jest.mock('@/contexts/RevenueCatContext', () => ({
   useRevenueCat: () => ({ customerInfo: null, activePlan: null, packages: [], purchase: jest.fn(), restorePurchases: jest.fn(), refreshActivePlan: jest.fn() }),
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/components/ui/LoadingSpinner', () => ({
   LoadingSpinner: () => null,

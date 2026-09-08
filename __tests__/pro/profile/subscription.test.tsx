@@ -18,12 +18,6 @@ jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
 }));
 
-jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn(),
-  notificationAsync: jest.fn(),
-  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
-  NotificationFeedbackType: { Success: 'success', Error: 'error' },
-}));
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -84,12 +78,6 @@ jest.mock('@/components/ui/ErrorMessage', () => ({
   },
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/lib/navigation', () => ({ safeBack: jest.fn() }));
 

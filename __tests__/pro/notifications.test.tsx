@@ -77,31 +77,40 @@ describe('ProNotificationsScreen', () => {
     await findByText('Notifications');
   });
 
+  // Les sections de préférences vivent sous l'onglet « Préférences » (l'onglet
+  // « Messages » est actif par défaut).
+  async function goToPreferences(utils: ReturnType<typeof renderNotifications>) {
+    fireEvent.press(await utils.findByText('Préférences'));
+  }
+
   it('renders notification sections after loading', async () => {
-    const { findByText } = renderNotifications();
-    await findByText('Rendez-vous & Clientes');
-    await findByText('Paiement & Activité');
+    const utils = renderNotifications();
+    await goToPreferences(utils);
+    await utils.findByText('Rendez-vous & Clientes');
+    await utils.findByText('Paiement & Activité');
   });
 
   it('renders individual notification items', async () => {
-    const { findByText } = renderNotifications();
-    await findByText('Nouvelles réservations');
-    await findByText('Changements & annulations');
+    const utils = renderNotifications();
+    await goToPreferences(utils);
+    await utils.findByText('Nouvelles réservations');
+    await utils.findByText('Changements & annulations');
   });
 
   it('calls updateNotificationSettings when toggling a switch', async () => {
     mockUpdateNotificationSettings.mockResolvedValue({ success: true });
-    const { findAllByRole } = renderNotifications();
-    const switches = await findAllByRole('switch');
-    // Toggle the first switch
+    const utils = renderNotifications();
+    await goToPreferences(utils);
+    const switches = await utils.findAllByRole('switch');
     fireEvent(switches[0], 'valueChange', false);
     expect(mockUpdateNotificationSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ new_reservation: false })
+      expect.objectContaining({ new_reservation: false }),
     );
   });
 
   it('shows system settings row', async () => {
-    const { findByText } = renderNotifications();
-    await findByText('Réglages système');
+    const utils = renderNotifications();
+    await goToPreferences(utils);
+    await utils.findByText('Réglages système');
   });
 });

@@ -50,12 +50,6 @@ jest.mock('@/contexts/RevenueCatContext', () => ({
   useRevenueCat: () => ({ customerInfo: null, activePlan: null, packages: [], purchase: jest.fn(), restorePurchases: jest.fn(), refreshActivePlan: jest.fn() }),
 }));
 
-jest.mock('@/components/ui/AnimatedPressable', () => ({
-  AnimatedIconButton: ({ children, onPress }: any) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
 
 jest.mock('@/components/ui/ErrorMessage', () => ({
   ErrorMessage: ({ message }: any) => {
@@ -80,6 +74,7 @@ jest.mock('@/lib/api', () => ({
 
 const MOCK_STATS = {
   today: 120,
+  plan: 'signature',
   week: 350,
   month: 1400,
   lastMonth: 1200,

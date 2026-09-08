@@ -31,10 +31,6 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'Images' },
 }));
 
-jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn(),
-  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
-}));
 
 jest.mock('expo-device', () => ({ isDevice: false }));
 

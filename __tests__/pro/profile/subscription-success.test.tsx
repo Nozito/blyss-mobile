@@ -1,37 +1,20 @@
-import { render, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../../utils/testQueryClient';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 const mockReplace = jest.fn();
-
-jest.mock('react-native-confetti-cannon', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  const ConfettiCannon = React.forwardRef((_props: any, ref: any) => {
-    if (ref) {
-      ref.current = { start: jest.fn() };
-    }
-    return <View testID="confetti" />;
-  });
-  return ConfettiCannon;
-});
+let mockParams: Record<string, string> = { plan: 'start' };
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   SafeAreaView: ({ children }: any) => children,
 }));
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn().mockResolvedValue('true'), // onboarding done → redirect to dashboard
-  setItem: jest.fn().mockResolvedValue(null),
-  removeItem: jest.fn().mockResolvedValue(null),
-}));
-
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: mockReplace }),
-  useLocalSearchParams: () => ({ plan: 'start' }),
+  useLocalSearchParams: () => mockParams,
 }));
 
 jest.mock('@/contexts/AuthContext', () => ({
@@ -63,11 +46,11 @@ jest.mock('@/lib/api', () => ({}));
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderSuccess() {
-  const ProSubscriptionSuccessScreen = require('../../../app/(pro)/(profile)/subscription-success').default;
+  const ProSubscriptionSuccessScreen = require('../../../app/pro-subscription-success').default;
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
       <ProSubscriptionSuccessScreen />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -76,59 +59,42 @@ function renderSuccess() {
 describe('ProSubscriptionSuccessScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
+    mockParams = { plan: 'start' };
     mockRefreshActivePlan.mockResolvedValue(undefined);
-    const AsyncStorage = require('@react-native-async-storage/async-storage');
-    AsyncStorage.getItem.mockResolvedValue('true');
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it('renders Félicitations title', () => {
+  it('affiche le tampon « C\'est / Confirmé »', () => {
     const { getByText } = renderSuccess();
-    expect(getByText('Félicitations ! 🎉')).toBeTruthy();
+    expect(getByText("C'est")).toBeTruthy();
+    expect(getByText('Confirmé')).toBeTruthy();
   });
 
-  it('renders Votre espace pro est prêt subtitle', () => {
-    const { getByText } = renderSuccess();
-    expect(getByText('Votre espace pro est prêt')).toBeTruthy();
-  });
-
-  it('renders active plan label (Start)', () => {
+  it('affiche le badge du plan actif', () => {
     const { getByText } = renderSuccess();
     expect(getByText('Start · Actif')).toBeTruthy();
   });
 
-  it('renders Redirection en cours message', () => {
+  it('affiche au moins un gain du palier Start', () => {
     const { getByText } = renderSuccess();
-    expect(getByText('Redirection en cours…')).toBeTruthy();
+    expect(getByText('Un agenda qui se remplit en ligne')).toBeTruthy();
   });
 
-  it('redirects to dashboard after 4s when onboarding done', async () => {
+  it('rafraîchit le plan actif au montage (hors preview)', async () => {
     renderSuccess();
-    await act(async () => {
-      jest.advanceTimersByTime(4000);
-      // Flush async work
-      await Promise.resolve();
-    });
-    await waitFor(() => {
-      expect(mockRefreshActivePlan).toHaveBeenCalled();
-      expect(mockReplace).toHaveBeenCalledWith('/(pro)/dashboard');
-    });
+    await waitFor(() => expect(mockRefreshActivePlan).toHaveBeenCalled());
   });
 
-  it('redirects to onboarding after 4s when onboarding NOT done', async () => {
-    const AsyncStorage = require('@react-native-async-storage/async-storage');
-    AsyncStorage.getItem.mockResolvedValue(null);
-    renderSuccess();
-    await act(async () => {
-      jest.advanceTimersByTime(4000);
-      await Promise.resolve();
-    });
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(pro)/onboarding');
-    });
+  it('1re souscription → bouton « Configurer » qui mène à l\'onboarding pro', () => {
+    const { getByText } = renderSuccess();
+    fireEvent.press(getByText('Configurer mon agenda →'));
+    expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/pro-onboarding' }),
+    );
+  });
+
+  it('upgrade → bouton « Voir ce qui change »', () => {
+    mockParams = { plan: 'serenite', previousPlan: 'start' };
+    const { getByText } = renderSuccess();
+    expect(getByText('Voir ce qui change →')).toBeTruthy();
   });
 });
