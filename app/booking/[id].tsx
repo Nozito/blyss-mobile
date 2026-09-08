@@ -28,7 +28,7 @@ import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { resolveMediaUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/dateUtils";
-import { computeRemainingBalance } from "@/lib/bookingUtils";
+import { computeRemainingBalance, canModifyBooking } from "@/lib/bookingUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BookingDetailData {
@@ -61,14 +61,6 @@ interface BookingDetailData {
   /** Délai de prévenance (heures) fixé par la pro. Passé cette limite avant le
    * RDV, la cliente ne peut plus annuler ni reporter. */
   cancellation_notice_hours?: number | null;
-}
-
-// Annulation / report possibles seulement tant que le délai de prévenance
-// fixé par la pro n'est pas dépassé (le backend applique la même règle).
-function canModifyBooking(b: BookingDetailData): boolean {
-  const deadline =
-    new Date(b.start_datetime).getTime() - (b.cancellation_notice_hours ?? 24) * 3_600_000;
-  return Date.now() < deadline;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
+import { canModifyBooking } from "@/lib/bookingUtils";
 
 
 interface Booking {
@@ -63,15 +64,6 @@ const fmtRelativeDay = (s: string): string | null => {
   if (days === 1) return "Demain";
   if (days > 1 && days <= 6) return `Dans ${days} jours`;
   return null;
-};
-
-// Annulation / report : possible uniquement tant que le délai de prévenance
-// fixé par la pro n'est pas dépassé. Passé cette limite, la cliente ne peut plus
-// ni annuler ni reporter (le backend applique la même règle côté API).
-const canModifyBooking = (b: Booking): boolean => {
-  const deadline =
-    new Date(b.start_datetime).getTime() - (b.cancellation_notice_hours ?? 24) * 3_600_000;
-  return Date.now() < deadline;
 };
 
 // ── Reschedule Modal ──────────────────────────────────────────────────────────
