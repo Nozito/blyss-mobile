@@ -28,7 +28,7 @@ import { reviewSchema } from "@/lib/validation";
 import { safeBack } from "@/lib/navigation";
 import { resolveMediaUrl } from "@/lib/media";
 import { formatDuration } from "@/lib/dateUtils";
-import { computeRemainingBalance } from "@/lib/bookingUtils";
+import { computeRemainingBalance, canModifyBooking } from "@/lib/bookingUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BookingDetailData {
@@ -58,6 +58,9 @@ interface BookingDetailData {
    * the pro's exact address stays private otherwise, even from this client. */
   address_line?: string | null;
   postal_code?: string | null;
+  /** Délai de prévenance (heures) fixé par la pro. Passé cette limite avant le
+   * RDV, la cliente ne peut plus annuler ni reporter. */
+  cancellation_notice_hours?: number | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -511,8 +514,9 @@ export default function BookingDetailScreen() {
           </FadeCard>
         )}
 
-        {/* Annulation — uniquement pour une réservation à venir non encore honorée */}
-        {(booking.status === "confirmed" || booking.status === "pending") && (
+        {/* Annulation — uniquement pour une réservation à venir non encore honorée,
+            et seulement tant que le délai d'annulation de la pro n'est pas dépassé */}
+        {(booking.status === "confirmed" || booking.status === "pending") && canModifyBooking(booking) && (
           <FadeCard delay={300}>
             <Pressable
               style={styles.cancelBookingBtn}

@@ -46,3 +46,17 @@ export function canPayOnline(
 ): boolean {
   return stripeOnboardingComplete && acceptOnlinePayment;
 }
+
+/**
+ * Annulation / report d'un RDV : possible uniquement tant que le délai de
+ * prévenance fixé par la pro (`cancellation_notice_hours`, 24h par défaut)
+ * n'est pas dépassé. Le backend applique la même règle côté API.
+ */
+export function canModifyBooking(b: {
+  start_datetime: string;
+  cancellation_notice_hours?: number | null;
+}, now: number = Date.now()): boolean {
+  const notice = b.cancellation_notice_hours ?? 24;
+  const deadline = new Date(b.start_datetime).getTime() - notice * 3_600_000;
+  return now < deadline;
+}

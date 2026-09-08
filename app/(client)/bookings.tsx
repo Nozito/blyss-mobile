@@ -24,6 +24,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
+import { canModifyBooking } from "@/lib/bookingUtils";
 
 
 interface Booking {
@@ -573,14 +574,17 @@ export default function MyBookingsScreen() {
   const activeList = activeTab === "upcoming" ? upcoming : activeTab === "past" ? past : cancelled;
   const hasOnlyPastBookings = upcoming.length === 0 && (past.length > 0 || cancelled.length > 0);
 
-  const renderItem = useCallback(({ item }: { item: Booking }) => (
-    <BookingCard
-      booking={item}
-      isUpcoming={activeTab === "upcoming"}
-      onReschedule={activeTab === "upcoming" ? setRescheduleBooking : undefined}
-      onCancel={activeTab === "upcoming" ? handleCancel : undefined}
-    />
-  ), [activeTab, handleCancel]);
+  const renderItem = useCallback(({ item }: { item: Booking }) => {
+    const modifiable = activeTab === "upcoming" && canModifyBooking(item);
+    return (
+      <BookingCard
+        booking={item}
+        isUpcoming={activeTab === "upcoming"}
+        onReschedule={modifiable ? setRescheduleBooking : undefined}
+        onCancel={modifiable ? handleCancel : undefined}
+      />
+    );
+  }, [activeTab, handleCancel]);
 
   const listHeader = (
     <View>

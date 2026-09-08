@@ -10,6 +10,7 @@ import {
   computeDepositAmount,
   computeRemainingBalance,
   canPayOnline,
+  canModifyBooking,
 } from "@/lib/bookingUtils";
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -158,5 +159,33 @@ describe("canPayOnline", () => {
 
   it("Stripe non onboardé + paiement désactivé → false", () => {
     expect(canPayOnline(false, false)).toBe(false);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+describe("canModifyBooking — délai de prévenance de la pro", () => {
+  const start = "2026-06-15T14:00:00.000Z";
+  const H = 3_600_000;
+
+  it("avant le délai (48h notice, RDV dans 72h) → modifiable", () => {
+    const now = new Date(start).getTime() - 72 * H;
+    expect(canModifyBooking({ start_datetime: start, cancellation_notice_hours: 48 }, now)).toBe(true);
+  });
+
+  it("après le délai (48h notice, RDV dans 24h) → non modifiable", () => {
+    const now = new Date(start).getTime() - 24 * H;
+    expect(canModifyBooking({ start_datetime: start, cancellation_notice_hours: 48 }, now)).toBe(false);
+  });
+
+  it("défaut 24h quand la valeur est absente", () => {
+    const in12h = new Date(start).getTime() - 12 * H;
+    const in36h = new Date(start).getTime() - 36 * H;
+    expect(canModifyBooking({ start_datetime: start }, in12h)).toBe(false);
+    expect(canModifyBooking({ start_datetime: start }, in36h)).toBe(true);
+  });
+
+  it("notice = 0 → modifiable jusqu'au début", () => {
+    const oneMinBefore = new Date(start).getTime() - 60_000;
+    expect(canModifyBooking({ start_datetime: start, cancellation_notice_hours: 0 }, oneMinBefore)).toBe(true);
   });
 });
