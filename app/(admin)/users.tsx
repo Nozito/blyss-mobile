@@ -28,7 +28,7 @@ import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
 import { Avatar } from "@/components/admin/Avatar";
 import { GrantSubscriptionModal } from "@/components/admin/GrantSubscriptionModal";
-import { formatEUR, formatNumberFR } from "@/lib/format";
+import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
@@ -174,8 +174,54 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               </AnimatedIconButton>
             </View>
 
+            {/* Activité pro — agrégats métier (avis, résa réalisées, clientèle, abo) */}
+            {full.role === "pro" && full.pro_activity && (() => {
+              const pa = full.pro_activity;
+              const statCard = (label: string, value: string, sub?: string) => (
+                <Card style={{ flex: 1 }}>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>{label}</Text>
+                  <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{value}</Text>
+                  {sub ? <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>{sub}</Text> : null}
+                </Card>
+              );
+              return (
+                <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg }}>
+                  <SectionLabel>Activité pro</SectionLabel>
+                  <View style={{ gap: ADMIN.space.md }}>
+                    <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+                      {statCard("Note", pa.reviews.avg != null ? `${pa.reviews.avg.toFixed(1).replace(".", ",")} ★` : "—", `${formatNumberFR(pa.reviews.count)} avis`)}
+                      {statCard("CA ce mois", formatEUR(pa.bookings.gmv_month))}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+                      {statCard("Complétion", formatPercentFR(pa.bookings.completion_rate), `${formatNumberFR(pa.bookings.completed)} terminées`)}
+                      {statCard("Annulation", formatPercentFR(pa.bookings.cancellation_rate), `${formatNumberFR(pa.bookings.cancelled)} annulées`)}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+                      {statCard("Clientèle", formatNumberFR(pa.clients.distinct), `${formatNumberFR(pa.clients.recurring)} récurrentes`)}
+                      {statCard("CA généré", formatEUR(pa.bookings.gmv_total), `${formatNumberFR(pa.bookings.total)} réservations`)}
+                    </View>
+                    <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ADMIN.space.md }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }}>Abonnement</Text>
+                        <Text style={{ ...ADMIN.type.name, color: ADMIN.text }} numberOfLines={1}>
+                          {pa.subscription ? (PLAN_LABELS[pa.subscription.plan] ?? pa.subscription.plan) : "Aucun"}
+                          {pa.subscription?.end_date ? ` · fin ${new Date(pa.subscription.end_date).toLocaleDateString("fr-FR")}` : ""}
+                        </Text>
+                      </View>
+                      {pa.subscription && (
+                        <StatusBadge
+                          label={pa.subscription.is_granted ? "Offert" : "Payé"}
+                          tone={pa.subscription.is_granted ? "warning" : "success"}
+                        />
+                      )}
+                    </Card>
+                  </View>
+                </View>
+              );
+            })()}
+
             {/* Stats — two rows of stat cards, same shape as the dashboard's "Deux faits" */}
-            {stats && (
+            {stats && full.role !== "pro" && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg, gap: ADMIN.space.md }}>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
