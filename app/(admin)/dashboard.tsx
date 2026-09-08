@@ -19,6 +19,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import { syncAdminDashboardWidgets } from "@/lib/widgetSync";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
 import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";
+import { timeGreeting } from "@/lib/greeting";
 
 function DashboardSkeleton({ top }: { top: number }) {
   return (
@@ -178,7 +179,7 @@ export default function AdminDashboard() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
     >
       <AdminHeader
-        title={`Bonjour, ${user?.first_name ?? ""}`}
+        title={`${timeGreeting()}${user?.first_name ? `, ${user.first_name}` : ""}.`}
         subtitle={`${today.charAt(0).toUpperCase()}${today.slice(1)}`}
       />
 
@@ -229,7 +230,7 @@ export default function AdminDashboard() {
               const pct = subsTotal > 0 ? Math.round((p.count / subsTotal) * 100) : 0;
               return (
                 <View key={p.key} style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md }}>
-                  <Text style={{ ...ADMIN.type.label, color: ADMIN.text, width: 74 }}>{p.label}</Text>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.text, width: 82, letterSpacing: 0.8 }} numberOfLines={1}>{p.label}</Text>
                   <View style={{ flex: 1, height: 8, backgroundColor: ADMIN.surfaceHover, overflow: "hidden" }}>
                     <View style={{ width: `${pct}%`, height: "100%", backgroundColor: ADMIN.accent }} />
                   </View>
