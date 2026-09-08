@@ -21,9 +21,9 @@ export function AdminHeader({ title, subtitle, action, safeTop = true }: AdminHe
   const insets = useSafeAreaInsets();
   return (
     <View style={{
-      paddingTop: (safeTop ? insets.top : 0) + ADMIN.space.sm,
+      paddingTop: (safeTop ? insets.top : ADMIN.space.sm) + 2,
       paddingHorizontal: ADMIN.space.xl,
-      paddingBottom: ADMIN.space.lg,
+      paddingBottom: ADMIN.space.md,
       backgroundColor: ADMIN.bg,
     }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>

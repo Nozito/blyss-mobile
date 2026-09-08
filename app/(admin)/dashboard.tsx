@@ -110,8 +110,10 @@ export default function AdminDashboard() {
   const plan = stats?.subsByPlan ?? { start: 0, serenite: 0, signature: 0 };
   const subsTotal = plan.signature + plan.serenite + plan.start;
 
-  // Métrique phare : le vrai CA plateforme = abonnements pros (MRR). Si le
-  // backend ne le renvoie pas encore, on retombe sur le CA de réservations.
+  // Métrique phare : le vrai CA plateforme = abonnements pros (MRR). Tant
+  // qu'il n'y en a pas, le "revenu du mois" (paiements de réservations) n'est
+  // PAS notre CA — c'est l'argent des pros qui transite. On met alors en avant
+  // le volume encaissé dans l'app + l'activité marketplace.
   const heroMetric = useMemo(() => {
     const s = stats;
     if (s && s.subMrr > 0) {
@@ -127,12 +129,12 @@ export default function AdminDashboard() {
       };
     }
     return {
-      label: "Revenu du mois",
+      label: "Encaissé dans l'app · ce mois",
       value: eur(s?.monthRevenue ?? 0),
       change: s?.revenueChange ?? null,
       stats: [
-        { k: "RDV auj.", v: s?.todayBookings ?? 0 },
-        { k: "Actifs", v: s?.activeUsers ?? 0 },
+        { k: "Utilisateurs", v: s?.totalUsers ?? 0 },
+        { k: "RDV ce mois", v: s?.monthBookings ?? 0 },
         { k: "Terminées", v: `${completionRate}%` },
       ],
     };
@@ -165,12 +167,12 @@ export default function AdminDashboard() {
 
       {/* ── Métrique phare — aplat rose plein largeur ── */}
       <View style={{ backgroundColor: ADMIN.accent, paddingHorizontal: ADMIN.space.xl, paddingVertical: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub, flexShrink: 1 }} numberOfLines={1}>
             {heroMetric.label}
           </Text>
           {heroMetric.change !== null && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 0 }}>
               <Ionicons name={heroMetric.change >= 0 ? "trending-up" : "trending-down"} size={13} color={ADMIN.accentInk} />
               <Text style={{ fontSize: 12, fontWeight: "900", color: ADMIN.accentInk }}>
                 {heroMetric.change >= 0 ? "+" : ""}{heroMetric.change}%
