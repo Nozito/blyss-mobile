@@ -3,79 +3,22 @@ import {
   View,
   Text,
   FlatList,
-  Pressable,
   Switch,
   ActivityIndicator,
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useNotifications } from "@/contexts/NotificationContext";
 import { notificationsApi, type ClientNotificationSettings } from "@/lib/api";
-import { Shadows } from "@/constants/shadows";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { ThreadList } from "@/components/screens/shared/ThreadList";
 
-type Tab = "activity" | "messages" | "preferences";
+type Tab = "messages" | "preferences";
 type PrefKey = keyof ClientNotificationSettings;
-
-// booking_confirmed, message_received, and late_alert removed — no backend
-// code path ever emits those types, so they always fell through to
-// "default" anyway. Also added the real types that previously had no entry
-// (and therefore rendered with the generic bell): no_show, slot_available,
-// recall.
-const NOTIF_CFG: Record<string, { icon: React.ComponentProps<typeof Ionicons>["name"]; color: string; bg: string }> = {
-  new_booking:       { icon: "checkmark-circle-outline", color: "#34C759", bg: "rgba(52,199,89,.12)" },
-  booking_cancelled: { icon: "alert-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
-  booking_reminder:  { icon: "time-outline",             color: "#FF9500", bg: "rgba(255,149,0,.12)" },
-  post_appointment:  { icon: "star-outline",              color: "#5856D6", bg: "rgba(88,86,214,.12)" },
-  payment_received:  { icon: "card-outline",             color: "#34C759", bg: "rgba(52,199,89,.12)" },
-  promotional:       { icon: "gift-outline",             color: "#FF2D55", bg: "rgba(255,45,85,.12)" },
-  no_show:           { icon: "close-circle-outline",     color: "#FF3B30", bg: "rgba(255,59,48,.12)" },
-  slot_available:    { icon: "calendar-outline",         color: "#34C759", bg: "rgba(52,199,89,.12)" },
-  booking_reschedule_proposed: { icon: "swap-horizontal-outline", color: "#FF9500", bg: "rgba(255,149,0,.12)" },
-  recall:            { icon: "refresh-outline",          color: "#5856D6", bg: "rgba(88,86,214,.12)" },
-  default:           { icon: "notifications-outline",    color: "#8E8E93", bg: "rgba(142,142,147,.12)" },
-};
-
-function formatRelTime(dateString: string): string {
-  const diffMs = Date.now() - new Date(dateString).getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  const hours = Math.floor(diffMs / 3_600_000);
-  const days = Math.floor(diffMs / 86_400_000);
-  if (mins < 1) return "maintenant";
-  if (mins < 60) return `${mins} min`;
-  if (hours < 24) return `${hours}h`;
-  if (days === 1) return "hier";
-  if (days < 7) return `${days}j`;
-  return new Date(dateString).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-}
-
-function groupByDay(notifications: Array<{ id: number; type: string; message: string; is_read: boolean; created_at: string; data?: Record<string, unknown> }>) {
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-  const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 7);
-  const groups: { label: string; items: typeof notifications }[] = [
-    { label: "Aujourd'hui", items: [] },
-    { label: "Hier", items: [] },
-    { label: "Cette semaine", items: [] },
-    { label: "Plus ancien", items: [] },
-  ];
-  for (const n of notifications) {
-    const d = new Date(n.created_at); d.setHours(0, 0, 0, 0);
-    if (d >= todayStart) groups[0].items.push(n);
-    else if (d >= yesterdayStart) groups[1].items.push(n);
-    else if (d >= weekStart) groups[2].items.push(n);
-    else groups[3].items.push(n);
-  }
-  return groups.filter((g) => g.items.length > 0);
-}
 
 interface PrefItem {
   key: PrefKey;
@@ -107,11 +50,9 @@ function getPrefSections(colors: ReturnType<typeof useThemeColors>): Array<{ tit
 }
 
 export default function ClientNotificationsScreen() {
-  const router = useRouter();
   const colors = useThemeColors();
   const PREF_SECTIONS = useMemo(() => getPrefSections(colors), [colors]);
-  const { notifications, unreadCount, markAsRead } = useNotifications();
-  const [tab, setTab] = useState<Tab>("activity");
+  const [tab, setTab] = useState<Tab>("messages");
   const listRef = useRef(null);
   useScrollToTop(listRef);
   const [savingKey, setSavingKey] = useState<PrefKey | null>(null);
@@ -153,36 +94,16 @@ export default function ClientNotificationsScreen() {
     }
   };
 
-  const markAllAsRead = () => {
-    notifications.filter((n) => !n.is_read).forEach((n) => {
-      markAsRead(n.id);
-      notificationsApi.markAsRead(Number(n.id)).catch(() => {}); // BLYSS-FIX: 3.1
-    });
-  };
-
-  const grouped = useMemo(() => groupByDay(notifications), [notifications]);
-
   const listHeader = (
     <View>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 0, paddingBottom: 16 }}>
         <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground, letterSpacing: -0.5 }}>Notifications</Text>
-        {tab === "activity" && unreadCount > 0 && (
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              markAllAsRead();
-            }}
-            hitSlop={8}
-          >
-            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>Tout marquer comme lu</Text>
-          </Pressable>
-        )}
       </View>
 
       {/* Segmented control */}
       <View style={{ flexDirection: "row", backgroundColor: colors.muted, borderRadius: 14, padding: 4, marginBottom: 20 }}>
-        {([["activity", "Activité"], ["messages", "Messages"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
+        {([["messages", "Messages"], ["preferences", "Préférences"]] as [Tab, string][]).map(([id, label]) => (
           <AnimatedPressable
             key={id}
             onPress={() => {
@@ -210,88 +131,7 @@ export default function ClientNotificationsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
-        {tab === "activity" ? (
-          notifications.length === 0 ? (
-            <View style={{ flex: 1 }}>
-              {listHeader}
-              <EmptyState
-                icon="notifications-outline"
-                title="Aucune notification"
-                description="Tes notifications apparaîtront ici en temps réel."
-              />
-            </View>
-          ) : (
-            <FlatList
-              ref={listRef}
-              data={grouped}
-              keyExtractor={(item) => item.label}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100 }}
-              ListHeaderComponent={listHeader}
-              renderItem={({ item: group }) => (
-                <View style={{ marginBottom: 20 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
-                    {group.label}
-                  </Text>
-                  <View style={{ gap: 6 }}>
-                    {group.items.map((notif) => {
-                      const cfg = NOTIF_CFG[notif.type] ?? NOTIF_CFG.default;
-                      return (
-                        <AnimatedPressable
-                          key={notif.id}
-                          onPress={() => {
-                            if (!notif.is_read) {
-                              // markAsRead(context) ne met à jour que le state local — sans
-                              // l'appel API ci-dessous (déjà fait par markAllAsRead, oublié
-                              // ici), la notification redevenait "non lue" au prochain
-                              // rechargement de la liste depuis le serveur.
-                              markAsRead(notif.id);
-                              notificationsApi.markAsRead(Number(notif.id)).catch(() => {});
-                            }
-                            // Sans cette navigation, taper une notif depuis la liste in-app
-                            // ne faisait rien d'autre que la marquer lue — la fonctionnalité
-                            // la plus attendue d'un centre de notifications (aller voir le
-                            // rendez-vous concerné) était absente.
-                            const reservationId = notif.data?.reservation_id;
-                            const requestId = notif.data?.request_id;
-                            if (notif.type === "booking_reschedule_proposed" && requestId != null) {
-                              router.push(`/reschedule-request/${String(requestId)}` as never);
-                            } else if (reservationId != null) {
-                              router.push(`/booking/${String(reservationId)}` as never);
-                            }
-                          }}
-                          style={{
-                            flexDirection: "row", alignItems: "flex-start", gap: 12,
-                            padding: 14, borderRadius: 16,
-                            backgroundColor: notif.is_read ? colors.muted : colors.white,
-                            borderWidth: notif.is_read ? 0 : 1,
-                            borderColor: withAlpha(colors.primary, 0.10),
-                            ...(notif.is_read ? {} : Shadows.card),
-                          }}
-                        >
-                          <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", flexShrink: 0, backgroundColor: cfg.bg, opacity: notif.is_read ? 0.55 : 1 }}>
-                            <Ionicons name={cfg.icon} size={17} color={cfg.color} />
-                          </View>
-                          <View style={{ flex: 1, paddingTop: 2 }}>
-                            <Text style={{ fontSize: 13, lineHeight: 18, color: notif.is_read ? colors.mutedForeground : colors.foreground, fontWeight: notif.is_read ? "400" : "600" }} numberOfLines={2}>
-                              {notif.message}
-                            </Text>
-                            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6, fontWeight: "500" }}>
-                              {formatRelTime(notif.created_at)}
-                            </Text>
-                          </View>
-                          {!notif.is_read && (
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginTop: 6, flexShrink: 0 }} />
-                          )}
-                        </AnimatedPressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-            />
-          )
-        ) : tab === "messages" ? (
+        {tab === "messages" ? (
           <>
             {listHeader}
             <ThreadList />

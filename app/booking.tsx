@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { stripePaymentsApi, specialistsApi, messagesApi } from "@/lib/api";
+import { stripePaymentsApi, specialistsApi, messagesApi, type AvailabilityResponse } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -31,8 +31,6 @@ import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { toLocalDateStr, calculateEndDateTime, canPayOnline as computeCanPayOnline, resolvePaymentType } from "@/lib/bookingUtils";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 interface Pro {
   id: number;
@@ -55,6 +53,21 @@ interface Pro {
 }
 
 const TOTAL_STEPS = 5;
+
+// Moteur de dispo → liste de créneaux affichables pour une date donnée.
+// `id` est un simple index de rendu (aucun slot précréé côté serveur) ;
+// `startISO` porte l'instant exact renvoyé par le moteur, réutilisé tel quel
+// à la réservation pour ne pas reconstruire l'heure depuis le fuseau device.
+function mapAvailabilityToSlots(data: AvailabilityResponse, dateStr: string): Slot[] {
+  const day = data.days.find((d) => d.date === dateStr);
+  if (!day) return [];
+  return day.slots.map((s, i) => ({
+    id: i,
+    time: new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+    duration: data.requested_duration_minutes,
+    startISO: s.start,
+  }));
+}
 
 // ── StepIndicator ─────────────────────────────────────────────────────────────
 function StepIndicator({ current, total }: { current: number; total: number }) {
@@ -267,17 +280,30 @@ export default function BookingScreen() {
     void fetchData();
   }, [proId, authLoading, isAuthenticated, router]);
 
+  // Dates réservables du mois affiché — calculées par le moteur de dispo
+  // (working_hours − absences − RDV), et non plus lues dans la table `slots`
+  // précréée qui est vide pour toutes les pros basculées sur le moteur.
   useEffect(() => {
     const fetchDates = async () => {
-      if (!proId || step !== 2) return;
+      if (!proId || step !== 2 || !selectedPrestation) return;
       setIsLoadingDates(true);
       try {
         const year = currentMonth.getFullYear();
-        const month = String(currentMonth.getMonth() + 1).padStart(2, "0");
-        const res = await fetch(`${API_URL}/api/slots/available-dates/${proId}/${year}-${month}`);
-        const data = await res.json();
-        if (data.success && data.data) {
-          setAvailableDates(new Set<string>(Array.isArray(data.data) ? data.data.map(String) : []));
+        const month = currentMonth.getMonth();
+        const firstOfMonth = new Date(year, month, 1);
+        const lastOfMonth = new Date(year, month + 1, 0);
+        const now = new Date();
+        const from = firstOfMonth < now ? now : firstOfMonth;
+        const res = await specialistsApi.getPublicAvailability({
+          proId: Number(proId),
+          serviceIds: [selectedPrestation],
+          fromDate: toLocalDateStr(from),
+          toDate: toLocalDateStr(lastOfMonth),
+        });
+        if (res.success && res.data) {
+          setAvailableDates(
+            new Set(res.data.days.filter((d) => d.slots.length > 0).map((d) => d.date))
+          );
         } else {
           setAvailableDates(new Set());
         }
@@ -288,18 +314,23 @@ export default function BookingScreen() {
       }
     };
     void fetchDates();
-  }, [proId, currentMonth, step]);
+  }, [proId, currentMonth, step, selectedPrestation]);
 
   useEffect(() => {
     const fetchSlots = async () => {
-      if (!selectedDate || !proId) return;
+      if (!selectedDate || !proId || !selectedPrestation) return;
       setIsLoadingSlots(true);
       try {
-        const res = await fetch(
-          `${API_URL}/api/slots/available/${proId}/${toLocalDateStr(selectedDate)}`
+        const dateStr = toLocalDateStr(selectedDate);
+        const res = await specialistsApi.getPublicAvailability({
+          proId: Number(proId),
+          serviceIds: [selectedPrestation],
+          fromDate: dateStr,
+          toDate: dateStr,
+        });
+        setAvailableSlots(
+          res.success && res.data ? mapAvailabilityToSlots(res.data, dateStr) : []
         );
-        const data = await res.json();
-        setAvailableSlots(data.success && data.data ? data.data : []);
       } catch {
         setAvailableSlots([]);
       } finally {
@@ -307,22 +338,25 @@ export default function BookingScreen() {
       }
     };
     void fetchSlots();
-  }, [selectedDate, proId]);
+  }, [selectedDate, proId, selectedPrestation]);
 
   useEffect(() => {
-    if (step !== 2 || !selectedDate || !proId) return;
+    if (step !== 2 || !selectedDate || !proId || !selectedPrestation) return;
     const refresh = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/api/slots/available/${proId}/${toLocalDateStr(selectedDate)}`
-        );
-        const data = await res.json();
-        if (data.success && data.data) setAvailableSlots(data.data);
+        const dateStr = toLocalDateStr(selectedDate);
+        const res = await specialistsApi.getPublicAvailability({
+          proId: Number(proId),
+          serviceIds: [selectedPrestation],
+          fromDate: dateStr,
+          toDate: dateStr,
+        });
+        if (res.success && res.data) setAvailableSlots(mapAvailabilityToSlots(res.data, dateStr));
       } catch {}
     };
     const interval = setInterval(refresh, 30_000);
     return () => clearInterval(interval);
-  }, [step, selectedDate, proId]);
+  }, [step, selectedDate, proId, selectedPrestation]);
 
   useEffect(() => {
     setSelectedTime(null);
@@ -378,21 +412,27 @@ export default function BookingScreen() {
 
       if (reservationId == null) {
         const selectedSlot = availableSlots.find((s) => s.time === selectedTime);
-        const [h, m] = selectedTime.split(":").map(Number);
-        const startDT = new Date(selectedDate);
-        startDT.setHours(h, m, 0, 0);
+        // Instant exact du moteur de dispo si dispo, sinon reconstruction
+        // locale (fallback défensif). Plus de `slot_id` : les créneaux ne
+        // sont plus des lignes `slots`, le moteur revérifie start_datetime.
+        const startDT = selectedSlot?.startISO
+          ? new Date(selectedSlot.startISO)
+          : (() => {
+              const [h, m] = selectedTime.split(":").map(Number);
+              const d = new Date(selectedDate);
+              d.setHours(h, m, 0, 0);
+              return d;
+            })();
+        const endDT = selectedSlot?.startISO
+          ? new Date(startDT.getTime() + selectedPrestationData.duration_minutes * 60_000)
+          : calculateEndDateTime(selectedDate, selectedTime, selectedPrestationData.duration_minutes);
 
         const resaResult = await stripePaymentsApi.createReservation({
           pro_id: Number(proId),
           prestation_id: selectedPrestation,
           start_datetime: startDT.toISOString(),
-          end_datetime: calculateEndDateTime(
-            selectedDate,
-            selectedTime,
-            selectedPrestationData.duration_minutes
-          ).toISOString(),
+          end_datetime: endDT.toISOString(),
           price: selectedPrestationData.price,
-          slot_id: selectedSlot?.id,
           payment_method: paymentMethod ?? "on_site",
           early_execution_requested: withdrawalRightAccepted,
         });

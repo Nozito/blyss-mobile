@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { clientApi, nailTechApi, type WaitingListEntry } from "@/lib/api";
+import { clientApi, nailTechApi, specialistsApi, type WaitingListEntry } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -33,6 +33,7 @@ interface Booking {
   end_datetime: string;
   status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
   price: number;
+  prestation_id: number | null;
   prestation_name: string;
   duration_minutes: number;
   pro_first_name: string;
@@ -77,8 +78,8 @@ function RescheduleModal({
 }) {
   const colors = useThemeColors();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<{ id: number; time: string } | null>(null);
-  const [slots, setSlots] = useState<Array<{ id: number; time: string }>>([]);
+  const [selectedSlot, setSelectedSlot] = useState<{ id: number; time: string; startISO?: string } | null>(null);
+  const [slots, setSlots] = useState<Array<{ id: number; time: string; startISO?: string }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
@@ -97,8 +98,29 @@ function RescheduleModal({
     setSelectedSlot(null);
     setLoadingSlots(true);
     try {
-      const data = await clientApi.getAvailableSlots(booking.pro_id, key);
-      setSlots(data.success && Array.isArray(data.data) ? data.data.map((s: { id: number; time: string }) => ({ id: s.id, time: s.time })) : []);
+      // Créneaux calculés par le moteur de dispo (les anciens slots précréés
+      // sont vides pour toutes les pros basculées — la cliente ne voyait
+      // alors jamais de créneau à reporter).
+      if (booking.prestation_id == null) {
+        setSlots([]);
+        return;
+      }
+      const data = await specialistsApi.getPublicAvailability({
+        proId: booking.pro_id,
+        serviceIds: [booking.prestation_id],
+        fromDate: key,
+        toDate: key,
+      });
+      const daySlots = data.success && data.data
+        ? (data.data.days.find((d) => d.date === key)?.slots ?? [])
+        : [];
+      setSlots(
+        daySlots.map((s, i) => ({
+          id: i,
+          time: new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+          startISO: s.start,
+        }))
+      );
     } catch {
       setSlots([]);
     } finally {
@@ -110,14 +132,18 @@ function RescheduleModal({
     if (!selectedDate || !selectedSlot) return;
     setIsSubmitting(true);
     try {
-      const [h, m] = selectedSlot.time.split(":").map(Number);
-      const start = new Date(`${selectedDate}T00:00:00`);
-      start.setHours(h, m, 0, 0);
+      let start: Date;
+      if (selectedSlot.startISO) {
+        start = new Date(selectedSlot.startISO);
+      } else {
+        const [h, m] = selectedSlot.time.split(":").map(Number);
+        start = new Date(`${selectedDate}T00:00:00`);
+        start.setHours(h, m, 0, 0);
+      }
       const end = new Date(start.getTime() + booking.duration_minutes * 60_000);
       const data = await clientApi.rescheduleBooking(booking.id, {
         start_datetime: start.toISOString().slice(0, 19).replace("T", " "),
         end_datetime: end.toISOString().slice(0, 19).replace("T", " "),
-        slot_id: selectedSlot.id,
       });
       if (!data.success) throw new Error(data?.message || "Erreur");
       onConfirm();
@@ -494,6 +520,7 @@ export default function MyBookingsScreen() {
           end_datetime: b.end_datetime as string,
           status: b.status as Booking["status"],
           price: b.price as number,
+          prestation_id: (prest.id ?? b.prestation_id ?? null) as number | null,
           prestation_name: (prest.name ?? "Prestation") as string,
           duration_minutes: (prest.duration_minutes ?? 60) as number,
           pro_first_name: (pro.first_name ?? "") as string,

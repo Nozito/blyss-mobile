@@ -12,6 +12,8 @@ export default function ProfileLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="preferences" />
+      <Stack.Screen name="reviews" />
       <Stack.Screen name="help" />
       <Stack.Screen name="rgpd" />
     </Stack>

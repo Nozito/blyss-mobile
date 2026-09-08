@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,24 +6,36 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Animated,
-  ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
+import Reanimated, { FadeIn } from "react-native-reanimated";
+import RNDateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
-import { Input } from "@/components/ui/Input";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { withAlpha } from "@/constants/colors";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { authApi } from "@/lib/api";
+import { authErrorMessage } from "@/lib/authErrors";
 import { useAppTransition } from "@/contexts/TransitionContext";
+import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
+import { withAlpha } from "@/constants/colors";
+import { FloatingNotice } from "@/components/ui/FloatingNotice";
+import {
+  CREAM,
+  INK,
+  PillButton,
+  PosterField,
+  Ribbon,
+  StepHeader,
+  fieldColors,
+  useRibbon,
+  type FieldTone,
+} from "@/components/onboarding/kit";
+import { AccountPreparing } from "@/components/onboarding/AccountPreparing";
 
-// ── Constants (mirrored from web) ──────────────────────────────────────────
+// ── Constantes (miroir du web) ────────────────────────────────────────────
 const VALIDATION = {
   PHONE_REGEX: /^[0-9]{10}$/,
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -31,22 +43,9 @@ const VALIDATION = {
   NAME_MAX: 50,
   TEXT_MAX: 100,
   EMAIL_MAX: 254,
-  PASSWORD_MIN: 8,
-  PASSWORD_MAX: 128,
   MIN_AGE: 16,
 } as const;
 
-const ERROR_CODES: Record<string, string> = {
-  email_exists: "Cet email est déjà utilisé",
-  weak_password: "Mot de passe trop faible (min. 8 car., majuscule, chiffre, caractère spécial)",
-  age_restriction: "Tu dois avoir au moins 16 ans",
-  invalid_phone: "Numéro de téléphone invalide",
-  invalid_email: "Email invalide",
-  missing_fields: "Champs obligatoires manquants",
-  data_too_long: "Un ou plusieurs champs sont trop longs",
-};
-
-// ── Types ──────────────────────────────────────────────────────────────────
 type Role = "client" | "pro";
 
 interface FormData {
@@ -64,163 +63,62 @@ interface FormData {
   acceptedTerms: boolean;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 10);
-  return digits.replace(/(\d{2})(?=\d)/g, "$1 ");
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 10)
+    .replace(/(\d{2})(?=\d)/g, "$1 ");
 }
 
-function getAge(birthDate: string): number {
+function getAge(birthDate: Date | undefined): number {
   if (!birthDate) return 0;
   const today = new Date();
-  const birth = new Date(birthDate);
-  if (isNaN(birth.getTime())) return 0;
-  let age = today.getFullYear() - birth.getFullYear();
+  let age = today.getFullYear() - birthDate.getFullYear();
   if (
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  )
+    today.getMonth() < birthDate.getMonth() ||
+    (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())
+  ) {
     age--;
+  }
   return age;
 }
 
-// ── Password step (shared between client step 6 and pro step 9) ────────────
-function PasswordStep({
-  formData,
-  update,
-}: {
-  formData: FormData;
-  update: (u: Partial<FormData>) => void;
-}) {
-  const colors = useThemeColors();
-  return (
-    <View className="gap-6">
-      <View>
-        <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Dernière étape</Text>
-        <Text className="mt-2" style={{ color: colors.mutedForeground }}>Choisis ton mot de passe</Text>
-      </View>
-
-      <View className="gap-4">
-        <Input
-          label="Mot de passe"
-          value={formData.password}
-          onChangeText={(v) => update({ password: v })}
-          secure
-          autoComplete="new-password"
-          placeholder="8-12 caractères"
-          leftIcon="lock-closed-outline"
-          hint="Majuscule, chiffre et caractère spécial (!@#$%^&*)"
-        />
-        <Input
-          label="Confirmer le mot de passe"
-          value={formData.confirmPassword}
-          onChangeText={(v) => update({ confirmPassword: v })}
-          secure
-          autoComplete="new-password"
-          placeholder="Répète ton mot de passe"
-          leftIcon="lock-closed-outline"
-        />
-
-        {/* CGU checkbox */}
-        <Pressable
-          onPress={() => update({ acceptedTerms: !formData.acceptedTerms })}
-          className="flex-row items-start gap-3"
-        >
-          <View
-            className="w-5 h-5 rounded border-2 items-center justify-center mt-0.5 flex-shrink-0"
-            style={{
-              backgroundColor: formData.acceptedTerms ? colors.primary : colors.card,
-              borderColor: formData.acceptedTerms ? colors.primary : colors.border,
-            }}
-          >
-            {formData.acceptedTerms && (
-              <Ionicons name="checkmark" size={12} color={colors.onColor} />
-            )}
-          </View>
-          <Text className="text-sm flex-1 leading-5" style={{ color: colors.mutedForeground }}>
-            J'accepte les{" "}
-            <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>Conditions générales</Text>
-            {" "}et la{" "}
-            <Text className="text-primary font-medium" onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>Politique de confidentialité</Text>
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  );
+function formatDate(d: Date): string {
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-// ── Success step ─────────────────────────────────────────────────────────────
+// ── Écran de succès ───────────────────────────────────────────────────────
 function RegisterSuccess({ onPress }: { onPress: () => void }) {
-  const colors = useThemeColors();
-  const reduceMotion = useReducedMotion();
-  const scale = useRef(new Animated.Value(reduceMotion ? 1 : 0.5)).current;
-  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    if (reduceMotion) return;
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 10 }),
-      Animated.timing(opacity, { toValue: 1, duration: 260, useNativeDriver: true }),
-    ]).start();
   }, []);
-
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 }}>
-      <Animated.View
-        style={{
-          width: 88,
-          height: 88,
-          borderRadius: 44,
-          backgroundColor: colors.primary,
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 24,
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.35,
-          shadowRadius: 18,
-          elevation: 8,
-          transform: [{ scale }],
-          opacity,
-        }}
-      >
-        <Ionicons name="checkmark" size={40} color={colors.onColor} />
-      </Animated.View>
-      <Text style={{ fontSize: 28, fontWeight: "900", color: colors.foreground, textAlign: "center", marginBottom: 8 }}>
-        Bienvenue sur Blyss !
-      </Text>
-      <Text style={{ fontSize: 15, color: colors.mutedForeground, textAlign: "center", lineHeight: 22, marginBottom: 40, paddingHorizontal: 16 }}>
-        Ton compte a été créé avec succès.{"\n"}On est ravis de t'accueillir !
-      </Text>
-      <AnimatedPressable
-        onPress={onPress}
-        style={{
-          width: "100%",
-          height: 56,
-          borderRadius: 16,
-          backgroundColor: colors.primary,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>Commencer</Text>
-      </AnimatedPressable>
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+        <Text style={{ color: INK, fontWeight: "900", fontSize: 42, lineHeight: 42, letterSpacing: -1.2, textTransform: "uppercase" }}>
+          Ton compte{"\n"}est prêt
+        </Text>
+        <Text style={{ color: INK, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 18, maxWidth: 320 }}>
+          On te présente maintenant les prothésistes ongulaires près de chez toi.
+        </Text>
+      </View>
+      <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
+        <PillButton label="Continuer →" onPress={onPress} bg={INK} fg={CREAM} />
+      </View>
     </View>
   );
 }
 
-// ── Main screen ────────────────────────────────────────────────────────────
 export default function RegisterScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const isDark = useIsDarkMode();
   const { signup, isLoading } = useAuth();
   const { showTransition, hideTransition } = useAppTransition();
-  // app/(auth)/onboarding.tsx renvoie ici avec ?role=pro|client selon le choix
-  // fait sur l'écran précédent — sans le lire, ce choix était silencieusement
-  // ignoré et l'utilisateur devait resélectionner son rôle à l'étape 1.
+  const { width } = useWindowDimensions();
+  const ribbon = useRibbon();
   const { role: roleParam } = useLocalSearchParams<{ role?: string }>();
-  const initialRole: "client" | "pro" = roleParam === "pro" ? "pro" : "client";
+  const initialRole: Role = roleParam === "pro" ? "pro" : "client";
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -237,484 +135,510 @@ export default function RegisterScreen() {
     confirmPassword: "",
     acceptedTerms: false,
   });
-  const [stepError, setStepError] = useState("");
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [notice, setNotice] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
 
-  useEffect(() => {
-    if (!stepError) return;
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 8,  duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 5,  duration: 45, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -5, duration: 45, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0,  duration: 35, useNativeDriver: true }),
-    ]).start();
-  }, [stepError, shakeAnim]);
-
-  const totalSteps = useMemo(
-    () => (formData.role === "pro" ? 9 : 6),
-    [formData.role],
-  );
+  const totalSteps = formData.role === "pro" ? 9 : 6;
 
   const update = useCallback((updates: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
-    setStepError("");
+    setNotice(null);
   }, []);
 
-  // ── Step validation ──────────────────────────────────────────────────────
+  const tone: FieldTone = useMemo(() => {
+    if (step === 99 || step === 98 || step === 1) return "rose"; // bienvenue / préparation / succès
+    const lastStep = formData.role === "pro" ? 9 : 6;
+    if (step === lastStep) return "prune"; // mot de passe : ton posé, pas le rose vif
+    return "cream";
+  }, [step, formData.role]);
+  const field = fieldColors(tone, colors);
+  const ink = field.ink;
+
+  const isLastStep = step === (formData.role === "pro" ? 9 : 6);
+  const isProOptionalStep = formData.role === "pro" && [6, 7, 8].includes(step);
+  const optionalValue =
+    step === 6 ? formData.activityName : step === 7 ? formData.city : step === 8 ? formData.instagramAccount : "";
+
   const isStepValid = (): boolean => {
     switch (step) {
-      case 1: return true;
+      case 1:
+        return true;
       case 2:
-        return (
-          formData.firstName.trim().length > 0 &&
-          formData.lastName.trim().length > 0
-        );
+        return formData.firstName.trim().length > 0 && formData.lastName.trim().length > 0;
       case 3:
         return VALIDATION.PHONE_REGEX.test(formData.phone.replace(/\s/g, ""));
       case 4:
-        return (
-          VALIDATION.EMAIL_REGEX.test(formData.email.trim()) &&
-          formData.email.length <= VALIDATION.EMAIL_MAX
-        );
+        return VALIDATION.EMAIL_REGEX.test(formData.email.trim()) && formData.email.length <= VALIDATION.EMAIL_MAX;
       case 5:
-        return !!formData.birthDate && getAge(formData.birthDate.toISOString().split("T")[0]) >= VALIDATION.MIN_AGE;
+        return !!formData.birthDate && getAge(formData.birthDate) >= VALIDATION.MIN_AGE;
       case 6:
         return formData.role === "client" ? formData.acceptedTerms : true;
-      case 7: case 8: return true;
-      case 9: return formData.acceptedTerms;
-      default: return false;
+      case 7:
+      case 8:
+        return true;
+      case 9:
+        return formData.acceptedTerms;
+      default:
+        return false;
     }
   };
 
-  const isLastStep =
-    (formData.role === "client" && step === 6) ||
-    (formData.role === "pro" && step === 9);
-
-  const isProOptionalStep =
-    formData.role === "pro" && [6, 7, 8].includes(step);
-
-  const currentOptionalValue =
-    step === 6 ? formData.activityName
-    : step === 7 ? formData.city
-    : step === 8 ? formData.instagramAccount
-    : "";
-
   const ctaLabel = isLoading
-    ? "Chargement..."
+    ? "…"
     : isLastStep
-    ? "Créer mon compte"
-    : isProOptionalStep && !currentOptionalValue.trim()
-    ? "Remplir plus tard"
-    : "Continuer";
+      ? "Créer mon compte →"
+      : isProOptionalStep && !optionalValue.trim()
+        ? "Plus tard →"
+        : "Continuer →";
 
-  // ── Navigation ───────────────────────────────────────────────────────────
   const handleBack = useCallback(() => {
     if (step === 1) router.back();
-    else { setStep((s) => s - 1); setStepError(""); }
+    else {
+      setNotice(null);
+      setStep((s) => s - 1);
+    }
   }, [step, router]);
+
+  const submit = useCallback(async () => {
+    if (formData.password !== formData.confirmPassword) {
+      setNotice("Les mots de passe ne correspondent pas");
+      return;
+    }
+    if (!VALIDATION.PASSWORD_REGEX.test(formData.password)) {
+      setNotice("8 car. min., 1 majuscule, 1 chiffre, 1 caractère spécial");
+      return;
+    }
+    if (!formData.acceptedTerms) {
+      setNotice("Accepte les conditions pour continuer");
+      return;
+    }
+    const res = await signup({
+      first_name: formData.firstName.trim(),
+      last_name: formData.lastName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+      phone_number: formData.phone.replace(/\s/g, ""),
+      birth_date: formData.birthDate ? formData.birthDate.toISOString().split("T")[0] : "",
+      role: formData.role,
+      accepted_terms: true,
+      activity_name: formData.activityName.trim() || null,
+      city: formData.city.trim() || null,
+      instagram_account: formData.instagramAccount.trim() || null,
+    });
+    if (!res.success) {
+      setNotice(authErrorMessage(res.error ?? res.message, "Création impossible, réessaie"));
+      // renvoie sur le champ concerné pour corriger
+      if (res.error === "email_exists" || res.error === "invalid_email") setStep(4);
+      else if (res.error === "phone_exists" || res.error === "invalid_phone") setStep(3);
+      return;
+    }
+    setStep(98); // interstitiel « on prépare ton compte » → 99
+  }, [formData, signup]);
 
   const handleNext = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setStepError("");
+    setNotice(null);
 
-    if (step === 4 && !VALIDATION.EMAIL_REGEX.test(formData.email.trim())) {
-      setStepError("Email invalide");
+    // Vérif de disponibilité sur l'étape concernée, pas à la fin du parcours.
+    if (step === 3) {
+      const cleanPhone = formData.phone.replace(/\s/g, "");
+      setChecking(true);
+      const { phone_taken } = await authApi.checkAvailability({ phone_number: cleanPhone });
+      setChecking(false);
+      if (phone_taken) {
+        setNotice("Ce numéro de téléphone est déjà utilisé");
+        return;
+      }
+    }
+    if (step === 4) {
+      const email = formData.email.trim();
+      if (!VALIDATION.EMAIL_REGEX.test(email)) {
+        setNotice("Email invalide");
+        return;
+      }
+      setChecking(true);
+      const { email_taken } = await authApi.checkAvailability({ email });
+      setChecking(false);
+      if (email_taken) {
+        setNotice("Cet email est déjà utilisé");
+        return;
+      }
+    }
+    if (step === 5 && getAge(formData.birthDate) < VALIDATION.MIN_AGE) {
+      setNotice("Tu dois avoir au moins 16 ans");
       return;
     }
-    if (step === 5 && (!formData.birthDate || getAge(formData.birthDate.toISOString().split("T")[0]) < VALIDATION.MIN_AGE)) {
-      setStepError("Tu dois avoir au moins 16 ans");
-      return;
-    }
-
     if (isLastStep) {
-      if (formData.password !== formData.confirmPassword) {
-        setStepError("Les mots de passe ne correspondent pas");
-        return;
-      }
-      if (!VALIDATION.PASSWORD_REGEX.test(formData.password)) {
-        setStepError("8 car. min., une majuscule, un chiffre et un caractère spécial (!@#$%^&*)");
-        return;
-      }
-      if (!formData.acceptedTerms) {
-        setStepError("Tu dois accepter les CGU pour continuer");
-        return;
-      }
-
-      const res = await signup({
-        first_name: formData.firstName.trim(),
-        last_name: formData.lastName.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        phone_number: formData.phone.replace(/\s/g, ""),
-        birth_date: formData.birthDate ? formData.birthDate.toISOString().split("T")[0] : "",
-        role: formData.role,
-        accepted_terms: true,
-        activity_name: formData.activityName.trim() || null,
-        city: formData.city.trim() || null,
-        instagram_account: formData.instagramAccount.trim() || null,
-      });
-
-      if (!res.success) {
-        const msg = res.error
-          ? (ERROR_CODES[res.error] ?? res.message ?? "Erreur lors de la création")
-          : "Erreur lors de la création";
-        setStepError(msg);
-        return;
-      }
-      setStep(99);
+      submit();
       return;
     }
+    ribbon.go(() => setStep((s) => s + 1));
+  }, [step, formData, isLastStep, submit, ribbon]);
 
-    setStep((s) => s + 1);
-  }, [step, formData, isLastStep, signup]);
+  const leaveToNext = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    showTransition();
+    if (formData.role === "pro") router.replace("/(pro)/dashboard" as never);
+    else router.replace("/client-onboarding?from=signup" as never);
+    hideTransition();
+  }, [formData.role, router, showTransition, hideTransition]);
 
-  // ── Step content ─────────────────────────────────────────────────────────
-  const renderContent = () => {
-    if (step === 99) {
-      return (
-        <RegisterSuccess
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            showTransition();
-            if (formData.role === "pro") router.replace("/(pro)/dashboard" as any);
-            else router.replace("/(client)" as any);
-            hideTransition();
-          }}
-        />
-      );
-    }
-
+  // ── Contenu par étape ───────────────────────────────────────────────────
+  const renderStep = () => {
     if (step === 1) {
       return (
-        <View className="gap-8">
-          <View className="items-center">
-            <Text className="text-3xl font-black text-center" style={{ color: colors.foreground }}>
-              Bienvenue sur Blyss
-            </Text>
-            <Text className="text-center mt-2" style={{ color: colors.mutedForeground }}>
-              Choisis comment tu utilises Blyss
-            </Text>
-          </View>
-
-          <View className="gap-4">
-            {(["client", "pro"] as Role[]).map((r) => (
-              <Pressable
-                key={r}
-                onPress={() => update({ role: r })}
-                disabled={isLoading}
-                className="flex-row items-center gap-4 rounded-2xl px-5 py-5 border-2"
-                style={{
-                  borderColor: formData.role === r ? colors.primary : colors.border,
-                  backgroundColor: formData.role === r ? withAlpha(colors.primary, 0.05) : colors.card,
-                }}
-              >
-                <View className="flex-1">
-                  <Text className="text-base font-semibold" style={{ color: colors.foreground }}>
-                    {r === "client" ? "Cliente" : "Prothésiste"}
-                  </Text>
-                  <Text className="text-sm mt-0.5" style={{ color: colors.mutedForeground }}>
-                    {r === "client"
-                      ? "Je réserve des prestations manucure"
-                      : "Agenda, réservations, paiements — tout en un"}
-                  </Text>
-                  {r === "pro" && (
-                    <View style={{
-                      marginTop: 6, alignSelf: "flex-start",
-                      backgroundColor: withAlpha(colors.primary, 0.12), borderRadius: 8,
-                      paddingHorizontal: 8, paddingVertical: 3,
-                    }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.primary }}>
-                        Pour les pros du nail art
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View
-                  className="w-6 h-6 rounded-full border-2 items-center justify-center flex-shrink-0"
+        <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+          <Text style={{ color: ink, fontWeight: "900", fontSize: 34, lineHeight: 34, letterSpacing: -1, textTransform: "uppercase" }}>
+            Bienvenue sur Blyss
+          </Text>
+          <Text style={{ color: ink, opacity: 0.85, fontSize: 13, marginTop: 10 }}>Comment tu utilises Blyss ?</Text>
+          <View style={{ gap: 10, marginTop: 22 }}>
+            {(["client", "pro"] as Role[]).map((r) => {
+              const on = formData.role === r;
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    update({ role: r });
+                  }}
                   style={{
-                    borderColor: formData.role === r ? colors.primary : withAlpha(colors.mutedForeground, 0.4),
-                    backgroundColor: formData.role === r ? colors.primary : "transparent",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    padding: 16,
+                    borderColor: on ? INK : withAlpha(ink, 0.2),
+                    backgroundColor: on ? INK : withAlpha(ink, 0.04),
                   }}
                 >
-                  {formData.role === r && (
-                    <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors.onColor }} />
-                  )}
-                </View>
-              </Pressable>
-            ))}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: on ? CREAM : ink, fontSize: 15, fontWeight: "800", textTransform: "uppercase" }}>
+                      {r === "client" ? "Cliente" : "Prothésiste"}
+                    </Text>
+                    <Text style={{ color: on ? withAlpha(CREAM, 0.75) : withAlpha(ink, 0.6), fontSize: 12, marginTop: 5 }}>
+                      {r === "client" ? "Je prends RDV avec les meilleures prothésistes près de chez moi" : "Agenda, réservations, paiements — tout en un"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={on ? "checkmark-circle" : "ellipse-outline"}
+                    size={20}
+                    color={on ? CREAM : withAlpha(ink, 0.3)}
+                  />
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       );
     }
+
+    if (step === 98) return <AccountPreparing ink={ink} onDone={() => setStep(99)} />;
+    if (step === 99) return <RegisterSuccess onPress={() => ribbon.go(leaveToNext)} />;
+
+    // Étapes formulaire — même gabarit
+    let body: React.ReactNode = null;
+    let title = "";
+    let subtitle = "";
 
     if (step === 2) {
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Enchanté</Text>
-            <Text className="mt-2" style={{ color: colors.mutedForeground }}>Et toi, c'est ?</Text>
-          </View>
-          <View className="gap-4">
-            <Input
-              label="Prénom"
-              value={formData.firstName}
-              onChangeText={(v) => update({ firstName: v })}
-              autoCapitalize="words"
-              autoComplete="given-name"
-              maxLength={VALIDATION.NAME_MAX}
-            />
-            <Input
-              label="Nom"
-              value={formData.lastName}
-              onChangeText={(v) => update({ lastName: v })}
-              autoCapitalize="words"
-              autoComplete="family-name"
-              maxLength={VALIDATION.NAME_MAX}
-            />
-          </View>
-        </View>
-      );
-    }
-
-    if (step === 3) {
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>
-              Enchanté {formData.firstName}
-            </Text>
-            <Text className="mt-2" style={{ color: colors.mutedForeground }}>Un 06 ?</Text>
-          </View>
-          <Input
-            label="Téléphone"
-            value={formData.phone}
-            onChangeText={(v) => update({ phone: formatPhone(v) })}
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            placeholder="06 12 34 56 78"
-            leftIcon="call-outline"
+      title = "Enchanté";
+      subtitle = "Et toi, c'est ?";
+      body = (
+        <>
+          <PosterField
+            label="Prénom"
+            ink={ink}
+            accent={colors.primary}
+            value={formData.firstName}
+            onChangeText={(v) => update({ firstName: v })}
+            autoCapitalize="words"
+            autoComplete="given-name"
+            textContentType="givenName"
+            maxLength={VALIDATION.NAME_MAX}
           />
-        </View>
-      );
-    }
-
-    if (step === 4) {
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Super !</Text>
-            <Text className="mt-2" style={{ color: colors.mutedForeground }}>Ton email ?</Text>
-          </View>
-          <Input
-            label="Email"
-            value={formData.email}
-            onChangeText={(v) => update({ email: v })}
-            keyboardType="email-address"
-            autoComplete="email"
-            placeholder="ton@email.com"
-            leftIcon="mail-outline"
-            maxLength={VALIDATION.EMAIL_MAX}
+          <PosterField
+            label="Nom"
+            ink={ink}
+            accent={colors.primary}
+            value={formData.lastName}
+            onChangeText={(v) => update({ lastName: v })}
+            autoCapitalize="words"
+            autoComplete="family-name"
+            textContentType="familyName"
+            maxLength={VALIDATION.NAME_MAX}
           />
-        </View>
+        </>
       );
-    }
-
-    if (step === 5) {
+    } else if (step === 3) {
+      title = formData.firstName ? `Enchanté ${formData.firstName}` : "Enchanté";
+      subtitle = "Un numéro pour tes confirmations de RDV";
+      body = (
+        <PosterField
+          label="Téléphone"
+          ink={ink}
+          accent={colors.primary}
+          value={formData.phone}
+          onChangeText={(v) => update({ phone: formatPhone(v) })}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          textContentType="telephoneNumber"
+          placeholder="06 12 34 56 78"
+        />
+      );
+    } else if (step === 4) {
+      title = "Ton email";
+      subtitle = "Pour te connecter et recevoir tes reçus";
+      body = (
+        <PosterField
+          label="Email"
+          ink={ink}
+          accent={colors.primary}
+          value={formData.email}
+          onChangeText={(v) => update({ email: v })}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="username"
+          placeholder="ton@email.com"
+          maxLength={VALIDATION.EMAIL_MAX}
+        />
+      );
+    } else if (step === 5) {
       const maxDate = new Date();
       maxDate.setFullYear(maxDate.getFullYear() - VALIDATION.MIN_AGE);
-      return (
-        <View className="gap-6">
-          <View>
-            <Text className="text-3xl font-black" style={{ color: colors.foreground }}>
-              Ta date de naissance
+      title = "Ta date de naissance";
+      subtitle = "On vérifie juste que tu as 16 ans ou plus";
+      body = (
+        <View style={{ marginBottom: 4 }}>
+          <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>
+            Date de naissance
+          </Text>
+          <Pressable
+            onPress={() => setDatePickerOpen((o) => !o)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderBottomWidth: 1.5,
+              borderBottomColor: datePickerOpen ? colors.primary : withAlpha(ink, 0.25),
+              paddingVertical: 12,
+            }}
+          >
+            <Text style={{ fontSize: 16, color: formData.birthDate ? ink : withAlpha(ink, 0.4) }}>
+              {formData.birthDate ? formatDate(formData.birthDate) : "Choisir une date"}
             </Text>
-            <Text className="mt-2" style={{ color: colors.mutedForeground }}>
-              Tu dois avoir au moins 16 ans
-            </Text>
-          </View>
-          <DatePicker
-            label="Date de naissance"
-            value={formData.birthDate}
-            onChange={(date) => update({ birthDate: date })}
-            maximumDate={maxDate}
-            placeholder="Sélectionner ta date de naissance"
-          />
+            <Ionicons name="calendar-outline" size={18} color={withAlpha(ink, 0.6)} />
+          </Pressable>
+          {datePickerOpen && (
+            <View
+              style={{
+                marginTop: 14,
+                backgroundColor: colors.card,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: withAlpha(ink, 0.1),
+                padding: 8,
+              }}
+            >
+              <RNDateTimePicker
+                mode="date"
+                display="spinner"
+                value={formData.birthDate ?? maxDate}
+                maximumDate={maxDate}
+                locale="fr-FR"
+                themeVariant={isDark ? "dark" : "light"}
+                style={{ height: 180 }}
+                onChange={(_e: DateTimePickerEvent, d?: Date) => {
+                  if (d) update({ birthDate: d });
+                  if (Platform.OS === "android") setDatePickerOpen(false);
+                }}
+              />
+              {Platform.OS === "ios" && (
+                <Pressable
+                  onPress={() => setDatePickerOpen(false)}
+                  style={{ alignSelf: "center", paddingVertical: 8, paddingHorizontal: 20 }}
+                >
+                  <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Valider
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
         </View>
+      );
+    } else if (formData.role === "pro" && step === 6) {
+      title = "Ton activité";
+      subtitle = "Modifiable plus tard";
+      body = (
+        <PosterField
+          label="Nom de l'activité"
+          ink={ink}
+          accent={colors.primary}
+          value={formData.activityName}
+          onChangeText={(v) => update({ activityName: v })}
+          placeholder="Ex. : Studio Blyss"
+          maxLength={VALIDATION.TEXT_MAX}
+        />
+      );
+    } else if (formData.role === "pro" && step === 7) {
+      title = "Où exerces-tu ?";
+      subtitle = "Ville ou quartier";
+      body = (
+        <PosterField
+          label="Ville"
+          ink={ink}
+          accent={colors.primary}
+          value={formData.city}
+          onChangeText={(v) => update({ city: v })}
+          placeholder="Ex. : Paris 11"
+          maxLength={VALIDATION.TEXT_MAX}
+        />
+      );
+    } else if (formData.role === "pro" && step === 8) {
+      title = "Ton Instagram";
+      subtitle = "Tes clientes verront ton travail avant de réserver";
+      body = (
+        <PosterField
+          label="Compte Instagram"
+          ink={ink}
+          accent={colors.primary}
+          value={formData.instagramAccount}
+          onChangeText={(v) => update({ instagramAccount: v })}
+          autoCapitalize="none"
+          placeholder="@ton_instagram"
+          maxLength={VALIDATION.TEXT_MAX}
+        />
+      );
+    } else {
+      // Dernière étape (client 6 / pro 9) : mot de passe + conditions
+      title = "Dernière étape";
+      subtitle = "Choisis ton mot de passe";
+      body = (
+        <>
+          <PosterField
+            label="Mot de passe"
+            ink={ink}
+            accent={colors.primary}
+            value={formData.password}
+            onChangeText={(v) => update({ password: v })}
+            secureTextEntry={!showPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            placeholder="8 caractères minimum"
+            right={
+              <Pressable onPress={() => setShowPassword((s) => !s)} hitSlop={10}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color={withAlpha(ink, 0.6)} />
+              </Pressable>
+            }
+          />
+          <PosterField
+            label="Confirmer"
+            ink={ink}
+            accent={colors.primary}
+            value={formData.confirmPassword}
+            onChangeText={(v) => update({ confirmPassword: v })}
+            secureTextEntry={!showPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            placeholder="Répète ton mot de passe"
+          />
+          <Text style={{ color: ink, opacity: 0.55, fontSize: 11, marginTop: 4 }}>
+            Une majuscule, un chiffre et un caractère spécial (!@#$%^&*)
+          </Text>
+          <Pressable
+            onPress={() => update({ acceptedTerms: !formData.acceptedTerms })}
+            style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, marginTop: 20 }}
+          >
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 6,
+                borderWidth: 1.5,
+                marginTop: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                borderColor: formData.acceptedTerms ? colors.primary : withAlpha(ink, 0.4),
+                backgroundColor: formData.acceptedTerms ? colors.primary : "transparent",
+              }}
+            >
+              {formData.acceptedTerms && <Ionicons name="checkmark" size={13} color={INK} />}
+            </View>
+            <Text style={{ flex: 1, color: ink, fontSize: 12, lineHeight: 17 }}>
+              J'accepte les{" "}
+              <Text style={{ textDecorationLine: "underline", fontWeight: "700", color: colors.primary }} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/cgu")}>
+                conditions générales
+              </Text>{" "}
+              et la{" "}
+              <Text style={{ textDecorationLine: "underline", fontWeight: "700", color: colors.primary }} onPress={() => WebBrowser.openBrowserAsync("https://blyssapp.fr/confidentialite")}>
+                politique de confidentialité
+              </Text>
+            </Text>
+          </Pressable>
+        </>
       );
     }
 
-    if (formData.role === "client" && step === 6) {
-      return <PasswordStep formData={formData} update={update} />;
-    }
-
-    if (formData.role === "pro") {
-      if (step === 6) {
-        return (
-          <View className="gap-6">
-            <View>
-              <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Ton activité</Text>
-              <Text className="mt-2" style={{ color: colors.mutedForeground }}>
-                Nom de ton activité (modifiable plus tard)
-              </Text>
-            </View>
-            <Input
-              label="Nom de l'activité"
-              value={formData.activityName}
-              onChangeText={(v) => update({ activityName: v })}
-              placeholder="Ex. : Studio Blyss"
-              leftIcon="storefront-outline"
-              maxLength={VALIDATION.TEXT_MAX}
-            />
-          </View>
-        );
-      }
-      if (step === 7) {
-        return (
-          <View className="gap-6">
-            <View>
-              <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Où exerces-tu ?</Text>
-              <Text className="mt-2" style={{ color: colors.mutedForeground }}>Ville ou quartier</Text>
-            </View>
-            <Input
-              label="Ville"
-              value={formData.city}
-              onChangeText={(v) => update({ city: v })}
-              placeholder="Ex. : Paris 11"
-              leftIcon="location-outline"
-              maxLength={VALIDATION.TEXT_MAX}
-            />
-          </View>
-        );
-      }
-      if (step === 8) {
-        return (
-          <View className="gap-6">
-            <View>
-              <Text className="text-3xl font-black" style={{ color: colors.foreground }}>Ton Instagram</Text>
-              <Text className="mt-2" style={{ color: colors.mutedForeground }}>
-                Tes clientes pourront voir ton travail avant de réserver
-              </Text>
-            </View>
-            <Input
-              label="Compte Instagram"
-              value={formData.instagramAccount}
-              onChangeText={(v) => update({ instagramAccount: v })}
-              placeholder="@ton_instagram"
-              leftIcon="logo-instagram"
-              maxLength={VALIDATION.TEXT_MAX}
-            />
-          </View>
-        );
-      }
-      if (step === 9) {
-        return <PasswordStep formData={formData} update={update} />;
-      }
-    }
-
-    return null;
+    return (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 16 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={{ color: ink, fontWeight: "900", fontSize: 26, lineHeight: 27, letterSpacing: -0.5, textTransform: "uppercase" }}>
+          {title}
+        </Text>
+        {subtitle ? <Text style={{ color: ink, opacity: 0.65, fontSize: 13, marginTop: 8, marginBottom: 20 }}>{subtitle}</Text> : null}
+        {body}
+      </ScrollView>
+    );
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  const headerRight =
+    step !== 99 ? (
+      <Text style={{ color: ink, opacity: 0.55, fontSize: 11, fontWeight: "700", letterSpacing: 1, marginTop: 8 }}>
+        {String(step).padStart(2, "0")} / {String(totalSteps).padStart(2, "0")}
+      </Text>
+    ) : null;
+
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={["top"]}>
-      {/* Progress header */}
-      {step !== 99 && (
-        <View className="flex-row items-center gap-4 px-6 py-4">
-          <AnimatedIconButton
-            onPress={handleBack}
-            disabled={isLoading}
-            accessibilityLabel="Retour"
-            className="p-2 -ml-2 rounded-xl"
-          >
-            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
-          </AnimatedIconButton>
-          <View className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.muted }}>
-            <View
-              className="h-full rounded-full"
-              style={{ width: `${(step / totalSteps) * 100}%`, backgroundColor: colors.primary }}
-            />
-          </View>
-          <Text className="text-sm font-medium w-10 text-right" style={{ color: colors.mutedForeground }}>
-            {step}/{totalSteps}
-          </Text>
-        </View>
-      )}
+    <View style={{ flex: 1, backgroundColor: field.bg }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        {step < 90 && <StepHeader step={step} total={totalSteps} ink={ink} right={headerRight} onBack={handleBack} />}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={20}
-      >
-        <ScrollView
-          className="flex-1 px-6"
-          contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {renderContent()}
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={12}>
+          <Reanimated.View key={step} entering={ribbon.reduceMotion ? undefined : FadeIn.duration(180)} style={{ flex: 1 }}>
+            {renderStep()}
+          </Reanimated.View>
 
-          {stepError ? (
-            <Animated.View
-              style={{
-                transform: [{ translateX: shakeAnim }],
-                marginTop: 16,
-                backgroundColor: colors.destructiveLight,
-                borderRadius: 14,
-                borderLeftWidth: 3,
-                borderLeftColor: colors.destructive,
-                paddingVertical: 12,
-                paddingHorizontal: 14,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <Ionicons name="alert-circle-outline" size={18} color={colors.destructive} />
-              <Text style={{ flex: 1, fontSize: 13, color: colors.destructiveText, fontWeight: "500", lineHeight: 18 }}>
-                {stepError}
-              </Text>
-            </Animated.View>
-          ) : null}
-        </ScrollView>
+          {step < 90 && (
+            <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
+              <PillButton
+                label={ctaLabel}
+                onPress={() => void handleNext()}
+                bg={isStepValid() ? field.pill.bg : withAlpha(ink, 0.25)}
+                fg={field.pill.fg}
+                loading={isLoading || checking}
+                disabled={!isStepValid() || checking}
+              />
+              <Pressable onPress={() => router.push("/(auth)/login")} style={{ alignItems: "center", paddingVertical: 10 }}>
+                <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                  Déjà un compte ? Se connecter
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
-        {/* Fixed bottom CTA */}
-        {step !== 99 && <View
-          className="px-6 pb-8 pt-4"
-          style={{ backgroundColor: withAlpha(colors.background, 0.97) }}
-        >
-          <AnimatedPressable
-            onPress={handleNext}
-            disabled={!isStepValid() || isLoading}
-            style={{
-              height: 56,
-              borderRadius: 16,
-              backgroundColor: !isStepValid() || isLoading ? colors.disabled : colors.primary,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.onColor} />
-            ) : (
-              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>
-                {ctaLabel}
-              </Text>
-            )}
-          </AnimatedPressable>
-
-          {/* Login redirect */}
-          <Text className="text-xs text-center mt-4" style={{ color: colors.mutedForeground }}>
-            Déjà un compte ?{" "}
-            <Text
-              className="text-primary font-semibold"
-              onPress={() => router.push("/(auth)/login")}
-            >
-              Se connecter
-            </Text>
-          </Text>
-        </View>}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <Ribbon x={ribbon.x} width={width} rose={colors.primary} />
+      <FloatingNotice message={notice} onHide={() => setNotice(null)} />
+    </View>
   );
 }

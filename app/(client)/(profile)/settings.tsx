@@ -37,6 +37,7 @@ export default function SettingsScreen() {
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
   const [birthDate, setBirthDate] = useState<Date | undefined>(
     user?.birth_date ? new Date(user.birth_date) : undefined
   );
@@ -54,6 +55,7 @@ export default function SettingsScreen() {
     if (user) {
       setFirstName(user.first_name ?? "");
       setLastName(user.last_name ?? "");
+      setEmail(user.email ?? "");
       if (user.birth_date) setBirthDate(new Date(user.birth_date));
     }
   }, [user]);
@@ -71,7 +73,20 @@ export default function SettingsScreen() {
       return;
     }
 
-    const changingPassword = !!(currentPassword || newPassword || newPasswordConfirm);
+    const cleanEmail = email.trim().toLowerCase();
+    const changingEmail = cleanEmail !== (user?.email ?? "").toLowerCase();
+    if (changingEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        setError("Ton adresse email n'est pas valide.");
+        return;
+      }
+      if (!currentPassword) {
+        setError("Renseigne ton mot de passe actuel pour changer d'email.");
+        return;
+      }
+    }
+
+    const changingPassword = !!(newPassword || newPasswordConfirm);
     if (changingPassword) {
       if (!currentPassword) { setError("Renseigne ton ancien mot de passe pour le modifier."); return; }
       if (!validatePassword(newPassword)) { setError("Ton nouveau mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre."); return; }
@@ -89,6 +104,10 @@ export default function SettingsScreen() {
       if (changingPassword) {
         payload.currentPassword = currentPassword;
         payload.newPassword = newPassword;
+      }
+      if (changingEmail) {
+        payload.email = cleanEmail;
+        payload.currentPassword = currentPassword;
       }
 
       const res = await usersApi.update(payload);
@@ -154,6 +173,21 @@ export default function SettingsScreen() {
               leftIcon="person-outline"
               autoComplete="given-name"
             />
+            <View style={{ gap: 6 }}>
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="ton@email.com"
+                leftIcon="mail-outline"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 16 }}>
+                Changer d'email demande ton mot de passe actuel (section Sécurité).
+              </Text>
+            </View>
             <DatePicker
               label="Date de naissance"
               value={birthDate}

@@ -630,11 +630,11 @@ export default function ClientHome() {
               style={{ marginBottom: 24 }}
             />
 
-            {/* ── Sélection Blyss header ─────────────────────────────────── */}
+            {/* ── « Choisies pour toi » header ──────────────────────────── */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, marginBottom: 12 }}>
               <View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground }}>Sélection Blyss</Text>
+                  <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground }}>Choisies pour toi</Text>
                 </View>
                 <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   {pros.length} experte{pros.length > 1 ? "s" : ""} disponible{pros.length > 1 ? "s" : ""}

@@ -9,8 +9,10 @@ export default function Index() {
   useEffect(() => {
     if (isLoading) return;
 
+    // Non connecté : on ouvre toujours sur l'intro (3 slides, « Passer » →
+    // accueil). C'est la porte d'entrée de la marque.
     if (!isAuthenticated) {
-      router.replace("/(auth)/welcome");
+      router.replace("/(auth)/onboarding");
       return;
     }
 

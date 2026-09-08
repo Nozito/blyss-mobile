@@ -1,265 +1,84 @@
-import React, { useRef, useState, useCallback, useMemo } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Dimensions,
-  StyleSheet,
-  Platform,
-} from "react-native";
+/**
+ * Intro — 3 slides au style « poster » (kit onboarding). Affichée par
+ * app/index.tsx à chaque lancement non connecté, juste avant l'accueil.
+ * Toujours skippable ; se termine sur /(auth)/welcome.
+ */
+import React, { useCallback, useState } from "react";
+import { View, Text, useWindowDimensions } from "react-native";
+import Reanimated, { FadeIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
+import { PillButton, Ribbon, StepHeader, fieldColors, useRibbon, type FieldTone } from "@/components/onboarding/kit";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const SLIDES: { tone: FieldTone; title: string; body: string }[] = [
+  { tone: "rose", title: "Trouve la main qui fera tes ongles", body: "Les prothésistes ongulaires près de chez toi — leur vrai travail, leurs vraies dispos." },
+  { tone: "prune", title: "Réserve en 3 taps", body: "Les créneaux réels de chaque pro, 24/7. Pas d'appel, pas de DM." },
+  { tone: "cream", title: "Des pros vérifiées", body: "Chaque prothésiste est validée par notre équipe. Avis authentiques, rien d'inventé." },
+];
 
-export const ONBOARDING_KEY = "onboarding_seen";
-
-// ─── Slides data ──────────────────────────────────────────────────────────────
-
-const SLIDES = [
-  {
-    id: "1",
-    emoji: "🌸",
-    title: "Ton bien-être,\nsimplifié",
-    subtitle: "Réserve des soins près de chez toi en quelques secondes.",
-  },
-  {
-    id: "2",
-    emoji: "👩‍⚕️",
-    title: "Des professionnels\nvérifiés",
-    subtitle: "Esthéticiennes, coachs, thérapeutes — tous évalués par notre équipe.",
-  },
-  {
-    id: "3",
-    emoji: "📅",
-    title: "Tu es\nprofessionnel ?",
-    subtitle: "Gère ton agenda, tes clients et tes paiements depuis l'app.",
-  },
-] as const;
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
-export default function OnboardingScreen() {
+export default function IntroScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const flatRef = useRef<FlatList>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const { width } = useWindowDimensions();
+  const ribbon = useRibbon();
+  const [index, setIndex] = useState(0);
 
-  const markSeen = useCallback(async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
-  }, []);
+  const slide = SLIDES[index];
+  const field = fieldColors(slide.tone, colors);
+  const ink = field.ink;
+  const isLast = index === SLIDES.length - 1;
 
-  const handleSkip = useCallback(async () => {
-    await markSeen();
-    router.replace("/(auth)/welcome");
-  }, [markSeen, router]);
+  const leave = useCallback(() => router.replace("/(auth)/welcome"), [router]);
 
-  const handleNext = useCallback(async () => {
-    if (activeIndex < SLIDES.length - 1) {
-      flatRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
-    }
-  }, [activeIndex]);
+  const skip = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
+    leave();
+  }, [leave]);
 
-  const handleRole = useCallback(
-    async (role: "client" | "pro") => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await markSeen();
-      router.push(`/(auth)/register?role=${role}`);
-    },
-    [markSeen, router]
-  );
-
-  const isLast = activeIndex === SLIDES.length - 1;
+  const enter = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    leave();
+  }, [leave]);
 
   return (
-    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      {/* Passer */}
-      <View style={styles.header}>
-        <AnimatedPressable onPress={handleSkip} hitSlop={12}>
-          <Text style={styles.skipText}>Passer</Text>
-        </AnimatedPressable>
-      </View>
+    <View style={{ flex: 1, backgroundColor: field.bg }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <StepHeader
+          step={index + 1}
+          total={SLIDES.length}
+          ink={ink}
+          right={
+            <Text
+              onPress={skip}
+              style={{ color: ink, opacity: 0.62, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 8 }}
+            >
+              Passer
+            </Text>
+          }
+        />
 
-      {/* Slides */}
-      <FlatList
-        ref={flatRef}
-        data={SLIDES}
-        keyExtractor={(s) => s.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEnabled={!isLast}
-        bounces={false}
-        onMomentumScrollEnd={(e) => {
-          const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-          setActiveIndex(idx);
-        }}
-        renderItem={({ item }) => (
-          <View style={styles.slide}>
-            <Text style={styles.emoji}>{item.emoji}</Text>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.subtitle}>{item.subtitle}</Text>
+        <Reanimated.View key={index} entering={ribbon.reduceMotion ? undefined : FadeIn.duration(180)} style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
+            <Text style={{ color: ink, fontWeight: "900", fontSize: 38, lineHeight: 38, letterSpacing: -1, textTransform: "uppercase" }}>
+              {slide.title}
+            </Text>
+            <Text style={{ color: ink, opacity: 0.9, fontSize: 14, lineHeight: 21, marginTop: 16, maxWidth: 320 }}>{slide.body}</Text>
           </View>
-        )}
-      />
+        </Reanimated.View>
 
-      {/* Bottom zone */}
-      <View style={styles.bottom}>
-        {/* Dots */}
-        <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                i === activeIndex ? styles.dotActive : styles.dotInactive,
-              ]}
-            />
-          ))}
+        <View style={{ paddingHorizontal: 22, paddingBottom: 10, paddingTop: 8 }}>
+          <PillButton
+            label={isLast ? "Découvrir Blyss →" : "Suivant →"}
+            onPress={isLast ? enter : () => ribbon.go(() => setIndex((i) => i + 1))}
+            bg={field.pill.bg}
+            fg={field.pill.fg}
+          />
         </View>
+      </SafeAreaView>
 
-        {isLast ? (
-          /* Last slide: 2 CTA buttons */
-          <View style={styles.ctaGroup}>
-            <AnimatedPressable
-              onPress={() => handleRole("client")}
-              style={styles.ctaPrimary}
-            >
-              <Text style={styles.ctaPrimaryText}>Je suis cliente</Text>
-            </AnimatedPressable>
-            <AnimatedPressable
-              onPress={() => handleRole("pro")}
-              style={styles.ctaOutline}
-            >
-              <Text style={styles.ctaOutlineText}>Je suis professionnelle</Text>
-            </AnimatedPressable>
-          </View>
-        ) : (
-          /* Next button */
-          <AnimatedPressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              handleNext();
-            }}
-            style={styles.ctaPrimary}
-          >
-            <Text style={styles.ctaPrimaryText}>Continuer</Text>
-          </AnimatedPressable>
-        )}
-      </View>
-    </SafeAreaView>
+      <Ribbon x={ribbon.x} width={width} rose={colors.primary} />
+    </View>
   );
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-function createStyles(colors: ReturnType<typeof useThemeColors>) {
-  return StyleSheet.create({
-    root: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: "row",
-      justifyContent: "flex-end",
-      paddingHorizontal: 24,
-      paddingTop: 0,
-      paddingBottom: 0,
-    },
-    skipText: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.mutedForeground,
-    },
-    slide: {
-      width: SCREEN_WIDTH,
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 40,
-      paddingBottom: 32,
-    },
-    emoji: {
-      fontSize: Platform.OS === "ios" ? 96 : 80,
-      marginBottom: 32,
-      textAlign: "center",
-    },
-    title: {
-      fontSize: 32,
-      fontWeight: "800",
-      color: colors.foreground,
-      textAlign: "center",
-      letterSpacing: -0.8,
-      lineHeight: 38,
-      marginBottom: 16,
-    },
-    subtitle: {
-      fontSize: 16,
-      color: colors.mutedForeground,
-      textAlign: "center",
-      lineHeight: 24,
-      fontWeight: "400",
-    },
-    bottom: {
-      paddingHorizontal: 24,
-      paddingBottom: 8,
-      gap: 20,
-    },
-    dots: {
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 8,
-    },
-    dot: {
-      height: 8,
-      borderRadius: 4,
-    },
-    dotActive: {
-      width: 24,
-      backgroundColor: colors.primary,
-    },
-    dotInactive: {
-      width: 8,
-      backgroundColor: colors.border,
-    },
-    ctaGroup: {
-      gap: 12,
-    },
-    ctaPrimary: {
-      height: 56,
-      borderRadius: 18,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.35,
-      shadowRadius: 14,
-      elevation: 6,
-    },
-    ctaPrimaryText: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: colors.onColor,
-    },
-    ctaOutline: {
-      height: 56,
-      borderRadius: 18,
-      borderWidth: 1.5,
-      borderColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "transparent",
-    },
-    ctaOutlineText: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: colors.primary,
-    },
-  });
 }
