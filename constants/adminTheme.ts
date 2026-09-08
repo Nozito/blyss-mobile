@@ -70,6 +70,8 @@ export const ADMIN = {
     hero:    { fontSize: 56, fontWeight: "900", letterSpacing: -2.6, textTransform: "uppercase" } as const,
     display: { fontSize: 34, fontWeight: "900", letterSpacing: -1.4, textTransform: "uppercase" } as const,
     title:   { fontSize: 15, fontWeight: "900", letterSpacing: -0.3, textTransform: "uppercase" } as const,
+    // Nom d'une personne / entité — jamais en capitales, mais dense.
+    name:    { fontSize: 16, fontWeight: "800", letterSpacing: -0.3 } as const,
     body:    { fontSize: 13, fontWeight: "600", letterSpacing: 0 } as const,
     label:   { fontSize: 10, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" } as const,
     mono:    { fontFamily: MONO_FAMILY, fontWeight: "700", letterSpacing: -0.4 } as const,

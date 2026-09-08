@@ -247,7 +247,7 @@ export default function AdminDashboard() {
             style={{ flex: 1 }}
           >
             <Card style={{ alignItems: "center", gap: ADMIN.space.sm, paddingVertical: ADMIN.space.md }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={icon} size={17} color={ADMIN.textSub} />
               </View>
               <Text style={{ ...ADMIN.type.caption, color: ADMIN.text, fontWeight: "600", textAlign: "center" }} numberOfLines={1}>{label}</Text>
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl }}>
         <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View style={{ gap: 4 }}>
-            <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.6 }}>Revenu du jour</Text>
+            <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }}>Revenu du jour</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ADMIN.success }} />
               <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{stats.todayBookings} rdv aujourd'hui</Text>
@@ -273,12 +273,12 @@ export default function AdminDashboard() {
       {/* ── Deux faits ── */}
       <View style={{ paddingHorizontal: ADMIN.space.xl, marginBottom: ADMIN.space.xl, flexDirection: "row", gap: ADMIN.space.md }}>
         <Card style={{ flex: 1 }}>
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Complétion</Text>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Complétion</Text>
           <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{completionRate}%</Text>
           <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>terminées</Text>
         </Card>
         <Card style={{ flex: 1 }}>
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Utilisateurs</Text>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }} numberOfLines={1}>Utilisateurs</Text>
           <Text style={{ ...ADMIN.type.display, fontSize: 24, color: ADMIN.text }} numberOfLines={1}>{stats.activeUsers}</Text>
           <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>actifs sur {stats.totalUsers}</Text>
         </Card>

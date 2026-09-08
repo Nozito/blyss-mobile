@@ -158,7 +158,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             </View>
 
             <Text style={styles.label}>Type de réduction</Text>
-            <View style={{ flexDirection: "row", backgroundColor: MUTED, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
+            <View style={{ flexDirection: "row", backgroundColor: MUTED, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
               {(["percent", "fixed"] as DiscountType[]).map((t) => {
                 const active = discountType === t;
                 return (
@@ -212,7 +212,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             <AnimatedPressable
               onPress={() => { if (isValid) { setCreateError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); createMut.mutate(); } }}
               disabled={createMut.isPending || !isValid}
-              style={{ height: 50, borderRadius: 14, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: (createMut.isPending || !isValid) ? 0.4 : 1 }}
+              style={{ height: 50, borderRadius: 4, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: (createMut.isPending || !isValid) ? 0.4 : 1 }}
             >
               {createMut.isPending
                 ? <ActivityIndicator size="small" color={Colors.white} />
@@ -229,14 +229,12 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 // Matches GrantModal's local styles exactly, so every admin bottom sheet shares one label/close-button shape.
 const styles = StyleSheet.create({
   closeBtn: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 32, height: 32, borderRadius: 4,
     backgroundColor: ADMIN.surfaceHover,
     alignItems: "center", justifyContent: "center",
   },
   label: {
-    fontSize: 10, fontWeight: "700",
-    color: ADMIN.textMuted,
-    textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
+    ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 10,
   },
 });
 
@@ -309,13 +307,13 @@ function CouponCard({
 
         {/* Discount + plans */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-          <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}>
+          <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}>
             <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>
               -{coupon.discount_value}{coupon.discount_type === "percent" ? "%" : "€"}
             </Text>
           </View>
           {coupon.applicable_plans.map((p: string) => (
-            <View key={p} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: MUTED, borderWidth: 1, borderColor: BORDER }}>
+            <View key={p} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, backgroundColor: MUTED, borderWidth: 1, borderColor: BORDER }}>
               <Text style={{ fontSize: 11, fontWeight: "600", color: TEXT2 }}>{PLAN_LABELS[p] ?? p}</Text>
             </View>
           ))}
@@ -350,7 +348,7 @@ function CouponCard({
           <AnimatedIconButton
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onDelete(coupon); }}
             accessibilityLabel="Supprimer le coupon"
-            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center" }}>
+            style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
           </AnimatedIconButton>
         </View>

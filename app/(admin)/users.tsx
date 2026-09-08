@@ -123,7 +123,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           </View>
 
           <Text style={styles.label}>Plan</Text>
-          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
+          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
             {PLAN_OPTS.map((p) => (
               <Pressable key={p}
                 onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
@@ -139,7 +139,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
           </View>
 
           <Text style={styles.label}>Durée</Text>
-          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.xxl }}>
+          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.xxl }}>
             {MONTHS_OPTS.map((m) => (
               <Pressable key={m}
                 onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
@@ -158,7 +158,7 @@ function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void })
             onPress={() => { setGrantError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
             disabled={grantMut.isPending}
             style={{
-              height: 50, borderRadius: 14, backgroundColor: ADMIN.accent,
+              height: 50, borderRadius: 4, backgroundColor: ADMIN.accent,
               alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8,
               opacity: grantMut.isPending ? 0.7 : 1,
             }}>
@@ -249,7 +249,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               <View style={{ marginBottom: ADMIN.space.md }}>
                 <Avatar name={`${full.first_name} ${full.last_name}`} photo={full.profile_photo} size={56} />
               </View>
-              <Text style={{ ...ADMIN.type.title, fontSize: 18, color: ADMIN.text, marginBottom: ADMIN.space.sm }}>{full.first_name} {full.last_name}</Text>
+              <Text style={{ ...ADMIN.type.name, color: ADMIN.text, marginBottom: ADMIN.space.sm }}>{full.first_name} {full.last_name}</Text>
               <View style={{ flexDirection: "row", gap: ADMIN.space.sm, flexWrap: "wrap", justifyContent: "center", marginBottom: ADMIN.space.sm }}>
                 <StatusBadge label={full.is_admin ? "Admin" : roleName(full)} tone="neutral" />
                 {planStr && <StatusBadge label={planStr} tone="warning" />}
@@ -262,7 +262,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
                 <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>{full.email}</Text>
                 <Ionicons name="share-outline" size={12} color={ADMIN.textMuted} />
               </AnimatedPressable>
-              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={18} color={ADMIN.textSub} />
               </AnimatedIconButton>
             </View>
@@ -272,21 +272,21 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg, gap: ADMIN.space.md }}>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Réservations</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Réservations</Text>
                     <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.total_bookings}</Text>
                   </Card>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Terminées</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Terminées</Text>
                     <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.completed}</Text>
                   </Card>
                 </View>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Annulées</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Annulées</Text>
                     <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.cancelled}</Text>
                   </Card>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Dépensé</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Dépensé</Text>
                     <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{Number(stats.total_spent ?? 0).toFixed(0)} €</Text>
                   </Card>
                 </View>
@@ -464,7 +464,7 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
           <Avatar name={name} photo={item.profile_photo} size={44} />
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
+              <Text style={{ ...ADMIN.type.name, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
               {item.is_vigilant && <StatusBadge label="Vigilance" tone="warning" />}
               {item.is_abusive_reporter && <StatusBadge label="Reporter à risque" tone="danger" />}
               <StatusBadge label={!item.is_active ? "Banni" : roleName(item)} tone={!item.is_active ? "danger" : "neutral"} />
@@ -493,13 +493,13 @@ function BannedUserCard({ item, onPress, onReactivate, reactivating }: {
       <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.md }}>
         <Avatar name={name} photo={item.profile_photo} size={44} />
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text }} numberOfLines={1}>{name}</Text>
+          <Text style={{ ...ADMIN.type.name, color: ADMIN.text }} numberOfLines={1}>{name}</Text>
           <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
         </View>
         <AnimatedPressable
           onPress={onReactivate}
           disabled={reactivating}
-          style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: ADMIN.successBg, opacity: reactivating ? 0.5 : 1 }}
+          style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, backgroundColor: ADMIN.successBg, opacity: reactivating ? 0.5 : 1 }}
         >
           <Text style={{ fontSize: 12, fontWeight: "700", color: ADMIN.success }}>Réactiver</Text>
         </AnimatedPressable>
@@ -662,7 +662,7 @@ export default function AdminUsersScreen() {
 
       <View style={{ paddingBottom: ADMIN.space.md }}>
         {/* Segmented tabs — one control, not a scrolling row of pills */}
-        <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
+        <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
           {FILTERS.map(({ value, label }) => {
             const active = roleFilter === value;
             return (
@@ -688,7 +688,7 @@ export default function AdminUsersScreen() {
 
         {/* Search — hidden on the banned tab, mirroring the pattern used for the blocked tab */}
         {roleFilter !== "banned" && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, height: 44, paddingHorizontal: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, height: 44, paddingHorizontal: 14 }}>
             <Ionicons name="search-outline" size={16} color={ADMIN.textMuted} />
             <TextInput
               value={search}
@@ -821,13 +821,11 @@ export default function AdminUsersScreen() {
 
 const styles = StyleSheet.create({
   closeBtn: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 32, height: 32, borderRadius: 4,
     backgroundColor: ADMIN.surfaceHover,
     alignItems: "center", justifyContent: "center",
   },
   label: {
-    fontSize: 10, fontWeight: "700",
-    color: ADMIN.textMuted,
-    textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
+    ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 10,
   },
 });

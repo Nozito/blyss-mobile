@@ -143,13 +143,13 @@ function KPICard({
       borderColor: ADMIN.border,
       padding: 16,
     }}>
-      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: withAlpha(color, 0.14), alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+      <View style={{ width: 32, height: 32, borderRadius: 4, backgroundColor: withAlpha(color, 0.14), alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
         <AdminIcon ios={symbol} android={androidIcon} size={16} color={color} />
       </View>
-      <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
+      <Text style={{ ...ADMIN.type.label, color: TEXT2, marginBottom: 4 }}>
         {label}
       </Text>
-      <Text style={{ fontSize: 22, fontWeight: "700", color: TEXT1, marginBottom: 2 }}>
+      <Text style={{ ...ADMIN.type.display, fontSize: 24, color: TEXT1, marginBottom: 2 }}>
         {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
       </Text>
       {sub && (
@@ -170,7 +170,7 @@ function ChartHeader({
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
       <View style={{
-        width: 32, height: 32, borderRadius: 10,
+        width: 32, height: 32, borderRadius: 4,
         backgroundColor: withAlpha(color, 0.14),
         alignItems: "center", justifyContent: "center",
       }}>
@@ -208,7 +208,7 @@ function PeriodPill({
       <Animated.View style={{
         flex: 1, height: 36,
         alignItems: "center", justifyContent: "center",
-        borderRadius: 10,
+        borderRadius: 4,
         backgroundColor: active ? ADMIN.accentBg : "transparent",
         transform: [{ scale }],
       }}>
@@ -315,72 +315,40 @@ export default function AdminAnalyticsScreen() {
         </Text>
       </View>
 
-      {/* ── Hero Revenue Card ── */}
+      {/* ── Hero — CA total, aplat rose plein ── */}
       {a && (
-        <View style={{ borderRadius: ADMIN.cardRadius, padding: 22, marginBottom: 14, backgroundColor: ADMIN.surface, borderWidth: 1, borderColor: ADMIN.border }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <Text style={{
-              fontSize: 11, fontWeight: "600",
-              color: TEXT2,
-              textTransform: "uppercase", letterSpacing: 1,
-            }}>
-              CA total
-            </Text>
+        <View style={{ padding: 22, marginBottom: 14, backgroundColor: ADMIN.accent }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>CA total (réservations)</Text>
             {growth != null && (
-              <View style={{
-                paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
-                backgroundColor: growth >= 0 ? ADMIN.successBg : ADMIN.dangerBg,
-              }}>
-                <Text style={{ fontSize: 10, fontWeight: "700", color: growth >= 0 ? ADMIN.success : ADMIN.danger }}>
-                  {growth >= 0 ? "↑" : "↓"} {Math.abs(growth).toFixed(1)}%
-                </Text>
-              </View>
+              <Text style={{ fontSize: 12, fontWeight: "900", color: ADMIN.accentInk }}>
+                {growth >= 0 ? "↑" : "↓"} {Math.abs(growth).toFixed(1)}%
+              </Text>
             )}
           </View>
 
-          <Text style={{
-            fontSize: 40, fontWeight: "700", color: TEXT1, letterSpacing: -1, marginBottom: 16,
-          }}>
-            {Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €
+          <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginBottom: 16 }} numberOfLines={1} adjustsFontSizeToFit>
+            {Number(a.revenue.total_revenue).toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+            <Text style={{ fontSize: 18 }}> €</Text>
           </Text>
 
-          <View style={{
-            flexDirection: "row", marginBottom: 16,
-            borderTopWidth: 1, borderTopColor: ADMIN.border,
-            paddingTop: 14,
-          }}>
-            <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
-                CE MOIS
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
-                {Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: ADMIN.border }} />
-            <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
-                UTILISATEURS
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
-                {Number(a.users.total_users).toLocaleString("fr-FR")}
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: ADMIN.border }} />
-            <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
-                RÉSERVATIONS
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
-                {Number(a.bookings.total).toLocaleString("fr-FR")}
-              </Text>
-            </View>
+          <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginBottom: 16 }}>
+            {[
+              { k: "Ce mois", v: `${Number(a.revenue.month_revenue).toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €` },
+              { k: "Utilisateurs", v: Number(a.users.total_users).toLocaleString("fr-FR") },
+              { k: "Réservations", v: Number(a.bookings.total).toLocaleString("fr-FR") },
+            ].map((s) => (
+              <View key={s.k}>
+                <Text style={{ fontSize: 17, fontWeight: "900", letterSpacing: -0.6, color: ADMIN.accentInk }}>{s.v}</Text>
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub, marginTop: 3 }}>{s.k}</Text>
+              </View>
+            ))}
           </View>
 
           {revenuePoints.length >= 2 && (
             <Sparkline
               data={revenuePoints.slice(-7)}
-              color={withAlpha(ACCENT, 0.5)}
+              color={ADMIN.accentInk}
               width={chartWidth}
               height={40}
               noFill
@@ -394,7 +362,7 @@ export default function AdminAnalyticsScreen() {
       <View style={{
         flexDirection: "row",
         backgroundColor: ADMIN.surfaceHover,
-        borderRadius: 12,
+        borderRadius: 4,
         padding: 4,
         marginBottom: 20,
       }}>

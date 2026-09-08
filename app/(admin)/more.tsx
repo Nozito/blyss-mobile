@@ -71,7 +71,7 @@ function ToolRow({
         transform: [{ scale }],
       }}>
         <View style={{
-          width: 40, height: 40, borderRadius: 12,
+          width: 40, height: 40, borderRadius: 4,
           backgroundColor: withAlpha(tool.color, 0.14),
           alignItems: "center", justifyContent: "center",
         }}>
@@ -213,7 +213,7 @@ export default function AdminMoreScreen() {
             }}
           >
             <View style={{
-              width: 40, height: 40, borderRadius: 12,
+              width: 40, height: 40, borderRadius: 4,
               backgroundColor: withAlpha(ACCENT, 0.18),
               alignItems: "center", justifyContent: "center",
             }}>
@@ -283,7 +283,7 @@ export default function AdminMoreScreen() {
               transform: [{ scale: logoutScale }],
             }}>
               <View style={{
-                width: 40, height: 40, borderRadius: 12,
+                width: 40, height: 40, borderRadius: 4,
                 backgroundColor: withAlpha(ADMIN.danger, 0.18),
                 alignItems: "center", justifyContent: "center",
               }}>

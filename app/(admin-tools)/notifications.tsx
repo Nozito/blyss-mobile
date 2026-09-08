@@ -48,10 +48,10 @@ function UserRow({ user, onClear }: { user: AdminUser; onClear?: () => void }) {
       flexDirection: "row", alignItems: "center", gap: 12,
       paddingHorizontal: 14, paddingVertical: 12,
       backgroundColor: MUTED,
-      borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+      borderRadius: 4, borderWidth: 1, borderColor: BORDER,
     }}>
       <View style={{
-        width: 46, height: 46, borderRadius: 14,
+        width: 46, height: 46, borderRadius: 4,
         backgroundColor: `${roleColor}20`,
         alignItems: "center", justifyContent: "center",
         overflow: "hidden",
@@ -128,14 +128,14 @@ function UserPicker({
 
   return (
     <View style={{ marginTop: 14 }}>
-      <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+      <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 8 }}>
         Rechercher un utilisateur
       </Text>
 
       {/* Search input */}
       <View style={{
         flexDirection: "row", alignItems: "center", gap: 10,
-        backgroundColor: MUTED, borderRadius: 12, paddingHorizontal: 14,
+        backgroundColor: MUTED, borderRadius: 4, paddingHorizontal: 14,
         borderWidth: 1, borderColor: BORDER, height: 46,
       }}>
         <Ionicons name="search-outline" size={16} color={TEXT3} />
@@ -166,7 +166,7 @@ function UserPicker({
       {/* Results */}
       {users.length > 0 && (
         <View style={{
-          marginTop: 10, borderRadius: 14, borderWidth: 1,
+          marginTop: 10, borderRadius: 4, borderWidth: 1,
           borderColor: BORDER, overflow: "hidden",
         }}>
           {users.map((u) => (
@@ -297,7 +297,7 @@ export default function AdminNotificationsScreen() {
                 }}
                 style={{
                   flex: 1, minWidth: "44%", flexDirection: "row", alignItems: "center", gap: 8,
-                  paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5,
+                  paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4, borderWidth: 1.5,
                   backgroundColor: active ? `${opt.color}18` : MUTED,
                   borderColor: active ? opt.color : BORDER,
                 }}
@@ -326,17 +326,17 @@ export default function AdminNotificationsScreen() {
       <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
         <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, marginBottom: 14 }}>2. Contenu</Text>
 
-        <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Titre</Text>
+        <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 8 }}>Titre</Text>
         <TextInput
           value={title}
           onChangeText={setTitle}
           placeholder="Titre de la notification"
           placeholderTextColor={TEXT3}
           maxLength={100}
-          style={{ backgroundColor: MUTED, borderRadius: 12, paddingHorizontal: 14, height: 46, fontSize: 14, color: TEXT1, borderWidth: 1, borderColor: BORDER, marginBottom: 14 }}
+          style={{ backgroundColor: MUTED, borderRadius: 4, paddingHorizontal: 14, height: 46, fontSize: 14, color: TEXT1, borderWidth: 1, borderColor: BORDER, marginBottom: 14 }}
         />
 
-        <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Message</Text>
+        <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 8 }}>Message</Text>
         <TextInput
           value={body}
           onChangeText={setBody}
@@ -346,7 +346,7 @@ export default function AdminNotificationsScreen() {
           numberOfLines={4}
           textAlignVertical="top"
           maxLength={500}
-          style={{ backgroundColor: MUTED, borderRadius: 12, paddingHorizontal: 14, paddingTop: 12, fontSize: 14, color: TEXT1, borderWidth: 1, borderColor: BORDER, minHeight: 90 }}
+          style={{ backgroundColor: MUTED, borderRadius: 4, paddingHorizontal: 14, paddingTop: 12, fontSize: 14, color: TEXT1, borderWidth: 1, borderColor: BORDER, minHeight: 90 }}
         />
         <Text style={{ fontSize: 11, color: TEXT3, textAlign: "right", marginTop: 4 }}>{body.length}/500</Text>
       </View>
@@ -354,7 +354,7 @@ export default function AdminNotificationsScreen() {
       {/* ── Aperçu ── */}
       {(title || body) && (
         <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Aperçu push</Text>
+          <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 12 }}>Aperçu push</Text>
           <View style={{ backgroundColor: MUTED, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: BORDER }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center" }}>

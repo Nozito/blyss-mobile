@@ -176,13 +176,13 @@ export default function AdminMessagesScreen() {
         <AnimatedIconButton
           onPress={() => safeBack(router)}
           accessibilityLabel="Retour"
-          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+          style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="arrow-back" size={18} color={TEXT1} />
         </AnimatedIconButton>
         <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>Messages</Text>
         {!isLoading && threads.length > 0 && (
-          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
             <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{threads.length}</Text>
           </View>
         )}
@@ -203,7 +203,7 @@ export default function AdminMessagesScreen() {
               key={t.key}
               onPress={() => setTab(t.key)}
               style={{
-                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4,
                 backgroundColor: active ? ADMIN.accent : ADMIN.surfaceHover,
                 borderWidth: 1, borderColor: active ? ADMIN.accent : ADMIN.border,
               }}
@@ -271,7 +271,7 @@ export default function AdminMessagesScreen() {
           renderItem={({ item }) => (
             <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 40, height: 40, borderRadius: 4, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="chatbubbles-outline" size={17} color={Colors.destructive} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -283,12 +283,12 @@ export default function AdminMessagesScreen() {
                   </Text>
                 </View>
                 {tab === "flagged" ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
                     <Ionicons name="flag-outline" size={11} color={Colors.destructive} />
                     <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.destructive }}>{item.flags_count}</Text>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: ADMIN.border }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: ADMIN.border }}>
                     <Ionicons name="trash-outline" size={11} color={TEXT3} />
                     <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3 }}>Modérée</Text>
                   </View>
@@ -296,7 +296,7 @@ export default function AdminMessagesScreen() {
               </View>
 
               {item.last_reason_code && (
-                <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: ADMIN.border }}>
+                <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: ADMIN.border }}>
                   <Text style={{ fontSize: 11, color: TEXT3, marginBottom: 2 }}>
                     Motif du signalement{item.flags_total > 1 ? ` (${item.flags_total} signalements au total)` : ""}
                   </Text>
@@ -316,7 +316,7 @@ export default function AdminMessagesScreen() {
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <AnimatedPressable
                   onPress={() => setDetailThread(item)}
-                  style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
+                  style={{ flex: 1, height: 38, borderRadius: 4, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
                 >
                   <Ionicons name="eye-outline" size={13} color={TEXT2} />
                   <Text style={{ fontSize: 12, fontWeight: "600", color: TEXT2 }}>Voir la conversation</Text>
@@ -326,7 +326,7 @@ export default function AdminMessagesScreen() {
                   <AnimatedPressable
                     onPress={() => { setActionError(null); setIgnoreOutcome("dismissed"); setIgnoreNote(""); setIgnoreTarget(item); }}
                     disabled={ignoreMut.isPending}
-                    style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
+                    style={{ flex: 1, height: 38, borderRadius: 4, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
                   >
                     {ignoreMut.isPending
                       ? <ActivityIndicator size="small" color={TEXT2} />
@@ -336,7 +336,7 @@ export default function AdminMessagesScreen() {
                   <AnimatedPressable
                     onPress={() => { setActionError(null); restoreMut.mutate(item.id); }}
                     disabled={restoreMut.isPending}
-                    style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center" }}
+                    style={{ flex: 1, height: 38, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center" }}
                   >
                     {restoreMut.isPending
                       ? <ActivityIndicator size="small" color={ADMIN.accent} />
@@ -349,7 +349,7 @@ export default function AdminMessagesScreen() {
                 <AnimatedPressable
                   onPress={() => { setActionError(null); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); setDeleteTarget(item); }}
                   accessibilityLabel="Modérer cette conversation"
-                  style={{ marginTop: 8, height: 38, borderRadius: 11, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
+                  style={{ marginTop: 8, height: 38, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
                 >
                   <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
                   <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Effacer le contenu</Text>
@@ -366,7 +366,7 @@ export default function AdminMessagesScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BORDER }}>
             <AnimatedIconButton
               onPress={() => setDetailThread(null)}
-              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+              style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
             >
               <Ionicons name="close" size={18} color={TEXT1} />
             </AnimatedIconButton>
@@ -381,7 +381,7 @@ export default function AdminMessagesScreen() {
           ) : (
             <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
               {detailFlags.length > 0 && (
-                <View style={{ backgroundColor: CARD, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: BORDER, gap: 10, marginBottom: 4 }}>
+                <View style={{ backgroundColor: CARD, borderRadius: 4, padding: 14, borderWidth: 1, borderColor: BORDER, gap: 10, marginBottom: 4 }}>
                   <Text style={{ fontSize: 12, fontWeight: "700", color: TEXT1 }}>Historique des signalements</Text>
                   {detailFlags.map((f) => {
                     const outcomeBadge = reportOutcome(f.status, f.outcome);
@@ -418,14 +418,14 @@ export default function AdminMessagesScreen() {
                     alignSelf: m.sender_role === "pro" ? "flex-end" : "flex-start",
                     maxWidth: "82%",
                     backgroundColor: m.deleted_at ? ADMIN.surfaceHover : (m.sender_role === "pro" ? ADMIN.accentBg : CARD),
-                    borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: photoUri ? 8 : 12, gap: 6,
+                    borderWidth: 1, borderColor: BORDER, borderRadius: 4, padding: photoUri ? 8 : 12, gap: 6,
                   }}
                 >
                   <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3, textTransform: "uppercase" }}>
                     {m.sender_role === "pro" ? "Pro" : m.sender_role === "client" ? "Cliente" : "Compte supprimé"}
                   </Text>
                   {photoUri && (
-                    <Image source={{ uri: photoUri }} style={{ width: 220, height: 220, borderRadius: 10 }} resizeMode="cover" />
+                    <Image source={{ uri: photoUri }} style={{ width: 220, height: 220, borderRadius: 4 }} resizeMode="cover" />
                   )}
                   {m.deleted_at ? (
                     <Text style={{ fontSize: 13, color: TEXT3, lineHeight: 18, fontStyle: "italic" }}>Contenu effacé par modération</Text>
@@ -472,7 +472,7 @@ export default function AdminMessagesScreen() {
                       flexDirection: "row", alignItems: "flex-start", gap: 10,
                       borderWidth: 1.2, borderColor: selected ? ADMIN.accent : BORDER,
                       backgroundColor: selected ? ADMIN.accentBg : "transparent",
-                      borderRadius: 12, padding: 12,
+                      borderRadius: 4, padding: 12,
                     }}
                   >
                     <Ionicons
@@ -499,7 +499,7 @@ export default function AdminMessagesScreen() {
               numberOfLines={3}
               style={{
                 minHeight: 64, fontSize: 13, color: TEXT1,
-                backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 12,
+                backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 12,
                 textAlignVertical: "top",
               }}
             />
@@ -508,14 +508,14 @@ export default function AdminMessagesScreen() {
               <AnimatedPressable
                 onPress={() => setIgnoreTarget(null)}
                 disabled={ignoreMut.isPending}
-                style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}
+                style={{ flex: 1, height: 46, borderRadius: 4, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}
               >
                 <Text style={{ color: TEXT2, fontWeight: "700" }}>Annuler</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 onPress={() => { if (ignoreTarget) ignoreMut.mutate({ id: ignoreTarget.id, outcome: ignoreOutcome, note: ignoreNote.trim() || undefined }); }}
                 disabled={ignoreMut.isPending}
-                style={{ flex: 1, height: 46, borderRadius: 14, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center" }}
+                style={{ flex: 1, height: 46, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center" }}
               >
                 {ignoreMut.isPending
                   ? <ActivityIndicator size="small" color={ADMIN.accent} />

@@ -137,13 +137,13 @@ export default function ReviewsScreen() {
         <AnimatedIconButton
           onPress={() => safeBack(router)}
           accessibilityLabel="Retour"
-          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+          style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="arrow-back" size={18} color={TEXT1} />
         </AnimatedIconButton>
         <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>Avis</Text>
         {!isLoading && reviews.length > 0 && (
-          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
             <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>{reviews.length}</Text>
           </View>
         )}
@@ -161,7 +161,7 @@ export default function ReviewsScreen() {
               key={t.key}
               onPress={() => setTab(t.key)}
               style={{
-                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4,
                 backgroundColor: active ? ADMIN.accent : ADMIN.surfaceHover,
                 borderWidth: 1, borderColor: active ? ADMIN.accent : ADMIN.border,
               }}
@@ -223,7 +223,7 @@ export default function ReviewsScreen() {
             <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: BORDER }}>
               {/* Author + rating */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 40, height: 40, borderRadius: 4, backgroundColor: ADMIN.dangerBg, alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.destructive }}>
                     {item.author_name[0]?.toUpperCase() ?? "?"}
                   </Text>
@@ -233,12 +233,12 @@ export default function ReviewsScreen() {
                   <StarRow rating={item.rating} />
                 </View>
                 {tab === "flagged" ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder }}>
                     <Ionicons name="flag-outline" size={11} color={Colors.destructive} />
                     <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.destructive }}>{item.flags_count}</Text>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: ADMIN.border }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: ADMIN.border }}>
                     <Ionicons name="trash-outline" size={11} color={TEXT3} />
                     <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT3 }}>Supprimé</Text>
                   </View>
@@ -253,7 +253,7 @@ export default function ReviewsScreen() {
 
               {/* Comment */}
               {item.comment && (
-                <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: ADMIN.border }}>
+                <View style={{ backgroundColor: ADMIN.surfaceHover, borderRadius: 4, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: ADMIN.border }}>
                   <Text style={{ fontSize: 13, color: TEXT2, lineHeight: 19 }}>{item.comment}</Text>
                 </View>
               )}
@@ -269,7 +269,7 @@ export default function ReviewsScreen() {
                   <AnimatedPressable
                     onPress={() => { setActionError(null); ignoreMut.mutate(item.id); }}
                     disabled={ignoreMut.isPending}
-                    style={{ flex: 1, height: 38, borderRadius: 11, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
+                    style={{ flex: 1, height: 38, borderRadius: 4, borderWidth: 1, borderColor: ADMIN.borderStrong, alignItems: "center", justifyContent: "center" }}
                   >
                     {ignoreMut.isPending
                       ? <ActivityIndicator size="small" color={TEXT2} />
@@ -278,7 +278,7 @@ export default function ReviewsScreen() {
                   <AnimatedPressable
                     onPress={() => { setActionError(null); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); setDeleteTarget(item); }}
                     accessibilityLabel="Supprimer cet avis"
-                    style={{ flex: 1, height: 38, borderRadius: 11, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
+                    style={{ flex: 1, height: 38, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
                   >
                     <Ionicons name="trash-outline" size={13} color={Colors.destructive} />
                     <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.destructive }}>Supprimer l'avis</Text>
@@ -289,7 +289,7 @@ export default function ReviewsScreen() {
                   onPress={() => { setActionError(null); restoreMut.mutate(item.id); }}
                   disabled={restoreMut.isPending}
                   accessibilityLabel="Restaurer cet avis"
-                  style={{ height: 38, borderRadius: 11, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
+                  style={{ height: 38, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
                 >
                   {restoreMut.isPending
                     ? <ActivityIndicator size="small" color={ADMIN.accent} />

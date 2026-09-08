@@ -65,7 +65,7 @@ function TxCard({
       opacity, transform: [{ translateY }],
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>
-        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? withAlpha(cfg.color, 0.14) : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <View style={{ width: 38, height: 38, borderRadius: 4, backgroundColor: cfg ? withAlpha(cfg.color, 0.14) : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Ionicons name={cfg ? cfg.icon : "card-outline"} size={18} color={cfg ? cfg.color : TEXT3} />
         </View>
 
@@ -286,7 +286,7 @@ export default function AdminPaymentsScreen() {
       <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center", gap: 12 }}>
         <Ionicons name="cloud-offline-outline" size={40} color={TEXT3} />
         <Text style={{ color: TEXT2, fontSize: 14 }}>Impossible de charger les paiements.</Text>
-        <AnimatedPressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10, backgroundColor: ADMIN.surfaceHover }}>
+        <AnimatedPressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4, backgroundColor: ADMIN.surfaceHover }}>
           <Text style={{ color: TEXT1, fontWeight: "600" }}>Réessayer</Text>
         </AnimatedPressable>
       </View>
@@ -376,7 +376,7 @@ export default function AdminPaymentsScreen() {
 
             {/* Section header + search + export */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: ADMIN.surfaceHover, borderRadius: 10, paddingHorizontal: 12, height: 44 }}>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, paddingHorizontal: 12, height: 44 }}>
                 <Ionicons name="search-outline" size={16} color={TEXT3} />
                 <TextInput
                   value={search}
@@ -400,7 +400,7 @@ export default function AdminPaymentsScreen() {
                 accessibilityLabel="Exporter les transactions en PDF"
                 accessibilityRole="button"
                 style={({ pressed }) => [{
-                  width: 44, height: 44, borderRadius: 10, backgroundColor: ADMIN.surfaceHover,
+                  width: 44, height: 44, borderRadius: 4, backgroundColor: ADMIN.surfaceHover,
                   alignItems: "center", justifyContent: "center",
                   opacity: (pressed || exporting || caMois === 0) ? 0.5 : 1,
                 }]}
@@ -421,7 +421,7 @@ export default function AdminPaymentsScreen() {
                   <AnimatedPressable
                     key={f}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
-                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4,
                       backgroundColor: active ? withAlpha(color, 0.16) : ADMIN.surfaceHover }}
                   >
                     <Text style={{ fontSize: 12, fontWeight: "600", color: active ? color : TEXT2 }}>
