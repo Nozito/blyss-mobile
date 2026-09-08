@@ -461,7 +461,7 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
       overshootRight={false} overshootLeft={false} friction={2}>
       <AnimatedPressable onPress={onPress} onLongPress={onLongPress}>
         <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.md, opacity: item.is_active ? 1 : 0.55 }}>
-          <Avatar name={name} photo={item.profile_photo} size={44} />
+          <Avatar name={name} photo={item.profile_photo} size={44} pro={item.role === "pro"} />
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Text style={{ ...ADMIN.type.name, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
@@ -469,8 +469,9 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
               {item.is_abusive_reporter && <StatusBadge label="Reporter à risque" tone="danger" />}
               <StatusBadge label={!item.is_active ? "Banni" : roleName(item)} tone={!item.is_active ? "danger" : "neutral"} />
             </View>
-            <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
-            {meta && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>{meta}</Text>}
+            <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }} numberOfLines={1}>
+              #{item.id} · {item.email}{meta ? ` · ${meta}` : ""}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={15} color={ADMIN.textMuted} />
         </Card>

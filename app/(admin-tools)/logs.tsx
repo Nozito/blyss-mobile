@@ -57,7 +57,7 @@ function LogRow({ log }: { log: Log }) {
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, flex: 1, marginRight: 10 }} numberOfLines={2}>
+            <Text style={{ ...ADMIN.type.title, fontSize: 13, color: TEXT1, flex: 1, marginRight: 10 }} numberOfLines={2}>
               {log.action}
             </Text>
             <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: cfg.bg }}>
@@ -97,7 +97,7 @@ function StatChip({ label, value, color, bg }: { label: string; value: number; c
   return (
     <View style={{ borderRadius: 4, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: BORDER }}>
       <Text style={{ fontSize: 10, color, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
-      <Text style={{ fontSize: 22, fontWeight: "700", color }}>{value}</Text>
+      <Text style={{ ...ADMIN.type.display, fontSize: 22, color }}>{value}</Text>
     </View>
   );
 }
@@ -165,7 +165,7 @@ export default function AdminLogsScreen() {
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
-          <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+          <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>Retour</Text>
         </AnimatedPressable>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>

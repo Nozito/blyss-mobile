@@ -264,26 +264,23 @@ export default function AdminNotificationsScreen() {
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
           <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
-          <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+          <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>Retour</Text>
         </AnimatedPressable>
-        <Text style={{ fontSize: 32, fontWeight: "700", color: TEXT1, letterSpacing: -0.8 }}>Notifications</Text>
+        <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>Notifications</Text>
         <Text style={{ fontSize: 13, color: TEXT2, marginTop: 2 }}>Envoi push en temps réel</Text>
       </View>
 
       {/* ── Stats ── */}
       {sentCount !== null && (
-        <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
-          <View style={{ flex: 1, backgroundColor: `${Colors.success}15`, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: `${Colors.success}28` }}>
-            <Text style={{ fontSize: 11, color: Colors.success, fontWeight: "600" }}>Dernière push</Text>
-            <Text style={{ fontSize: 28, fontWeight: "700", color: Colors.success, marginTop: 2 }}>{sentCount}</Text>
-            <Text style={{ fontSize: 10, color: TEXT2 }}>destinataire(s)</Text>
-          </View>
+        <View style={{ marginBottom: 20, borderWidth: 1, borderColor: ADMIN.successBorder, backgroundColor: ADMIN.successBg, padding: 16, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+          <Text style={{ fontSize: 30, fontWeight: "900", letterSpacing: -1, color: Colors.success }}>{sentCount}</Text>
+          <Text style={{ ...ADMIN.type.label, color: TEXT2 }}>destinataires · dernière push</Text>
         </View>
       )}
 
       {/* ── 1. Cible ── */}
       <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, marginBottom: 14 }}>1. Cible</Text>
+        <Text style={{ ...ADMIN.type.title, fontSize: 13, color: TEXT1, marginBottom: 14 }}>1. Cible</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {TARGET_OPTS.map((opt) => {
             const active = target === opt.value;
@@ -324,7 +321,7 @@ export default function AdminNotificationsScreen() {
 
       {/* ── 2. Contenu ── */}
       <View style={{ backgroundColor: CARD, borderRadius: ADMIN.cardRadius, borderWidth: 1, borderColor: BORDER, padding: 20, marginBottom: 16 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, marginBottom: 14 }}>2. Contenu</Text>
+        <Text style={{ ...ADMIN.type.title, fontSize: 13, color: TEXT1, marginBottom: 14 }}>2. Contenu</Text>
 
         <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 8 }}>Titre</Text>
         <TextInput

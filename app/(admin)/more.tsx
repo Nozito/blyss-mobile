@@ -78,7 +78,7 @@ function ToolRow({
           <AdminIcon ios={tool.symbol as any} android={tool.androidIcon} size={19} color={tool.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: TEXT1 }}>{tool.label}</Text>
+          <Text style={{ ...ADMIN.type.name, color: TEXT1 }}>{tool.label}</Text>
           <Text style={{ fontSize: 12, color: TEXT3, marginTop: 1 }}>{tool.sub}</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={TEXT3} />
@@ -128,66 +128,54 @@ export default function AdminMoreScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Profile header ── */}
-        <View style={{ paddingTop: insets.top + 12, paddingBottom: 24, paddingHorizontal: 24, alignItems: "center" }}>
+        <View style={{ paddingTop: insets.top + 16, paddingBottom: 22, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 16 }}>
           <View style={{
-            width: 76, height: 76, borderRadius: 24,
-            backgroundColor: withAlpha(ACCENT, 0.16),
+            width: 60, height: 60, borderRadius: 3,
+            backgroundColor: ACCENT,
             alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
             {photoUri ? (
-              <Image source={{ uri: photoUri }} style={{ width: 76, height: 76 }} contentFit="cover" />
+              <Image source={{ uri: photoUri }} style={{ width: 60, height: 60 }} contentFit="cover" />
             ) : (
-              <Text style={{ fontSize: 28, fontWeight: "700", color: ACCENT }}>
+              <Text style={{ fontSize: 22, fontWeight: "900", letterSpacing: -0.5, color: ADMIN.accentInk }}>
                 {initials || "A"}
               </Text>
             )}
           </View>
-
-          <Text style={{ fontSize: 20, fontWeight: "700", color: TEXT1, marginTop: 14, marginBottom: 3 }}>
-            {fullName || "Admin"}
-          </Text>
-          <Text style={{ fontSize: 13, color: TEXT2, marginBottom: 14 }}>
-            {user?.email}
-          </Text>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: withAlpha(ACCENT, 0.16) }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT, letterSpacing: 0.3 }}>ADMIN</Text>
-            </View>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: ADMIN.surfaceHover }}>
-              <Text style={{ fontSize: 11, color: TEXT2 }}>Accès total</Text>
-            </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...ADMIN.type.display, fontSize: 26, color: TEXT1 }} numberOfLines={1}>
+              {fullName || "Admin"}
+            </Text>
+            <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 4 }} numberOfLines={1}>
+              {user?.email} · Accès total
+            </Text>
           </View>
         </View>
 
-        {/* ── Stats strip ── */}
+        {/* ── Stats strip — filet, chiffres 900 ── */}
         <View style={{
           marginHorizontal: 20,
-          backgroundColor: ADMIN.surface,
-          borderRadius: ADMIN.cardRadius,
           borderWidth: 1, borderColor: ADMIN.border,
-          padding: 16,
           flexDirection: "row",
         }}>
-          {stats.map(({ label, value, symbol, icon, route }, i) => (
+          {stats.map(({ label, value, route }, i) => (
             <React.Fragment key={label}>
               <Link href={route as any} asChild>
               <AnimatedPressable
                 onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
-                style={{ flex: 1, alignItems: "center" }}
+                style={{ flex: 1, paddingVertical: 16, paddingHorizontal: 12 }}
               >
-                <AdminIcon ios={symbol as any} android={icon} size={17} color={TEXT2} />
-                <Text style={{ fontSize: 18, fontWeight: "700", color: TEXT1, marginTop: 8 }}>
+                <Text style={{ ...ADMIN.type.display, fontSize: 22, color: TEXT1 }} numberOfLines={1}>
                   {value}
                 </Text>
-                <Text style={{ fontSize: 10, color: TEXT3, marginTop: 2 }}>
+                <Text style={{ ...ADMIN.type.label, color: TEXT3, marginTop: 4 }} numberOfLines={1}>
                   {label}
                 </Text>
               </AnimatedPressable>
               </Link>
               {i < stats.length - 1 && (
-                <View style={{ width: 1, backgroundColor: ADMIN.border, alignSelf: "stretch", marginVertical: 4 }} />
+                <View style={{ width: 1, backgroundColor: ADMIN.border }} />
               )}
             </React.Fragment>
           ))}
@@ -220,7 +208,7 @@ export default function AdminMoreScreen() {
               <Ionicons name="swap-horizontal-outline" size={19} color={ACCENT} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: TEXT1, marginBottom: 2 }}>
+              <Text style={{ ...ADMIN.type.name, color: TEXT1, marginBottom: 2 }}>
                 Changer d'interface
               </Text>
               <Text style={{ fontSize: 12, color: TEXT2 }}>
@@ -232,10 +220,7 @@ export default function AdminMoreScreen() {
 
           {/* ── Outils Admin ── */}
           <Text style={{
-            fontSize: 11, fontWeight: "700",
-            color: TEXT3,
-            letterSpacing: 1,
-            textTransform: "uppercase",
+            ...ADMIN.type.label, color: TEXT3,
             marginBottom: 10,
             marginTop: 28,
           }}>
@@ -289,7 +274,7 @@ export default function AdminMoreScreen() {
               }}>
                 <Ionicons name="log-out-outline" size={19} color={ADMIN.danger} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: ADMIN.danger, flex: 1 }}>
+              <Text style={{ ...ADMIN.type.name, color: ADMIN.danger, flex: 1 }}>
                 Se déconnecter
               </Text>
             </Animated.View>
@@ -297,10 +282,7 @@ export default function AdminMoreScreen() {
 
           {/* ── À propos ── */}
           <Text style={{
-            fontSize: 11, fontWeight: "700",
-            color: TEXT3,
-            letterSpacing: 1,
-            textTransform: "uppercase",
+            ...ADMIN.type.label, color: TEXT3,
             marginBottom: 10,
             marginTop: 28,
           }}>

@@ -308,7 +308,7 @@ function CouponCard({
         {/* Discount + plans */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
           <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>
+            <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>
               -{coupon.discount_value}{coupon.discount_type === "percent" ? "%" : "€"}
             </Text>
           </View>
@@ -434,7 +434,7 @@ export default function AdminCouponsScreen() {
         style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
       >
         <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
-        <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+        <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>Retour</Text>
       </AnimatedPressable>
       <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase", marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
       {couponError && <View style={{ marginBottom: 8 }}><ErrorMessage message={couponError} /></View>}

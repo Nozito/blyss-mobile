@@ -305,7 +305,7 @@ export default function AdminAnalyticsScreen() {
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
           <Ionicons name="chevron-back" size={18} color={ACCENT} />
-          <Text style={{ fontSize: 15, fontWeight: "600", color: ACCENT }}>Retour</Text>
+          <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ACCENT }}>Retour</Text>
         </AnimatedPressable>
         <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>
           Analytics
