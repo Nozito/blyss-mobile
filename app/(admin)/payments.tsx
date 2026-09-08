@@ -17,6 +17,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -65,7 +66,7 @@ function TxCard({
       opacity, transform: [{ translateY }],
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>
-        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: cfg ? withAlpha(cfg.color, 0.14) : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <View style={{ width: 38, height: 38, borderRadius: 4, backgroundColor: cfg ? withAlpha(cfg.color, 0.14) : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Ionicons name={cfg ? cfg.icon : "card-outline"} size={18} color={cfg ? cfg.color : TEXT3} />
         </View>
 
@@ -73,7 +74,7 @@ function TxCard({
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
             <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT1, flex: 1 }} numberOfLines={1}>{tx.client_name}</Text>
             <Text style={{ fontSize: 16, fontWeight: "700", color: isSucceeded ? Colors.success : TEXT1, letterSpacing: -0.3, marginLeft: 8 }}>
-              {Number(tx.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+              {formatEUR(tx.amount, { cents: true })}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -91,12 +92,12 @@ function TxCard({
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 12, paddingTop: 2, gap: 12, borderTopWidth: 1, borderTopColor: ADMIN.border }}>
           {tx.fee != null && (
             <Text style={{ fontSize: 11, color: TEXT2 }}>
-              Frais : {Number(tx.fee).toFixed(2)} €
+              Frais : {formatEUR(tx.fee, { cents: true })}
             </Text>
           )}
           {tx.net_amount != null && (
             <Text style={{ fontSize: 11, color: TEXT2 }}>
-              Net : {Number(tx.net_amount).toFixed(2)} €
+              Net : {formatEUR(tx.net_amount, { cents: true })}
             </Text>
           )}
           {isSucceeded && (
@@ -197,6 +198,7 @@ export default function AdminPaymentsScreen() {
   const caMois   = revenueAgg?.month_revenue ?? thisMonth.reduce((s, t) => s + Number(t.amount), 0);
   const netTotal = succeeded.reduce((s, t) => s + Number(t.net_amount ?? 0), 0);
   const pending  = transactions.filter((t) => t.status === "pending" || t.status === "processing").length;
+  const failed   = transactions.filter((t) => t.status === "failed").length;
 
   const confirmRefund = (tx: AdminPayment) => {
     setPaymentError(null);
@@ -227,14 +229,14 @@ export default function AdminPaymentsScreen() {
       });
 
       const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-      const total = monthTx.reduce((s, t) => s + Number(t.amount), 0).toFixed(2);
+      const totalNum = monthTx.reduce((s, t) => s + Number(t.amount), 0);
 
       const rows = monthTx.map((tx) => `
         <tr>
           <td>${tx.client_name}</td>
           <td>${tx.pro_name}</td>
           <td>${new Date(tx.created_at).toLocaleDateString("fr-FR")}</td>
-          <td style="text-align:right;font-weight:700;color:#22C55E">${Number(tx.amount).toFixed(2)} €</td>
+          <td style="text-align:right;font-weight:700;color:#22C55E">${formatEUR(tx.amount, { cents: true })}</td>
           <td>${tx.status}</td>
         </tr>
       `).join("");
@@ -258,7 +260,7 @@ export default function AdminPaymentsScreen() {
           <thead><tr><th>Client</th><th>Pro</th><th>Date</th><th style="text-align:right">Montant</th><th>Statut</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <p class="total">Total : ${total} €</p>
+        <p class="total">Total : ${formatEUR(totalNum, { cents: true })}</p>
         <p class="footer">Généré par Blyss Admin · ${new Date().toLocaleString("fr-FR")}</p>
         </body></html>
       `;
@@ -285,7 +287,7 @@ export default function AdminPaymentsScreen() {
       <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center", gap: 12 }}>
         <Ionicons name="cloud-offline-outline" size={40} color={TEXT3} />
         <Text style={{ color: TEXT2, fontSize: 14 }}>Impossible de charger les paiements.</Text>
-        <AnimatedPressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10, backgroundColor: ADMIN.surfaceHover }}>
+        <AnimatedPressable onPress={() => void refetch()} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4, backgroundColor: ADMIN.surfaceHover }}>
           <Text style={{ color: TEXT1, fontWeight: "600" }}>Réessayer</Text>
         </AnimatedPressable>
       </View>
@@ -303,7 +305,7 @@ export default function AdminPaymentsScreen() {
             <>
               {"Rembourser "}
               <Text style={{ fontWeight: "700", color: ADMIN.danger }}>
-                {Number(refundTarget.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+                {formatEUR(refundTarget.amount, { cents: true })}
               </Text>
               {` à ${refundTarget.client_name} ?\n\nCette action est irréversible.`}
             </>
@@ -337,49 +339,45 @@ export default function AdminPaymentsScreen() {
         ListHeaderComponent={
           <>
             {/* Page title */}
-            <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.5, marginBottom: 16 }}>Paiements</Text>
+            <Text style={{ ...ADMIN.type.display, color: TEXT1, marginBottom: 16 }}>Paiements</Text>
             {paymentError && <View style={{ marginBottom: 12 }}><ErrorMessage message={paymentError} /></View>}
 
-            {/* Hero CA total */}
-            <View style={{ borderRadius: ADMIN.cardRadius, padding: 20, marginBottom: 14, backgroundColor: ADMIN.surface, borderWidth: 1, borderColor: ADMIN.border }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CA total</Text>
-              <Text style={{ fontSize: 40, fontWeight: "700", color: TEXT1, letterSpacing: -1 }}>
-                {caTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+            {/* Hero — encaissé dans l'app, aplat rose */}
+            <View style={{ padding: 20, marginBottom: 16, backgroundColor: ADMIN.accent }}>
+              <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>Encaissé dans l'app · total</Text>
+              <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>
+                {formatNumberFR(caTotal)}
+                <Text style={{ fontSize: 18 }}> €</Text>
               </Text>
-              <View style={{ flexDirection: "row", marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: ADMIN.border }}>
+              <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginTop: 16 }}>
                 {[
-                  { label: "Ce mois",      value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-                  { label: partiallyLoaded ? "Net (chargé)" : "Net total", value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-                  { label: "Transactions", value: String(totalTransactions ?? transactions.length) },
-                ].map(({ label, value }, i) => (
-                  <React.Fragment key={label}>
-                    {i > 0 && <View style={{ width: 1, backgroundColor: ADMIN.border, marginHorizontal: 14 }} />}
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 10, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>{label}</Text>
-                      <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>{value}</Text>
-                    </View>
-                  </React.Fragment>
+                  { label: "Ce mois",      value: formatEUR(caMois) },
+                  { label: partiallyLoaded ? "Net (chargé)" : "Net", value: formatEUR(netTotal) },
+                  { label: "Transactions", value: formatNumberFR(totalTransactions ?? transactions.length) },
+                ].map(({ label, value }) => (
+                  <View key={label}>
+                    <Text style={{ fontSize: 18, fontWeight: "900", letterSpacing: -0.6, color: ADMIN.accentInk }}>{value}</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub, marginTop: 3 }}>{label}</Text>
+                  </View>
                 ))}
               </View>
             </View>
 
-            {/* 3 mini-cards */}
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
-              {[
-                { label: "Ce mois",    value: `${caMois.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.pro },
-                { label: partiallyLoaded ? "Net (chargé)" : "Net total", value: `${netTotal.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €`, color: Colors.success },
-                { label: partiallyLoaded ? "Attente (chargé)" : "En attente", value: String(pending), color: Colors.warning },
-              ].map(({ label, value, color }) => (
-                <View key={label} style={{ flex: 1, backgroundColor: ADMIN.surface, borderRadius: ADMIN.cardRadius, padding: 14, borderWidth: 1, borderColor: ADMIN.border }}>
-                  <Text style={{ fontSize: 10, fontWeight: "600", color: TEXT2, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>{label}</Text>
-                  <Text style={{ fontSize: 17, fontWeight: "700", color, letterSpacing: -0.3 }}>{value}</Text>
-                </View>
-              ))}
+            {/* Bandeau : en attente / échecs */}
+            <View style={{ flexDirection: "row", marginBottom: 20, borderWidth: 1, borderColor: ADMIN.border }}>
+              <View style={{ flex: 1, padding: 14, borderRightWidth: 1, borderRightColor: ADMIN.border }}>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.warning }}>{formatNumberFR(pending)}</Text>
+                <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 3 }}>{partiallyLoaded ? "Attente (chargé)" : "En attente"}</Text>
+              </View>
+              <View style={{ flex: 1, padding: 14 }}>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 20, color: ADMIN.danger }}>{formatNumberFR(failed)}</Text>
+                <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 3 }}>Échecs</Text>
+              </View>
             </View>
 
             {/* Section header + search + export */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: ADMIN.surfaceHover, borderRadius: 10, paddingHorizontal: 12, height: 44 }}>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, paddingHorizontal: 12, height: 44 }}>
                 <Ionicons name="search-outline" size={16} color={TEXT3} />
                 <TextInput
                   value={search}
@@ -403,7 +401,7 @@ export default function AdminPaymentsScreen() {
                 accessibilityLabel="Exporter les transactions en PDF"
                 accessibilityRole="button"
                 style={({ pressed }) => [{
-                  width: 44, height: 44, borderRadius: 10, backgroundColor: ADMIN.surfaceHover,
+                  width: 44, height: 44, borderRadius: 4, backgroundColor: ADMIN.surfaceHover,
                   alignItems: "center", justifyContent: "center",
                   opacity: (pressed || exporting || caMois === 0) ? 0.5 : 1,
                 }]}
@@ -424,7 +422,7 @@ export default function AdminPaymentsScreen() {
                   <AnimatedPressable
                     key={f}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f); }}
-                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4,
                       backgroundColor: active ? withAlpha(color, 0.16) : ADMIN.surfaceHover }}
                   >
                     <Text style={{ fontSize: 12, fontWeight: "600", color: active ? color : TEXT2 }}>

@@ -16,6 +16,7 @@ import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
+import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 
 // Groupe compte
 const ACCOUNT_ITEMS = [
@@ -38,6 +39,17 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showRoleSwitch, setShowRoleSwitch] = useState(false);
+
+  const goToRole = (role: AdminRole) => {
+    setShowRoleSwitch(false);
+    const routes: Record<AdminRole, string> = {
+      client: "/(client)",
+      pro: "/(pro)/dashboard",
+      admin: "/(admin)/dashboard",
+    };
+    router.replace(routes[role] as never);
+  };
   const showActionSheet = useActionSheet();
 
   const pickFromGallery = async () => {
@@ -279,43 +291,30 @@ export default function ProfileScreen() {
 
         {/* Admin switcher — admin only */}
         {user?.is_admin && (
-          <View style={{
-            backgroundColor: "#0A0A0F",
-            borderRadius: 16,
-            padding: 14,
-            marginBottom: 16,
-            borderWidth: 1,
-            borderColor: "rgba(249,115,22,0.30)",
-          }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.admin} />
-              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.admin, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                Vue administrateur
+          <AnimatedPressable
+            onPress={() => setShowRoleSwitch(true)}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 14,
+              backgroundColor: colors.white,
+              borderRadius: 20, padding: 16, marginBottom: 16,
+              borderWidth: 1, borderColor: withAlpha(colors.admin, 0.28),
+            }}
+          >
+            <View style={{
+              width: 40, height: 40, borderRadius: 12,
+              backgroundColor: withAlpha(colors.admin, 0.1),
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name="shield-checkmark" size={18} color={colors.admin} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Vue administrateur</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+                Basculer vers Client, Pro ou Admin
               </Text>
             </View>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <AnimatedPressable
-                onPress={() => router.push("/(admin)/dashboard" as any)}
-                style={{
-                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-                  gap: 6, backgroundColor: colors.admin, borderRadius: 10, paddingVertical: 10,
-                }}
-              >
-                <Ionicons name="grid" size={15} color={colors.onColor} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Admin</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                onPress={() => router.push("/(pro)/dashboard" as any)}
-                style={{
-                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-                  gap: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 10, paddingVertical: 10,
-                }}
-              >
-                <Ionicons name="briefcase-outline" size={15} color="rgba(255,255,255,0.7)" />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Vue Pro</Text>
-              </AnimatedPressable>
-            </View>
-          </View>
+            <Ionicons name="swap-horizontal" size={18} color={colors.admin} />
+          </AnimatedPressable>
         )}
 
         {/* Menu — zone danger */}
@@ -342,6 +341,13 @@ export default function ProfileScreen() {
           </AnimatedPressable>
         </View>
       </ScrollView>
+
+      <RoleSelectionModal
+        visible={showRoleSwitch}
+        userName={user?.first_name ?? ""}
+        onSelectRole={goToRole}
+        onClose={() => setShowRoleSwitch(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -10,7 +10,7 @@ import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tansta
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { adminApi, AdminUser, REPORT_REASONS } from "@/lib/api";
+import { adminApi, AdminUser, AdminMessageReport, REPORT_REASONS } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Colors, withAlpha } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
@@ -21,18 +21,17 @@ import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedP
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { SectionLabel } from "@/components/admin/SectionLabel";
-import { Row } from "@/components/admin/Row";
 import { ActionGrid } from "@/components/admin/ActionGrid";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Card } from "@/components/admin/Card";
 import { useToast } from "@/components/ui/Toast";
 import { Avatar } from "@/components/admin/Avatar";
+import { GrantSubscriptionModal } from "@/components/admin/GrantSubscriptionModal";
+import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";
 
 type RoleFilter = "all" | "pro" | "client" | "banned";
 
-const PLAN_OPTS   = ["start", "serenite", "signature"] as const;
 const PLAN_LABELS: Record<string, string> = { start: "Start", serenite: "Sérénité", signature: "Signature" };
-const MONTHS_OPTS = [1, 3, 6, 12];
 
 function roleName(user: Pick<AdminUser, "is_admin" | "role">) {
   if (user.is_admin) return "Admin";
@@ -57,6 +56,51 @@ function reportOutcome(status: "pending" | "reviewed", outcome: "upheld" | "dism
   return { label: "Confirmé", tone: "warning" };
 }
 
+const MAX_REPORTS_SHOWN = 3;
+
+// Une ligne de signalement — carte multi-lignes, pas un Row à sous-titre géant.
+function ReportRow({ r, dir, showDivider }: {
+  r: AdminMessageReport;
+  dir: "against" | "made";
+  showDivider: boolean;
+}) {
+  const oc = reportOutcome(r.status, r.outcome);
+  const who = dir === "against" ? r.flagged_by_name : r.reported_user_name;
+  return (
+    <View style={{ padding: 12, borderBottomWidth: showDivider ? 1 : 0, borderBottomColor: ADMIN.border, gap: 3 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <Text style={{ ...ADMIN.type.name, fontSize: 13, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{reasonLabel(r.reason_code)}</Text>
+        <StatusBadge label={oc.label} tone={oc.tone} />
+      </View>
+      <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }} numberOfLines={1}>
+        {dir === "against" ? "Par" : "Contre"} {who ?? "—"} · {new Date(r.created_at).toLocaleDateString("fr-FR")}
+      </Text>
+      {!!r.reason && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={2}>{r.reason}</Text>}
+      {!!r.admin_note && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, fontStyle: "italic" }} numberOfLines={2}>Note : {r.admin_note}</Text>}
+    </View>
+  );
+}
+
+function ReportBlock({ label, items, dir }: { label: string; items: AdminMessageReport[]; dir: "against" | "made" }) {
+  const shown = items.slice(0, MAX_REPORTS_SHOWN);
+  const rest = items.length - shown.length;
+  return (
+    <>
+      <SectionLabel>{`${label} (${items.length})`}</SectionLabel>
+      <Card style={{ padding: 0 }}>
+        {shown.map((r, i) => (
+          <ReportRow key={r.id} r={r} dir={dir} showDivider={i < shown.length - 1} />
+        ))}
+      </Card>
+      {rest > 0 && (
+        <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 6 }}>
+          + {rest} autre{rest > 1 ? "s" : ""} — voir Modération
+        </Text>
+      )}
+    </>
+  );
+}
+
 // ── Skeleton — same card shape as the real rows, so the layout doesn't jump ──
 function UserSkeleton() {
   return (
@@ -79,99 +123,6 @@ function UserSkeleton() {
   );
 }
 
-// ── Grant bottom sheet ────────────────────────────────────────────────────────
-function GrantModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
-  const qc = useQueryClient();
-  const [plan, setPlan]       = useState<typeof PLAN_OPTS[number]>("serenite");
-  const [months, setMonths]   = useState(1);
-  const [grantError, setGrantError] = useState<string | null>(null);
-
-  const grantMut = useMutation({
-    mutationFn: () => adminApi.grantSubscription(user.id, { plan, months }),
-    onSuccess: () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      qc.invalidateQueries({ queryKey: ["admin-user", user.id] });
-      onClose();
-    },
-    onError: () => setGrantError("Impossible d'accorder l'abonnement."),
-  });
-
-  return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable
-          style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }}
-          onPress={onClose}
-        />
-        <View style={{
-          backgroundColor: ADMIN.surface,
-          borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius,
-          paddingHorizontal: ADMIN.space.xl, paddingBottom: ADMIN.space.xxl, paddingTop: ADMIN.space.md,
-        }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ADMIN.sheetHandle, alignSelf: "center", marginBottom: ADMIN.space.xl }} />
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.xl }}>
-            <Avatar name={`${user.first_name} ${user.last_name}`} photo={user.profile_photo} size={40} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...ADMIN.type.title, color: ADMIN.text }}>Offrir un abonnement</Text>
-              <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>pour {user.first_name} {user.last_name}</Text>
-            </View>
-            <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color={ADMIN.textSub} />
-            </AnimatedIconButton>
-          </View>
-
-          <Text style={styles.label}>Plan</Text>
-          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
-            {PLAN_OPTS.map((p) => (
-              <Pressable key={p}
-                onPress={() => { setPlan(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: "center",
-                  backgroundColor: plan === p ? ADMIN.accent : "transparent",
-                }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: plan === p ? Colors.white : ADMIN.textSub }}>
-                  {PLAN_LABELS[p]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.label}>Durée</Text>
-          <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.xxl }}>
-            {MONTHS_OPTS.map((m) => (
-              <Pressable key={m}
-                onPress={() => { setMonths(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: "center",
-                  backgroundColor: months === m ? ADMIN.accent : "transparent",
-                }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: months === m ? Colors.white : ADMIN.textSub }}>{m}m</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {grantError && <View style={{ marginBottom: ADMIN.space.md }}><ErrorMessage message={grantError} /></View>}
-
-          <AnimatedPressable
-            onPress={() => { setGrantError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); grantMut.mutate(); }}
-            disabled={grantMut.isPending}
-            style={{
-              height: 50, borderRadius: 14, backgroundColor: ADMIN.accent,
-              alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8,
-              opacity: grantMut.isPending ? 0.7 : 1,
-            }}>
-            {grantMut.isPending
-              ? <ActivityIndicator size="small" color={Colors.white} />
-              : <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Accorder l'abonnement</Text>}
-          </AnimatedPressable>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 // ── User detail bottom sheet ───────────────────────────────────────────────────
 function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant: () => void; onClose: () => void }) {
   const qc = useQueryClient();
@@ -179,7 +130,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"ban" | "delete" | null>(null);
 
-  const { data: fullData } = useQuery({
+  const { data: fullData, isLoading: detailLoading } = useQuery({
     queryKey: ["admin-user", user.id],
     queryFn:  () => adminApi.getUser(user.id),
     staleTime: 60_000,
@@ -187,6 +138,8 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
   const full    = (fullData?.data as AdminUser | undefined) ?? user;
   const stats   = full.stats;
   const planStr = getActivePlan(full);
+  // fullData existe mais success=false → l'endpoint détail a échoué (500, DB…).
+  const detailError = fullData && !fullData.success ? (fullData.error ?? "Erreur inconnue") : null;
 
   const banMut = useMutation({
     mutationFn: () => adminApi.banUser(user.id),
@@ -249,7 +202,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               <View style={{ marginBottom: ADMIN.space.md }}>
                 <Avatar name={`${full.first_name} ${full.last_name}`} photo={full.profile_photo} size={56} />
               </View>
-              <Text style={{ ...ADMIN.type.title, fontSize: 18, color: ADMIN.text, marginBottom: ADMIN.space.sm }}>{full.first_name} {full.last_name}</Text>
+              <Text style={{ ...ADMIN.type.name, color: ADMIN.text, marginBottom: ADMIN.space.sm }}>{full.first_name} {full.last_name}</Text>
               <View style={{ flexDirection: "row", gap: ADMIN.space.sm, flexWrap: "wrap", justifyContent: "center", marginBottom: ADMIN.space.sm }}>
                 <StatusBadge label={full.is_admin ? "Admin" : roleName(full)} tone="neutral" />
                 {planStr && <StatusBadge label={planStr} tone="warning" />}
@@ -259,99 +212,120 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
               </View>
               <AnimatedPressable onPress={handleShareEmail} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Ionicons name="mail-outline" size={13} color={ADMIN.textMuted} />
-                <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>{full.email}</Text>
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>{full.email}</Text>
                 <Ionicons name="share-outline" size={12} color={ADMIN.textMuted} />
               </AnimatedPressable>
-              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={18} color={ADMIN.textSub} />
               </AnimatedIconButton>
             </View>
 
-            {/* Stats — two rows of stat cards, same shape as the dashboard's "Deux faits" */}
-            {stats && (
+            {detailLoading && !fullData && (
+              <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <ActivityIndicator size="small" color={ADMIN.textMuted} />
+                <Text style={{ ...ADMIN.type.body, color: ADMIN.textSub }}>Chargement de la fiche…</Text>
+              </View>
+            )}
+            {detailError && (
+              <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg }}>
+                <View style={{ borderWidth: 1, borderColor: ADMIN.dangerBorder, backgroundColor: ADMIN.dangerBg, padding: 12 }}>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.danger, marginBottom: 4 }}>Fiche détaillée indisponible</Text>
+                  <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }}>{detailError}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Activité pro — agrégats métier (avis, résa réalisées, clientèle, abo) */}
+            {full.role === "pro" && full.pro_activity && (() => {
+              const pa = full.pro_activity;
+              const statCard = (label: string, value: string, sub?: string) => (
+                <Card style={{ flex: 1 }}>
+                  <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>{label}</Text>
+                  <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{value}</Text>
+                  {sub ? <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub, marginTop: 2 }} numberOfLines={1}>{sub}</Text> : null}
+                </Card>
+              );
+              return (
+                <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg }}>
+                  <SectionLabel>Activité pro</SectionLabel>
+                  <View style={{ gap: ADMIN.space.md }}>
+                    <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+                      {statCard("Note", pa.reviews.avg != null ? `${pa.reviews.avg.toFixed(1).replace(".", ",")} ★` : "—", `${formatNumberFR(pa.reviews.count)} avis`)}
+                      {statCard("CA ce mois", formatEUR(pa.bookings.gmv_month))}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+                      {statCard("Complétion", formatPercentFR(pa.bookings.completion_rate), `${formatNumberFR(pa.bookings.completed)} terminées`)}
+                      {statCard("Annulation", formatPercentFR(pa.bookings.cancellation_rate), `${formatNumberFR(pa.bookings.cancelled)} annulées`)}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
+                      {statCard("Clientèle", formatNumberFR(pa.clients.distinct), `${formatNumberFR(pa.clients.recurring)} récurrentes`)}
+                      {statCard("CA généré", formatEUR(pa.bookings.gmv_total), `${formatNumberFR(pa.bookings.total)} réservations`)}
+                    </View>
+                    <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ADMIN.space.md }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ ...ADMIN.type.name, color: ADMIN.text }} numberOfLines={1}>
+                          {pa.subscription
+                            ? `Abonnement ${PLAN_LABELS[pa.subscription.plan] ?? pa.subscription.plan}`
+                            : "Aucun abonnement"}
+                        </Text>
+                        {pa.subscription?.start_date && (
+                          <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 3 }} numberOfLines={1}>
+                            depuis {new Date(pa.subscription.start_date).toLocaleDateString("fr-FR", { month: "2-digit", year: "numeric" })}
+                          </Text>
+                        )}
+                      </View>
+                      {pa.subscription && (
+                        <StatusBadge
+                          label={pa.subscription.is_granted ? "Offert" : "Payé"}
+                          tone={pa.subscription.is_granted ? "warning" : "success"}
+                        />
+                      )}
+                    </Card>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Stats génériques — pour un client, ou en repli si le backend ne
+                renvoie pas encore pro_activity (déploiement en cours). */}
+            {stats && !(full.role === "pro" && full.pro_activity) && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.lg, gap: ADMIN.space.md }}>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Réservations</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.total_bookings}</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Réservations</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.total_bookings)}</Text>
                   </Card>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Terminées</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.completed}</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Terminées</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.completed)}</Text>
                   </Card>
                 </View>
                 <View style={{ flexDirection: "row", gap: ADMIN.space.md }}>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Annulées</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{stats.cancelled}</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Annulées</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatNumberFR(stats.cancelled)}</Text>
                   </Card>
                   <Card style={{ flex: 1 }}>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }} numberOfLines={1}>Dépensé</Text>
-                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{Number(stats.total_spent ?? 0).toFixed(0)} €</Text>
+                    <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 4 }} numberOfLines={1}>Dépensé</Text>
+                    <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{formatEUR(stats.total_spent)}</Text>
                   </Card>
                 </View>
               </View>
             )}
 
-            {/* Subscription history — one card, rows inside */}
-            {(full.subscription_history ?? []).length > 0 && (
+            {/* Signalements — dans les deux sens, pour décider d'un bannissement
+                d'un coup d'œil. Listes plafonnées à 3, le détail est dans Modération. */}
+            {(full.reports?.against.length ?? 0) > 0 && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
-                <SectionLabel>Abonnements</SectionLabel>
-                <Card style={{ padding: 0 }}>
-                  {(full.subscription_history ?? []).slice(0, 4).map((sub, i, arr) => (
-                    <Row
-                      key={sub.id}
-                      title={PLAN_LABELS[sub.plan] ?? sub.plan}
-                      subtitle={new Date(sub.start_date).toLocaleDateString("fr-FR")}
-                      trailing={<StatusBadge label={sub.status === "active" ? "Actif" : sub.status} tone={sub.status === "active" ? "success" : "neutral"} />}
-                      showDivider={i < arr.length - 1}
-                    />
-                  ))}
-                </Card>
+                <ReportBlock label="Signalements reçus" items={full.reports!.against} dir="against" />
               </View>
             )}
-
-            {/* Signalements — historique complet, traités ou non, dans les deux
-                sens, pour décider d'un bannissement en un coup d'œil. */}
-            {((full.reports?.against.length ?? 0) > 0 || (full.reports?.made.length ?? 0) > 0) && (
+            {(full.reports?.made.length ?? 0) > 0 && (
               <View style={{ paddingHorizontal: ADMIN.space.xl, paddingTop: ADMIN.space.xl }}>
-                <SectionLabel>{`Signalements reçus (${full.reports?.against.length ?? 0})`}</SectionLabel>
-                {(full.reports?.against.length ?? 0) > 0 ? (
-                  <Card style={{ padding: 0 }}>
-                    {(full.reports?.against ?? []).map((r, i, arr) => (
-                      <Row
-                        key={r.id}
-                        title={reasonLabel(r.reason_code)}
-                        subtitle={`Par ${r.flagged_by_name} · ${new Date(r.created_at).toLocaleDateString("fr-FR")}${r.reason ? ` — ${r.reason}` : ""}${r.admin_note ? ` · Note: ${r.admin_note}` : ""}`}
-                        trailing={<StatusBadge label={reportOutcome(r.status, r.outcome).label} tone={reportOutcome(r.status, r.outcome).tone} />}
-                        showDivider={i < arr.length - 1}
-                      />
-                    ))}
-                  </Card>
-                ) : (
-                  <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>Aucun signalement reçu.</Text>
-                )}
-
-                {(full.reports?.made.length ?? 0) > 0 && (
-                  <>
-                    <View style={{ height: ADMIN.space.md }} />
-                    <SectionLabel>{`Signalements effectués (${full.reports?.made.length ?? 0})`}</SectionLabel>
-                    <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, marginBottom: ADMIN.space.sm }}>
-                      {`${full.reports?.made_justified_count ?? 0} fondé(s) · ${full.reports?.made_dismissed_count ?? 0} infondé(s) de bonne foi · ${full.reports?.made_abusive_count ?? 0} abusif(s)`}
-                    </Text>
-                    <Card style={{ padding: 0 }}>
-                      {(full.reports?.made ?? []).map((r, i, arr) => (
-                        <Row
-                          key={r.id}
-                          title={reasonLabel(r.reason_code)}
-                          subtitle={`Contre ${r.reported_user_name} · ${new Date(r.created_at).toLocaleDateString("fr-FR")}${r.admin_note ? ` · Note: ${r.admin_note}` : ""}`}
-                          trailing={<StatusBadge label={reportOutcome(r.status, r.outcome).label} tone={reportOutcome(r.status, r.outcome).tone} />}
-                          showDivider={i < arr.length - 1}
-                        />
-                      ))}
-                    </Card>
-                  </>
-                )}
+                <ReportBlock label="Signalements effectués" items={full.reports!.made} dir="made" />
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 6 }}>
+                  {`${full.reports?.made_abusive_count ?? 0} abusif(s)`}
+                </Text>
               </View>
             )}
 
@@ -461,16 +435,17 @@ function UserCard({ item, onPress, onLongPress, onBan, onDelete, onGrant }: {
       overshootRight={false} overshootLeft={false} friction={2}>
       <AnimatedPressable onPress={onPress} onLongPress={onLongPress}>
         <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.md, opacity: item.is_active ? 1 : 0.55 }}>
-          <Avatar name={name} photo={item.profile_photo} size={44} />
+          <Avatar name={name} photo={item.profile_photo} size={44} pro={item.role === "pro"} />
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
+              <Text style={{ ...ADMIN.type.name, color: ADMIN.text, flex: 1 }} numberOfLines={1}>{name}</Text>
               {item.is_vigilant && <StatusBadge label="Vigilance" tone="warning" />}
               {item.is_abusive_reporter && <StatusBadge label="Reporter à risque" tone="danger" />}
               <StatusBadge label={!item.is_active ? "Banni" : roleName(item)} tone={!item.is_active ? "danger" : "neutral"} />
             </View>
-            <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
-            {meta && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>{meta}</Text>}
+            <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }} numberOfLines={1}>
+              #{item.id} · {item.email}{meta ? ` · ${meta}` : ""}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={15} color={ADMIN.textMuted} />
         </Card>
@@ -493,13 +468,13 @@ function BannedUserCard({ item, onPress, onReactivate, reactivating }: {
       <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md, marginBottom: ADMIN.space.md }}>
         <Avatar name={name} photo={item.profile_photo} size={44} />
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={{ ...ADMIN.type.title, fontSize: 15, color: ADMIN.text }} numberOfLines={1}>{name}</Text>
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
+          <Text style={{ ...ADMIN.type.name, color: ADMIN.text }} numberOfLines={1}>{name}</Text>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }} numberOfLines={1}>{item.email}</Text>
         </View>
         <AnimatedPressable
           onPress={onReactivate}
           disabled={reactivating}
-          style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: ADMIN.successBg, opacity: reactivating ? 0.5 : 1 }}
+          style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, backgroundColor: ADMIN.successBg, opacity: reactivating ? 0.5 : 1 }}
         >
           <Text style={{ fontSize: 12, fontWeight: "700", color: ADMIN.success }}>Réactiver</Text>
         </AnimatedPressable>
@@ -661,21 +636,22 @@ export default function AdminUsersScreen() {
       </View>
 
       <View style={{ paddingBottom: ADMIN.space.md }}>
-        {/* Segmented tabs — one control, not a scrolling row of pills */}
-        <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
-          {FILTERS.map(({ value, label }) => {
+        {/* Segmented tabs — un bloc rose vif pour l'onglet actif */}
+        <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.md }}>
+          {FILTERS.map(({ value, label }, idx) => {
             const active = roleFilter === value;
             return (
               <Pressable
                 key={value}
                 onPress={() => { setRoleFilter(value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
                 style={{
-                  flex: 1, paddingVertical: 8, borderRadius: 9,
+                  flex: 1, paddingVertical: 10,
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
                   backgroundColor: active ? ADMIN.accent : "transparent",
+                  borderLeftWidth: idx > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: active ? Colors.white : ADMIN.textSub }}>{label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accentInk : ADMIN.textSub }}>{label}</Text>
                 {value === "banned" && bannedCount > 0 && (
                   <View style={{ minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3, backgroundColor: active ? withAlpha(Colors.white, 0.3) : ADMIN.danger, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ fontSize: 9, fontWeight: "700", color: Colors.white }}>{bannedCount}</Text>
@@ -688,7 +664,7 @@ export default function AdminUsersScreen() {
 
         {/* Search — hidden on the banned tab, mirroring the pattern used for the blocked tab */}
         {roleFilter !== "banned" && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, height: 44, paddingHorizontal: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, height: 44, paddingHorizontal: 14 }}>
             <Ionicons name="search-outline" size={16} color={ADMIN.textMuted} />
             <TextInput
               value={search}
@@ -766,7 +742,7 @@ export default function AdminUsersScreen() {
                     {i > 0 && <View style={{ width: 1, backgroundColor: ADMIN.border, marginHorizontal: ADMIN.space.sm }} />}
                     <View style={{ flex: 1, alignItems: "center" }}>
                       <Text style={{ ...ADMIN.type.display, fontSize: 22, color: ADMIN.text }} numberOfLines={1}>{value}</Text>
-                      <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }} numberOfLines={1}>{label}</Text>
+                      <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted, marginTop: 2 }} numberOfLines={1}>{label}</Text>
                     </View>
                   </React.Fragment>
                 ))}
@@ -793,7 +769,7 @@ export default function AdminUsersScreen() {
           onClose={() => setSelectedUser(null)}
         />
       )}
-      {grantTarget && <GrantModal user={grantTarget} onClose={() => setGrantTarget(null)} />}
+      {grantTarget && <GrantSubscriptionModal user={grantTarget} onClose={() => setGrantTarget(null)} />}
 
       <ConfirmDialog
         visible={!!confirmTarget}
@@ -818,16 +794,3 @@ export default function AdminUsersScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  closeBtn: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: ADMIN.surfaceHover,
-    alignItems: "center", justifyContent: "center",
-  },
-  label: {
-    fontSize: 10, fontWeight: "700",
-    color: ADMIN.textMuted,
-    textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
-  },
-});

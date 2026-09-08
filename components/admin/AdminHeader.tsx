@@ -21,9 +21,12 @@ export function AdminHeader({ title, subtitle, action, safeTop = true }: AdminHe
   const insets = useSafeAreaInsets();
   return (
     <View style={{
-      paddingTop: (safeTop ? insets.top : 0) + ADMIN.space.sm,
+      // Exactement la safe-area (elle dégage déjà la Dynamic Island / la
+      // status bar) — pas de marge en plus, sinon un vide inutile sous
+      // l'encoche sur iPhone Pro.
+      paddingTop: safeTop ? insets.top : ADMIN.space.sm,
       paddingHorizontal: ADMIN.space.xl,
-      paddingBottom: ADMIN.space.lg,
+      paddingBottom: ADMIN.space.md,
       backgroundColor: ADMIN.bg,
     }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>

@@ -5,19 +5,19 @@ import {
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adminApi } from "@/lib/api";
-import { Colors, withAlpha } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { useScrollToTop } from "@react-navigation/native";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { AdminIcon } from "@/components/admin/AdminIcon";
 import { resolveMediaUrl } from "@/lib/media";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -25,68 +25,11 @@ const TEXT2  = ADMIN.textSub;
 const TEXT3  = ADMIN.textMuted;
 const ACCENT = ADMIN.accent;
 
-const TOOLS = [
-  { key: "coupons",    label: "Coupons",          sub: "Codes promo",       symbol: "tag.fill",             androidIcon: "pricetag-outline"        as const, color: Colors.warning,    route: "/(admin-tools)/coupons" },
-  { key: "reviews",    label: "Avis",             sub: "Modération",        symbol: "text.bubble.fill",     androidIcon: "chatbubble-outline"      as const, color: Colors.destructive, route: "/(admin-tools)/reviews" },
-  { key: "messages",   label: "Messages",         sub: "Conversations signalées", symbol: "flag.fill",     androidIcon: "flag-outline"            as const, color: Colors.destructive, route: "/(admin-tools)/messages" },
-  { key: "analytics",  label: "Analytics",        sub: "Métriques & revenus", symbol: "chart.bar.fill",     androidIcon: "bar-chart-outline"       as const, color: Colors.pro,        route: "/(admin-tools)/analytics" },
-  { key: "logs",       label: "Logs",             sub: "Événements système", symbol: "waveform",            androidIcon: "pulse-outline"           as const, color: Colors.info,       route: "/(admin-tools)/logs" },
-  { key: "notifs",     label: "Notifs",           sub: "Push ciblées",      symbol: "bell.fill",            androidIcon: "notifications-outline"   as const, color: Colors.success,    route: "/(admin-tools)/notifications" },
-];
-
 const INFO_ROWS = [
   { label: "Application", value: "Blyss Admin",                         icon: "apps-outline"           as const },
   { label: "Plateforme",  value: "React Native / Expo",                  icon: "phone-portrait-outline" as const },
   { label: "Backend",     value: process.env.EXPO_PUBLIC_API_URL ?? "—", icon: "server-outline"         as const },
 ] as const;
-
-// ─── ToolRow ──────────────────────────────────────────────────────────────────
-
-function ToolRow({
-  tool, isLast,
-}: {
-  tool: typeof TOOLS[number]; isLast: boolean;
-}) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  return (
-    <Link href={tool.route as any} asChild>
-      <Pressable
-        onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
-        onPressIn={() =>
-          Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
-        }
-        onPressOut={() =>
-          Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()
-        }
-    >
-      <Animated.View style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: ADMIN.border,
-        transform: [{ scale }],
-      }}>
-        <View style={{
-          width: 40, height: 40, borderRadius: 12,
-          backgroundColor: withAlpha(tool.color, 0.14),
-          alignItems: "center", justifyContent: "center",
-        }}>
-          <AdminIcon ios={tool.symbol as any} android={tool.androidIcon} size={19} color={tool.color} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: TEXT1 }}>{tool.label}</Text>
-          <Text style={{ fontSize: 12, color: TEXT3, marginTop: 1 }}>{tool.sub}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={TEXT3} />
-      </Animated.View>
-    </Pressable>
-    </Link>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -112,10 +55,16 @@ export default function AdminMoreScreen() {
   const initials = fullName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
   const photoUri = resolveMediaUrl(user?.profile_photo);
 
+  // Le CA plateforme = abonnements pros (MRR), pas les paiements de réservations
+  // (ça, c'est "encaissé dans l'app", l'argent des pros). Fallback CA résa si
+  // le backend ne renvoie pas encore subMrr.
   const stats = [
-    { label: "Utilisateurs", value: dashStats?.totalUsers ?? "—", symbol: "person.2.fill",   icon: "people-outline"   as const, route: "/(admin)/users" },
-    { label: "RDV du mois",  value: dashStats?.monthBookings ?? "—", symbol: "calendar.circle.fill", icon: "calendar-outline" as const, route: "/(admin)/bookings" },
-    { label: "CA du mois",   value: dashStats?.monthRevenue ? `${Number(dashStats.monthRevenue).toFixed(0)}€` : "—", symbol: "banknote.fill", icon: "wallet-outline" as const, route: "/(admin-tools)/analytics" },
+    { label: "Utilisateurs", value: formatNumberFR(dashStats?.totalUsers) },
+    { label: "Abos actifs",  value: formatNumberFR(dashStats?.subsActive) },
+    {
+      label: dashStats?.subMrr ? "MRR abos" : "Encaissé (mois)",
+      value: dashStats?.subMrr ? formatEUR(dashStats.subMrr) : formatEUR(dashStats?.collectedThisMonth || dashStats?.monthRevenue),
+    },
   ];
 
   return (
@@ -128,66 +77,49 @@ export default function AdminMoreScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Profile header ── */}
-        <View style={{ paddingTop: insets.top + 12, paddingBottom: 24, paddingHorizontal: 24, alignItems: "center" }}>
+        <View style={{ paddingTop: insets.top + 16, paddingBottom: 22, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 16 }}>
           <View style={{
-            width: 76, height: 76, borderRadius: 24,
-            backgroundColor: withAlpha(ACCENT, 0.16),
+            width: 60, height: 60, borderRadius: 3,
+            backgroundColor: ACCENT,
             alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
             {photoUri ? (
-              <Image source={{ uri: photoUri }} style={{ width: 76, height: 76 }} contentFit="cover" />
+              <Image source={{ uri: photoUri }} style={{ width: 60, height: 60 }} contentFit="cover" />
             ) : (
-              <Text style={{ fontSize: 28, fontWeight: "700", color: ACCENT }}>
+              <Text style={{ fontSize: 22, fontWeight: "900", letterSpacing: -0.5, color: ADMIN.accentInk }}>
                 {initials || "A"}
               </Text>
             )}
           </View>
-
-          <Text style={{ fontSize: 20, fontWeight: "700", color: TEXT1, marginTop: 14, marginBottom: 3 }}>
-            {fullName || "Admin"}
-          </Text>
-          <Text style={{ fontSize: 13, color: TEXT2, marginBottom: 14 }}>
-            {user?.email}
-          </Text>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: withAlpha(ACCENT, 0.16) }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT, letterSpacing: 0.3 }}>ADMIN</Text>
-            </View>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: ADMIN.surfaceHover }}>
-              <Text style={{ fontSize: 11, color: TEXT2 }}>Accès total</Text>
-            </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...ADMIN.type.display, fontSize: 26, color: TEXT1 }} numberOfLines={1}>
+              {fullName || "Admin"}
+            </Text>
+            <Text style={{ ...ADMIN.type.label, color: TEXT2, marginTop: 4 }} numberOfLines={1}>
+              {user?.email} · Accès total
+            </Text>
           </View>
         </View>
 
-        {/* ── Stats strip ── */}
+        {/* ── Stats strip — filet, chiffres 900 ── */}
         <View style={{
           marginHorizontal: 20,
-          backgroundColor: ADMIN.surface,
-          borderRadius: ADMIN.cardRadius,
           borderWidth: 1, borderColor: ADMIN.border,
-          padding: 16,
           flexDirection: "row",
         }}>
-          {stats.map(({ label, value, symbol, icon, route }, i) => (
+          {stats.map(({ label, value }, i) => (
             <React.Fragment key={label}>
-              <Link href={route as any} asChild>
-              <AnimatedPressable
-                onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
-                style={{ flex: 1, alignItems: "center" }}
-              >
-                <AdminIcon ios={symbol as any} android={icon} size={17} color={TEXT2} />
-                <Text style={{ fontSize: 18, fontWeight: "700", color: TEXT1, marginTop: 8 }}>
+              <View style={{ flex: 1, paddingVertical: 16, paddingHorizontal: 12 }}>
+                <Text style={{ ...ADMIN.type.display, fontSize: 22, color: TEXT1 }} numberOfLines={1}>
                   {value}
                 </Text>
-                <Text style={{ fontSize: 10, color: TEXT3, marginTop: 2 }}>
+                <Text style={{ ...ADMIN.type.label, color: TEXT3, marginTop: 4 }} numberOfLines={1}>
                   {label}
                 </Text>
-              </AnimatedPressable>
-              </Link>
+              </View>
               {i < stats.length - 1 && (
-                <View style={{ width: 1, backgroundColor: ADMIN.border, alignSelf: "stretch", marginVertical: 4 }} />
+                <View style={{ width: 1, backgroundColor: ADMIN.border }} />
               )}
             </React.Fragment>
           ))}
@@ -213,14 +145,14 @@ export default function AdminMoreScreen() {
             }}
           >
             <View style={{
-              width: 40, height: 40, borderRadius: 12,
+              width: 40, height: 40, borderRadius: 4,
               backgroundColor: withAlpha(ACCENT, 0.18),
               alignItems: "center", justifyContent: "center",
             }}>
               <Ionicons name="swap-horizontal-outline" size={19} color={ACCENT} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: TEXT1, marginBottom: 2 }}>
+              <Text style={{ ...ADMIN.type.name, color: TEXT1, marginBottom: 2 }}>
                 Changer d'interface
               </Text>
               <Text style={{ fontSize: 12, color: TEXT2 }}>
@@ -230,33 +162,9 @@ export default function AdminMoreScreen() {
             <Ionicons name="chevron-forward" size={15} color={ACCENT} />
           </AnimatedPressable>
 
-          {/* ── Outils Admin ── */}
-          <Text style={{
-            fontSize: 11, fontWeight: "700",
-            color: TEXT3,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-            marginBottom: 10,
-            marginTop: 28,
-          }}>
-            Outils Admin
-          </Text>
-
-          <View style={{
-            backgroundColor: ADMIN.surface,
-            borderRadius: ADMIN.cardRadius,
-            borderWidth: 1,
-            borderColor: ADMIN.border,
-            overflow: "hidden",
-          }}>
-            {TOOLS.map((tool, i) => (
-              <ToolRow
-                key={tool.key}
-                tool={tool}
-                isLast={i === TOOLS.length - 1}
-              />
-            ))}
-          </View>
+          {/* Les outils (Analytics, Avis, Messages, Coupons, Notifier, Journal)
+              vivent sur le dashboard — section « Piloter » — pour éviter le
+              doublon de navigation. */}
 
           {/* ── Bouton déconnexion ── */}
           <Pressable
@@ -283,13 +191,13 @@ export default function AdminMoreScreen() {
               transform: [{ scale: logoutScale }],
             }}>
               <View style={{
-                width: 40, height: 40, borderRadius: 12,
+                width: 40, height: 40, borderRadius: 4,
                 backgroundColor: withAlpha(ADMIN.danger, 0.18),
                 alignItems: "center", justifyContent: "center",
               }}>
                 <Ionicons name="log-out-outline" size={19} color={ADMIN.danger} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: ADMIN.danger, flex: 1 }}>
+              <Text style={{ ...ADMIN.type.name, color: ADMIN.danger, flex: 1 }}>
                 Se déconnecter
               </Text>
             </Animated.View>
@@ -297,10 +205,7 @@ export default function AdminMoreScreen() {
 
           {/* ── À propos ── */}
           <Text style={{
-            fontSize: 11, fontWeight: "700",
-            color: TEXT3,
-            letterSpacing: 1,
-            textTransform: "uppercase",
+            ...ADMIN.type.label, color: TEXT3,
             marginBottom: 10,
             marginTop: 28,
           }}>
@@ -352,7 +257,6 @@ export default function AdminMoreScreen() {
       <RoleSelectionModal
         visible={showSwitchModal}
         userName={fullName || "Admin"}
-        userInitials={initials || "A"}
         onSelectRole={(role: AdminRole) => {
           setShowSwitchModal(false);
           const routes: Record<AdminRole, string> = {

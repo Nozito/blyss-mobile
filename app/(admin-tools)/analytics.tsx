@@ -19,6 +19,7 @@ import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { syncAdminAnalyticsWidgets } from "@/lib/widgetSync";
+import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";
 
 const BG     = ADMIN.bg;
 const TEXT1  = ADMIN.text;
@@ -143,14 +144,14 @@ function KPICard({
       borderColor: ADMIN.border,
       padding: 16,
     }}>
-      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: withAlpha(color, 0.14), alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+      <View style={{ width: 32, height: 32, borderRadius: 4, backgroundColor: withAlpha(color, 0.14), alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
         <AdminIcon ios={symbol} android={androidIcon} size={16} color={color} />
       </View>
-      <Text style={{ fontSize: 12, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
+      <Text style={{ ...ADMIN.type.label, color: TEXT2, marginBottom: 4 }}>
         {label}
       </Text>
-      <Text style={{ fontSize: 22, fontWeight: "700", color: TEXT1, marginBottom: 2 }}>
-        {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
+      <Text style={{ ...ADMIN.type.display, fontSize: 24, color: TEXT1, marginBottom: 2 }}>
+        {typeof value === "number" ? formatNumberFR(value) : value}
       </Text>
       {sub && (
         <Text style={{ fontSize: 11, color: TEXT3 }}>{sub}</Text>
@@ -170,7 +171,7 @@ function ChartHeader({
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
       <View style={{
-        width: 32, height: 32, borderRadius: 10,
+        width: 32, height: 32, borderRadius: 4,
         backgroundColor: withAlpha(color, 0.14),
         alignItems: "center", justifyContent: "center",
       }}>
@@ -208,7 +209,7 @@ function PeriodPill({
       <Animated.View style={{
         flex: 1, height: 36,
         alignItems: "center", justifyContent: "center",
-        borderRadius: 10,
+        borderRadius: 4,
         backgroundColor: active ? ADMIN.accentBg : "transparent",
         transform: [{ scale }],
       }}>
@@ -305,9 +306,9 @@ export default function AdminAnalyticsScreen() {
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 14 }}
         >
           <Ionicons name="chevron-back" size={18} color={ACCENT} />
-          <Text style={{ fontSize: 15, fontWeight: "600", color: ACCENT }}>Retour</Text>
+          <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ACCENT }}>Retour</Text>
         </AnimatedPressable>
-        <Text style={{ fontSize: 26, fontWeight: "700", color: TEXT1, letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase" }}>
           Analytics
         </Text>
         <Text style={{ fontSize: 13, color: TEXT2, marginTop: 2 }}>
@@ -315,72 +316,40 @@ export default function AdminAnalyticsScreen() {
         </Text>
       </View>
 
-      {/* ── Hero Revenue Card ── */}
+      {/* ── Hero — CA total, aplat rose plein ── */}
       {a && (
-        <View style={{ borderRadius: ADMIN.cardRadius, padding: 22, marginBottom: 14, backgroundColor: ADMIN.surface, borderWidth: 1, borderColor: ADMIN.border }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <Text style={{
-              fontSize: 11, fontWeight: "600",
-              color: TEXT2,
-              textTransform: "uppercase", letterSpacing: 1,
-            }}>
-              CA total
-            </Text>
+        <View style={{ padding: 22, marginBottom: 14, backgroundColor: ADMIN.accent }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub }}>CA total (réservations)</Text>
             {growth != null && (
-              <View style={{
-                paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
-                backgroundColor: growth >= 0 ? ADMIN.successBg : ADMIN.dangerBg,
-              }}>
-                <Text style={{ fontSize: 10, fontWeight: "700", color: growth >= 0 ? ADMIN.success : ADMIN.danger }}>
-                  {growth >= 0 ? "↑" : "↓"} {Math.abs(growth).toFixed(1)}%
-                </Text>
-              </View>
+              <Text style={{ fontSize: 12, fontWeight: "900", color: ADMIN.accentInk }}>
+                {growth >= 0 ? "↑" : "↓"} {formatPercentFR(Math.abs(growth), 1)}
+              </Text>
             )}
           </View>
 
-          <Text style={{
-            fontSize: 40, fontWeight: "700", color: TEXT1, letterSpacing: -1, marginBottom: 16,
-          }}>
-            {Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €
+          <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginBottom: 16 }} numberOfLines={1} adjustsFontSizeToFit>
+            {formatNumberFR(a.revenue.total_revenue)}
+            <Text style={{ fontSize: 18 }}> €</Text>
           </Text>
 
-          <View style={{
-            flexDirection: "row", marginBottom: 16,
-            borderTopWidth: 1, borderTopColor: ADMIN.border,
-            paddingTop: 14,
-          }}>
-            <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
-                CE MOIS
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
-                {Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: ADMIN.border }} />
-            <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
-                UTILISATEURS
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
-                {Number(a.users.total_users).toLocaleString("fr-FR")}
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: ADMIN.border }} />
-            <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontSize: 10, color: TEXT2, fontWeight: "500", marginBottom: 4 }}>
-                RÉSERVATIONS
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>
-                {Number(a.bookings.total).toLocaleString("fr-FR")}
-              </Text>
-            </View>
+          <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginBottom: 16 }}>
+            {[
+              { k: "Ce mois", v: formatEUR(a.revenue.month_revenue) },
+              { k: "Utilisateurs", v: formatNumberFR(a.users.total_users) },
+              { k: "Réservations", v: formatNumberFR(a.bookings.total) },
+            ].map((s) => (
+              <View key={s.k}>
+                <Text style={{ fontSize: 17, fontWeight: "900", letterSpacing: -0.6, color: ADMIN.accentInk }}>{s.v}</Text>
+                <Text style={{ ...ADMIN.type.label, color: ADMIN.accentSub, marginTop: 3 }}>{s.k}</Text>
+              </View>
+            ))}
           </View>
 
           {revenuePoints.length >= 2 && (
             <Sparkline
               data={revenuePoints.slice(-7)}
-              color={withAlpha(ACCENT, 0.5)}
+              color={ADMIN.accentInk}
               width={chartWidth}
               height={40}
               noFill
@@ -394,7 +363,7 @@ export default function AdminAnalyticsScreen() {
       <View style={{
         flexDirection: "row",
         backgroundColor: ADMIN.surfaceHover,
-        borderRadius: 12,
+        borderRadius: 4,
         padding: 4,
         marginBottom: 20,
       }}>
@@ -433,14 +402,14 @@ export default function AdminAnalyticsScreen() {
           <View style={{ flexDirection: "row", gap: 10 }}>
             <KPICard
               label="CA total"
-              value={`${Number(a.revenue.total_revenue).toLocaleString("fr-FR")} €`}
+              value={formatEUR(a.revenue.total_revenue)}
               color={ACCENT}
               symbol="banknote"
               androidIcon="cash-outline"
             />
             <KPICard
               label="CA du mois"
-              value={`${Number(a.revenue.month_revenue).toLocaleString("fr-FR")} €`}
+              value={formatEUR(a.revenue.month_revenue)}
               color={Colors.success}
               symbol="checkmark.seal.fill"
               androidIcon="checkmark-circle-outline"
@@ -474,7 +443,7 @@ export default function AdminAnalyticsScreen() {
           androidIcon="trending-up-outline"
           title="Revenus"
           color={ACCENT}
-          badge={`${revenuePoints.reduce((s, v) => s + v, 0).toLocaleString("fr-FR")} €`}
+          badge={formatEUR(revenuePoints.reduce((s, v) => s + v, 0))}
         />
         {revenuePoints.length > 1 ? (
           <Sparkline data={revenuePoints} color={ACCENT} width={chartWidth} height={72} />
@@ -564,10 +533,10 @@ export default function AdminAnalyticsScreen() {
                   <Text style={{ fontSize: 13, color: TEXT1, fontWeight: "500" }}>{label}</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={{ fontSize: 13, color, fontWeight: "700" }}>
-                      {Number(value).toLocaleString("fr-FR")}
+                      {formatNumberFR(value)}
                     </Text>
                     <Text style={{ fontSize: 11, color: TEXT2 }}>
-                      {pct.toFixed(0)}%
+                      {formatPercentFR(pct)}
                     </Text>
                   </View>
                 </View>

@@ -15,6 +15,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import { formatEUR, formatPercentFR } from "@/lib/format";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -158,14 +159,14 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             </View>
 
             <Text style={styles.label}>Type de réduction</Text>
-            <View style={{ flexDirection: "row", backgroundColor: MUTED, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.xl }}>
-              {(["percent", "fixed"] as DiscountType[]).map((t) => {
+            <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.xl }}>
+              {(["percent", "fixed"] as DiscountType[]).map((t, ti) => {
                 const active = discountType === t;
                 return (
                   <Pressable key={t}
                     onPress={() => { setDiscountType(t); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
-                    style={{ flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: "center", backgroundColor: active ? ADMIN.accent : "transparent" }}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: active ? Colors.white : TEXT2 }}>
+                    style={{ flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: active ? ADMIN.accent : "transparent", borderLeftWidth: ti > 0 ? 1 : 0, borderLeftColor: ADMIN.border }}>
+                    <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accentInk : TEXT2 }}>
                       {t === "percent" ? "Pourcentage %" : "Montant fixe €"}
                     </Text>
                   </Pressable>
@@ -180,7 +181,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               placeholder={discountType === "percent" ? "20" : "5.00"}
               placeholderTextColor={TEXT3}
               keyboardType="decimal-pad"
-              style={[inputStyle, { fontSize: 20, fontWeight: "700", marginBottom: ADMIN.space.xl }]}
+              style={[inputStyle, { ...ADMIN.type.display, fontSize: 22, marginBottom: ADMIN.space.xl }]}
             />
 
             <Text style={styles.label}>Plans concernés</Text>
@@ -212,11 +213,11 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             <AnimatedPressable
               onPress={() => { if (isValid) { setCreateError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); createMut.mutate(); } }}
               disabled={createMut.isPending || !isValid}
-              style={{ height: 50, borderRadius: 14, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: (createMut.isPending || !isValid) ? 0.4 : 1 }}
+              style={{ height: 50, borderRadius: 4, backgroundColor: ADMIN.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: (createMut.isPending || !isValid) ? 0.4 : 1 }}
             >
               {createMut.isPending
                 ? <ActivityIndicator size="small" color={Colors.white} />
-                : <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.white }}>Créer le coupon</Text>}
+                : <Text style={{ ...ADMIN.type.label, color: ADMIN.accentInk }}>Créer le coupon</Text>}
             </AnimatedPressable>
           </ScrollView>
         </Animated.View>
@@ -229,14 +230,12 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 // Matches GrantModal's local styles exactly, so every admin bottom sheet shares one label/close-button shape.
 const styles = StyleSheet.create({
   closeBtn: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 32, height: 32, borderRadius: 4,
     backgroundColor: ADMIN.surfaceHover,
     alignItems: "center", justifyContent: "center",
   },
   label: {
-    fontSize: 10, fontWeight: "700",
-    color: ADMIN.textMuted,
-    textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
+    ...ADMIN.type.label, color: ADMIN.textMuted, marginBottom: 10,
   },
 });
 
@@ -309,13 +308,13 @@ function CouponCard({
 
         {/* Discount + plans */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-          <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>
-              -{coupon.discount_value}{coupon.discount_type === "percent" ? "%" : "€"}
+          <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}>
+            <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>
+              {coupon.discount_type === "percent" ? `-${formatPercentFR(coupon.discount_value)}` : `-${formatEUR(coupon.discount_value, { cents: true })}`}
             </Text>
           </View>
           {coupon.applicable_plans.map((p: string) => (
-            <View key={p} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: MUTED, borderWidth: 1, borderColor: BORDER }}>
+            <View key={p} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, backgroundColor: MUTED, borderWidth: 1, borderColor: BORDER }}>
               <Text style={{ fontSize: 11, fontWeight: "600", color: TEXT2 }}>{PLAN_LABELS[p] ?? p}</Text>
             </View>
           ))}
@@ -350,7 +349,7 @@ function CouponCard({
           <AnimatedIconButton
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onDelete(coupon); }}
             accessibilityLabel="Supprimer le coupon"
-            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center" }}>
+            style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.dangerBg, borderWidth: 1, borderColor: ADMIN.dangerBorder, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="trash-outline" size={16} color={Colors.destructive} />
           </AnimatedIconButton>
         </View>
@@ -436,9 +435,9 @@ export default function AdminCouponsScreen() {
         style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
       >
         <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
-        <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+        <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>Retour</Text>
       </AnimatedPressable>
-      <Text style={{ fontSize: 28, fontWeight: "700", color: TEXT1, letterSpacing: -0.5, marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
+      <Text style={{ fontSize: 30, fontWeight: "900", color: TEXT1, letterSpacing: -1.4, textTransform: "uppercase", marginBottom: couponError ? 8 : 10 }}>Coupons</Text>
       {couponError && <View style={{ marginBottom: 8 }}><ErrorMessage message={couponError} /></View>}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -447,9 +446,9 @@ export default function AdminCouponsScreen() {
           return (
             <AnimatedPressable key={f.key}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setStatusFilter(f.key); }}
-              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+              style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 3, borderWidth: 1,
                 backgroundColor: active ? withAlpha(f.color, 0.16) : MUTED, borderColor: active ? f.color : BORDER }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: active ? f.color : TEXT2 }}>{f.label}</Text>
+              <Text style={{ ...ADMIN.type.label, color: active ? f.color : TEXT2 }}>{f.label}</Text>
             </AnimatedPressable>
           );
         })}

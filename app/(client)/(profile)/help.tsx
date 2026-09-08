@@ -57,7 +57,7 @@ export default function ClientHelpScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top,
+        paddingTop: Math.max(insets.top - 12, 12),
         paddingBottom: insets.bottom + 40,
         paddingHorizontal: 20,
       }}

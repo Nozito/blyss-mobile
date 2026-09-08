@@ -74,24 +74,29 @@ export function Row({
       })}
     >
       {icon ? (
-        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 32, height: 32, borderRadius: 4, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name={icon} size={16} color={color} />
         </View>
       ) : leading && (
         <View style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>{leading}</View>
       )}
 
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={{ ...ADMIN.type.title, fontSize: 15, color: isActionTone ? color : ADMIN.text }} numberOfLines={1}>{title}</Text>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text
+          style={{ fontSize: 14, fontWeight: "800", letterSpacing: -0.3, color: isActionTone ? color : ADMIN.text }}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
         {subtitle && (
-          <Text style={{ ...ADMIN.type.caption, color: ADMIN.textSub }} numberOfLines={1}>{subtitle}</Text>
+          <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }} numberOfLines={1}>{subtitle}</Text>
         )}
       </View>
 
       {(trailing || trailingMeta) && (
         <View style={{ alignItems: "flex-end", gap: 3 }}>
           {trailing}
-          {trailingMeta && <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>{trailingMeta}</Text>}
+          {trailingMeta && <Text style={{ ...ADMIN.type.label, color: ADMIN.textMuted }}>{trailingMeta}</Text>}
         </View>
       )}
 

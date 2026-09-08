@@ -25,6 +25,7 @@ import { Card } from "@/components/admin/Card";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Avatar } from "@/components/admin/Avatar";
 import { toNumber } from "@/lib/bookingUtils";
+import { formatEUR, formatNumberFR } from "@/lib/format";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const BG      = ADMIN.bg;
@@ -82,7 +83,7 @@ function BookingCard({
   const time       = dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const dateLabel  = dt.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   const clientName = booking.client_name ?? `#${booking.id}`;
-  const meta       = `${price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"} · ${dateLabel} ${time}`;
+  const meta       = `${price > 0 ? formatEUR(price, { cents: true }) : "—"} · ${dateLabel} ${time}`;
 
   const canConfirm = booking.status === "pending";
   const canCancel  = booking.status === "pending" || booking.status === "confirmed";
@@ -118,14 +119,14 @@ function BookingCard({
         <Card style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.md }}>
           <Avatar name={clientName} />
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ ...ADMIN.type.title, fontSize: 15, color: TEXT1 }} numberOfLines={1}>{clientName}</Text>
-            <Text style={{ ...ADMIN.type.caption, color: TEXT2 }} numberOfLines={1}>
-              {[booking.service_name, booking.pro_name].filter(Boolean).join(" · ")}
+            <Text style={{ ...ADMIN.type.name, color: TEXT1 }} numberOfLines={1}>{clientName}</Text>
+            <Text style={{ ...ADMIN.type.label, color: TEXT2 }} numberOfLines={1}>
+              #{booking.id} · {[booking.service_name, booking.pro_name].filter(Boolean).join(" · ")}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end", gap: 3 }}>
             {cfg && <StatusBadge label={cfg.label} tone={tone} />}
-            <Text style={{ ...ADMIN.type.caption, color: TEXT3 }} numberOfLines={1}>{meta}</Text>
+            <Text style={{ ...ADMIN.type.label, color: TEXT3 }} numberOfLines={1}>{meta}</Text>
           </View>
         </Card>
       </AnimatedPressable>
@@ -147,9 +148,11 @@ function DetailRow({ label, value, emphasize, showDivider = true }: {
       paddingHorizontal: ADMIN.space.lg, paddingVertical: ADMIN.space.md,
       borderBottomWidth: showDivider ? 1 : 0, borderBottomColor: ADMIN.border,
     }}>
-      <Text style={{ ...ADMIN.type.body, color: ADMIN.textSub }}>{label}</Text>
+      <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>{label}</Text>
       <Text
-        style={{ ...ADMIN.type.body, fontWeight: "700", color: emphasize ? ADMIN.success : ADMIN.text, fontSize: emphasize ? 16 : 14 }}
+        style={emphasize
+          ? { ...ADMIN.type.display, fontSize: 18, color: ADMIN.success }
+          : { ...ADMIN.type.name, fontSize: 14, color: ADMIN.text }}
         numberOfLines={1}
       >
         {value}
@@ -210,9 +213,9 @@ function BookingDetailSheet({
               <View style={{ marginBottom: ADMIN.space.md }}>
                 <Avatar name={clientName} size={56} />
               </View>
-              <Text style={{ ...ADMIN.type.title, fontSize: 18, color: TEXT1, marginBottom: ADMIN.space.sm }} numberOfLines={1}>{clientName}</Text>
+              <Text style={{ ...ADMIN.type.name, color: TEXT1, marginBottom: ADMIN.space.sm }} numberOfLines={1}>{clientName}</Text>
               {cfg && <StatusBadge label={cfg.label} tone={tone} />}
-              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+              <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="close" size={18} color={TEXT2} />
               </AnimatedIconButton>
             </View>
@@ -225,7 +228,7 @@ function BookingDetailSheet({
                 <DetailRow label="Professionnel" value={booking.pro_name ?? "—"} />
                 <DetailRow label="Date"          value={dateLabel} />
                 <DetailRow label="Heure"         value={time} />
-                <DetailRow label="Prix"          value={price > 0 ? `${price.toFixed(2).replace(".", ",")} €` : "—"} emphasize showDivider={false} />
+                <DetailRow label="Prix"          value={price > 0 ? formatEUR(price, { cents: true }) : "—"} emphasize showDivider={false} />
               </Card>
             </View>
 
@@ -262,24 +265,24 @@ function StatsBar({ bookings }: { bookings: AdminBooking[] }) {
 
   // Single-word labels only — two words in a 4-column card wraps to a second line.
   const metrics = [
-    { label: "CA",         value: `${revenue.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} €` },
-    { label: "Attente",    value: String(counts.pending) },
-    { label: "Confirmées", value: String(counts.confirmed) },
-    { label: "Terminées",  value: String(counts.completed) },
+    { label: "CA",         value: formatEUR(revenue) },
+    { label: "Attente",    value: formatNumberFR(counts.pending) },
+    { label: "Confirmées", value: formatNumberFR(counts.confirmed) },
+    { label: "Terminées",  value: formatNumberFR(counts.completed) },
   ];
 
   return (
-    <Card style={{ flexDirection: "row", marginBottom: 14 }}>
+    <View style={{ flexDirection: "row", marginBottom: 14, borderWidth: 1, borderColor: BORDER }}>
       {metrics.map((m, i) => (
         <React.Fragment key={m.label}>
-          {i > 0 && <View style={{ width: 1, backgroundColor: BORDER, marginHorizontal: ADMIN.space.sm }} />}
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ ...ADMIN.type.display, fontSize: 18, color: TEXT1 }} numberOfLines={1}>{m.value}</Text>
-            <Text style={{ ...ADMIN.type.caption, color: TEXT3, marginTop: 2, textAlign: "center" }} numberOfLines={1}>{m.label}</Text>
+          {i > 0 && <View style={{ width: 1, backgroundColor: BORDER }} />}
+          <View style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 10 }}>
+            <Text style={{ ...ADMIN.type.display, fontSize: 20, color: TEXT1 }} numberOfLines={1}>{m.value}</Text>
+            <Text style={{ ...ADMIN.type.label, color: TEXT3, marginTop: 4 }} numberOfLines={1}>{m.label}</Text>
           </View>
         </React.Fragment>
       ))}
-    </Card>
+    </View>
   );
 }
 
@@ -302,8 +305,8 @@ function ClientPicker({ selected, onSelect }: { selected: AdminUser | null; onSe
 
   if (selected) {
     return (
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 14, borderWidth: 1, borderColor: BORDER, padding: 12 }}>
-        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ADMIN.accentBg, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, borderWidth: 1, borderColor: BORDER, padding: 12 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: ADMIN.accentBg, alignItems: "center", justifyContent: "center" }}>
           <Text style={{ fontSize: 13, fontWeight: "800", color: ACCENT }}>
             {selected.first_name?.[0]?.toUpperCase()}{selected.last_name?.[0]?.toUpperCase()}
           </Text>
@@ -321,7 +324,7 @@ function ClientPicker({ selected, onSelect }: { selected: AdminUser | null; onSe
 
   return (
     <View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 14, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14, height: 46 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14, height: 46 }}>
         <Ionicons name="search-outline" size={16} color={TEXT3} />
         <TextInput
           value={search}
@@ -338,7 +341,7 @@ function ClientPicker({ selected, onSelect }: { selected: AdminUser | null; onSe
         <Text style={{ fontSize: 12, color: TEXT3, marginTop: 8 }}>Tape au moins 2 caractères pour chercher</Text>
       )}
       {results.length > 0 && (
-        <View style={{ marginTop: 10, borderRadius: 14, borderWidth: 1, borderColor: BORDER, overflow: "hidden" }}>
+        <View style={{ marginTop: 10, borderRadius: 4, borderWidth: 1, borderColor: BORDER, overflow: "hidden" }}>
           {results.map((u) => (
             <Pressable
               key={u.id}
@@ -381,22 +384,22 @@ function BookingFiltersModal({
 
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <Text style={{ fontSize: 18, fontWeight: "700", color: TEXT1 }}>Filtres avancés</Text>
-            <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
+            <AnimatedIconButton onPress={onClose} accessibilityLabel="Fermer" style={{ width: 32, height: 32, borderRadius: 4, backgroundColor: ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}>
               <Ionicons name="close" size={18} color={TEXT2} />
             </AnimatedIconButton>
           </View>
 
-          <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Date</Text>
+          <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 10 }}>Date</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
             <AnimatedPressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onChangeDate(new Date()); }}
-              style={{ flex: 1, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER }}
+              style={{ flex: 1, height: 44, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER }}
             >
               <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1 }}>Aujourd'hui</Text>
             </AnimatedPressable>
             <AnimatedPressable
               onPress={() => setShowPicker(true)}
-              style={{ flex: 1, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, backgroundColor: date ? ADMIN.accentBg : ADMIN.surfaceHover, borderWidth: 1, borderColor: date ? ADMIN.accentBorder : BORDER }}
+              style={{ flex: 1, height: 44, borderRadius: 4, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, backgroundColor: date ? ADMIN.accentBg : ADMIN.surfaceHover, borderWidth: 1, borderColor: date ? ADMIN.accentBorder : BORDER }}
             >
               <Ionicons name="calendar-outline" size={14} color={date ? ACCENT : TEXT1} />
               <Text style={{ fontSize: 13, fontWeight: "700", color: date ? ACCENT : TEXT1 }}>
@@ -404,7 +407,7 @@ function BookingFiltersModal({
               </Text>
             </AnimatedPressable>
             {date && (
-              <AnimatedIconButton onPress={() => onChangeDate(null)} accessibilityLabel="Effacer le filtre de date" style={{ width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER }}>
+              <AnimatedIconButton onPress={() => onChangeDate(null)} accessibilityLabel="Effacer le filtre de date" style={{ width: 44, height: 44, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: ADMIN.surfaceHover, borderWidth: 1, borderColor: BORDER }}>
                 <Ionicons name="close" size={16} color={TEXT2} />
               </AnimatedIconButton>
             )}
@@ -417,7 +420,7 @@ function BookingFiltersModal({
             <RNDateTimePicker mode="date" value={date ?? new Date()} onChange={handleDateChange} />
           )}
 
-          <Text style={{ fontSize: 11, fontWeight: "800", color: TEXT3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Client ou pro</Text>
+          <Text style={{ ...ADMIN.type.label, color: TEXT3, marginBottom: 10 }}>Client ou pro</Text>
           <ClientPicker selected={client} onSelect={onChangeClient} />
         </View>
       </View>
@@ -558,7 +561,7 @@ export default function AdminBookingsScreen() {
               <AnimatedIconButton
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowFilters(true); }}
                 accessibilityLabel={`Filtres avancés${activeAdvancedFilters > 0 ? ` (${activeAdvancedFilters} actifs)` : ""}`}
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: activeAdvancedFilters > 0 ? ADMIN.accentBg : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
+                style={{ width: 36, height: 36, borderRadius: 4, backgroundColor: activeAdvancedFilters > 0 ? ADMIN.accentBg : ADMIN.surfaceHover, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="options-outline" size={18} color={activeAdvancedFilters > 0 ? ACCENT : TEXT2} />
                 {activeAdvancedFilters > 0 && (
@@ -577,7 +580,7 @@ export default function AdminBookingsScreen() {
         </View>
       )}
       {/* Search — client-side, mirrors the Users search bar */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 12, height: 44, paddingHorizontal: 14, marginBottom: ADMIN.space.md }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: ADMIN.surfaceHover, borderRadius: 4, height: 44, paddingHorizontal: 14, marginBottom: ADMIN.space.md }}>
         <Ionicons name="search-outline" size={16} color={TEXT3} />
         <TextInput
           value={search}
@@ -595,20 +598,21 @@ export default function AdminBookingsScreen() {
         )}
       </View>
 
-      {/* Segmented status tabs — same shape as the Users role tabs */}
-      <View style={{ flexDirection: "row", backgroundColor: ADMIN.surfaceHover, borderRadius: 12, padding: 4, gap: 4, marginBottom: ADMIN.space.md }}>
-        {FILTERS.map(({ key, label }) => {
+      {/* Segmented status tabs — bloc rose vif pour l'onglet actif */}
+      <View style={{ flexDirection: "row", borderWidth: 1, borderColor: ADMIN.border, marginBottom: ADMIN.space.md }}>
+        {FILTERS.map(({ key, label }, idx) => {
           const active = statusFilter === key;
           return (
             <Pressable
               key={key}
               onPress={() => { setStatusFilter(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }}
               style={{
-                flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: "center",
+                flex: 1, paddingVertical: 10, alignItems: "center",
                 backgroundColor: active ? ADMIN.accent : "transparent",
+                borderLeftWidth: idx > 0 ? 1 : 0, borderLeftColor: ADMIN.border,
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: "600", color: active ? Colors.white : TEXT2 }} numberOfLines={1}>{label}</Text>
+              <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accentInk : TEXT2 }} numberOfLines={1}>{label}</Text>
             </Pressable>
           );
         })}
@@ -621,9 +625,9 @@ export default function AdminBookingsScreen() {
             <Pressable
               onPress={() => setDateFilter(null)}
               accessibilityLabel="Retirer le filtre de date"
-              style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
             >
-              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT }}>
+              <Text style={{ ...ADMIN.type.label, color: ACCENT }}>
                 {dateFilter.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
               </Text>
               <Ionicons name="close" size={11} color={ACCENT} />
@@ -633,9 +637,9 @@ export default function AdminBookingsScreen() {
             <Pressable
               onPress={() => setClientFilter(null)}
               accessibilityLabel="Retirer le filtre de client ou pro"
-              style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
             >
-              <Text style={{ fontSize: 11, fontWeight: "700", color: ACCENT }}>
+              <Text style={{ ...ADMIN.type.label, color: ACCENT }}>
                 {clientFilter.first_name} {clientFilter.last_name}
               </Text>
               <Ionicons name="close" size={11} color={ACCENT} />

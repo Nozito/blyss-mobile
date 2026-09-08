@@ -16,7 +16,7 @@ const TONE: Record<StatusTone, { color: string; bg: string }> = {
 export function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
   const { color, bg } = TONE[tone];
   return (
-    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: bg }}>
+    <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 3, backgroundColor: bg }}>
       <Text style={{ fontSize: 11, fontWeight: "600", color }}>{label}</Text>
     </View>
   );

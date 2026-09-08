@@ -1275,6 +1275,28 @@ export const nailTechApi = {
 
 // ── Admin Types ───────────────────────────────────────────────────────────────
 
+export interface AdminProActivity {
+  reviews: { avg: number | null; count: number };
+  bookings: {
+    total: number;
+    completed: number;
+    cancelled: number;
+    confirmed: number;
+    gmv_total: number;
+    gmv_month: number;
+    cancellation_rate: number;
+    completion_rate: number;
+  };
+  clients: { distinct: number; recurring: number };
+  subscription: {
+    plan: string;
+    status: string;
+    start_date: string | null;
+    end_date: string | null;
+    is_granted: boolean;
+  } | null;
+}
+
 export interface AdminUser {
   id: number;
   first_name: string;
@@ -1304,6 +1326,8 @@ export interface AdminUser {
     total_spent: number;
   };
   subscription_history?: AdminSubscription[];
+  /** Agrégats métier — présent uniquement pour un compte pro. */
+  pro_activity?: AdminProActivity | null;
   reports?: {
     against: AdminMessageReport[];
     made: AdminMessageReport[];

@@ -36,8 +36,6 @@ export function ConfirmDialog({
   onClose,
 }: ConfirmDialogProps) {
   const accent = danger ? ADMIN.danger : ADMIN.accent;
-  const accentBg = danger ? ADMIN.dangerBg : ADMIN.accentBg;
-  const accentBorder = danger ? ADMIN.dangerBorder : ADMIN.accentBorder;
 
   const handleConfirm = () => {
     if (danger) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
@@ -51,9 +49,9 @@ export function ConfirmDialog({
         <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={loading ? undefined : onClose} />
         <View
           accessibilityRole="alert"
-          style={{ backgroundColor: ADMIN.surface, borderRadius: 20, padding: 24, width: "100%", borderWidth: 1, borderColor: ADMIN.border }}
+          style={{ backgroundColor: ADMIN.surface, borderRadius: ADMIN.cardRadius, padding: 24, width: "100%", borderWidth: 1, borderColor: ADMIN.borderStrong }}
         >
-          <Text style={{ fontSize: 18, fontWeight: "900", color: ADMIN.text, marginBottom: 10 }}>{title}</Text>
+          <Text style={{ ...ADMIN.type.title, fontSize: 18, color: ADMIN.text, marginBottom: 10 }}>{title}</Text>
           <Text style={{ fontSize: 14, color: ADMIN.textSub, lineHeight: 20, marginBottom: 24 }}>{message}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -61,19 +59,19 @@ export function ConfirmDialog({
               onPress={onClose}
               disabled={loading}
               accessibilityLabel={cancelLabel}
-              style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center", opacity: loading ? 0.5 : 1 }}
+              style={{ flex: 1, height: 48, borderWidth: 1, borderColor: ADMIN.border, alignItems: "center", justifyContent: "center", opacity: loading ? 0.5 : 1 }}
             >
-              <Text style={{ color: ADMIN.textSub, fontWeight: "700" }}>{cancelLabel}</Text>
+              <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>{cancelLabel}</Text>
             </AnimatedPressable>
             <AnimatedPressable
               onPress={handleConfirm}
               disabled={loading}
               accessibilityLabel={confirmLabel}
-              style={{ flex: 1, height: 46, borderRadius: 14, backgroundColor: accentBg, borderWidth: 1, borderColor: accentBorder, alignItems: "center", justifyContent: "center" }}
+              style={{ flex: 1, height: 48, backgroundColor: accent, alignItems: "center", justifyContent: "center" }}
             >
               {loading
-                ? <ActivityIndicator size="small" color={accent} />
-                : <Text style={{ color: accent, fontWeight: "800" }}>{confirmLabel}</Text>}
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={{ ...ADMIN.type.label, color: "#fff" }}>{confirmLabel}</Text>}
             </AnimatedPressable>
           </View>
         </View>

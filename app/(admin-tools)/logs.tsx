@@ -48,20 +48,20 @@ function LogRow({ log }: { log: Log }) {
   const cfg = TYPE_CONFIG[log.type];
   return (
     <View style={{
-      backgroundColor: CARD, borderRadius: 14, padding: 14, marginBottom: 10,
+      backgroundColor: CARD, borderRadius: 4, padding: 14, marginBottom: 10,
       borderWidth: 1, borderColor: BORDER,
           }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: cfg.bg, flexShrink: 0 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: cfg.bg, flexShrink: 0 }}>
           <Ionicons name={cfg.icon} size={20} color={cfg.color} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT1, flex: 1, marginRight: 10 }} numberOfLines={2}>
+            <Text style={{ ...ADMIN.type.title, fontSize: 13, color: TEXT1, flex: 1, marginRight: 10 }} numberOfLines={2}>
               {log.action}
             </Text>
-            <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: cfg.bg }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cfg.label}</Text>
+            <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 3, backgroundColor: cfg.bg }}>
+              <Text style={{ ...ADMIN.type.label, color: cfg.color }}>{cfg.label}</Text>
             </View>
           </View>
           <Text style={{ fontSize: 12, color: TEXT2, lineHeight: 18, marginBottom: 8 }} numberOfLines={2}>
@@ -83,7 +83,7 @@ function LogRow({ log }: { log: Log }) {
             {log.ip_address && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <Ionicons name="globe-outline" size={11} color={TEXT3} />
-                <Text style={{ fontSize: 11, color: TEXT2 }}>{log.ip_address}</Text>
+                <Text style={{ ...ADMIN.type.mono, fontSize: 11, fontWeight: "500", color: TEXT2 }}>{log.ip_address}</Text>
               </View>
             )}
           </View>
@@ -95,9 +95,9 @@ function LogRow({ log }: { log: Log }) {
 
 function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <View style={{ borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: BORDER }}>
-      <Text style={{ fontSize: 10, color, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
-      <Text style={{ fontSize: 22, fontWeight: "700", color }}>{value}</Text>
+    <View style={{ borderRadius: 4, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: bg, borderWidth: 1, borderColor: BORDER }}>
+      <Text style={{ ...ADMIN.type.label, color, marginBottom: 3 }}>{label}</Text>
+      <Text style={{ ...ADMIN.type.display, fontSize: 22, color }}>{value}</Text>
     </View>
   );
 }
@@ -112,7 +112,7 @@ function SkeletonRow() {
       ])
     ).start();
   }, []);
-  return <Animated.View style={{ height: 80, borderRadius: 14, backgroundColor: CARD, marginBottom: 10, opacity: anim }} />;
+  return <Animated.View style={{ height: 80, borderRadius: 4, backgroundColor: CARD, marginBottom: 10, opacity: anim }} />;
 }
 
 export default function AdminLogsScreen() {
@@ -165,17 +165,17 @@ export default function AdminLogsScreen() {
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
-          <Text style={{ fontSize: 15, fontWeight: "700", color: ADMIN.accent }}>Retour</Text>
+          <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>Retour</Text>
         </AnimatedPressable>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <View style={{ width: 4, height: 22, borderRadius: 2, backgroundColor: Colors.info }} />
-          <Text style={{ fontSize: 22, fontWeight: "700", color: TEXT1, letterSpacing: -0.5 }}>Logs Système</Text>
+          <Text style={{ fontSize: 26, fontWeight: "900", color: TEXT1, letterSpacing: -1.2, textTransform: "uppercase" }}>Logs Système</Text>
         </View>
         <Text style={{ fontSize: 13, color: TEXT2, marginBottom: 16, paddingLeft: 14 }}>{filtered.length} événement(s)</Text>
 
         {/* Search */}
-        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: MUTED, borderRadius: 12, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: BORDER, gap: 10, marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: MUTED, borderRadius: 4, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: BORDER, gap: 10, marginBottom: 12 }}>
           <Ionicons name="search-outline" size={18} color={TEXT2} />
           <TextInput
             value={searchQuery}
@@ -202,11 +202,11 @@ export default function AdminLogsScreen() {
               <AnimatedPressable
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setTypeFilter(f.id); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 3, borderWidth: 1,
                   backgroundColor: active ? ADMIN.accentBg : MUTED,
                   borderColor: active ? ADMIN.accent : BORDER }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
               </AnimatedPressable>
             );
           })}
@@ -220,11 +220,11 @@ export default function AdminLogsScreen() {
               <AnimatedPressable
                 key={f.id}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setDateFilter(f.id); }}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 3, borderWidth: 1,
                   backgroundColor: active ? ADMIN.accentBg : MUTED,
                   borderColor: active ? ADMIN.accent : BORDER }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
+                <Text style={{ ...ADMIN.type.label, color: active ? ADMIN.accent : TEXT2 }}>{f.label}</Text>
               </AnimatedPressable>
             );
           })}
@@ -263,17 +263,17 @@ export default function AdminLogsScreen() {
             </View>
           ) : loadError ? (
             <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: 64, height: 64, borderRadius: 4, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="cloud-offline-outline" size={32} color={TEXT3} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1 }}>Impossible de charger les logs</Text>
-              <AnimatedPressable onPress={fetchLogs} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accent }}>
+              <Text style={{ ...ADMIN.type.name, color: TEXT1 }}>Impossible de charger les logs</Text>
+              <AnimatedPressable onPress={fetchLogs} style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accent }}>
                 <Text style={{ color: ADMIN.accent, fontWeight: "700" }}>Réessayer</Text>
               </AnimatedPressable>
             </View>
           ) : (
             <View style={{ alignItems: "center", paddingVertical: 60 }}>
-              <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 4, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                 <Ionicons name="pulse-outline" size={32} color={TEXT3} />
               </View>
               <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT1, marginBottom: 6 }}>Aucun log trouvé</Text>

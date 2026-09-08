@@ -16,16 +16,15 @@ export function SectionLabel({ children, trailing }: SectionLabelProps) {
   return (
     <View style={{
       flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-      marginBottom: ADMIN.space.sm,
+      marginBottom: ADMIN.space.md,
     }}>
-      <Text style={{
-        ...ADMIN.type.caption, color: ADMIN.textMuted,
-        textTransform: "uppercase", letterSpacing: 0.8,
-      }}>
-        {children}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: ADMIN.space.sm }}>
+        {/* Tiret rose — accent de section */}
+        <View style={{ width: 14, height: 3, backgroundColor: ADMIN.accent }} />
+        <Text style={{ ...ADMIN.type.title, color: ADMIN.text }}>{children}</Text>
+      </View>
       {trailing && (
-        <Text style={{ ...ADMIN.type.caption, color: ADMIN.textMuted }}>{trailing}</Text>
+        <Text style={{ ...ADMIN.type.label, color: ADMIN.textSub }}>{trailing}</Text>
       )}
     </View>
   );
