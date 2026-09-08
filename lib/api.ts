@@ -1005,7 +1005,7 @@ export const clientApi = {
     apiCall(`/api/client/booking-detail/${id}`),
   cancelReservationWithPolicy: (reservationId: number): Promise<ApiResponse<{ reservation_id: number; deadline?: string }>> =>
     apiCall(`/api/reservations/${reservationId}/cancel`, { method: "POST" }),
-  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string; slot_id?: number }): Promise<ApiResponse<void>> =>
+  rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string }): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/my-booking/${id}/reschedule`, { method: "PATCH", body: JSON.stringify(data) }),
   getAvailableSlots: (proId: number, date: string): Promise<ApiResponse<Array<{ id: number; time: string }>>> =>
     apiCall(`/api/slots/available/${proId}/${date}`),
@@ -1145,7 +1145,6 @@ export const stripePaymentsApi = {
     start_datetime: string;
     end_datetime: string;
     price: number;
-    slot_id?: number | null;
     payment_method: "online" | "on_site";
     /** Demande expresse d'exécution anticipée — cf. server.ts POST /api/reservations. */
     early_execution_requested: boolean;
