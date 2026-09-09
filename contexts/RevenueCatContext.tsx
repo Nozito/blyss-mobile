@@ -164,10 +164,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         if (isAuthenticated && user?.id != null) {
-          await Purchases.logIn(String(user.id));
-        } else {
-          // logOut jette si déjà anonyme — non fatal.
-          await Purchases.logOut().catch(() => {});
+          const currentId = await Purchases.getAppUserID();
+          if (currentId !== String(user.id)) {
+            await Purchases.logIn(String(user.id));
+          }
+        } else if (!(await Purchases.isAnonymous())) {
+          // logOut jette (et log une ERROR) si l'utilisateur est déjà anonyme.
+          await Purchases.logOut();
         }
         const info = await Purchases.getCustomerInfo();
         if (!cancelled) setCustomerInfo(info);
