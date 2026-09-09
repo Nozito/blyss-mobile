@@ -55,11 +55,7 @@ jest.mock('@/components/ui/ErrorMessage', () => ({
 
 
 const mockGetCalendar = jest.fn();
-const mockGetSlots = jest.fn();
 const mockGetUnavailabilities = jest.fn();
-const mockCreateSlot = jest.fn();
-const mockUpdateSlot = jest.fn();
-const mockDeleteSlot = jest.fn();
 const mockCreateUnavailability = jest.fn();
 const mockDeleteUnavailability = jest.fn();
 const mockUpdateReservationStatus = jest.fn();
@@ -68,11 +64,7 @@ const mockMarkNoShow = jest.fn();
 jest.mock('@/lib/api', () => ({
   proApi: {
     getCalendar: (...args: any[]) => mockGetCalendar(...args),
-    getSlots: (...args: any[]) => mockGetSlots(...args),
     getUnavailabilities: (...args: any[]) => mockGetUnavailabilities(...args),
-    createSlot: (...args: any[]) => mockCreateSlot(...args),
-    updateSlot: (...args: any[]) => mockUpdateSlot(...args),
-    deleteSlot: (...args: any[]) => mockDeleteSlot(...args),
     createUnavailability: (...args: any[]) => mockCreateUnavailability(...args),
     deleteUnavailability: (...args: any[]) => mockDeleteUnavailability(...args),
     updateReservationStatus: (...args: any[]) => mockUpdateReservationStatus(...args),
@@ -99,7 +91,6 @@ describe('ProCalendarScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetCalendar.mockResolvedValue({ success: true, data: [] });
-    mockGetSlots.mockResolvedValue({ success: true, data: [] });
     mockGetUnavailabilities.mockResolvedValue({ success: true, data: [] });
   });
 

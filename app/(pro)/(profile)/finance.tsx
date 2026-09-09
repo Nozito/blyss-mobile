@@ -483,7 +483,7 @@ export default function ProFinanceScreen() {
                   {!hasForecast && <Ionicons name="lock-closed-outline" size={14} color={colors.mutedForeground} />}
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: "800", color: colors.foreground }}>Analyses de performance</Text>
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>Meilleur jour, panier moyen, remplissage</Text>
+                <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>Meilleur jour, meilleure heure, panier moyen</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
