@@ -108,26 +108,15 @@ export default function ProFinancePerformanceScreen() {
               </View>
             </View>
 
-            {/* Panier moyen / remplissage */}
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                  <Ionicons name="cash-outline" size={16} color="#34C759" />
-                </View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
-                  {perf.avgBasket.toFixed(0)} €
-                </Text>
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Panier moyen</Text>
+            {/* Panier moyen */}
+            <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                <Ionicons name="cash-outline" size={16} color="#34C759" />
               </View>
-              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, ...Shadows.card }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(52,199,89,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                  <Ionicons name="pie-chart-outline" size={16} color="#34C759" />
-                </View>
-                <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
-                  {perf.fillRate}%
-                </Text>
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Taux de remplissage</Text>
-              </View>
+              <Text style={{ fontSize: 22, fontWeight: "900", color: colors.foreground, letterSpacing: -0.5 }}>
+                {perf.avgBasket.toFixed(0)} €
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>Panier moyen</Text>
             </View>
 
             {/* Nouvelles vs fidèles */}

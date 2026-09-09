@@ -54,7 +54,6 @@ type DashData = {
   todayForecast?: number;
   todayAppointmentsCount?: number;
   upcomingClients?: UpcomingClient[];
-  fillRate?: number;
   clientsThisWeek?: number;
   topServices?: TopService[];
   weeklyRevenue?: WeeklyPoint[];
@@ -237,7 +236,6 @@ export default function ProDashboard() {
   const todayForecast = n(raw?.todayForecast);
   const todayAppointmentsCount = n(raw?.todayAppointmentsCount);
   const upcomingClients = raw?.upcomingClients ?? [];
-  const fillRate     = n(raw?.fillRate);
   const clientsThisWeek = n(raw?.clientsThisWeek);
   const topServices  = raw?.topServices  ?? [];
   const weeklyRevenue = raw?.weeklyRevenue ?? [];
@@ -618,83 +616,6 @@ export default function ProDashboard() {
       {/* ── STATS GRID ── */}
       <View>
         <View style={{ flexDirection: "row", gap: 10 }}>
-          {/* Fill rate */}
-          <View
-            style={{
-              flex: 1,
-              borderRadius: 12,
-              padding: 16,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              overflow: "hidden",
-              shadowColor: colors.black,
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.04,
-              shadowRadius: 4,
-              elevation: 1,
-            }}
-          >
-            <View
-              style={{
-                position: "absolute",
-                top: -16,
-                right: -16,
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: `${colors.primary}0D`,
-              }}
-            />
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    backgroundColor: "#FFE8F3",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                </View>
-                <Text
-                  style={{
-                    fontSize: 9,
-                    color: colors.mutedForeground,
-                    fontWeight: "800",
-                    letterSpacing: 0.5,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Remplissage
-                </Text>
-              </View>
-              <View>
-                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 2 }}>
-                  <Text
-                    style={{
-                      fontSize: 32,
-                      fontWeight: "900",
-                      color: colors.foreground,
-                      letterSpacing: -0.5,
-                    }}
-                  >
-                    {fillRate.toFixed(0)}
-                  </Text>
-                  <Text style={{ fontSize: 20, fontWeight: "900", color: colors.primary }}>
-                    %
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 4, fontWeight: "500" }}>
-                  Créneaux réservés
-                </Text>
-              </View>
-            </View>
-          </View>
-
           {/* Clients */}
           <View
             style={{

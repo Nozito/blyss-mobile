@@ -485,11 +485,9 @@ export const specialistsApi = {
 
   /**
    * Disponibilités calculées côté serveur pour la réservation cliente
-   * (route publique, anonyme). Remplace les anciens endpoints
-   * `/api/slots/available*` qui lisaient la table `slots` précréée — vide
-   * pour toutes les pros passées sur le moteur de dispo (chantier 4). Le
-   * moteur gère aussi le cas des rares pros legacy via son adaptateur, donc
-   * cet endpoint est la source de vérité unique.
+   * (route publique, anonyme). Le modèle des créneaux précréés (`slots`) a
+   * été retiré (#31) : cet endpoint est la source de vérité unique, la dispo
+   * est calculée depuis les horaires d'ouverture de la pro.
    * Query : ?service_ids=10,11&from=YYYY-MM-DD&to=YYYY-MM-DD (plage ≤ 62 j).
    */
   getPublicAvailability: (params: {
@@ -688,7 +686,7 @@ export const proApi = {
 
   /**
    * Créneaux calculés côté serveur pour une plage de dates. Remplace la
-   * génération locale (calendar.tsx / getAvailableSlots). `role: "pro"` côté
+   * génération locale (calendar.tsx). `role: "pro"` côté
    * mobile pro : pas de contrainte de lead-time, la pro voit tout son planning.
    */
   getAvailability: (params: {
@@ -835,17 +833,6 @@ export const proApi = {
     return apiCall(`/api/pro/live-activity/tokens${q}`, { method: "DELETE" });
   },
 
-  getSlots: (params: { date: string }) =>
-    apiCall<unknown[]>(`/api/pro/slots?date=${encodeURIComponent(params.date)}`),
-
-  createSlot: (data: { date: string; time: string; duration: number }) =>
-    apiCall("/api/pro/slots", { method: "POST", body: JSON.stringify(data) }),
-
-  updateSlot: (id: number, data: { status?: string; date?: string; time?: string; duration?: number }) =>
-    apiCall(`/api/pro/slots/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-
-  deleteSlot: (id: number) => apiCall(`/api/pro/slots/${id}`, { method: "DELETE" }),
-
   // ── Horaires d'ouverture (chantier 4) ──────────────────────────────────────
   getWorkingHours: (): Promise<ApiResponse<{ days: WorkingHoursDay[] }>> =>
     apiCall("/api/pro/working-hours"),
@@ -963,7 +950,6 @@ export const proApi = {
       bestDay: string | null;
       bestHour: string | null;
       avgBasket: number;
-      fillRate: number;
       newClients: number;
       returningClients: number;
       monthlyEvolution: Array<{ month: string; revenue: number }>;
@@ -1007,8 +993,6 @@ export const clientApi = {
     apiCall(`/api/reservations/${reservationId}/cancel`, { method: "POST" }),
   rescheduleBooking: (id: number, data: { start_datetime: string; end_datetime: string }): Promise<ApiResponse<void>> =>
     apiCall(`/api/client/my-booking/${id}/reschedule`, { method: "PATCH", body: JSON.stringify(data) }),
-  getAvailableSlots: (proId: number, date: string): Promise<ApiResponse<Array<{ id: number; time: string }>>> =>
-    apiCall(`/api/slots/available/${proId}/${date}`),
   getRescheduleRequest: (
     id: number
   ): Promise<ApiResponse<{

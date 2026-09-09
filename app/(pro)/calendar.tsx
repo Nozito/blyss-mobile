@@ -13,12 +13,8 @@ import {
   RefreshControl,
   Switch,
 } from "react-native";
-import { useActionSheet } from "@/components/ui/ActionSheet";
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { Modal } from "@/components/ui/Modal";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScrollToTop } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,10 +28,9 @@ import {
   syncAppointmentsToCalendar,
 } from "@/lib/appleCalendarSync";
 import { withAlpha } from "@/constants/colors";
-import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useToast } from "@/components/ui/Toast";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { hasPlanAtLeast } from "@/constants/plans";
@@ -48,15 +43,6 @@ import { AbsenceSheet, type Unavailability } from "@/components/screens/pro/cale
 import { StatusBadge, getStatusCfg } from "@/components/screens/pro/calendar/StatusBadge";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
-
-type TimeSlot = {
-  id: string;
-  time: string;
-  duration: number;
-  isActive: boolean;
-  isAvailable: boolean;
-  isPast: boolean;
-};
 
 type Appointment = {
   id: number;
@@ -88,57 +74,8 @@ const formatDuration = (min: number): string => {
   return `${min}min`;
 };
 
-const timeToMin = (t: string) => {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-};
-
-const checkOverlap = (slots: TimeSlot[], time: string, duration: number, excludeId?: string) => {
-  if (duration <= 0) return false;
-  const s = timeToMin(time);
-  const e = s + duration;
-  for (const slot of slots) {
-    if (excludeId && slot.id === excludeId) continue;
-    if (slot.isPast) continue;
-    const ss = timeToMin(slot.time);
-    const se = ss + parseDuration(slot.duration);
-    if ((s >= ss && s < se) || (e > ss && e <= se) || (s <= ss && e >= se)) return true;
-  }
-  return false;
-};
-
-const canCreate = (date: string, time: string) =>
-  new Date(`${date}T${time}:00`) > new Date();
-
-const mapSlot = (s: Record<string, unknown>): TimeSlot => ({
-  id: String(s.id),
-  time: String(s.time),
-  duration: parseDuration(s.duration),
-  isActive: Boolean(s.is_active ?? s.isActive),
-  isAvailable: Boolean(s.is_available ?? s.isAvailable),
-  isPast: s.computed_status === "past" || Boolean(s.is_past),
-});
-
-const QUICK_TIMES = [
-  "08:00","09:00","10:00","11:00","12:00",
-  "13:00","14:00","15:00","16:00","17:00","18:00","19:00",
-];
-
-const MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+const MONTHS =["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const DAYS_SHORT = ["Lun","Mar","Mer","Jeu","Ven","Sam"];
-
-// ─── Feature-scoped theme constants (intentionally distinct from brand palette)
-function getPlanning(colors: ReturnType<typeof useThemeColors>) {
-  return {
-    bg: colors.successLight,
-    border: colors.successBorder,
-    color: colors.successText,
-    colorDark: colors.successTextDark,
-    iconBg: withAlpha(colors.successText, 0.12),
-    closeBg: withAlpha(colors.successBorder, 0.5),
-  } as const;
-}
-
 
 function getAptStatus(apt: Appointment): string {
   if (apt.status === "completed") return "completed";
@@ -517,11 +454,8 @@ function FreeSlotsCard({ slots }: { slots: AvailabilitySlot[] }) {
 export default function ProCalendarScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-  const isDark = useIsDarkMode();
-  const PLANNING = useMemo(() => getPlanning(colors), [colors]);
   const qc = useQueryClient();
   const router = useRouter();
-  const showActionSheet = useActionSheet();
   const { showToast } = useToast();
   const { activePlan } = useRevenueCat();
   const { refreshNow: refreshLiveActivity } = useLiveActivity();
@@ -536,47 +470,18 @@ export default function ProCalendarScreen() {
   const debouncedSearchQuery = useDebounce(searchQuery.trim(), 350);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
   const [loading, setLoading] = useState(false);
-  const [slotsLoading, setSlotsLoading] = useState(false);
 
   const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(false);
   const [calendarSyncLoading, setCalendarSyncLoading] = useState(false);
 
-  const [showAddSlot, setShowAddSlot] = useState(false);
-  const [addingSlot, setAddingSlot] = useState(false);
-  // Chantier design (lot a) — les outils « slots précréés » (legacy) sont repliés
-  // derrière un dépliant tant que la pro n'a pas basculé sur le moteur. Filet le
-  // temps de la migration ; à retirer avec les slots (backend 4.6b).
-  const [showLegacyTools, setShowLegacyTools] = useState(false);
   const [showUnavailModal, setShowUnavailModal] = useState(false);
-  const [showPlanningModal, setShowPlanningModal] = useState(false);
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
   const [showNewAppt, setShowNewAppt] = useState(false);
   const [editingAppt, setEditingAppt] = useState<EditableAppointment | null>(null);
 
-  const [newSlotTime, setNewSlotTime] = useState("09:00");
-  const [newSlotDuration, setNewSlotDuration] = useState(60);
-
-  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
-  const [editTime, setEditTime] = useState("09:00");
-  const [editDur, setEditDur] = useState(60);
-
-  const [activeDays, setActiveDays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [planningSlots, setPlanningSlots] = useState<string[]>(["09:00", "14:00"]);
-  const [weeklyPlanSaving, setWeeklyPlanSaving] = useState(false);
-  const [weeklyPlanSuccess, setWeeklyPlanSuccess] = useState(false);
-  const [showPlanTimePicker, setShowPlanTimePicker] = useState(false);
-  const [newPlanTime, setNewPlanTime] = useState(new Date());
-
-  const [slotError, setSlotError] = useState<string | null>(null);
-  const [planningError, setPlanningError] = useState<string | null>(null);
-  const [planningInfo, setPlanningInfo] = useState<string | null>(null);
-  const [showDeleteSlotId, setShowDeleteSlotId] = useState<string | null>(null);
   const [showCancelAptId, setShowCancelAptId] = useState<number | null>(null);
-  const [planConfirmWeeks, setPlanConfirmWeeks] = useState(4);
-  const [planningDuration, setPlanningDuration] = useState(60);
 
   type ViewMode = "month" | "week";
   // Dernier choix vue complète / réduite mémorisé jusqu'à ce que la pro le change.
@@ -672,23 +577,7 @@ export default function ProCalendarScreen() {
     }
   }, []);
 
-  const fetchSlots = useCallback(async (dateStr: string, opts?: { silent?: boolean }) => {
-    if (!opts?.silent) setSlotsLoading(true);
-    try {
-      const res = await proApi.getSlots({ date: dateStr });
-      if (res.success && res.data) setSlots((res.data as Record<string, unknown>[]).map(mapSlot));
-    } catch {
-      // silent
-    } finally {
-      if (!opts?.silent) setSlotsLoading(false);
-    }
-  }, []);
-
   useEffect(() => { void fetchMonthData(selectedYear, selectedMonth); }, [fetchMonthData, selectedYear, selectedMonth]);
-  useEffect(() => {
-    if (useNewEngine) return; // moteur : la dispo vient de getAvailability (useQuery), pas des slots
-    void fetchSlots(selectedDateStr);
-  }, [fetchSlots, selectedDateStr, useNewEngine]);
 
   // Search spans every reservation (past + future), not just the currently
   // loaded month — proApi.getCalendar() is always date-bounded, so this goes
@@ -797,29 +686,32 @@ export default function ProCalendarScreen() {
   useEffect(() => {
     const id = setInterval(() => {
       void fetchMonthData(selectedYear, selectedMonth, { silent: true });
-      void fetchSlots(selectedDateStr, { silent: true });
+      void qc.invalidateQueries({ queryKey: ["availability"] });
       void runCalendarSync();
     }, 30_000);
     return () => clearInterval(id);
-  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr, runCalendarSync]);
+  }, [fetchMonthData, qc, selectedYear, selectedMonth, runCalendarSync]);
 
   // Refresh instantly when a push notification arrives (new booking, etc.)
   useEffect(() => {
     if (Platform.OS === "web") return;
     const sub = Notifications.addNotificationReceivedListener(() => {
       void fetchMonthData(selectedYear, selectedMonth, { silent: true });
-      void fetchSlots(selectedDateStr, { silent: true });
+      void qc.invalidateQueries({ queryKey: ["availability"] });
     });
     return () => sub.remove();
-  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr]);
+  }, [fetchMonthData, qc, selectedYear, selectedMonth]);
 
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchMonthData(selectedYear, selectedMonth), fetchSlots(selectedDateStr)]);
+    await Promise.all([
+      fetchMonthData(selectedYear, selectedMonth),
+      qc.invalidateQueries({ queryKey: ["availability"] }),
+    ]);
     setRefreshing(false);
-  }, [fetchMonthData, fetchSlots, selectedYear, selectedMonth, selectedDateStr]);
+  }, [fetchMonthData, qc, selectedYear, selectedMonth]);
 
   const handleSelectDate = (d: Date) => {
     setSelectedDate(d);
@@ -857,76 +749,6 @@ export default function ProCalendarScreen() {
       total: searchResults.length,
     };
   }, [searchQuery, searchResults]);
-
-  const toggleSlot = async (id: string) => {
-    const slot = slots.find((s) => s.id === id);
-    if (!slot || slot.isPast || !slot.isAvailable) return;
-    setSlots((prev) => prev.map((s) => s.id === id ? { ...s, isActive: !s.isActive } : s));
-    try {
-      await proApi.updateSlot(parseInt(id), { status: slot.isActive ? "blocked" : "available" });
-    } catch {
-      setSlots((prev) => prev.map((s) => s.id === id ? { ...s, isActive: slot.isActive } : s));
-      setSlotError("Impossible de mettre à jour le créneau");
-    }
-  };
-
-  const addSlot = async () => {
-    setSlotError(null);
-    const date = toLocalDate(selectedDate);
-    if (!canCreate(date, newSlotTime)) {
-      setSlotError("Impossible de créer un créneau dans le passé");
-      return;
-    }
-    if (checkOverlap(slots, newSlotTime, newSlotDuration)) {
-      setSlotError("Ce créneau chevauche un créneau existant");
-      return;
-    }
-    setAddingSlot(true);
-    try {
-      const res = await proApi.createSlot({ date, time: newSlotTime, duration: newSlotDuration });
-      if (!res.success) throw new Error(res.error);
-      await fetchSlots(selectedDateStr);
-      setShowAddSlot(false);
-    } catch (e) {
-      setSlotError(e instanceof Error && e.message ? e.message : "Impossible d'ajouter le créneau");
-    } finally {
-      setAddingSlot(false);
-    }
-  };
-
-  const confirmEditSlot = async () => {
-    if (!editingSlotId) return;
-    setSlotError(null);
-    const date = toLocalDate(selectedDate);
-    if (!canCreate(date, editTime)) {
-      setSlotError("Heure déjà passée");
-      return;
-    }
-    if (checkOverlap(slots, editTime, editDur, editingSlotId)) {
-      setSlotError("Chevauchement avec un autre créneau");
-      return;
-    }
-    setEditingSlotId(null);
-    try {
-      await proApi.updateSlot(parseInt(editingSlotId), { date, time: editTime, duration: editDur });
-      await fetchSlots(selectedDateStr);
-    } catch {
-      setSlotError("Impossible de modifier le créneau");
-    }
-  };
-
-  const deleteSlot = async (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    const backup = [...slots];
-    setShowDeleteSlotId(null);
-    setSlots((prev) => prev.filter((s) => s.id !== id));
-    try {
-      await proApi.deleteSlot(parseInt(id));
-    } catch {
-      setSlots(backup);
-      setSlotError("Impossible de supprimer le créneau");
-    }
-  };
 
   const handleComplete = async (apt: Appointment) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -981,8 +803,7 @@ export default function ProCalendarScreen() {
     overrideApplied?: "outside_hours" | "conflict" | null;
   }) => {
     void fetchMonthData(selectedYear, selectedMonth, { silent: true });
-    if (useNewEngine) void qc.invalidateQueries({ queryKey: ["availability"] });
-    else void fetchSlots(selectedDateStr, { silent: true });
+    void qc.invalidateQueries({ queryKey: ["availability"] });
     // Un report proposé par la pro ne modifie pas le RDV tant que la cliente
     // n'a pas accepté — le refetch ci-dessus continuera donc d'afficher
     // l'horaire d'origine, ce qui est le comportement attendu.
@@ -1013,88 +834,6 @@ export default function ProCalendarScreen() {
     } catch {
       setAppointments((prev) => prev.map((a) => a.id === apt.id ? { ...a, status: apt.status } : a));
       showToast("Impossible de marquer cette absence", "error");
-    }
-  };
-
-
-  // Planning "semaine type" = génération en masse de slots précréés. N'a de sens
-  // qu'en mode legacy (useNewEngine === false) : avec le moteur, les créneaux
-  // découlent des working_hours.
-  // TODO 4.6 — supprimer applyWeeklyPlanning / doApplyWeeklyPlanning / la modale
-  // quand les slots legacy seront retirés.
-  const applyWeeklyPlanning = () => {
-    if (activeDays.length === 0 || planningSlots.length === 0) return;
-
-    const MAX_SLOTS_PER_DAY = 5;
-
-    setPlanningError(null);
-    if (planningSlots.length > MAX_SLOTS_PER_DAY) {
-      setPlanningError(`Le planning est limité à ${MAX_SLOTS_PER_DAY} créneaux par jour. Retire les créneaux en trop avant de continuer.`);
-      return;
-    }
-
-    const totalSlots = activeDays.length * planConfirmWeeks * planningSlots.length;
-    const weeks = planConfirmWeeks;
-    showActionSheet(
-      {
-        title: "Confirmer le planning",
-        message: `${totalSlots} créneaux sur ${weeks} semaines (${activeDays.length} jour${activeDays.length > 1 ? "s" : ""} × ${planningSlots.length} créneau${planningSlots.length > 1 ? "x" : ""}/jour · ${formatDuration(planningDuration)}). Les créneaux déjà existants ou passés seront ignorés.`,
-        options: ["Annuler", "Appliquer"],
-        cancelButtonIndex: 0,
-      },
-      (idx) => {
-        if (idx === 1) {
-          setShowPlanningModal(false);
-          void doApplyWeeklyPlanning(weeks);
-        }
-      }
-    );
-  };
-
-  const doApplyWeeklyPlanning = async (weeks: number) => {
-    setWeeklyPlanSaving(true);
-
-    const getNextDates = (dayNum: number): string[] => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const jsDay = dayNum % 7;
-      const diff = (jsDay - today.getDay() + 7) % 7;
-      const first = new Date(today);
-      first.setDate(today.getDate() + diff);
-      return Array.from({ length: weeks }, (_, w) => {
-        const d = new Date(first);
-        d.setDate(first.getDate() + w * 7);
-        return toLocalDate(d);
-      });
-    };
-
-    try {
-      const results = await Promise.all(
-        activeDays.flatMap((dayNum) =>
-          getNextDates(dayNum).flatMap((date) =>
-            planningSlots.map((time) =>
-              proApi.createSlot({ date, time, duration: planningDuration }).catch(() => null)
-            )
-          )
-        )
-      );
-
-      const failed = results.filter((r) => r === null).length;
-      const created = results.length - failed;
-      await fetchSlots(selectedDateStr);
-      qc.invalidateQueries({ queryKey: ["slots"] });
-
-      if (failed > 0) {
-        setPlanningInfo(`${created} créneaux créés, ${failed} ignorés (chevauchement ou passés).`);
-        setTimeout(() => setPlanningInfo(null), 3000);
-      } else {
-        setWeeklyPlanSuccess(true);
-        setTimeout(() => setWeeklyPlanSuccess(false), 2500);
-      }
-    } catch {
-      setPlanningError("Impossible d'appliquer le planning");
-    } finally {
-      setWeeklyPlanSaving(false);
     }
   };
 
@@ -1356,15 +1095,6 @@ export default function ProCalendarScreen() {
               <Ionicons name="person-add-outline" size={14} color={colors.onColor} />
               <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>RDV</Text>
             </AnimatedPressable>
-            {!useNewEngine && showLegacyTools && (
-              <AnimatedPressable
-                onPress={() => setShowAddSlot(true)}
-                style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}
-              >
-                <Ionicons name="add" size={16} color={colors.onColor} />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onColor }}>Créneau</Text>
-              </AnimatedPressable>
-            )}
           </View>
         </View>
 
@@ -1424,172 +1154,7 @@ export default function ProCalendarScreen() {
           ) : (
             <FreeSlotsCard slots={engineSlots ?? []} />
           )
-        ) : (
-          <>
-            <AnimatedPressable
-              onPress={() => setShowLegacyTools((v) => !v)}
-              accessibilityLabel="Gérer mes anciens créneaux"
-              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}
-            >
-              <Ionicons name="construct-outline" size={15} color={colors.foreground} />
-              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: colors.foreground }}>Gérer mes anciens créneaux</Text>
-              <Ionicons name={showLegacyTools ? "chevron-up" : "chevron-down"} size={16} color={colors.mutedForeground} />
-            </AnimatedPressable>
-            {showLegacyTools && (
-              <View style={{ marginBottom: 16, gap: 10 }}>
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, lineHeight: 15 }}>
-                  Ces créneaux précréés ne servent plus une fois tes horaires d&apos;ouverture configurés. En attendant, tu peux encore les gérer ici.
-                </Text>
-                <AnimatedPressable
-                  onPress={() => setShowPlanningModal(true)}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
-                >
-                  <Ionicons name="calendar-number-outline" size={14} color={colors.foreground} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>Planning semaine type</Text>
-                </AnimatedPressable>
-                {slotsLoading ? (
-                  <View style={{ padding: 20, alignItems: "center" }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </View>
-                ) : slots.length === 0 ? (
-                  <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, alignItems: "center", ...Shadows.card, gap: 6 }}>
-                    <Ionicons name="time-outline" size={36} color={colors.border} />
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Aucun créneau ce jour</Text>
-                    <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: "center" }}>Appuie sur « + Créneau » pour en ajouter</Text>
-                  </View>
-                ) : (
-                  <View style={{ backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", ...Shadows.card }}>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
-                      Créneaux ({slots.length})
-                    </Text>
-                    {slots.map((slot, i) => {
-              const isBooked = !slot.isAvailable && !slot.isPast;
-              const isOpen = slot.isAvailable && slot.isActive && !slot.isPast;
-              const isEditing = editingSlotId === slot.id;
-              const endMin = timeToMin(slot.time) + parseDuration(slot.duration);
-              const endTime = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
-
-              return (
-                <View key={slot.id}>
-                  {i > 0 && <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }} />}
-                  <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: isEditing ? withAlpha(colors.primary, 0.05) : undefined }}>
-                    {isEditing ? (
-                      <View style={{ gap: 12 }}>
-                        <View style={{ flexDirection: "row", gap: 10 }}>
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            <View style={{ flexDirection: "row", gap: 6 }}>
-                              {QUICK_TIMES.map((t) => (
-                                <AnimatedPressable
-                                  key={t}
-                                  onPress={() => setEditTime(t)}
-                                  style={{
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 6,
-                                    borderRadius: 10,
-                                    backgroundColor: editTime === t ? colors.primary : colors.muted,
-                                  }}
-                                >
-                                  <Text style={{ fontSize: 12, fontWeight: "600", color: editTime === t ? colors.onColor : colors.foreground }}>
-                                    {t}
-                                  </Text>
-                                </AnimatedPressable>
-                              ))}
-                            </View>
-                          </ScrollView>
-                        </View>
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          {[30, 45, 60, 90, 120].map((d) => (
-                            <AnimatedPressable
-                              key={d}
-                              onPress={() => setEditDur(d)}
-                              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: editDur === d ? colors.primary : colors.muted }}
-                            >
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: editDur === d ? colors.onColor : colors.foreground }}>
-                                {formatDuration(d)}
-                              </Text>
-                            </AnimatedPressable>
-                          ))}
-                        </View>
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          <AnimatedPressable
-                            onPress={() => setEditingSlotId(null)}
-                            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
-                          >
-                            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
-                          </AnimatedPressable>
-                          <AnimatedPressable
-                            onPress={confirmEditSlot}
-                            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}
-                          >
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onColor }}>Confirmer</Text>
-                          </AnimatedPressable>
-                        </View>
-                      </View>
-                    ) : (
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                          <View style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: 5,
-                            backgroundColor: slot.isPast ? colors.border : isBooked ? colors.info : isOpen ? colors.primary : colors.mutedForeground,
-                          }} />
-                          <View>
-                            <Text style={{ fontSize: 14, fontWeight: "700", color: slot.isPast ? colors.mutedForeground : colors.foreground }}>
-                              {slot.time} – {endTime}
-                            </Text>
-                            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>
-                              {formatDuration(parseDuration(slot.duration))}
-                              {" · "}
-                              <Text style={{ color: isBooked ? colors.info : isOpen ? colors.primary : colors.mutedForeground }}>
-                                {slot.isPast ? "Passé" : isBooked ? "Réservé" : isOpen ? "Ouvert" : "Bloqué"}
-                              </Text>
-                            </Text>
-                          </View>
-                        </View>
-
-                        {!slot.isPast && !isBooked && (
-                          <View style={{ flexDirection: "row", gap: 6 }}>
-                            <AnimatedPressable
-                              onPress={() => toggleSlot(slot.id)}
-                              accessibilityLabel={isOpen ? "Bloquer le créneau" : "Ouvrir le créneau"}
-                              accessibilityState={{ checked: isOpen }}
-                              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isOpen ? withAlpha(colors.primary, 0.10) : colors.muted, alignItems: "center", justifyContent: "center" }}
-                            >
-                              <Ionicons name={isOpen ? "lock-open-outline" : "lock-closed-outline"} size={16} color={isOpen ? colors.primary : colors.mutedForeground} />
-                            </AnimatedPressable>
-                            <AnimatedPressable
-                              onPress={() => {
-                                setEditTime(slot.time);
-                                setEditDur(parseDuration(slot.duration));
-                                setEditingSlotId(slot.id);
-                              }}
-                              accessibilityLabel="Modifier le créneau"
-                              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
-                            >
-                              <Ionicons name="pencil-outline" size={16} color={colors.mutedForeground} />
-                            </AnimatedPressable>
-                            <AnimatedPressable
-                              onPress={() => setShowDeleteSlotId(slot.id)}
-                              accessibilityLabel="Supprimer le créneau"
-                              style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.destructiveLight, alignItems: "center", justifyContent: "center" }}
-                            >
-                              <Ionicons name="trash-outline" size={16} color={colors.destructive} />
-                            </AnimatedPressable>
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-                  </View>
-                )}
-              </View>
-            )}
-          </>
-        )}
+        ) : null}
 
         {/* ── APPOINTMENTS ── */}
         {searchSections ? (
@@ -1648,115 +1213,6 @@ export default function ProCalendarScreen() {
           </>
         )}
       </ScrollView>
-
-      {/* ── ADD SLOT MODAL ── */}
-      <RNModal visible={showAddSlot} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowAddSlot(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: colors.overlayLight }} onPress={() => setShowAddSlot(false)} />
-        <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          backgroundColor: colors.white,
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          paddingBottom: insets.bottom + 16,
-        }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
-
-          <View style={{ backgroundColor: withAlpha(colors.primary, 0.06), paddingHorizontal: 24, paddingTop: 14, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: withAlpha(colors.primary, 0.12) }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: withAlpha(colors.primary, 0.10), alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground }}>Nouveau créneau</Text>
-                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1, textTransform: "capitalize" }}>{selectedDateLabel}</Text>
-                </View>
-              </View>
-              <AnimatedIconButton
-                onPress={() => setShowAddSlot(false)}
-                accessibilityLabel="Fermer"
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: withAlpha(colors.primary, 0.08), alignItems: "center", justifyContent: "center" }}
-              >
-                <Ionicons name="close" size={18} color={colors.primary} />
-              </AnimatedIconButton>
-            </View>
-          </View>
-
-          <View style={{ paddingHorizontal: 24, paddingTop: 20, gap: 20, paddingBottom: 8 }}>
-            <View>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                Heure de début
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {QUICK_TIMES.map((t) => (
-                    <AnimatedPressable
-                      key={t}
-                      onPress={() => setNewSlotTime(t)}
-                      style={{
-                        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
-                        backgroundColor: newSlotTime === t ? colors.primary : colors.muted,
-                      }}
-                    >
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotTime === t ? colors.onColor : colors.foreground }}>
-                        {t}
-                      </Text>
-                    </AnimatedPressable>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-
-            <View>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-                Durée
-              </Text>
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                {[30, 45, 60, 75, 90, 120].map((d) => (
-                  <AnimatedPressable
-                    key={d}
-                    onPress={() => setNewSlotDuration(d)}
-                    style={{
-                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
-                      backgroundColor: newSlotDuration === d ? colors.primary : colors.muted,
-                    }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: newSlotDuration === d ? colors.onColor : colors.foreground }}>
-                      {formatDuration(d)}
-                    </Text>
-                  </AnimatedPressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.muted, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-              <Ionicons name="time-outline" size={16} color={colors.mutedForeground} />
-              <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
-                Créneau de{" "}
-                <Text style={{ fontWeight: "700", color: colors.foreground }}>{newSlotTime}</Text>
-                {" "}à{" "}
-                <Text style={{ fontWeight: "700", color: colors.foreground }}>
-                  {(() => {
-                    const end = timeToMin(newSlotTime) + newSlotDuration;
-                    return `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
-                  })()}
-                </Text>
-                {" · "}{formatDuration(newSlotDuration)}
-              </Text>
-            </View>
-
-            {slotError && <View style={{ marginBottom: 4 }}><ErrorMessage message={slotError} /></View>}
-            <AnimatedPressable
-              onPress={addSlot}
-              disabled={addingSlot}
-              style={{ height: 56, borderRadius: 16, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", opacity: addingSlot ? 0.7 : 1 }}
-            >
-              {addingSlot
-                ? <ActivityIndicator color={colors.onColor} />
-                : <Text style={{ fontSize: 15, fontWeight: "700", color: colors.onColor }}>Créer ce créneau</Text>}
-            </AnimatedPressable>
-          </View>
-        </View>
-      </RNModal>
 
       {/* ── APPOINTMENT ACTIONS MODAL ── */}
       <RNModal visible={selectedApt != null} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSelectedApt(null)}>
@@ -1888,234 +1344,6 @@ export default function ProCalendarScreen() {
         onChanged={setUnavailabilities}
         loading={loading}
       />
-
-      {/* ── WEEKLY PLANNING MODAL (legacy uniquement) ── */}
-      {/* TODO 4.6 — à supprimer avec les slots legacy. Jamais ouverte en mode
-          moteur : la carte "Planning" pointe alors vers pro-working-hours. */}
-      <Modal visible={showPlanningModal} onClose={() => setShowPlanningModal(false)} bottomSheet noPadding maxHeight="90%">
-        <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28, flex: 1 }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
-
-          <View style={{ backgroundColor: PLANNING.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: PLANNING.border }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: PLANNING.iconBg, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="calendar-number-outline" size={22} color={PLANNING.color} />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 18, fontWeight: "800", color: PLANNING.colorDark }}>Planning semaine type</Text>
-                  <Text style={{ fontSize: 12, color: PLANNING.color, marginTop: 1 }}>Appliqué sur les 4 prochaines semaines</Text>
-                </View>
-              </View>
-              <AnimatedIconButton
-                onPress={() => setShowPlanningModal(false)}
-                accessibilityLabel="Fermer"
-                style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PLANNING.closeBg, alignItems: "center", justifyContent: "center" }}
-              >
-                <Ionicons name="close" size={18} color={PLANNING.colorDark} />
-              </AnimatedIconButton>
-            </View>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16, gap: 20 }}>
-            <View style={{ gap: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
-                Durée de chaque créneau
-              </Text>
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                {[30, 45, 60, 75, 90, 120].map((d) => (
-                  <AnimatedPressable
-                    key={d}
-                    onPress={() => setPlanningDuration(d)}
-                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
-                      backgroundColor: planningDuration === d ? colors.primary : colors.muted }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: planningDuration === d ? colors.onColor : colors.foreground }}>
-                      {formatDuration(d)}
-                    </Text>
-                  </AnimatedPressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={{ gap: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
-                Nombre de semaines
-              </Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {[2, 4, 6, 8].map((w) => (
-                  <AnimatedPressable
-                    key={w}
-                    onPress={() => setPlanConfirmWeeks(w)}
-                    style={{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-                      backgroundColor: planConfirmWeeks === w ? PLANNING.color : colors.muted }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "700",
-                      color: planConfirmWeeks === w ? colors.onColor : colors.mutedForeground }}>
-                      {w} sem.
-                    </Text>
-                  </AnimatedPressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={{ gap: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
-                Jours actifs
-              </Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {DAYS_SHORT.map((d, idx) => {
-                  const dayNum = idx + 1;
-                  const isActive = activeDays.includes(dayNum);
-                  return (
-                    <AnimatedPressable
-                      key={d}
-                      onPress={() =>
-                        setActiveDays((prev) =>
-                          isActive ? prev.filter((n) => n !== dayNum) : [...prev, dayNum].sort()
-                        )
-                      }
-                      style={{
-                        flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-                        backgroundColor: isActive ? PLANNING.color : colors.muted,
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: isActive ? colors.onColor : colors.mutedForeground }}>
-                        {d}
-                      </Text>
-                    </AnimatedPressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={{ gap: 10 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
-                    Horaires de début
-                  </Text>
-                  <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>Durée par défaut : 1h</Text>
-                </View>
-                <AnimatedPressable
-                  onPress={() => setShowPlanTimePicker(true)}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}
-                >
-                  <Ionicons name="add" size={14} color={PLANNING.color} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: PLANNING.color }}>Ajouter</Text>
-                </AnimatedPressable>
-              </View>
-
-              {showPlanTimePicker && (
-                <View style={{ backgroundColor: PLANNING.bg, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: PLANNING.border }}>
-                  <DateTimePicker
-                    value={newPlanTime}
-                    mode="time"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                    onChange={(_, date) => {
-                      if (date) setNewPlanTime(date);
-                      if (Platform.OS === "android") {
-                        setShowPlanTimePicker(false);
-                        if (date) {
-                          const h = String(date.getHours()).padStart(2, "0");
-                          const m = String(date.getMinutes()).padStart(2, "0");
-                          const t = `${h}:${m}`;
-                          if (!planningSlots.includes(t)) setPlanningSlots((prev) => [...prev, t].sort());
-                        }
-                      }
-                    }}
-                    themeVariant={isDark ? "dark" : "light"}
-                    accentColor={PLANNING.color}
-                  />
-                  {Platform.OS === "ios" && (
-                    <AnimatedPressable
-                      onPress={() => {
-                        const h = String(newPlanTime.getHours()).padStart(2, "0");
-                        const m = String(newPlanTime.getMinutes()).padStart(2, "0");
-                        const t = `${h}:${m}`;
-                        if (!planningSlots.includes(t)) setPlanningSlots((prev) => [...prev, t].sort());
-                        setShowPlanTimePicker(false);
-                      }}
-                      style={{ margin: 12, height: 44, borderRadius: 12, backgroundColor: PLANNING.color, alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Confirmer</Text>
-                    </AnimatedPressable>
-                  )}
-                </View>
-              )}
-
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {planningSlots.map((t) => (
-                  <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: PLANNING.bg, borderRadius: 10, borderWidth: 1, borderColor: PLANNING.border }}>
-                    <Ionicons name="time-outline" size={13} color={PLANNING.color} />
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: PLANNING.colorDark }}>{t}</Text>
-                    <AnimatedIconButton onPress={() => setPlanningSlots((prev) => prev.filter((s) => s !== t))} accessibilityLabel="Supprimer cet horaire">
-                      <Ionicons name="close-circle" size={16} color={PLANNING.color} />
-                    </AnimatedIconButton>
-                  </View>
-                ))}
-                {planningSlots.length === 0 && (
-                  <View style={{ backgroundColor: colors.muted, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, width: "100%" }}>
-                    <Text style={{ fontSize: 13, color: colors.mutedForeground }}>Aucun horaire — appuie sur Ajouter</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {activeDays.length > 0 && planningSlots.length > 0 && (
-              <View style={{ backgroundColor: PLANNING.bg, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: PLANNING.border }}>
-                <Text style={{ fontSize: 12, color: PLANNING.colorDark, fontWeight: "600", lineHeight: 18 }}>
-                  {activeDays.length * planConfirmWeeks * planningSlots.length} créneaux · {activeDays.length} jour{activeDays.length > 1 ? "s" : ""} × {planningSlots.length} horaire{planningSlots.length > 1 ? "s" : ""} × {planConfirmWeeks} semaines · {formatDuration(planningDuration)}/créneau
-                </Text>
-              </View>
-            )}
-
-          </ScrollView>
-
-          <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 8 }}>
-            {weeklyPlanSuccess && (
-              <View style={{ backgroundColor: withAlpha(colors.successText, 0.10), borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: PLANNING.border }}>
-                <Ionicons name="checkmark-circle" size={18} color={PLANNING.color} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: PLANNING.colorDark }}>Planning appliqué avec succès</Text>
-              </View>
-            )}
-            {planningError && <ErrorMessage message={planningError} />}
-            {planningInfo && (
-              <View style={{ backgroundColor: withAlpha(colors.successText, 0.08), borderRadius: 12, padding: 10, borderWidth: 1, borderColor: PLANNING.border }}>
-                <Text style={{ fontSize: 12, color: PLANNING.colorDark, fontWeight: "600" }}>{planningInfo}</Text>
-              </View>
-            )}
-            <LoadingButton
-              loading={weeklyPlanSaving}
-              onPress={applyWeeklyPlanning}
-              disabled={activeDays.length === 0 || planningSlots.length === 0}
-              label="Appliquer le planning"
-              style={{ backgroundColor: (activeDays.length === 0 || planningSlots.length === 0) ? colors.disabled : PLANNING.color }}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── DELETE SLOT CONFIRM ── */}
-      <RNModal visible={showDeleteSlotId != null} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDeleteSlotId(null)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }}>
-          <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 24, width: "100%", gap: 16 }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground, textAlign: "center" }}>Supprimer ce créneau ?</Text>
-            <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center" }}>Cette action est irréversible.</Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <AnimatedPressable onPress={() => setShowDeleteSlotId(null)} style={{ flex: 1, height: 48, borderRadius: 13, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>Annuler</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                onPress={() => { if (showDeleteSlotId) void deleteSlot(showDeleteSlotId); }}
-                style={{ flex: 1, height: 48, borderRadius: 13, backgroundColor: colors.destructive, alignItems: "center", justifyContent: "center" }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Supprimer</Text>
-              </AnimatedPressable>
-            </View>
-          </View>
-        </View>
-      </RNModal>
 
       {/* ── CANCEL APT CONFIRM ── */}
       <RNModal visible={showCancelAptId != null} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowCancelAptId(null)}>
