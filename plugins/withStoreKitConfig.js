@@ -71,6 +71,21 @@ const withStoreKitXcodeProject = (config) => {
       targetUuid: target,
     });
 
+    // addResourceFileToGroup crée la PBXFileReference avec
+    // lastKnownFileType = "unknown" → Xcode ne reconnaît pas le .storekit et
+    // ignore silencieusement `storeKitConfigurationFileReference` du scheme
+    // (résultat : StoreKit tape le vrai store → "No active account" en
+    // simulateur, offerings vides). On force le bon type.
+    const refs = project.pbxFileReferenceSection();
+    for (const key of Object.keys(refs)) {
+      const ref = refs[key];
+      if (ref && typeof ref === "object" && ref.path && String(ref.path).replace(/"/g, "").endsWith(STOREKIT_FILENAME)) {
+        ref.lastKnownFileType = "text";
+        delete ref.explicitFileType;
+        delete ref.fileEncoding;
+      }
+    }
+
     return config;
   });
 };
