@@ -1,6 +1,14 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
 import withStoreKitConfig from "./plugins/withStoreKitConfig";
 
+// Le fichier StoreKit local (ios-config/Blyss.storekit) court-circuite App Store
+// Connect : StoreKit lit les produits DANS ce fichier au lieu de l'App Store.
+// Pratique pour tester les achats en simulateur sans compte sandbox — mais un
+// build qui l'embarque ne peut PAS encaisser de vrai paiement (ni tester en
+// sandbox Apple). On ne l'active donc que sur demande explicite.
+// Défaut (dev client, sandbox, TestFlight, prod) = vrai App Store Connect.
+const USE_STOREKIT_CONFIG = process.env.EXPO_PUBLIC_USE_STOREKIT_CONFIG === "1";
+
 const LIVE_ACTIVITY_APP_GROUP = "group.blyss.app";
 
 const EAS_PROJECT_ID = "0e3cae8f-7b87-4e19-9fea-e8a16fa399e4";
@@ -255,7 +263,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         enableGooglePay: true,
       },
     ],
-    withStoreKitConfig,
+    ...(USE_STOREKIT_CONFIG ? [withStoreKitConfig] : []),
     "@bacons/apple-targets",
     "expo-localization",
     // Pas le plugin "@sentry/react-native" ici : il injecte une phase de

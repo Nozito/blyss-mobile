@@ -84,8 +84,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     // Réduit le bruit console du SDK (INFO/DEBUG). Les "offerings empty" restent
     // en ERROR — c'est une config App Store Connect / StoreKit, pas un bug appli :
     // agreement "Paid Applications" actif, in-app purchases "Ready to Submit"
-    // avec des product IDs identiques dans RevenueCat, offering marquée "Current",
-    // et (simulateur) fichier Blyss.storekit sélectionné dans le scheme Xcode.
+    // avec des product IDs identiques dans RevenueCat, offering marquée "Current".
+    // ⚠️ Si le build embarque ios-config/Blyss.storekit (plugin withStoreKitConfig,
+    // activé par EXPO_PUBLIC_USE_STOREKIT_CONFIG=1), StoreKit lit ce fichier au
+    // lieu d'App Store Connect — désactiver pour tester en sandbox / prod.
     void Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.WARN : LOG_LEVEL.ERROR);
     Purchases.configure({ apiKey });
 
