@@ -36,15 +36,32 @@ markStartup("module_eval");
 if (ENV.SENTRY_DSN) {
   Sentry.init({
     dsn: ENV.SENTRY_DSN,
+    environment: __DEV__ ? "development" : "production",
     tracesSampleRate: 0.2,
     enableNativeCrashHandling: true,
     debug: __DEV__,
-    // Breadcrumbs réseau (requêtes échouées visibles dans le fil d'événements).
-    enableCaptureFailedRequests: true,
-    // Session Replay — activé partout (les données clientes sensibles restent
-    // masquées par défaut : maskAllText/maskAllImages/maskAllVectors à `true`).
-    replaysSessionSampleRate: __DEV__ ? 1.0 : 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    // Le SDK reste initialisé en dev (breadcrumbs, logs `debug`) mais on
+    // n'ENVOIE rien : le board Sentry ne doit refléter que les vrais
+    // incidents prod, pas le bruit des sessions `expo run` / dev client
+    // (500 d'API en cours de fix, ReferenceError de bundles obsolètes, etc).
+    beforeSend: __DEV__ ? () => null : undefined,
+    // La couche `apiCall` (lib/api.ts) renvoie déjà les erreurs HTTP de façon
+    // structurée et chaque écran affiche son état d'erreur — capturer en plus
+    // chaque 4xx/5xx comme une *issue* Sentry ne fait que du bruit.
+    enableCaptureFailedRequests: false,
+    // Bruit non actionnable : échecs d'ouverture de lien (tel:/sms:/mailto:
+    // selon l'appareil), aléas keychain de SecureStore (retry transparent),
+    // offerings RevenueCat le temps que la config store soit finalisée.
+    ignoreErrors: [
+      /Unable to open URL/i,
+      /getValueWithKeyAsync/i,
+      /Error fetching offerings/i,
+      /None of the products registered/i,
+    ],
+    // Session Replay — prod uniquement (les données clientes sensibles restent
+    // masquées : maskAllText/maskAllImages/maskAllVectors à `true`).
+    replaysSessionSampleRate: __DEV__ ? 0 : 0.1,
+    replaysOnErrorSampleRate: __DEV__ ? 0 : 1.0,
   });
 }
 
