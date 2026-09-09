@@ -50,8 +50,16 @@ function getActivePlanFromRC(info: CustomerInfo | null): RCPlan | null {
   return null;
 }
 
+// Les clés RevenueCat réelles ont un préfixe connu suivi d'une chaîne
+// alphanumérique longue — un placeholder au format "goog_..." passe à travers
+// une liste de mots-clés, pas à travers ce regex.
+function isValidRcKey(key: string): boolean {
+  return /^(appl|goog|amzn)_[A-Za-z0-9]{10,}$/.test(key);
+}
+const RC_API_KEY = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
+
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [rcReady, setRcReady] = useState(false);
   const [backendPlanChecked, setBackendPlanChecked] = useState(false);
@@ -67,15 +75,8 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    const apiKey = Platform.OS === "ios" ? RC_API_KEY_IOS : RC_API_KEY_ANDROID;
-    // Les clés RevenueCat réelles ont un préfixe connu suivi d'une chaîne alphanumérique
-    // longue, sans ponctuation. Se fier à une liste de mots-clés de placeholder
-    // (ex: "your_key_here") est fragile — un placeholder au format "goog_..." (points de
-    // suspension littéraux, cf. .env.example) passait à travers l'ancien guard et
-    // déclenchait Purchases.configure() avec une clé invalide, cassant silencieusement
-    // les achats sur Android.
-    const isValidRcKey = /^(appl|goog|amzn)_[A-Za-z0-9]{10,}$/.test(apiKey);
-    if (!isValidRcKey) {
+    const apiKey = RC_API_KEY;
+    if (!isValidRcKey(apiKey)) {
       setRcReady(true);
       return;
     }
@@ -150,6 +151,33 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     Purchases.addCustomerInfoUpdateListener(onCustomerInfo);
     return () => { Purchases.removeCustomerInfoUpdateListener(onCustomerInfo); };
   }, []);
+
+  // Identifie l'utilisateur auprès de RevenueCat : le subscriber id RC devient
+  // l'id numérique du backend. C'est ce qu'attendent le webhook
+  // (`event.app_user_id`) ET la réconciliation serveur
+  // (`GET api.revenuecat.com/v1/subscribers/<id>`). Sans logIn, RC utilise un id
+  // anonyme (`$RCAnonymousID:…`) et AUCUN achat réel n'est jamais rattaché à la
+  // pro côté backend.
+  useEffect(() => {
+    if (!rcReady || !isValidRcKey(RC_API_KEY)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (isAuthenticated && user?.id != null) {
+          await Purchases.logIn(String(user.id));
+        } else {
+          // logOut jette si déjà anonyme — non fatal.
+          await Purchases.logOut().catch(() => {});
+        }
+        const info = await Purchases.getCustomerInfo();
+        if (!cancelled) setCustomerInfo(info);
+      } catch {
+        // best-effort : un échec ici n'empêche pas l'app de tourner, mais les
+        // achats ne seront pas réconciliés tant que ça n'a pas réussi.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [rcReady, isAuthenticated, user?.id]);
 
   const fetchBackendPlanRef = useRef<() => Promise<void>>(async () => {});
 
