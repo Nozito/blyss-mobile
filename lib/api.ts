@@ -1398,22 +1398,6 @@ export interface AdminPayment {
   created_at: string;
 }
 
-export interface AdminCoupon {
-  id: number;
-  code: string;
-  discount_type: "percent" | "fixed";
-  discount_value: number;
-  // Backend sometimes returns this as a stringified JSON array rather than a
-  // real array — always run it through parsePlans() (app/(admin-tools)/coupons.tsx)
-  // before use.
-  applicable_plans: string[] | string;
-  expires_at?: string | null;
-  max_uses?: number | null;
-  used_count: number;
-  is_active: boolean;
-  created_at: string;
-}
-
 export interface AdminSubscriptionItem {
   id: number;
   proId: number;
@@ -1509,6 +1493,8 @@ export const adminApi = {
     apiCall(`/api/admin/users/${id}`, { method: "DELETE" }),
   grantSubscription: (id: number, data: { plan: string; months: number }): Promise<ApiResponse<{ id: number; plan: string; months: number; end_date: string }>> =>
     apiCall(`/api/admin/users/${id}/grant-subscription`, { method: "POST", body: JSON.stringify(data) }),
+  cancelSubscription: (proId: number): Promise<ApiResponse<{ subscriptionId: number; wasStoreSub: boolean }>> =>
+    apiCall(`/api/admin/users/${proId}/cancel-subscription`, { method: "POST" }),
 
   // Bookings
   getBookings: (params?: { page?: number; limit?: number; status?: string; date?: string; user_id?: number }): Promise<ApiResponse<AdminBooking[]> & { meta?: AdminMeta }> => {
@@ -1527,15 +1513,6 @@ export const adminApi = {
   },
   refundPayment: (id: number): Promise<ApiResponse<{ id: number; status: string }>> =>
     apiCall(`/api/admin/payments/${id}/refund`, { method: "POST" }),
-
-  // Coupons
-  getCoupons: (): Promise<ApiResponse<AdminCoupon[]>> => apiCall("/api/admin/coupons"),
-  createCoupon: (data: { code: string; discount_type: "percent" | "fixed"; discount_value: number; applicable_plans: string[]; expires_at?: string; max_uses?: number }): Promise<ApiResponse<{ id: number }>> =>
-    apiCall("/api/admin/coupons", { method: "POST", body: JSON.stringify(data) }),
-  deleteCoupon: (id: number): Promise<ApiResponse<{ id: number }>> =>
-    apiCall(`/api/admin/coupons/${id}`, { method: "DELETE" }),
-  toggleCoupon: (id: number, active: boolean): Promise<ApiResponse<{ id: number; is_active: boolean }>> =>
-    apiCall(`/api/admin/coupons/${id}/toggle`, { method: "PATCH", body: JSON.stringify({ active }) }),
 
   // Notifications
   sendPush: (data: { target: "user_id" | "all" | "pros" | "clients"; user_id?: number; title: string; body: string }): Promise<ApiResponse<{ sent: number }>> =>
