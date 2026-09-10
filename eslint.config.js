@@ -61,7 +61,7 @@ module.exports = tseslint.config(
   {
     // Tooling / build config files run under Node's CommonJS module system
     files: [
-      "*.config.js",
+      "**/*.config.js",
       "plugins/**/*.js",
       "scripts/**/*.{js,mjs}",
       "eslint.config.js",
