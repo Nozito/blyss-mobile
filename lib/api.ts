@@ -1410,6 +1410,8 @@ export interface AdminSubscriptionItem {
   billingType: "monthly" | "one_time";
   monthlyPrice: number;
   totalPrice: number | null;
+  /** `store` = montant réellement facturé par l'App Store · `catalog` = tarif de référence Blyss (offert / interne / seed). */
+  priceSource?: "store" | "catalog";
   status: "active" | "cancelled" | "pending";
   startDate: string | null;
   endDate: string | null;
