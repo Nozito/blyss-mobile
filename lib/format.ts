@@ -28,8 +28,10 @@ export function formatNumberFR(value: number | string | null | undefined): strin
 }
 
 /**
- * Montant en euros. `cents: true` force deux décimales (12 345,00 €),
- * sinon arrondi à l'euro (12 345 €). Renvoie "—" si la valeur est absente.
+ * Montant en euros, **deux décimales par défaut** (12 345,00 €) — ce sont des
+ * chiffres financiers, on n'arrondit pas. `cents: false` pour l'arrondi à
+ * l'euro (rare, réservé à un affichage volontairement compact). Renvoie "—"
+ * si la valeur est absente.
  */
 export function formatEUR(
   value: number | string | null | undefined,
@@ -38,7 +40,7 @@ export function formatEUR(
   const n = toNum(value);
   if (n === null) return "—";
   const sign = n < 0 ? "-" : "";
-  const fixed = Math.abs(n).toFixed(opts.cents ? 2 : 0);
+  const fixed = Math.abs(n).toFixed(opts.cents === false ? 0 : 2);
   const [int, dec] = fixed.split(".");
   return `${sign}${group(int)}${dec ? "," + dec : ""}${NBSP}€`;
 }
