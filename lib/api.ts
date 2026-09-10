@@ -1530,11 +1530,11 @@ export const adminApi = {
 
   // Analytics
   getAnalytics: (): Promise<ApiResponse<AdminAnalytics>> => apiCall("/api/admin/analytics"),
-  getRevenueAnalytics: (period?: "week" | "month" | "year"): Promise<ApiResponse<Array<{ period: string; revenue: number; transactions: number }>>> =>
+  getRevenueAnalytics: (period?: "week" | "month" | "year" | "all"): Promise<ApiResponse<Array<{ period: string; revenue: number; transactions: number }>>> =>
     apiCall(`/api/admin/analytics/revenue${period ? `?period=${period}` : ""}`),
-  getUsersAnalytics: (period?: "week" | "month" | "year"): Promise<ApiResponse<Array<{ period: string; new_users: number; new_pros: number; new_clients: number }>>> =>
+  getUsersAnalytics: (period?: "week" | "month" | "year" | "all"): Promise<ApiResponse<Array<{ period: string; new_users: number; new_pros: number; new_clients: number }>>> =>
     apiCall(`/api/admin/analytics/users${period ? `?period=${period}` : ""}`),
-  getBookingsAnalytics: (period?: "week" | "month" | "year"): Promise<ApiResponse<Array<{ period: string; total: number; completed: number; cancelled: number; revenue: number }>>> =>
+  getBookingsAnalytics: (period?: "week" | "month" | "year" | "all"): Promise<ApiResponse<Array<{ period: string; total: number; completed: number; cancelled: number; revenue: number }>>> =>
     apiCall(`/api/admin/analytics/bookings${period ? `?period=${period}` : ""}`),
 
   // Logs

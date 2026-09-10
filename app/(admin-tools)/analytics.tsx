@@ -28,7 +28,8 @@ const TEXT3  = ADMIN.textMuted;
 const ACCENT = ADMIN.accent;
 const DAYS_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 
-type Period = "week" | "month" | "year";
+type Period = "week" | "month" | "year" | "all";
+const MONTHS_SHORT = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
 
@@ -80,13 +81,25 @@ function Sparkline({
 // ─── BarChart ─────────────────────────────────────────────────────────────────
 
 function BarChart({
-  data, color, width = 300, height = 80, isWeek = false,
+  data, color, width = 300, height = 80, dates, granularity = "day",
 }: {
-  data: number[]; color: string; width?: number; height?: number; isWeek?: boolean;
+  data: number[]; color: string; width?: number; height?: number;
+  dates?: string[]; granularity?: "day" | "month";
 }) {
   if (!data.length) return null;
   const max  = Math.max(...data, 1);
   const barW = Math.max(2, (width - (data.length - 1) * 4) / data.length);
+  const n = data.length;
+  // Un label ~toutes les 60px pour rester lisible.
+  const labelEvery = Math.max(1, Math.ceil((n * (barW + 4)) / (width / 6)));
+  const labelFor = (i: number): string => {
+    if (i % labelEvery !== 0 && i !== n - 1) return "";
+    const d = dates?.[i] ? new Date(dates[i]) : null;
+    if (!d || isNaN(d.getTime())) {
+      return granularity === "day" && n === 7 ? (DAYS_SHORT[i % 7] ?? "") : String(i + 1);
+    }
+    return granularity === "month" ? (MONTHS_SHORT[d.getMonth()] ?? "") : String(d.getDate());
+  };
   return (
     <View>
       <Svg width={width} height={height}>
@@ -108,9 +121,7 @@ function BarChart({
       </Svg>
       <View style={{ flexDirection: "row", paddingTop: 4, paddingBottom: 8 }}>
         {data.map((_, i) => {
-          const label = isWeek
-            ? (DAYS_SHORT[i % 7] ?? String(i + 1))
-            : (data.length <= 31 ? String(i + 1) : "");
+          const label = labelFor(i);
           return (
             <View
               key={i}
@@ -262,7 +273,9 @@ export default function AdminAnalyticsScreen() {
   const a = analytics?.data as AdminAnalytics | undefined;
   const revenuePoints  = useMemo(() => (revenueData?.data  ?? []).map((r) => Number(r.revenue)),   [revenueData]);
   const usersPoints    = useMemo(() => (usersData?.data    ?? []).map((r) => Number(r.new_users)), [usersData]);
+  const usersDates     = useMemo(() => (usersData?.data    ?? []).map((r) => r.period),            [usersData]);
   const bookingsPoints = useMemo(() => (bookingsData?.data ?? []).map((r) => Number(r.total)),     [bookingsData]);
+  const granularity: "day" | "month" = period === "week" || period === "month" ? "day" : "month";
 
   const growth = a?.revenue?.growth;
 
@@ -275,9 +288,10 @@ export default function AdminAnalyticsScreen() {
   });
 
   const PERIOD_OPTS: { value: Period; label: string }[] = [
-    { value: "week",  label: "7 jours" },
-    { value: "month", label: "30 jours" },
+    { value: "week",  label: "7 j" },
+    { value: "month", label: "30 j" },
     { value: "year",  label: "1 an" },
+    { value: "all",   label: "Tout" },
   ];
 
   const CHART_STYLE = {
@@ -471,7 +485,8 @@ export default function AdminAnalyticsScreen() {
             color={Colors.pro}
             width={chartWidth}
             height={80}
-            isWeek={period === "week"}
+            dates={usersDates}
+            granularity={granularity}
           />
         ) : (
           <View style={{ height: 96, alignItems: "center", justifyContent: "center" }}>
@@ -502,56 +517,6 @@ export default function AdminAnalyticsScreen() {
         )}
       </View>
 
-      {/* ── Bookings Breakdown ── */}
-      {a && (
-        <View style={CHART_STYLE}>
-          <ChartHeader
-            symbol="chart.pie.fill"
-            androidIcon="pie-chart-outline"
-            title="Répartition des statuts"
-            color={Colors.warning}
-            badge={`${Number(a.bookings.total)} total`}
-          />
-          <Text style={{ fontSize: 11, color: TEXT3, marginTop: -8, marginBottom: 14 }}>
-            Toutes périodes confondues — ne suit pas le sélecteur ci-dessus
-          </Text>
-          {[
-            { label: "Confirmées", value: a.bookings.confirmed, color: Colors.info },
-            { label: "Terminées",  value: a.bookings.completed, color: Colors.success },
-            { label: "En attente", value: a.bookings.pending,   color: Colors.warning },
-            { label: "Annulées",   value: a.bookings.cancelled, color: ADMIN.danger },
-          ].map(({ label, value, color }) => {
-            const pct = a.bookings.total > 0
-              ? (Number(value) / Number(a.bookings.total)) * 100
-              : 0;
-            return (
-              <View key={label} style={{ marginBottom: 14 }}>
-                <View style={{
-                  flexDirection: "row", justifyContent: "space-between",
-                  alignItems: "center", marginBottom: 6,
-                }}>
-                  <Text style={{ fontSize: 13, color: TEXT1, fontWeight: "500" }}>{label}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 13, color, fontWeight: "700" }}>
-                      {formatNumberFR(value)}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: TEXT2 }}>
-                      {formatPercentFR(pct)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={{
-                  height: 6, borderRadius: 3,
-                  backgroundColor: ADMIN.surfaceHover,
-                  overflow: "hidden",
-                }}>
-                  <View style={{ height: "100%", width: `${pct}%`, borderRadius: 3, backgroundColor: color }} />
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
     </ScrollView>
   );
 }

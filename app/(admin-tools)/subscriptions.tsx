@@ -212,7 +212,10 @@ export default function AdminSubscriptionsScreen() {
             <Kpi label="Abonnés actifs" value={formatNumberFR(summary.activeCount)} />
           </View>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
-            <Kpi label="Payants / offerts" value={`${summary.activeStore} / ${summary.activeFree}`} />
+            <Kpi
+              label="Revenu / abonné"
+              value={summary.activeCount > 0 ? formatEUR(summary.mrr / summary.activeCount) : "—"}
+            />
             <Kpi label="Annualisé (ARR)" value={formatEUR(summary.arr)} />
           </View>
 
