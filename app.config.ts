@@ -266,12 +266,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(USE_STOREKIT_CONFIG ? [withStoreKitConfig] : []),
     "@bacons/apple-targets",
     "expo-localization",
-    // Pas le plugin "@sentry/react-native" ici : il injecte une phase de
-    // build Xcode qui tente d'uploader les dSYM/sourcemaps et échoue tout
-    // le build (local ET EAS) tant que SENTRY_ORG/SENTRY_PROJECT/
-    // SENTRY_AUTH_TOKEN ne sont pas configurés. Sentry.init() (app/_layout.tsx)
-    // suffit pour le crash reporting — l'upload de symboles est une
-    // amélioration à activer plus tard, une fois les secrets en place.
+    // Upload des dSYM iOS + source maps Hermes vers Sentry pendant le build,
+    // pour que les stack traces des crashs prod soient symbolisées (sinon =
+    // adresses mémoire illisibles). org/project non secrets (codés en dur) ;
+    // le token vient de la variable d'env SENTRY_AUTH_TOKEN (secret EAS,
+    // environnements production + preview). En build local sans le token la
+    // phase se contente d'un warning et n'échoue pas ; SENTRY_DISABLE_AUTO_UPLOAD=true
+    // la coupe explicitement au besoin. `url` = région EU du projet (DSN .de.).
+    [
+      "@sentry/react-native/expo",
+      {
+        organization: "blyss",
+        project: "blyss-backend",
+        url: "https://de.sentry.io/",
+      },
+    ],
   ] as ExpoConfig["plugins"],
 
   updates: {
