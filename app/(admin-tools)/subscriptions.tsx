@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, FlatList, ActivityIndicator, RefreshControl, Image,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -13,6 +13,9 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { safeBack } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { formatEUR, formatNumberFR } from "@/lib/format";
+import { useActionSheet } from "@/components/ui/ActionSheet";
+import { useToast } from "@/components/ui/Toast";
+import { GrantSubscriptionModal } from "@/components/admin/GrantSubscriptionModal";
 
 const BG = ADMIN.bg;
 const CARD = ADMIN.surface;
@@ -63,11 +66,12 @@ function Kpi({ label, value, hero }: { label: string; value: string; hero?: bool
   );
 }
 
-function SubCard({ item }: { item: AdminSubscriptionItem }) {
+function SubCard({ item, onLongPress }: { item: AdminSubscriptionItem; onLongPress: (s: AdminSubscriptionItem) => void }) {
   const active = item.status === "active";
   const price = item.billingType === "monthly" ? item.monthlyPrice : item.totalPrice ?? item.monthlyPrice * 12;
   return (
-    <View
+    <AnimatedPressable
+      onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onLongPress(item); }}
       style={{
         backgroundColor: CARD, borderRadius: 12, borderWidth: 1,
         borderColor: active ? withAlpha(Colors.success, 0.28) : BORDER,
@@ -112,22 +116,57 @@ function SubCard({ item }: { item: AdminSubscriptionItem }) {
           </Text>
         </View>
       </View>
-    </View>
+    </AnimatedPressable>
   );
 }
 
 export default function AdminSubscriptionsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const qc = useQueryClient();
+  const showActionSheet = useActionSheet();
+  const { showToast } = useToast();
   const [status, setStatus] = useState<StatusFilter>("active");
   const [plan, setPlan] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showGrant, setShowGrant] = useState(false);
 
   const { data, isLoading, refetch, isError } = useQuery({
     queryKey: ["admin-subscriptions", status, plan],
     queryFn: () => adminApi.getSubscriptions({ status, plan: plan ?? undefined }),
     staleTime: 30_000,
   });
+
+  const cancelMut = useMutation({
+    mutationFn: (proId: number) => adminApi.cancelSubscription(proId),
+    onSuccess: (r) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      showToast(
+        r.data?.wasStoreSub
+          ? "Accès coupé. ⚠️ La facturation App Store continue tant que la pro n'annule pas côté Apple."
+          : "Abonnement résilié.",
+        "success",
+      );
+      qc.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+    },
+    onError: () => showToast("Résiliation impossible.", "error"),
+  });
+
+  const onCardLongPress = useCallback((s: AdminSubscriptionItem) => {
+    if (s.status !== "active") return;
+    showActionSheet(
+      {
+        title: s.proName,
+        message: s.source === "store"
+          ? "Abo App Store — la résiliation ne coupe que l'accès Blyss, pas la facturation Apple."
+          : undefined,
+        options: ["Annuler", "Résilier l'abonnement"],
+        destructiveButtonIndex: 1,
+        cancelButtonIndex: 0,
+      },
+      (i) => { if (i === 1) cancelMut.mutate(s.proId); },
+    );
+  }, [showActionSheet, cancelMut]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -152,7 +191,16 @@ export default function AdminSubscriptionsScreen() {
         <Ionicons name="chevron-back" size={18} color={ADMIN.accent} />
         <Text style={{ ...ADMIN.type.label, fontSize: 12, color: ADMIN.accent }}>Retour</Text>
       </AnimatedPressable>
-      <Text style={{ ...ADMIN.type.display, fontSize: 30, color: TEXT1, marginBottom: 14 }}>Abonnements</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <Text style={{ ...ADMIN.type.display, fontSize: 30, color: TEXT1 }}>Abonnements</Text>
+        <AnimatedPressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowGrant(true); }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 3, backgroundColor: ADMIN.accentBg, borderWidth: 1, borderColor: ADMIN.accentBorder }}
+        >
+          <Ionicons name="gift-outline" size={14} color={ADMIN.accent} />
+          <Text style={{ ...ADMIN.type.label, fontSize: 10, color: ADMIN.accent }}>Offrir</Text>
+        </AnimatedPressable>
+      </View>
 
       {summary && (
         <>
@@ -246,7 +294,7 @@ export default function AdminSubscriptionsScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN.accent} />}
           ListHeaderComponent={header}
-          renderItem={({ item }) => <SubCard item={item} />}
+          renderItem={({ item }) => <SubCard item={item} onLongPress={onCardLongPress} />}
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingVertical: 60 }}>
               <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
@@ -262,6 +310,13 @@ export default function AdminSubscriptionsScreen() {
               )}
             </View>
           }
+        />
+      )}
+
+      {showGrant && (
+        <GrantSubscriptionModal
+          onClose={() => setShowGrant(false)}
+          onGranted={() => { setShowGrant(false); qc.invalidateQueries({ queryKey: ["admin-subscriptions"] }); }}
         />
       )}
     </View>

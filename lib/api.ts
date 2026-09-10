@@ -1493,6 +1493,8 @@ export const adminApi = {
     apiCall(`/api/admin/users/${id}`, { method: "DELETE" }),
   grantSubscription: (id: number, data: { plan: string; months: number }): Promise<ApiResponse<{ id: number; plan: string; months: number; end_date: string }>> =>
     apiCall(`/api/admin/users/${id}/grant-subscription`, { method: "POST", body: JSON.stringify(data) }),
+  cancelSubscription: (proId: number): Promise<ApiResponse<{ subscriptionId: number; wasStoreSub: boolean }>> =>
+    apiCall(`/api/admin/users/${proId}/cancel-subscription`, { method: "POST" }),
 
   // Bookings
   getBookings: (params?: { page?: number; limit?: number; status?: string; date?: string; user_id?: number }): Promise<ApiResponse<AdminBooking[]> & { meta?: AdminMeta }> => {
