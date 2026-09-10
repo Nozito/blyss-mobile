@@ -258,7 +258,7 @@ export default function SubscriptionScreen() {
                       <Text style={{ fontSize: 14, fontWeight: "400", color: colors.mutedForeground }}>/an</Text>
                     </Text>
                     <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 4 }}>
-                      soit {currentPlanPkg.annualMonthlyPrice.toFixed(2)} €/mois
+                      soit {currentPlanPkg.annualPricePerMonthString}/mois
                     </Text>
                   </>
                 ) : (
@@ -394,11 +394,15 @@ export default function SubscriptionScreen() {
                 // réellement facturé (cf. obligations d'affichage du prix total en France).
                 const annualTotalValue = rcPkg?.annualTotal ?? config.fallbackAnnualTotal;
 
+                // Chaînes formatées par le store (devise incluse) — jamais de
+                // symbole en dur : le compte App Store peut être en $, £, etc.
                 const displayStr = isAnnual
-                  ? `${(annualTotalValue / 12).toFixed(2)} €`
+                  ? (rcPkg?.annualPricePerMonthString ?? `${(annualTotalValue / 12).toFixed(2)} €`)
                   : (rcPkg?.priceString ?? `${config.fallbackMonthly.toFixed(2)} €`);
 
-                const annualTotal = isAnnual ? annualTotalValue.toFixed(2) : null;
+                const annualTotalStr = isAnnual
+                  ? (rcPkg?.annualPriceString ?? `${annualTotalValue.toFixed(2)} €`)
+                  : null;
 
                 const planSavings = savingsPercent(
                   rcPkg?.monthlyPrice ?? config.fallbackMonthly,
@@ -439,7 +443,7 @@ export default function SubscriptionScreen() {
                           </View>
                           <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
                             <Text style={{ fontSize: 28, fontWeight: "800", color: config.color }}>
-                              {isAnnual ? `${annualTotal} €` : displayStr}
+                              {isAnnual ? annualTotalStr : displayStr}
                             </Text>
                             <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{isAnnual ? "/an" : "/mois"}</Text>
                           </View>
