@@ -291,6 +291,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     appDescription:
       "La plateforme tout-en-un pour gérer ton salon de nail art comme une pro",
     brandColor: "#FE5D9D",
-    apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "https://api.blyssapp.fr",
+    apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "https://app.blyssapp.fr",
   },
 });
