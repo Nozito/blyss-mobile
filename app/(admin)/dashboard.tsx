@@ -250,6 +250,7 @@ export default function AdminDashboard() {
             { label: "Analytics", icon: "stats-chart-outline"   as const, badge: 0,             onPress: () => router.push("/(admin-tools)/analytics") },
             { label: "Avis",      icon: "star-outline"           as const, badge: flaggedReviews, onPress: () => router.push("/(admin-tools)/reviews") },
             { label: "Messages",  icon: "chatbubbles-outline"    as const, badge: flaggedThreads, onPress: () => router.push("/(admin-tools)/messages") },
+            { label: "Abonnements", icon: "card-outline"         as const, badge: 0,             onPress: () => router.push("/(admin-tools)/subscriptions") },
             { label: "Coupons",   icon: "pricetag-outline"       as const, badge: 0,             onPress: () => router.push("/(admin-tools)/coupons") },
             { label: "Notifier",  icon: "notifications-outline"  as const, badge: 0,             onPress: () => router.push("/(admin-tools)/notifications") },
             { label: "Journal",   icon: "receipt-outline"        as const, badge: 0,             onPress: () => router.push("/(admin-tools)/logs") },

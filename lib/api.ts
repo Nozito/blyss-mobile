@@ -1414,6 +1414,42 @@ export interface AdminCoupon {
   created_at: string;
 }
 
+export interface AdminSubscriptionItem {
+  id: number;
+  proId: number;
+  proName: string;
+  email: string;
+  city: string | null;
+  profilePhoto: string | null;
+  proStatus: string;
+  plan: "start" | "serenite" | "signature";
+  billingType: "monthly" | "one_time";
+  monthlyPrice: number;
+  totalPrice: number | null;
+  status: "active" | "cancelled" | "pending";
+  startDate: string | null;
+  endDate: string | null;
+  source: "store" | "granted" | "internal" | "seed" | "other";
+  isGranted: boolean;
+  createdAt: string;
+}
+
+export interface AdminSubscriptionsResponse {
+  summary: {
+    activeCount: number;
+    activeStore: number;
+    activeFree: number;
+    mrr: number;
+    arr: number;
+    byPlan: { start: number; serenite: number; signature: number };
+    newThisMonth: number;
+    cancelledThisMonth: number;
+    expiring7d: number;
+  };
+  items: AdminSubscriptionItem[];
+  meta: { page: number; limit: number; total: number };
+}
+
 export interface AdminAnalytics {
   revenue: {
     total_revenue: number;
@@ -1504,6 +1540,14 @@ export const adminApi = {
   // Notifications
   sendPush: (data: { target: "user_id" | "all" | "pros" | "clients"; user_id?: number; title: string; body: string }): Promise<ApiResponse<{ sent: number }>> =>
     apiCall("/api/admin/notifications/send", { method: "POST", body: JSON.stringify(data) }),
+
+  // Abonnements
+  getSubscriptions: (params?: { status?: "active" | "cancelled" | "all"; plan?: string }): Promise<ApiResponse<AdminSubscriptionsResponse>> => {
+    const q = new URLSearchParams({ limit: "100" });
+    if (params?.status) q.set("status", params.status);
+    if (params?.plan) q.set("plan", params.plan);
+    return apiCall(`/api/admin/subscriptions?${q}`);
+  },
 
   // Analytics
   getAnalytics: (): Promise<ApiResponse<AdminAnalytics>> => apiCall("/api/admin/analytics"),
