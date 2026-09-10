@@ -177,7 +177,7 @@ export default function AdminMoreScreen() {
             <Ionicons name="chevron-forward" size={15} color={ACCENT} />
           </AnimatedPressable>
 
-          {/* Les outils (Analytics, Avis, Messages, Coupons, Notifier, Journal)
+          {/* Les outils (Analytics, Avis, Messages, Abonnements, Notifier, Journal)
               vivent sur le dashboard — section « Piloter » — pour éviter le
               doublon de navigation. */}
 
