@@ -105,6 +105,9 @@ function SubCard({ item, onLongPress }: { item: AdminSubscriptionItem; onLongPre
             {item.billingType === "monthly" ? "/mois" : "/an"}
           </Text>
         </Text>
+        {item.priceSource === "catalog" && (
+          <Text style={{ fontSize: 9, color: TEXT2 }}>tarif catalogue</Text>
+        )}
         <View
           style={{
             paddingHorizontal: 8, paddingVertical: 3, borderRadius: 3,
