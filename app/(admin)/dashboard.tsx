@@ -136,7 +136,7 @@ export default function AdminDashboard() {
     if (s && s.subMrr > 0) {
       return {
         label: "Revenu mensuel · abonnements",
-        value: formatNumberFR(s.subMrr),
+        value: formatEUR(s.subMrr),
         change: s.subsChange,
         stats: [
           { k: "Abos actifs", v: formatNumberFR(s.subsActive) },
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
     }
     return {
       label: "Encaissé dans l'app · ce mois",
-      value: formatNumberFR(s?.monthRevenue ?? 0),
+      value: formatEUR(s?.monthRevenue ?? 0),
       change: s?.revenueChange ?? null,
       stats: [
         { k: "Utilisateurs", v: formatNumberFR(s?.totalUsers ?? 0) },
@@ -199,9 +199,8 @@ export default function AdminDashboard() {
           )}
         </View>
 
-        <Text style={{ ...ADMIN.type.hero, fontSize: 56, lineHeight: 54, color: ADMIN.accentInk, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>
+        <Text style={{ ...ADMIN.type.hero, fontSize: 52, lineHeight: 50, color: ADMIN.accentInk, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>
           {heroMetric.value}
-          <Text style={{ fontSize: 20 }}> €</Text>
         </Text>
 
         <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginTop: ADMIN.space.lg }}>

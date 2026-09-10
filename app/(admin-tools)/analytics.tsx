@@ -342,9 +342,8 @@ export default function AdminAnalyticsScreen() {
             )}
           </View>
 
-          <Text style={{ ...ADMIN.type.hero, fontSize: 46, lineHeight: 44, color: ADMIN.accentInk, marginBottom: 16 }} numberOfLines={1} adjustsFontSizeToFit>
-            {formatNumberFR(a.revenue.total_revenue)}
-            <Text style={{ fontSize: 18 }}> €</Text>
+          <Text style={{ ...ADMIN.type.hero, fontSize: 42, lineHeight: 42, color: ADMIN.accentInk, marginBottom: 16 }} numberOfLines={1} adjustsFontSizeToFit>
+            {formatEUR(a.revenue.total_revenue)}
           </Text>
 
           <View style={{ flexDirection: "row", gap: ADMIN.space.xl, marginBottom: 16 }}>

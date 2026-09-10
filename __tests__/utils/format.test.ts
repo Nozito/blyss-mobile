@@ -25,13 +25,18 @@ describe("formatNumberFR", () => {
 });
 
 describe("formatEUR", () => {
-  it("formate un montant à l'euro par défaut", () => {
-    expect(formatEUR(3470)).toBe(`3${NBSP}470${NBSP}€`);
-    expect(formatEUR(0)).toBe(`0${NBSP}€`);
+  it("deux décimales par défaut — chiffres financiers, jamais arrondis", () => {
+    expect(formatEUR(3470)).toBe(`3${NBSP}470,00${NBSP}€`);
+    expect(formatEUR(49.99)).toBe(`49,99${NBSP}€`);
+    expect(formatEUR(133.33)).toBe(`133,33${NBSP}€`);
+    expect(formatEUR(0)).toBe(`0,00${NBSP}€`);
   });
-  it("force deux décimales avec cents:true", () => {
-    expect(formatEUR(12345678.9, { cents: true })).toBe(`12${NBSP}345${NBSP}678,90${NBSP}€`);
-    expect(formatEUR(1234.5, { cents: true })).toBe(`1${NBSP}234,50${NBSP}€`);
+  it("cents:false pour l'arrondi à l'euro (affichage compact)", () => {
+    expect(formatEUR(3470.4, { cents: false })).toBe(`3${NBSP}470${NBSP}€`);
+  });
+  it("gros montant groupé", () => {
+    expect(formatEUR(12345678.9)).toBe(`12${NBSP}345${NBSP}678,90${NBSP}€`);
+    expect(formatEUR(1234.5)).toBe(`1${NBSP}234,50${NBSP}€`);
   });
   it("renvoie — si absent", () => {
     expect(formatEUR(null)).toBe("—");
