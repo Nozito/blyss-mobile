@@ -80,7 +80,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.29.6",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
@@ -95,7 +95,21 @@
   "private": true,
   "overrides": {
     "keyv": "4.5.4",
+    "shell-quote": "1.10.0",
+    "brace-expansion@1": "1.1.18",
+    "brace-expansion@2": "2.1.4",
+    "nanoid@3": "3.3.19",
+    "ws@7": "7.5.13",
+    "ws@8": "8.21.3",
+    "form-data@4": "4.0.6",
+    "js-yaml@3": "3.15.2",
+    "js-yaml@4": "4.3.2",
+    "fast-uri": "3.1.7",
+    "undici@6": "6.28.1",
+    "browserslist": "4.28.9",
+    "baseline-browser-mapping": "2.11.22",
     "postcss": "^8.5.28",
+    "postcss-selector-parser@6": "6.1.4",
     "xcode": {
       "uuid": "^11.1.1"
     },
@@ -104,6 +118,8 @@
       "@expo/plist": {
         "@xmldom/xmldom": "0.8.15"
       }
-    }
+    },
+    "tar": "^7.5.22",
+    "@xmldom/xmldom@0.9": "0.9.12"
   }
 }
