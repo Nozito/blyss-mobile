@@ -12,13 +12,29 @@ export type RCPlan = "start" | "serenite" | "signature";
 export type RCPackage = {
   key: RCPlan;
   rcPackage: PurchasesPackage;
+  /** ISO 4217 du store (dépend de la région du compte App Store). */
+  currencyCode: string;
   monthlyPrice: number;
+  /** Prix mensuel formaté par le store (devise incluse). */
   priceString: string;
   annualMonthlyPrice: number;
   annualTotal: number;
+  /** Total annuel formaté par le store. */
   annualPriceString: string;
+  /** Total annuel ÷ 12, formaté dans la devise du store. */
+  annualPricePerMonthString: string;
   annualRcPackage?: PurchasesPackage;
 };
+
+// Formate un montant dans la devise du store. Utilisé uniquement en repli
+// quand le SDK ne fournit pas de chaîne toute faite — jamais de symbole en dur.
+function formatMoney(amount: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: currencyCode }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currencyCode}`;
+  }
+}
 
 interface RevenueCatContextType {
   isReady: boolean;
@@ -125,17 +141,21 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
           const built: RCPackage[] = (["start", "serenite", "signature"] as RCPlan[]).flatMap((key) => {
             const mp = monthly[key];
             if (!mp) return [];
+            const currencyCode = mp.product.currencyCode || "EUR";
             const monthlyPrice = mp.product.price;
             const ap = annual[key];
             const annualTotal = ap?.product.price ?? monthlyPrice * 10;
             return [{
               key,
               rcPackage: mp,
+              currencyCode,
               monthlyPrice,
               priceString: mp.product.priceString,
               annualMonthlyPrice: annualTotal / 12,
               annualTotal,
-              annualPriceString: ap?.product.priceString ?? `${(annualTotal / 12).toFixed(2)} €`,
+              annualPriceString: ap?.product.priceString ?? formatMoney(annualTotal, currencyCode),
+              annualPricePerMonthString:
+                ap?.product.pricePerMonthString ?? formatMoney(annualTotal / 12, currencyCode),
               annualRcPackage: ap,
             }];
           });
