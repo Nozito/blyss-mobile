@@ -94,6 +94,16 @@
   },
   "private": true,
   "overrides": {
-    "keyv": "4.5.4"
+    "keyv": "4.5.4",
+    "postcss": "^8.5.28",
+    "xcode": {
+      "uuid": "^11.1.1"
+    },
+    "@bacons/xcode": {
+      "uuid": "^11.1.1",
+      "@expo/plist": {
+        "@xmldom/xmldom": "0.8.15"
+      }
+    }
   }
 }
