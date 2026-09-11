@@ -21,6 +21,8 @@ type Service = {
   price: number;
   duration_minutes: number;
   active?: boolean;
+  buffer_before_minutes?: number;
+  buffer_after_minutes?: number;
 };
 
 function formatDuration(minutes: number): string {
@@ -84,6 +86,16 @@ const ServiceRow = memo(function ServiceRow({
                 {formatDuration(item.duration_minutes)}
               </Text>
             </View>
+            {!!(item.buffer_before_minutes || item.buffer_after_minutes) && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="contract-outline" size={13} color={colors.mutedForeground} />
+                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
+                  {item.buffer_before_minutes ? `${item.buffer_before_minutes}min avant` : ""}
+                  {item.buffer_before_minutes && item.buffer_after_minutes ? " · " : ""}
+                  {item.buffer_after_minutes ? `${item.buffer_after_minutes}min après` : ""}
+                </Text>
+              </View>
+            )}
           </View>
           {item.description ? (
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4 }} numberOfLines={1}>
