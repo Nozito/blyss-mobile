@@ -86,17 +86,17 @@ const ServiceRow = memo(function ServiceRow({
                 {formatDuration(item.duration_minutes)}
               </Text>
             </View>
-            {!!(item.buffer_before_minutes || item.buffer_after_minutes) && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Ionicons name="contract-outline" size={13} color={colors.mutedForeground} />
-                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
-                  {item.buffer_before_minutes ? `${item.buffer_before_minutes}min avant` : ""}
-                  {item.buffer_before_minutes && item.buffer_after_minutes ? " · " : ""}
-                  {item.buffer_after_minutes ? `${item.buffer_after_minutes}min après` : ""}
-                </Text>
-              </View>
-            )}
           </View>
+          {!!(item.buffer_before_minutes || item.buffer_after_minutes) && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
+              <Ionicons name="contract-outline" size={13} color={colors.mutedForeground} />
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }} numberOfLines={1}>
+                {item.buffer_before_minutes ? `${item.buffer_before_minutes}min avant` : ""}
+                {item.buffer_before_minutes && item.buffer_after_minutes ? " · " : ""}
+                {item.buffer_after_minutes ? `${item.buffer_after_minutes}min après` : ""}
+              </Text>
+            </View>
+          )}
           {item.description ? (
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4 }} numberOfLines={1}>
               {item.description}
