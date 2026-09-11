@@ -72,8 +72,13 @@ export default function ServiceFormScreen() {
   const [bufferBefore, setBufferBefore] = useState(0);
   const [bufferAfter, setBufferAfter] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
+  // Tant que la prestation existante n'est pas chargée (édition), le formulaire
+  // reste masqué : sinon un utilisateur rapide peut modifier un champ (ex: le
+  // buffer) juste avant que le fetch ne réponde, et le useEffect ci-dessous
+  // écrase silencieusement sa saisie avec les valeurs serveur au chargement.
+  const [ready, setReady] = useState(!isEdit);
 
-  const { data: servicesData } = useQuery({
+  const { data: servicesData, isLoading: isLoadingExisting } = useQuery({
     queryKey: ["pro-services"],
     queryFn: () => proApi.getServices(),
     enabled: isEdit,
@@ -95,18 +100,22 @@ export default function ServiceFormScreen() {
   });
 
   useEffect(() => {
-    if (!existing || initialized.current) return;
+    if (initialized.current) return;
+    if (isLoadingExisting) return;
     initialized.current = true;
-    reset({
-      name: existing.name,
-      description: existing.description ?? "",
-      price: String(existing.price),
-      duration_minutes: String(existing.duration_minutes),
-    });
-    setIsActive(existing.active !== false);
-    setBufferBefore(existing.buffer_before_minutes ?? 0);
-    setBufferAfter(existing.buffer_after_minutes ?? 0);
-  }, [existing, reset]);
+    if (existing) {
+      reset({
+        name: existing.name,
+        description: existing.description ?? "",
+        price: String(existing.price),
+        duration_minutes: String(existing.duration_minutes),
+      });
+      setIsActive(existing.active !== false);
+      setBufferBefore(existing.buffer_before_minutes ?? 0);
+      setBufferAfter(existing.buffer_after_minutes ?? 0);
+    }
+    setReady(true);
+  }, [existing, isLoadingExisting, reset]);
 
   const createMutation = useMutation({
     // apiCall() ne rejette jamais sa promesse (voir lib/api.ts) — sans ce throw,
@@ -168,6 +177,14 @@ export default function ServiceFormScreen() {
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
   const durationValue = watch("duration_minutes");
+
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
