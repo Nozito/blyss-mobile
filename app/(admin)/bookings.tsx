@@ -13,7 +13,7 @@ import { useActionSheet } from "@/components/ui/ActionSheet";
 import { adminApi, AdminBooking, AdminUser } from "@/lib/api";
 import { Colors } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { AdminIcon } from "@/components/admin/AdminIcon";
@@ -204,7 +204,7 @@ function BookingDetailSheet({
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }} onPress={onClose} />
+        <Pressable style={{ ...StyleSheet.absoluteFill, backgroundColor: ADMIN.overlay }} onPress={onClose} />
         <View style={{ backgroundColor: ADMIN.surface, borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius, maxHeight: "92%" }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: ADMIN.sheetHandle, alignSelf: "center", marginTop: ADMIN.space.md }} />
           <ScrollView contentContainerStyle={{ paddingBottom: ADMIN.space.xxl }} showsVerticalScrollIndicator={false}>

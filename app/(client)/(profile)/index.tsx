@@ -168,7 +168,7 @@ export default function ProfileScreen() {
               )}
               {(uploading || deleting) && (
                 <View style={{
-                  ...StyleSheet.absoluteFillObject,
+                  ...StyleSheet.absoluteFill,
                   backgroundColor: colors.overlayDark,
                   alignItems: "center", justifyContent: "center",
                 }}>

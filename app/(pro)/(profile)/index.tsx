@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, StyleSheet, Animated, Modal as RNModal, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import * as ImagePicker from "expo-image-picker";
@@ -230,7 +230,7 @@ export default function ProProfileScreen() {
                 )}
                 {uploading && (
                   <View style={{
-                    ...StyleSheet.absoluteFillObject,
+                    ...StyleSheet.absoluteFill,
                     backgroundColor: colors.overlayDark,
                     alignItems: "center", justifyContent: "center",
                   }}>

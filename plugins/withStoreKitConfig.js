@@ -1,7 +1,7 @@
-const { withDangerousMod, withXcodeProject } = require("@expo/config-plugins");
-const {
-  addResourceFileToGroup,
-} = require("@expo/config-plugins/build/ios/utils/Xcodeproj");
+// SDK 54+ : @expo/config-plugins n'est plus hissé en node_modules racine —
+// passer par le ré-export stable `expo/config-plugins` (chemin public).
+const { withDangerousMod, withXcodeProject, IOSConfig } = require("expo/config-plugins");
+const { addResourceFileToGroup } = IOSConfig.XcodeUtils;
 const fs = require("fs");
 const path = require("path");
 

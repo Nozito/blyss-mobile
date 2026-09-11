@@ -13,7 +13,7 @@ import * as Application from "expo-application";
 import { adminApi } from "@/lib/api";
 import { withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { EditProfileSheet } from "@/components/admin/EditProfileSheet";
 import { switchRole } from "@/lib/roleSwitch";

@@ -1,6 +1,9 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { NativeTabs, Icon, Label, VectorIcon } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+
+// SDK 57 : Icon / Label / VectorIcon vivent sous NativeTabs.Trigger.
+const { Icon, Label, VectorIcon } = NativeTabs.Trigger;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";

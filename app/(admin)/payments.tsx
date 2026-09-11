@@ -12,7 +12,7 @@ import * as Sharing from "expo-sharing";
 import { adminApi, AdminPayment } from "@/lib/api";
 import { Colors, withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";

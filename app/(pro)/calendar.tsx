@@ -16,7 +16,7 @@ import {
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { proApi, nailTechApi, type AvailabilitySlot } from "@/lib/api";

@@ -1,6 +1,10 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { NativeTabs, Icon, Badge, VectorIcon } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+
+// SDK 57 : Icon / Label / Badge / VectorIcon ne sont plus des exports racine —
+// ils vivent sous NativeTabs.Trigger.
+const { Icon, Badge, VectorIcon } = NativeTabs.Trigger;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -48,28 +52,28 @@ export default function ProLayout() {
       minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >
-      <NativeTabs.Trigger name="dashboard" options={{ title: "" }}>
+      <NativeTabs.Trigger name="dashboard">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="grid-outline" />,
           selected: <VectorIcon family={Ionicons} name="grid" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="calendar" options={{ title: "" }}>
+      <NativeTabs.Trigger name="calendar">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="calendar-outline" />,
           selected: <VectorIcon family={Ionicons} name="calendar" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(clients)" options={{ title: "" }}>
+      <NativeTabs.Trigger name="(clients)">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="people-outline" />,
           selected: <VectorIcon family={Ionicons} name="people" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="notifications" options={{ title: "" }}>
+      <NativeTabs.Trigger name="notifications">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="notifications-outline" />,
           selected: <VectorIcon family={Ionicons} name="notifications" />,
@@ -77,7 +81,7 @@ export default function ProLayout() {
         <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(profile)" options={{ title: "" }}>
+      <NativeTabs.Trigger name="(profile)">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="person-outline" />,
           selected: <VectorIcon family={Ionicons} name="person" />,

@@ -288,7 +288,7 @@ export default ENV.SENTRY_DSN ? Sentry.wrap(RootLayout) : RootLayout;
 
 const styles = StyleSheet.create({
   splash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 999,
   },
 });

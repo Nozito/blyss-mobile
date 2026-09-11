@@ -1,6 +1,9 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { NativeTabs, Icon, VectorIcon } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+
+// SDK 57 : Icon / VectorIcon vivent sous NativeTabs.Trigger.
+const { Icon, VectorIcon } = NativeTabs.Trigger;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -20,35 +23,35 @@ export default function ClientLayout() {
       minimizeBehavior="never"
       labelVisibilityMode="unlabeled"
     >
-      <NativeTabs.Trigger name="index" options={{ title: "" }}>
+      <NativeTabs.Trigger name="index">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="home-outline" />,
           selected: <VectorIcon family={Ionicons} name="home" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="bookings" options={{ title: "" }}>
+      <NativeTabs.Trigger name="bookings">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="calendar-outline" />,
           selected: <VectorIcon family={Ionicons} name="calendar" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="favorites" options={{ title: "" }}>
+      <NativeTabs.Trigger name="favorites">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="heart-outline" />,
           selected: <VectorIcon family={Ionicons} name="heart" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="notifications" options={{ title: "" }}>
+      <NativeTabs.Trigger name="notifications">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="notifications-outline" />,
           selected: <VectorIcon family={Ionicons} name="notifications" />,
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(profile)" options={{ title: "" }}>
+      <NativeTabs.Trigger name="(profile)">
         <Icon src={{
           default: <VectorIcon family={Ionicons} name="person-outline" />,
           selected: <VectorIcon family={Ionicons} name="person" />,

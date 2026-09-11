@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { stripePaymentsApi, specialistsApi, messagesApi, type AvailabilityResponse } from "@/lib/api";

@@ -1,4 +1,8 @@
-import type { Router } from "expo-router";
+import type { router } from "expo-router";
+
+// SDK 57 : `expo-router` n'exporte plus le type `Router` — on le dérive de
+// l'objet impératif `router`.
+type Router = typeof router;
 
 /**
  * Remplace router.back() partout — évite "GO_BACK not handled" quand il n'y a pas d'historique

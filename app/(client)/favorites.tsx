@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SpecialistCard, type Specialist } from "@/components/screens/client/specialists/SpecialistCard";
 
