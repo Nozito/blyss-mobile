@@ -115,8 +115,10 @@ describe('ServiceFormScreen', () => {
   });
 
   it('renders duration preset buttons', () => {
-    const { getByText } = renderServiceForm();
-    expect(getByText('30min')).toBeTruthy();
+    // "30min" est ambigu depuis l'ajout des chips de buffer (avant/après
+    // proposent aussi "30min") — getAllByText pour ce seul preset.
+    const { getByText, getAllByText } = renderServiceForm();
+    expect(getAllByText('30min').length).toBeGreaterThan(0);
     expect(getByText('45min')).toBeTruthy();
     expect(getByText('1h')).toBeTruthy();
     expect(getByText('1h30')).toBeTruthy();
