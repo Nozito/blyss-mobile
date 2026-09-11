@@ -38,6 +38,7 @@ export default function BookingConfirmationScreen() {
     durationMinutes?: string;
     proCity?: string;
     proId?: string;
+    paymentMethod?: "online" | "on_site";
   }>();
   const { showToast } = useToast();
   const [addingToCalendar, setAddingToCalendar] = useState(false);
@@ -127,7 +128,11 @@ export default function BookingConfirmationScreen() {
       icon: "pricetag-outline",
       label: "Prestation",
       value: params.serviceName,
-      trailing: params.amount ? { label: "Acompte", value: `${params.amount} €` } : undefined,
+      trailing: params.amount
+        ? { label: "Acompte", value: `${params.amount} €` }
+        : params.paymentMethod === "on_site"
+        ? { label: "Paiement", value: "Sur place" }
+        : undefined,
     });
   } else if (params.amount) {
     rows.push({ icon: "card-outline", label: "Acompte payé", value: `${params.amount} €` });

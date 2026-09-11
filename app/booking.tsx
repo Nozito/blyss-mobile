@@ -52,7 +52,7 @@ interface Pro {
   acceptance_conditions: ConditionItem[] | null;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 // Durée d'attente affichée (barre qui se remplit) entre le paiement Stripe
 // validé et l'écran de confirmation — cf. FillLoader.
 const PAYMENT_CONFIRM_DELAY_MS = 3000;
@@ -115,45 +115,6 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
         </View>
       ))}
     </View>
-  );
-}
-
-// ── SuccessCheckmark ─────────────────────────────────────────────────────────
-function SuccessCheckmark() {
-  const colors = useThemeColors();
-  const reduceMotion = useReducedMotion();
-  const scale = useRef(new Animated.Value(reduceMotion ? 1 : 0.4)).current;
-  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 10 }),
-      Animated.timing(opacity, { toValue: 1, duration: 260, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View
-      style={{
-        width: 96,
-        height: 96,
-        borderRadius: 48,
-        backgroundColor: colors.primary,
-        alignItems: "center",
-        justifyContent: "center",
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 8,
-        transform: [{ scale }],
-        opacity,
-      }}
-    >
-      <Ionicons name="checkmark" size={48} color={colors.white} />
-    </Animated.View>
   );
 }
 
@@ -403,9 +364,8 @@ export default function BookingScreen() {
   const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (step === 1) safeBack(router);
-    else if (step === 5 && paymentMethod === "on_site") setStep(3);
     else setStep((s) => s - 1);
-  }, [step, paymentMethod, router]);
+  }, [step, router]);
 
   const handleConfirmBooking = async () => {
     if (!selectedPrestation || !selectedDate || !selectedTime || !proId || !selectedPrestationData) {
@@ -462,7 +422,26 @@ export default function BookingScreen() {
       }
 
       if (paymentMethod === "on_site") {
-        setStep(5);
+        // Pas de paiement à traiter : la réservation est déjà confirmée
+        // côté serveur, on va direct à l'écran de confirmation partagé
+        // (pas de barre de chargement ici — rien à attendre).
+        const formattedDate = selectedDate?.toLocaleDateString("fr-FR", {
+          weekday: "short", day: "numeric", month: "long",
+        });
+        router.replace({
+          pathname: "/booking/confirmation",
+          params: {
+            specialistName: proName,
+            serviceName: selectedPrestationData.name,
+            date: formattedDate ?? "",
+            time: selectedTime ?? "",
+            paymentMethod: "on_site",
+            dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
+            durationMinutes: String(selectedPrestationData.duration_minutes),
+            proCity: pro?.city ?? "",
+            proId: String(proId),
+          },
+        } as Parameters<typeof router.replace>[0]);
         return;
       }
 
@@ -649,100 +628,6 @@ export default function BookingScreen() {
             }}
           />
         );
-      case 5:
-        return (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={{ alignItems: "center", paddingVertical: 48, gap: 24 }}>
-              <SuccessCheckmark />
-
-              <View style={{ alignItems: "center", gap: 6 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={{ fontSize: 26, fontWeight: "800", color: colors.foreground }}>
-                    Réservation confirmée
-                  </Text>
-                  <Ionicons name="sparkles" size={22} color={colors.primary} />
-                </View>
-                <Text style={{ fontSize: 14, color: colors.mutedForeground, textAlign: "center", maxWidth: 280, lineHeight: 20 }}>
-                  Tu recevras une confirmation et un rappel avant ton rendez‑vous
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: colors.white,
-                  borderRadius: 20,
-                  padding: 20,
-                  gap: 12,
-                  width: "100%",
-                  shadowColor: colors.black,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.08,
-                  shadowRadius: 12,
-                  elevation: 3,
-                }}
-              >
-                {[
-                  { label: "Spécialiste", value: proName },
-                  { label: "Prestation", value: selectedPrestationData?.name },
-                  {
-                    label: "Date",
-                    value: selectedDate?.toLocaleDateString("fr-FR", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "long",
-                    }),
-                  },
-                  { label: "Horaire", value: selectedTime ?? undefined },
-                  {
-                    label: "Paiement",
-                    value:
-                      paymentMethod === "on_site"
-                        ? "Sur place"
-                        : depositPercentage < 100
-                        ? `Acompte payé (${Number(depositAmount ?? 0).toFixed(2)}€)`
-                        : "Payé en ligne",
-                  },
-                ].map((row, i, arr) => (
-                  <React.Fragment key={row.label}>
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-                      <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{row.label}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: "500", color: colors.foreground }}>
-                        {row.value}
-                      </Text>
-                    </View>
-                    {i < arr.length - 1 && <View style={{ height: 1, backgroundColor: colors.border }} />}
-                  </React.Fragment>
-                ))}
-              </View>
-
-              <Pressable
-                onPress={() => router.replace("/(client)/bookings")}
-                style={{ width: "100%" }}
-              >
-                <LinearGradient
-                  colors={[colors.primary, `${colors.primary}E6`]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{
-                    height: 56,
-                    borderRadius: 16,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 4,
-                  }}
-                >
-                  <Text style={{ color: colors.white, fontWeight: "700", fontSize: 15 }}>
-                    Voir mes réservations
-                  </Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </ScrollView>
-        );
       default:
         return null;
     }
@@ -754,29 +639,27 @@ export default function BookingScreen() {
     <>
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
-        {step < 5 && (
-          <View style={{ paddingTop: 0, paddingBottom: 16 }}>
-            <AnimatedIconButton
-              onPress={handleBack}
-              accessibilityLabel="Retour"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                backgroundColor: colors.white,
-                borderWidth: 1,
-                borderColor: colors.border,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 16,
-              }}
-            >
-              <Ionicons name="chevron-back" size={20} color={colors.foreground} />
-            </AnimatedIconButton>
+        <View style={{ paddingTop: 0, paddingBottom: 16 }}>
+          <AnimatedIconButton
+            onPress={handleBack}
+            accessibilityLabel="Retour"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: colors.white,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.foreground} />
+          </AnimatedIconButton>
 
-            <StepIndicator current={step} total={TOTAL_STEPS} />
-          </View>
-        )}
+          <StepIndicator current={step} total={TOTAL_STEPS} />
+        </View>
 
         <View style={{ flex: 1 }}>{renderStep()}</View>
 
