@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Modal } from "@/components/ui/Modal";
-import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
+import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { DateField } from "@/components/ui/DateField";

@@ -61,13 +61,13 @@ export function LoadingButton({
         ]}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={variant === "ghost" ? colors.foreground : "#FFFFFF"} />
+          <ActivityIndicator size="small" color={variant === "ghost" ? colors.foreground : colors.onColor} />
         ) : (
           <Text
             style={{
               fontSize: 15,
               fontWeight: "700",
-              color: variant === "ghost" ? colors.foreground : "#FFFFFF",
+              color: variant === "ghost" ? colors.foreground : colors.onColor,
             }}
           >
             {label}

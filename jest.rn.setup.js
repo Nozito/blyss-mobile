@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 require('@testing-library/jest-native/extend-expect');
 
 // ── AsyncStorage ─────────────────────────────────────────────────────────────

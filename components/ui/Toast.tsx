@@ -67,7 +67,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <Ionicons
             name={toast.type === "success" ? "checkmark-circle" : "alert-circle"}
             size={20}
-            color="#FFFFFF"
+            color={colors.onColor}
           />
           <Text style={styles.message} numberOfLines={2}>
             {toast.message}
@@ -99,7 +99,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     },
     message: {
       flex: 1,
-      color: "#FFFFFF",
+      color: colors.onColor,
       fontSize: 14,
       fontWeight: "600",
     },
