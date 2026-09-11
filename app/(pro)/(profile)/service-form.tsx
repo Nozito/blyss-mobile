@@ -15,13 +15,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { proApi } from "@/lib/api";
 import { Input } from "@/components/ui/Input";
-import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
+// Alignées sur les CHECK constraints buffer_before_minutes / buffer_after_minutes
+// de la table `prestations` côté backend.
+const BUFFER_PRESETS = [0, 5, 10, 15, 20, 30];
 
 function formatDurationLabel(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -38,6 +40,8 @@ type Service = {
   price: number;
   duration_minutes: number;
   active?: boolean;
+  buffer_before_minutes?: number;
+  buffer_after_minutes?: number;
 };
 
 type FormData = {
@@ -65,6 +69,8 @@ export default function ServiceFormScreen() {
   const isEdit = !!id;
   const initialized = useRef(false);
   const [isActive, setIsActive] = useState(true);
+  const [bufferBefore, setBufferBefore] = useState(0);
+  const [bufferAfter, setBufferAfter] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: servicesData } = useQuery({
@@ -98,6 +104,8 @@ export default function ServiceFormScreen() {
       duration_minutes: String(existing.duration_minutes),
     });
     setIsActive(existing.active !== false);
+    setBufferBefore(existing.buffer_before_minutes ?? 0);
+    setBufferAfter(existing.buffer_after_minutes ?? 0);
   }, [existing, reset]);
 
   const createMutation = useMutation({
@@ -148,6 +156,8 @@ export default function ServiceFormScreen() {
       price,
       duration_minutes: duration,
       active: isActive,
+      buffer_before_minutes: bufferBefore,
+      buffer_after_minutes: bufferAfter,
     };
     if (isEdit && existing) {
       updateMutation.mutate({ pid: existing.id, data: payload });
@@ -165,7 +175,7 @@ export default function ServiceFormScreen() {
         contentContainerStyle={{
           paddingTop: insets.top,
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 200,
+          paddingBottom: insets.bottom + 32,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -303,6 +313,47 @@ export default function ServiceFormScreen() {
           />
         </View>
 
+        {/* Temps de battement */}
+        <View style={{ marginBottom: 16 }}>
+          <SectionLabel text="Temps de battement" />
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 10 }}>
+            Bloqué automatiquement avant/après chaque RDV pour cette prestation (nettoyage, préparation...).
+          </Text>
+          {(
+            [
+              { label: "Avant le RDV", value: bufferBefore, set: setBufferBefore },
+              { label: "Après le RDV", value: bufferAfter, set: setBufferAfter },
+            ] as const
+          ).map((row) => (
+            <View key={row.label} style={{ marginBottom: 10 }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.foreground, marginBottom: 6 }}>
+                {row.label}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                {BUFFER_PRESETS.map((m) => {
+                  const selected = row.value === m;
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => row.set(m)}
+                      style={{
+                        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                        borderWidth: 1.5,
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? `${colors.primary}15` : colors.cream,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: selected ? colors.primary : colors.mutedForeground }}>
+                        {m === 0 ? "Aucun" : `${m}min`}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+        </View>
+
         {/* Actif / Inactif */}
         <View style={{
           backgroundColor: colors.card, borderRadius: 16,
@@ -335,42 +386,38 @@ export default function ServiceFormScreen() {
             thumbColor={colors.onColor}
           />
         </View>
-      </ScrollView>
 
-      {/* Sticky CTA — positioned above the absolute tab bar (height 64, bottom insets.bottom+24) */}
-      <View style={{
-        position: "absolute", bottom: 0, left: 0, right: 0,
-        paddingHorizontal: 20, paddingTop: 12,
-        paddingBottom: insets.bottom + 96,
-        backgroundColor: withAlpha(colors.background, 0.97),
-      }}>
-        {formError && <View style={{ marginBottom: 10 }}><ErrorMessage message={formError} /></View>}
-        <Pressable
-          onPress={handleSubmit(onSubmit)}
-          disabled={isLoading}
-          style={{
-            height: 56, borderRadius: 20,
-            backgroundColor: colors.primary,
-            alignItems: "center", justifyContent: "center",
-            flexDirection: "row", gap: 8,
-            opacity: isLoading ? 0.7 : 1,
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
-          }}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={colors.onColor} />
-          ) : (
-            <>
-              <Ionicons name={isEdit ? "save-outline" : "add-circle-outline"} size={20} color={colors.onColor} />
-              <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>
-                {isEdit ? "Enregistrer les modifications" : "Créer la prestation"}
-              </Text>
-            </>
-          )}
-        </Pressable>
-      </View>
+        {/* CTA — à la fin du formulaire, pas d'overlay flottant : cet écran n'a pas
+            de tab bar en dessous (route hors du groupe (pro)), donc rien à éviter. */}
+        <View style={{ marginTop: 24 }}>
+          {formError && <View style={{ marginBottom: 10 }}><ErrorMessage message={formError} /></View>}
+          <Pressable
+            onPress={handleSubmit(onSubmit)}
+            disabled={isLoading}
+            style={{
+              height: 56, borderRadius: 20,
+              backgroundColor: colors.primary,
+              alignItems: "center", justifyContent: "center",
+              flexDirection: "row", gap: 8,
+              opacity: isLoading ? 0.7 : 1,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+            }}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.onColor} />
+            ) : (
+              <>
+                <Ionicons name={isEdit ? "save-outline" : "add-circle-outline"} size={20} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 16 }}>
+                  {isEdit ? "Enregistrer les modifications" : "Créer la prestation"}
+                </Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+      </ScrollView>
     </View>
   );
 }
