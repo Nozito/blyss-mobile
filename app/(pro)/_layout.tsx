@@ -53,24 +53,24 @@ export default function ProLayout() {
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard">
-        <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="calendar">
-        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(clients)">
-        <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
-        <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} renderingMode="template" />
         <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
-        <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
     </NativeTabs>

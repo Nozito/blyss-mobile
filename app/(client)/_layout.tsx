@@ -24,23 +24,23 @@ export default function ClientLayout() {
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="index">
-        <Icon src={<VectorIcon family={Ionicons} name="home-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="home-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="bookings">
-        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="favorites">
-        <Icon src={<VectorIcon family={Ionicons} name="heart-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="heart-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
-        <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
-        <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} renderingMode="template" />
       </NativeTabs.Trigger>
 
     </NativeTabs>

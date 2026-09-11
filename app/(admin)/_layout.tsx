@@ -23,28 +23,28 @@ export default function AdminLayout() {
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard">
-        <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} renderingMode="template" />
         {/* hidden: keeps "Accueil" as the accessible name (VoiceOver/TalkBack) without showing it under the icon */}
         <Label hidden>Accueil</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="users">
-        <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} renderingMode="template" />
         <Label hidden>Utilisateurs</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="bookings">
-        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} renderingMode="template" />
         <Label hidden>Réservations</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="payments">
-        <Icon src={<VectorIcon family={Ionicons} name="card-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="card-outline" />} renderingMode="template" />
         <Label hidden>Paiements</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="more">
-        <Icon src={<VectorIcon family={Ionicons} name="person-circle-outline" />} />
+        <Icon src={<VectorIcon family={Ionicons} name="person-circle-outline" />} renderingMode="template" />
         <Label hidden>Profil</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
