@@ -3,7 +3,7 @@ import { Redirect } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 
 // SDK 57 : Icon / VectorIcon vivent sous NativeTabs.Trigger.
-const { Icon, VectorIcon } = NativeTabs.Trigger;
+const { Icon, Label, VectorIcon } = NativeTabs.Trigger;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -25,22 +25,27 @@ export default function ClientLayout() {
     >
       <NativeTabs.Trigger name="index">
         <Icon src={<VectorIcon family={Ionicons} name="home-outline" />} renderingMode="template" />
+        <Label hidden>Accueil</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="bookings">
         <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} renderingMode="template" />
+        <Label hidden>Réservations</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="favorites">
         <Icon src={<VectorIcon family={Ionicons} name="heart-outline" />} renderingMode="template" />
+        <Label hidden>Favoris</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
         <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} renderingMode="template" />
+        <Label hidden>Notifications</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
         <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} renderingMode="template" />
+        <Label hidden>Profil</Label>
       </NativeTabs.Trigger>
 
     </NativeTabs>

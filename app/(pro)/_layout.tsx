@@ -4,7 +4,7 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 
 // SDK 57 : Icon / Label / Badge / VectorIcon ne sont plus des exports racine —
 // ils vivent sous NativeTabs.Trigger.
-const { Icon, Badge, VectorIcon } = NativeTabs.Trigger;
+const { Icon, Label, Badge, VectorIcon } = NativeTabs.Trigger;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -54,23 +54,28 @@ export default function ProLayout() {
     >
       <NativeTabs.Trigger name="dashboard">
         <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} renderingMode="template" />
+        <Label hidden>Accueil</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="calendar">
         <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} renderingMode="template" />
+        <Label hidden>Calendrier</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(clients)">
         <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} renderingMode="template" />
+        <Label hidden>Clientes</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
         <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} renderingMode="template" />
         <Badge hidden={unreadCount === 0}>{String(unreadCount || "")}</Badge>
+        <Label hidden>Notifications</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
         <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} renderingMode="template" />
+        <Label hidden>Profil</Label>
       </NativeTabs.Trigger>
 
     </NativeTabs>
