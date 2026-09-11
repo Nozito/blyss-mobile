@@ -24,38 +24,23 @@ export default function ClientLayout() {
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="index">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="home-outline" />,
-          selected: <VectorIcon family={Ionicons} name="home" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="home-outline" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="bookings">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="calendar-outline" />,
-          selected: <VectorIcon family={Ionicons} name="calendar" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="favorites">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="heart-outline" />,
-          selected: <VectorIcon family={Ionicons} name="heart" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="heart-outline" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="notifications-outline" />,
-          selected: <VectorIcon family={Ionicons} name="notifications" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="notifications-outline" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="person-outline" />,
-          selected: <VectorIcon family={Ionicons} name="person" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="person-outline" />} />
       </NativeTabs.Trigger>
 
     </NativeTabs>

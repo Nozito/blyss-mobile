@@ -23,43 +23,28 @@ export default function AdminLayout() {
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="grid-outline" />,
-          selected: <VectorIcon family={Ionicons} name="grid" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} />
         {/* hidden: keeps "Accueil" as the accessible name (VoiceOver/TalkBack) without showing it under the icon */}
         <Label hidden>Accueil</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="users">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="people-outline" />,
-          selected: <VectorIcon family={Ionicons} name="people" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} />
         <Label hidden>Utilisateurs</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="bookings">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="calendar-outline" />,
-          selected: <VectorIcon family={Ionicons} name="calendar" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} />
         <Label hidden>Réservations</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="payments">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="card-outline" />,
-          selected: <VectorIcon family={Ionicons} name="card" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="card-outline" />} />
         <Label hidden>Paiements</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="more">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="person-circle-outline" />,
-          selected: <VectorIcon family={Ionicons} name="person-circle" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="person-circle-outline" />} />
         <Label hidden>Profil</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
