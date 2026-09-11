@@ -28,7 +28,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { usePro } from "@/hooks/usePro";
 import { BiometricToggle } from "@/components/screens/shared/BiometricToggle";
 import type { User } from "@/lib/api";
-import { safeBack } from "@/lib/navigation";
+import { safeBack, logoutAndGoTo } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
@@ -190,11 +190,11 @@ export default function ProSettingsScreen() {
     try {
       const res = await authApi.deleteAccount();
       if (res.success) {
-        // logout() du contexte (pas authApi.logout() brut) : remet aussi le
-        // `user` en mémoire à null, sinon un compte supprimé restait visible
-        // dans AuthContext tant que l'app n'était pas relancée.
-        await logout();
-        router.replace("/(auth)/login");
+        // logoutAndGoTo() appelle logout() du contexte (pas authApi.logout()
+        // brut) : remet aussi le `user` en mémoire à null, sinon un compte
+        // supprimé restait visible dans AuthContext tant que l'app n'était
+        // pas relancée. dismissAll() intégré vide aussi l'historique de nav.
+        await logoutAndGoTo(router, logout);
       } else {
         setError("Impossible de supprimer le compte.");
       }

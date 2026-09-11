@@ -25,7 +25,7 @@ import { useRevenueCat, type RCPlan } from "@/contexts/RevenueCatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import * as Haptics from "expo-haptics";
-import { safeBack } from "@/lib/navigation";
+import { safeBack, logoutAndGoTo } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type BillingPeriod = "monthly" | "annual";
@@ -526,7 +526,7 @@ export default function SubscriptionScreen() {
 
             {!hasActiveSubscription && (
               <Pressable
-                onPress={() => { void logout().then(() => router.replace("/(auth)/login")); }}
+                onPress={() => void logoutAndGoTo(router, logout)}
                 style={{ alignItems: "center", paddingVertical: 16 }}
               >
                 <Text style={{ fontSize: 13, color: colors.mutedForeground }}>

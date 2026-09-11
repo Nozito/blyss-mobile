@@ -11,7 +11,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: jest.fn(), canDismiss: () => false, dismissAll: jest.fn() }),
   useLocalSearchParams: () => ({}),
 }));
 
@@ -69,7 +69,13 @@ jest.mock('@/components/ui/ErrorMessage', () => ({
   },
 }));
 
-jest.mock('@/lib/navigation', () => ({ safeBack: jest.fn() }));
+jest.mock('@/lib/navigation', () => ({
+  safeBack: jest.fn(),
+  logoutAndGoTo: async (router: any, logout: () => Promise<void>, target = '/(auth)/welcome') => {
+    await logout();
+    router.replace(target);
+  },
+}));
 
 jest.mock('@/lib/validation', () => ({
   phoneSchema: { parse: jest.fn() },

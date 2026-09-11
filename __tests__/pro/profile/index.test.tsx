@@ -14,7 +14,7 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('expo-router', () => ({
   useScrollToTop: jest.fn(),
-  useRouter: () => ({ push: mockPush, back: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({ push: mockPush, back: jest.fn(), replace: jest.fn(), canDismiss: () => false, dismissAll: jest.fn() }),
   useLocalSearchParams: () => ({}),
 }));
 

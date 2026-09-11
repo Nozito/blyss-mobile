@@ -14,7 +14,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: mockReplace }),
+  useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: mockReplace, canDismiss: () => false, dismissAll: jest.fn() }),
   useLocalSearchParams: () => ({}),
 }));
 
@@ -41,7 +41,13 @@ jest.mock('@/components/ui/ErrorMessage', () => ({
   },
 }));
 
-jest.mock('@/lib/navigation', () => ({ safeBack: jest.fn() }));
+jest.mock('@/lib/navigation', () => ({
+  safeBack: jest.fn(),
+  logoutAndGoTo: async (router: any, logout: () => Promise<void>, target = '/(auth)/welcome') => {
+    await logout();
+    router.replace(target);
+  },
+}));
 
 const mockDeleteAccount = jest.fn();
 
@@ -120,7 +126,7 @@ describe('ProRGPDScreen', () => {
     });
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalled();
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+      expect(mockReplace).toHaveBeenCalledWith('/(auth)/welcome');
     });
   });
 

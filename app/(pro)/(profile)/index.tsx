@@ -22,6 +22,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { resolveMediaUrl } from "@/lib/media";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { switchRole } from "@/lib/roleSwitch";
+import { logoutAndGoTo } from "@/lib/navigation";
 
 function calculateProfileCompleteness(user: User | null | undefined): number {
   if (!user) return 0;
@@ -687,7 +688,7 @@ export default function ProProfileScreen() {
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
               setShowLogoutConfirm(false);
-              void logout().then(() => router.replace("/(auth)/login"));
+              void logoutAndGoTo(router, logout);
             }}
             style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.destructive, alignItems: "center", justifyContent: "center" }}
           >

@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { safeBack } from "@/lib/navigation";
+import { safeBack, logoutAndGoTo } from "@/lib/navigation";
 
 interface RGPDRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -110,8 +110,7 @@ export default function ClientRGPDScreen() {
     try {
       const res = await authApi.deleteAccount();
       if (!res.success) throw new Error(res.error ?? "Erreur lors de la suppression");
-      await logout();
-      router.replace("/(auth)/login");
+      await logoutAndGoTo(router, logout);
     } catch (err) {
       setRgpdError(err instanceof Error ? err.message : "Une erreur est survenue.");
     } finally {
