@@ -1,6 +1,9 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { NativeTabs, Icon, Label, VectorIcon } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+
+// SDK 57 : Icon / Label / VectorIcon vivent sous NativeTabs.Trigger.
+const { Icon, Label, VectorIcon } = NativeTabs.Trigger;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -20,43 +23,28 @@ export default function AdminLayout() {
       labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="dashboard">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="grid-outline" />,
-          selected: <VectorIcon family={Ionicons} name="grid" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="grid-outline" />} renderingMode="template" />
         {/* hidden: keeps "Accueil" as the accessible name (VoiceOver/TalkBack) without showing it under the icon */}
         <Label hidden>Accueil</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="users">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="people-outline" />,
-          selected: <VectorIcon family={Ionicons} name="people" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="people-outline" />} renderingMode="template" />
         <Label hidden>Utilisateurs</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="bookings">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="calendar-outline" />,
-          selected: <VectorIcon family={Ionicons} name="calendar" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="calendar-outline" />} renderingMode="template" />
         <Label hidden>Réservations</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="payments">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="card-outline" />,
-          selected: <VectorIcon family={Ionicons} name="card" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="card-outline" />} renderingMode="template" />
         <Label hidden>Paiements</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="more">
-        <Icon src={{
-          default: <VectorIcon family={Ionicons} name="person-circle-outline" />,
-          selected: <VectorIcon family={Ionicons} name="person-circle" />,
-        }} />
+        <Icon src={<VectorIcon family={Ionicons} name="person-circle-outline" />} renderingMode="template" />
         <Label hidden>Profil</Label>
       </NativeTabs.Trigger>
     </NativeTabs>

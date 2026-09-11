@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { stripePaymentsApi, specialistsApi, messagesApi, type AvailabilityResponse } from "@/lib/api";
@@ -29,7 +29,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useAppTransition } from "@/contexts/TransitionContext";
+import { FillLoader } from "@/components/ui/FillLoader";
 import { toLocalDateStr, calculateEndDateTime, canPayOnline as computeCanPayOnline, resolvePaymentType } from "@/lib/bookingUtils";
 
 interface Pro {
@@ -53,6 +53,9 @@ interface Pro {
 }
 
 const TOTAL_STEPS = 5;
+// Durée d'attente affichée (barre qui se remplit) entre le paiement Stripe
+// validé et l'écran de confirmation — cf. FillLoader.
+const PAYMENT_CONFIRM_DELAY_MS = 3000;
 
 // Moteur de dispo → liste de créneaux affichables pour une date donnée.
 // `id` est un simple index de rendu (aucun slot précréé côté serveur) ;
@@ -159,8 +162,13 @@ export default function BookingScreen() {
   const router = useRouter();
   const { proId } = useLocalSearchParams<{ proId: string }>();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { showTransition, hideTransition } = useAppTransition();
   const { showToast } = useToast();
+  // Attente volontaire après la validation Stripe : une confirmation qui
+  // s'affiche trop vite laisse penser que le paiement n'a pas vraiment eu
+  // lieu. Barre qui se remplit sur PAYMENT_CONFIRM_DELAY_MS pile — pas le
+  // splash animé (logo) utilisé ailleurs (connexion, onboarding), qui
+  // n'a pas sa place dans ce flow-ci.
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   const [step, setStep] = useState(1);
   const navigation = useNavigation();
@@ -605,24 +613,25 @@ export default function BookingScreen() {
               const formattedDate = selectedDate?.toLocaleDateString("fr-FR", {
                 weekday: "short", day: "numeric", month: "long",
               });
-              showTransition();
-              router.replace({
-                pathname: "/booking/confirmation",
-                params: {
-                  specialistName: proName,
-                  serviceName: selectedPrestationData?.name ?? "",
-                  date: formattedDate ?? "",
-                  time: selectedTime ?? "",
-                  amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
-                  dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
-                  durationMinutes: selectedPrestationData?.duration_minutes != null
-                    ? String(selectedPrestationData.duration_minutes)
-                    : "",
-                  proCity: pro.city ?? "",
-                  proId: String(proId),
-                },
-              } as Parameters<typeof router.replace>[0]);
-              hideTransition();
+              setConfirmingPayment(true);
+              setTimeout(() => {
+                router.replace({
+                  pathname: "/booking/confirmation",
+                  params: {
+                    specialistName: proName,
+                    serviceName: selectedPrestationData?.name ?? "",
+                    date: formattedDate ?? "",
+                    time: selectedTime ?? "",
+                    amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
+                    dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
+                    durationMinutes: selectedPrestationData?.duration_minutes != null
+                      ? String(selectedPrestationData.duration_minutes)
+                      : "",
+                    proCity: pro.city ?? "",
+                    proId: String(proId),
+                  },
+                } as Parameters<typeof router.replace>[0]);
+              }, PAYMENT_CONFIRM_DELAY_MS);
             }}
             onError={(msg) => {
               // Le fallback générique masquait le vrai motif Stripe (carte
@@ -742,6 +751,7 @@ export default function BookingScreen() {
   if (!authLoading && !isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
+    <>
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
         {step < 5 && (
@@ -819,5 +829,24 @@ export default function BookingScreen() {
         )}
       </View>
     </SafeAreaView>
+
+    {confirmingPayment && (
+      // pointerEvents par défaut ("auto") : bloque les taps sur l'écran de
+      // paiement pendant l'attente (anti double-soumission), comme
+      // l'overlay de TransitionContext ailleurs dans l'app.
+      <View
+        style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999,
+        }}
+      >
+        <FillLoader duration={PAYMENT_CONFIRM_DELAY_MS} label="Confirmation de ta réservation…" />
+      </View>
+    )}
+    </>
   );
 }

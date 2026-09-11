@@ -61,3 +61,26 @@ jest.mock('@/contexts/TransitionContext', () => ({
 jest.mock('@/components/screens/shared/BiometricToggle', () => ({
   BiometricToggle: () => null,
 }));
+
+// ── react-native-maps ────────────────────────────────────────────────────────
+// react-native-maps 1.27 (SDK 57) appelle TurboModuleRegistry.getEnforcing
+// ('RNMapsAirModule') dès l'import → Invariant Violation en env jest. Mock
+// global : chaque composant devient une <View> passe-plat.
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Passthrough = (props) => React.createElement(View, props, props.children);
+  return {
+    __esModule: true,
+    default: Passthrough,
+    MapView: Passthrough,
+    Marker: Passthrough,
+    Circle: Passthrough,
+    Callout: Passthrough,
+    Polygon: Passthrough,
+    Polyline: Passthrough,
+    Overlay: Passthrough,
+    PROVIDER_DEFAULT: 'default',
+    PROVIDER_GOOGLE: 'google',
+  };
+});

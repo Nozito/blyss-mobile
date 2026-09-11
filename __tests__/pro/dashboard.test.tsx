@@ -18,9 +18,8 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => children,
 }));
 
-jest.mock('@react-navigation/native', () => ({ useScrollToTop: jest.fn() }));
-
 jest.mock('expo-router', () => ({
+  useScrollToTop: jest.fn(),
   useRouter: () => ({ push: mockPush, back: jest.fn(), replace: mockReplace }),
   useLocalSearchParams: () => ({}),
   useSegments: () => [],

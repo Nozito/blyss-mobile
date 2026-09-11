@@ -16,7 +16,7 @@ import { Colors, withAlpha } from "@/constants/colors";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { ADMIN } from "@/constants/adminTheme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { AnimatedPressable, AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { AdminHeader } from "@/components/admin/AdminHeader";
@@ -191,7 +191,7 @@ function UserDetailSheet({ user, onGrant, onClose }: { user: AdminUser; onGrant:
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end" }}>
         <Pressable
-          style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }}
+          style={{ ...StyleSheet.absoluteFill, backgroundColor: ADMIN.overlay }}
           onPress={onClose}
         />
         <View style={{ backgroundColor: ADMIN.surface, borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius, maxHeight: "92%" }}>

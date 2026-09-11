@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, StyleSheet, Animated, Modal as RNModal, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import * as ImagePicker from "expo-image-picker";
@@ -22,6 +22,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { resolveMediaUrl } from "@/lib/media";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { switchRole } from "@/lib/roleSwitch";
+import { logoutAndGoTo } from "@/lib/navigation";
 
 function calculateProfileCompleteness(user: User | null | undefined): number {
   if (!user) return 0;
@@ -230,7 +231,7 @@ export default function ProProfileScreen() {
                 )}
                 {uploading && (
                   <View style={{
-                    ...StyleSheet.absoluteFillObject,
+                    ...StyleSheet.absoluteFill,
                     backgroundColor: colors.overlayDark,
                     alignItems: "center", justifyContent: "center",
                   }}>
@@ -687,7 +688,7 @@ export default function ProProfileScreen() {
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
               setShowLogoutConfirm(false);
-              void logout().then(() => router.replace("/(auth)/login"));
+              void logoutAndGoTo(router, logout);
             }}
             style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.destructive, alignItems: "center", justifyContent: "center" }}
           >

@@ -68,7 +68,7 @@ export function EditProfileSheet({ onClose }: { onClose: () => void }) {
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }} onPress={onClose} />
+        <Pressable style={{ ...StyleSheet.absoluteFill, backgroundColor: ADMIN.overlay }} onPress={onClose} />
         <View style={{
           backgroundColor: ADMIN.surface,
           borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius,

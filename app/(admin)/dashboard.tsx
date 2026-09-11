@@ -15,7 +15,7 @@ import { SectionLabel } from "@/components/admin/SectionLabel";
 import { Card } from "@/components/admin/Card";
 import { TriageQueue } from "@/components/admin/TriageQueue";
 import { GrantSubscriptionModal } from "@/components/admin/GrantSubscriptionModal";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import { syncAdminDashboardWidgets } from "@/lib/widgetSync";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
 import { formatEUR, formatNumberFR, formatPercentFR } from "@/lib/format";

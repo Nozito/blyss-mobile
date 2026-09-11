@@ -13,10 +13,11 @@ import * as Application from "expo-application";
 import { adminApi } from "@/lib/api";
 import { withAlpha } from "@/constants/colors";
 import { ADMIN } from "@/constants/adminTheme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop } from "expo-router";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { EditProfileSheet } from "@/components/admin/EditProfileSheet";
 import { switchRole } from "@/lib/roleSwitch";
+import { logoutAndGoTo } from "@/lib/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
 import { normalizeAdminDashboardStats } from "@/lib/adminStats";
@@ -185,7 +186,10 @@ export default function AdminMoreScreen() {
           <Pressable
             onPress={() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-              void logout().then(() => router.replace("/(auth)/login"));
+              // Admin = surface staff distincte : on renvoie sur /login, pas
+              // sur l'écran d'accueil client/pro (contrairement au reste de
+              // l'app, cf. lib/navigation.ts logoutAndGoTo).
+              void logoutAndGoTo(router, logout, "/(auth)/login" as Parameters<typeof router.replace>[0]);
             }}
             onPressIn={() =>
               Animated.spring(logoutScale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }).start()

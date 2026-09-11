@@ -8,10 +8,12 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useToast } from "@/components/ui/Toast";
@@ -19,6 +21,8 @@ import { addAppointmentToCalendar } from "@/lib/appleCalendarSync";
 import { messagesApi } from "@/lib/api";
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
+// Direction "moment chaleureux" (3 propositions soumises à l'user, 2026-09-11) :
+// halo rose derrière le check, carte à lignes iconées, bouton pilule.
 
 export default function BookingConfirmationScreen() {
   const colors = useThemeColors();
@@ -108,109 +112,144 @@ export default function BookingConfirmationScreen() {
     ]).start();
   }, []);
 
-  const details = [
-    params.specialistName ? { label: "Spécialiste", value: params.specialistName } : null,
-    params.serviceName    ? { label: "Prestation",   value: params.serviceName }    : null,
-    params.date           ? { label: "Date",          value: params.date }           : null,
-    params.time           ? { label: "Heure",         value: params.time }           : null,
-    params.amount         ? { label: "Montant",       value: `${params.amount} €` } : null,
-    params.confirmationCode ? { label: "Référence", value: params.confirmationCode } : null,
-  ].filter(Boolean) as { label: string; value: string }[];
+  // Lignes iconées de la carte — regroupe date+heure, et met le montant sur
+  // la même ligne que la prestation (comme un ticket, sans en avoir l'air).
+  const dateTimeValue = [params.date, params.time].filter(Boolean).join(" · ");
+  const rows: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; trailing?: { label: string; value: string } }[] = [];
+  if (params.specialistName) {
+    rows.push({ icon: "person-outline", label: "Spécialiste", value: params.specialistName });
+  }
+  if (dateTimeValue) {
+    rows.push({ icon: "calendar-outline", label: "Rendez-vous", value: dateTimeValue });
+  }
+  if (params.serviceName) {
+    rows.push({
+      icon: "pricetag-outline",
+      label: "Prestation",
+      value: params.serviceName,
+      trailing: params.amount ? { label: "Acompte", value: `${params.amount} €` } : undefined,
+    });
+  } else if (params.amount) {
+    rows.push({ icon: "card-outline", label: "Acompte payé", value: `${params.amount} €` });
+  }
+  if (params.confirmationCode) {
+    rows.push({ icon: "receipt-outline", label: "Référence", value: params.confirmationCode });
+  }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Animated checkmark */}
-        <Animated.View
-          style={[
-            styles.checkCircle,
-            { backgroundColor: colors.success, shadowColor: colors.success },
-            { transform: [{ scale: scaleAnim }], opacity: opacAnim },
-          ]}
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[colors.primaryLight, colors.background, colors.background]}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="checkmark" size={52} color={colors.onColor} />
-        </Animated.View>
-
-        {/* Title */}
-        <Animated.View
-          style={{ opacity: opacAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}
-        >
-          <Text style={[styles.title, { color: colors.foreground }]}>Réservation confirmée !</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Tu recevras une confirmation et un rappel avant ton rendez-vous.
-          </Text>
-        </Animated.View>
-
-        {/* Detail card */}
-        {details.length > 0 && (
+          {/* Halo + check */}
           <Animated.View
-            style={[styles.card, { backgroundColor: colors.card }, { opacity: opacAnim, transform: [{ translateY: slideAnim }] }]}
+            style={[
+              styles.glowRing,
+              { backgroundColor: withAlpha(colors.primary, 0.16) },
+              { transform: [{ scale: scaleAnim }], opacity: opacAnim },
+            ]}
           >
-            {details.map((d, i) => (
-              <View key={d.label}>
-                {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                <View style={styles.row}>
-                  <Text style={[styles.rowLabel, { color: colors.mutedForeground }]}>{d.label}</Text>
-                  <Text style={[styles.rowValue, { color: colors.foreground }]}>{d.value}</Text>
-                </View>
-              </View>
-            ))}
+            <View style={[styles.checkCircle, { backgroundColor: colors.card, shadowColor: colors.primary }]}>
+              <Ionicons name="checkmark" size={34} color={colors.primary} />
+            </View>
           </Animated.View>
-        )}
 
-        {/* CTAs */}
-        <Animated.View style={[styles.ctas, { opacity: opacAnim }]}>
-          <AnimatedPressable
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/(client)/bookings" as Parameters<typeof router.push>[0]);
-            }}
-            style={[styles.ctaPrimary, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
+          {/* Title */}
+          <Animated.View
+            style={{ opacity: opacAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}
           >
-            <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
-            <Text style={[styles.ctaPrimaryText, { color: colors.onColor }]}>Voir mes réservations</Text>
-          </AnimatedPressable>
+            <Text style={[styles.title, { color: colors.foreground }]}>Réservation confirmée</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              {params.specialistName ? `${params.specialistName} te recevra` : "Tu recevras"} une confirmation et un rappel avant ton rendez‑vous.
+            </Text>
+          </Animated.View>
 
-          {canAddToCalendar && (
-            <AnimatedPressable
-              onPress={handleAddToCalendar}
-              disabled={addingToCalendar}
-              style={[styles.ctaSecondary, { backgroundColor: colors.card, borderColor: colors.border }]}
+          {/* Detail card */}
+          {rows.length > 0 && (
+            <Animated.View
+              style={[styles.card, { backgroundColor: colors.card }, { opacity: opacAnim, transform: [{ translateY: slideAnim }] }]}
             >
-              <Ionicons name="add-circle-outline" size={18} color={colors.foreground} />
-              <Text style={[styles.ctaSecondaryText, { color: colors.foreground }]}>
-                {addingToCalendar ? "Ajout en cours…" : "Ajouter à mon calendrier"}
-              </Text>
-            </AnimatedPressable>
+              {rows.map((row, i) => (
+                <View key={row.label}>
+                  {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                  <View style={styles.row}>
+                    <View style={[styles.rowIcon, { backgroundColor: colors.primaryLight }]}>
+                      <Ionicons name={row.icon} size={16} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowLabel, { color: colors.mutedForeground }]}>{row.label}</Text>
+                      <Text style={[styles.rowValue, { color: colors.foreground }]} numberOfLines={1}>{row.value}</Text>
+                    </View>
+                    {row.trailing && (
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={[styles.rowLabel, { color: colors.mutedForeground, textAlign: "right" }]}>{row.trailing.label}</Text>
+                        <Text style={[styles.rowValue, { color: colors.primary, textAlign: "right" }]}>{row.trailing.value}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </Animated.View>
           )}
 
-          {!!params.proId && (
+          {/* CTAs */}
+          <Animated.View style={[styles.ctas, { opacity: opacAnim }]}>
             <AnimatedPressable
-              onPress={handleContactPro}
-              disabled={openingThread}
-              style={[styles.ctaSecondary, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/(client)/bookings" as Parameters<typeof router.push>[0]);
+              }}
+              style={[styles.ctaPrimary, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
             >
-              <Ionicons name="chatbubble-outline" size={18} color={colors.foreground} />
-              <Text style={[styles.ctaSecondaryText, { color: colors.foreground }]}>
-                {openingThread ? "Ouverture…" : `Écrire à ${params.specialistName ?? "la pro"}`}
-              </Text>
+              <Ionicons name="calendar-outline" size={18} color={colors.onColor} />
+              <Text style={[styles.ctaPrimaryText, { color: colors.onColor }]}>Voir mes réservations</Text>
             </AnimatedPressable>
-          )}
 
-          <AnimatedPressable
-            onPress={() => {
-              router.replace("/(client)" as Parameters<typeof router.replace>[0]);
-            }}
-            style={styles.ctaGhost}
-          >
-            <Text style={[styles.ctaGhostText, { color: colors.mutedForeground }]}>Retour à l'accueil</Text>
-          </AnimatedPressable>
-        </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
+            {canAddToCalendar && (
+              <AnimatedPressable
+                onPress={handleAddToCalendar}
+                disabled={addingToCalendar}
+                style={[styles.ctaSecondary, { backgroundColor: colors.primaryLight }]}
+              >
+                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                <Text style={[styles.ctaSecondaryText, { color: colors.primary }]}>
+                  {addingToCalendar ? "Ajout en cours…" : "Ajouter à mon calendrier"}
+                </Text>
+              </AnimatedPressable>
+            )}
+
+            {!!params.proId && (
+              <AnimatedPressable
+                onPress={handleContactPro}
+                disabled={openingThread}
+                style={[styles.ctaSecondary, { backgroundColor: colors.primaryLight }]}
+              >
+                <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+                <Text style={[styles.ctaSecondaryText, { color: colors.primary }]}>
+                  {openingThread ? "Ouverture…" : `Écrire à ${params.specialistName ?? "la pro"}`}
+                </Text>
+              </AnimatedPressable>
+            )}
+
+            <AnimatedPressable
+              onPress={() => {
+                router.replace("/(client)" as Parameters<typeof router.replace>[0]);
+              }}
+              style={styles.ctaGhost}
+            >
+              <Text style={[styles.ctaGhostText, { color: colors.mutedForeground }]}>Retour à l'accueil</Text>
+            </AnimatedPressable>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -227,20 +266,27 @@ const styles = StyleSheet.create({
     gap: 24,
   },
 
-  checkCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  glowRing: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
+  },
+  checkCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 22,
     elevation: 10,
   },
 
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: -0.5,
@@ -250,44 +296,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 21,
-    maxWidth: 300,
+    maxWidth: 280,
   },
 
   card: {
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 22,
+    padding: 18,
     width: "100%",
     ...Shadows.card,
   },
-  divider: { height: 1, marginVertical: 10 },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  rowLabel: { fontSize: 13, fontWeight: "500", flex: 1 },
-  rowValue: { fontSize: 14, fontWeight: "700", textAlign: "right", flex: 1 },
+  divider: { height: 1, marginVertical: 12 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowLabel: { fontSize: 10.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 },
+  rowValue: { fontSize: 14, fontWeight: "700" },
 
-  ctas: { width: "100%", gap: 12 },
+  ctas: { width: "100%", gap: 10 },
   ctaPrimary: {
-    height: 56,
-    borderRadius: 18,
+    height: 54,
+    borderRadius: 27,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
     elevation: 6,
   },
   ctaPrimaryText: { fontSize: 15, fontWeight: "700" },
   ctaSecondary: {
-    height: 52,
-    borderRadius: 18,
-    borderWidth: 1,
+    height: 50,
+    borderRadius: 25,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  ctaSecondaryText: { fontSize: 14, fontWeight: "600" },
+  ctaSecondaryText: { fontSize: 14, fontWeight: "700" },
   ctaGhost: { height: 48, alignItems: "center", justifyContent: "center" },
   ctaGhostText: { fontSize: 14, fontWeight: "600" },
 });

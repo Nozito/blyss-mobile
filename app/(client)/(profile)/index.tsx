@@ -18,6 +18,7 @@ import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { resolveMediaUrl } from "@/lib/media";
 import RoleSelectionModal, { type AdminRole } from "@/components/ui/RoleSelectionModal";
 import { switchRole } from "@/lib/roleSwitch";
+import { logoutAndGoTo } from "@/lib/navigation";
 
 // Groupe compte
 const ACCOUNT_ITEMS = [
@@ -116,8 +117,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    await logout();
-    router.replace("/(auth)/login");
+    await logoutAndGoTo(router, logout);
   };
 
   return (
@@ -168,7 +168,7 @@ export default function ProfileScreen() {
               )}
               {(uploading || deleting) && (
                 <View style={{
-                  ...StyleSheet.absoluteFillObject,
+                  ...StyleSheet.absoluteFill,
                   backgroundColor: colors.overlayDark,
                   alignItems: "center", justifyContent: "center",
                 }}>

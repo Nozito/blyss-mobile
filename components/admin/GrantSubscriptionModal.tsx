@@ -65,7 +65,7 @@ export function GrantSubscriptionModal({
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable style={{ ...StyleSheet.absoluteFillObject, backgroundColor: ADMIN.overlay }} onPress={onClose} />
+        <Pressable style={{ ...StyleSheet.absoluteFill, backgroundColor: ADMIN.overlay }} onPress={onClose} />
         <View style={{
           backgroundColor: ADMIN.surface,
           borderTopLeftRadius: ADMIN.sheetRadius, borderTopRightRadius: ADMIN.sheetRadius,
