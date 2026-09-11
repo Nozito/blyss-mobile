@@ -890,10 +890,10 @@ export const proApi = {
 
   getServices: () => apiCall<unknown[]>("/api/pro/prestations"),
 
-  createService: (data: { name: string; description: string; price: number; duration_minutes: number; active?: boolean }) =>
+  createService: (data: { name: string; description: string; price: number; duration_minutes: number; active?: boolean; buffer_before_minutes?: number; buffer_after_minutes?: number }) =>
     apiCall("/api/pro/prestations", { method: "POST", body: JSON.stringify(data) }),
 
-  updateService: (id: number, data: Partial<{ name: string; description: string; price: number; duration_minutes: number; active: boolean }>) =>
+  updateService: (id: number, data: Partial<{ name: string; description: string; price: number; duration_minutes: number; active: boolean; buffer_before_minutes: number; buffer_after_minutes: number }>) =>
     apiCall(`/api/pro/prestations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   deleteService: (id: number) => apiCall(`/api/pro/prestations/${id}`, { method: "DELETE" }),

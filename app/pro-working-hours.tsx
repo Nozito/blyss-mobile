@@ -140,14 +140,14 @@ export default function ProWorkingHoursScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <View>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12 }}>
+        <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 18, fontWeight: "800", color: colors.foreground }}>Horaires d'ouverture</Text>
-          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }} numberOfLines={2}>
             Tes créneaux réservables en découlent automatiquement.
           </Text>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <AnimatedIconButton
             onPress={() => setShowHelp(true)}
             accessibilityLabel="Comment fonctionnent les horaires"
