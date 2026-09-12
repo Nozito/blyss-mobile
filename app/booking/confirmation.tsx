@@ -76,6 +76,11 @@ export default function BookingConfirmationScreen() {
       } else {
         showToast(result.error ?? "Impossible d'ajouter le rendez-vous au calendrier", "error");
       }
+    } catch {
+      // Échec natif inattendu (permission, module Calendar) — sans ce catch,
+      // l'erreur restait silencieuse pour l'utilisateur (aucun toast, aucun
+      // signe visible que le bouton n'a rien fait).
+      showToast("Impossible d'ajouter le rendez-vous au calendrier", "error");
     } finally {
       setAddingToCalendar(false);
     }

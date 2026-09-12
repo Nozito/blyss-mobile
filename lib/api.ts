@@ -876,7 +876,13 @@ export const proApi = {
     return apiCall<unknown[]>(`/api/pro/unavailabilities${q}`);
   },
 
-  createUnavailability: (data: { start_date: string; end_date: string; reason?: string }) =>
+  createUnavailability: (data: { start_date: string; end_date: string; reason?: string }): Promise<ApiResponse<{
+    id: number;
+    start_date: string;
+    end_date: string;
+    reason: string | null;
+    conflictingAppointments: { id: number; start_datetime: string; first_name: string; last_name: string }[];
+  }>> =>
     apiCall("/api/pro/unavailabilities", { method: "POST", body: JSON.stringify(data) }),
 
   deleteUnavailability: (id: number) =>

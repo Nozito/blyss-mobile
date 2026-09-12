@@ -68,7 +68,7 @@ export function NewAppointmentSheet({
   const { user } = useAuth();
   const isEditing = !!editing;
 
-  const [step, setStep] = useState<1 | 2 | 3>(isEditing ? 2 : 1);
+  const [step, setStep] = useState<1 | 2 | 3>(isEditing ? 3 : 1);
 
   const [clientQuery, setClientQuery] = useState("");
   const debouncedClientQuery = useDebounce(clientQuery.trim(), 250);
@@ -117,7 +117,10 @@ export function NewAppointmentSheet({
     setOverrideNote("");
     setAlternativeSlots([]);
     if (editing) {
-      setStep(2);
+      // "Modifier" = reprogrammer, pas recréer le rdv : on saute direct à
+      // l'étape date/heure, prestation et cliente restent celles d'origine
+      // (verrouillées, non re-choisissables — cf. retour user).
+      setStep(3);
       setSelectedClient(null);
       setClientQuery("");
       setClientResults([]);
@@ -313,7 +316,7 @@ export function NewAppointmentSheet({
         <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View>
             <Text style={{ fontSize: 17, fontWeight: "800", color: colors.foreground }}>
-              {isEditing ? "Modifier le rendez-vous" : "Nouveau rendez-vous"}
+              {isEditing ? "Reprogrammer le rendez-vous" : "Nouveau rendez-vous"}
             </Text>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
               {isEditing ? editing?.clientLabel : step === 1 ? "1. Choisis la cliente" : step === 2 ? "2. Choisis la prestation" : "3. Date & heure"}
@@ -381,7 +384,7 @@ export function NewAppointmentSheet({
             </View>
           )}
 
-          {step === 2 && (
+          {step === 2 && !isEditing && (
             <View style={{ gap: 12 }}>
               {!isEditing && selectedClient && (
                 <AnimatedPressable onPress={() => setStep(1)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -425,10 +428,19 @@ export function NewAppointmentSheet({
 
           {step === 3 && selectedPrestation && (
             <View style={{ gap: 18 }}>
-              <AnimatedPressable onPress={() => setStep(2)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="chevron-back" size={16} color={colors.primary} />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{selectedPrestation.name}</Text>
-              </AnimatedPressable>
+              {isEditing ? (
+                // Prestation verrouillée en édition — pas de retour possible vers
+                // un choix de prestation (reprogrammer ≠ recréer le rdv).
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="pricetag-outline" size={16} color={colors.mutedForeground} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>{selectedPrestation.name}</Text>
+                </View>
+              ) : (
+                <AnimatedPressable onPress={() => setStep(2)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="chevron-back" size={16} color={colors.primary} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{selectedPrestation.name}</Text>
+                </AnimatedPressable>
+              )}
 
               <DateField
                 label="Date"
@@ -657,7 +669,7 @@ export function NewAppointmentSheet({
                 onPress={handleSubmit}
                 label={
                   isEditing
-                    ? "Enregistrer les modifications"
+                    ? "Reprogrammer"
                     : pendingOverride?.mode === "conflict"
                       ? "Forcer malgré le conflit"
                       : pendingOverride?.mode === "outside_hours"

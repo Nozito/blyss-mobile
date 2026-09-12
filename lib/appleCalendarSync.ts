@@ -176,12 +176,12 @@ export async function addAppointmentToCalendar(
 ): Promise<{ ok: boolean; error?: string }> {
   if (Platform.OS !== "ios") return { ok: false, error: "Disponible uniquement sur iOS." };
 
-  const { status } = await Calendar.requestCalendarPermissionsAsync();
-  if (status !== "granted") {
-    return { ok: false, error: "Accès au calendrier refusé. Active-le dans Réglages > Blyss." };
-  }
-
   try {
+    const { status } = await Calendar.requestCalendarPermissionsAsync();
+    if (status !== "granted") {
+      return { ok: false, error: "Accès au calendrier refusé. Active-le dans Réglages > Blyss." };
+    }
+
     const calendarId = await findOrCreateBlyssCalendar();
     await Calendar.createEventAsync(calendarId, {
       title: event.title,
