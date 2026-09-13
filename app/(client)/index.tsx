@@ -468,13 +468,20 @@ export default function ClientHome() {
   const { data: proRes, isLoading: loadingPros, refetch: refetchPros } = useQuery({
     queryKey: ["pros", "home", preferredCity, preferredStyles],
     queryFn: async () => {
+      // Logs temporaires — la home reste vide sans aucune trace exploitable
+      // nulle part (ni Sentry, ni logs serveur : le backend répond bien dans
+      // tous les cas testés en direct) ; ça ne peut venir que d'ici. Objectif
+      // : voir dans la console Metro exactement quelle étape échoue et
+      // pourquoi, au prochain test.
       if (preferredCity) {
         const byCity = await specialistsApi.getPros({ limit: 8, city: preferredCity, styles: preferredStyles });
+        console.log("[home:pros] tentative ville", { preferredCity, success: byCity.success, count: byCity.data?.length, error: byCity.error });
         if (byCity.success && byCity.data?.length) return byCity;
       }
 
       try {
         const { status } = await Location.getForegroundPermissionsAsync();
+        console.log("[home:pros] permission localisation", { status });
         if (status === "granted") {
           // getCurrentPositionAsync n'a pas de timeout intégré — sans garde-fou,
           // un GPS indisponible (simulateur sans position simulée, signal
@@ -493,13 +500,17 @@ export default function ClientHome() {
             nearby: true,
             styles: preferredStyles,
           });
+          console.log("[home:pros] tentative position", { success: nearby.success, count: nearby.data?.length, error: nearby.error });
           if (nearby.success && nearby.data?.length) return nearby;
         }
-      } catch {
+      } catch (e) {
         // pas de position dispo — on retombe sur la liste générale
+        console.log("[home:pros] exception branche position", e instanceof Error ? e.message : e);
       }
 
-      return specialistsApi.getPros({ limit: 8, styles: preferredStyles });
+      const fallback = await specialistsApi.getPros({ limit: 8, styles: preferredStyles });
+      console.log("[home:pros] tentative générale (fallback final)", { success: fallback.success, count: fallback.data?.length, error: fallback.error });
+      return fallback;
     },
     staleTime: 2 * 60_000,
   });

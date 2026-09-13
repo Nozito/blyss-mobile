@@ -70,6 +70,10 @@ export default function ClientPreferencesScreen() {
     setSaving(true);
     const res = await clientOnboardingApi.setPreferences(styles, city.trim() || undefined);
     setSaving(false);
+    // Log temporaire — l'échec persiste malgré une validation backend vérifiée
+    // OK en direct (curl) ; ça ne peut venir que d'ici. Objectif : voir dans
+    // la console Metro le payload exact envoyé et la réponse exacte reçue.
+    console.log("[preferences:save]", { styles, city: city.trim() || undefined, success: res.success, error: res.error, data: res.data });
     if (res.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSuccess("Préférences enregistrées.");
