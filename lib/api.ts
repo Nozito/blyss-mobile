@@ -460,6 +460,7 @@ export const specialistsApi = {
     lng?: number;
     radius?: number;
     nearby?: boolean;
+    styles?: string[];
   }): Promise<ApiResponse<unknown[]>> => {
     const q = new URLSearchParams();
     if (params?.page) q.set("page", String(params.page));
@@ -472,6 +473,7 @@ export const specialistsApi = {
     if (params?.lng != null) q.set("lng", String(params.lng));
     if (params?.radius) q.set("radius", String(params.radius));
     if (params?.nearby) q.set("nearby", "1");
+    if (params?.styles?.length) q.set("styles", params.styles.join(","));
     const qs = q.toString() ? `?${q}` : "";
     return apiCall(`/api/users/pros${qs}`);
   },
@@ -1072,6 +1074,17 @@ export interface OnboardingRecommendation {
   distance_km: number | null;
   open_slots: { today: number; this_week: number; this_weekend: number };
 }
+
+export interface CitySuggestion {
+  nom: string;
+  codePostal: string | null;
+}
+
+export const geoApi = {
+  /** Autocomplete villes françaises réelles (#5) — public, non authentifié. */
+  searchCities: (query: string): Promise<ApiResponse<CitySuggestion[]>> =>
+    apiCall(`/api/geo/cities?q=${encodeURIComponent(query)}`),
+};
 
 export const clientOnboardingApi = {
   getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>

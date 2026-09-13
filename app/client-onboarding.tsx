@@ -280,7 +280,7 @@ export default function ClientOnboardingScreen() {
   const skipLabel = fromSettings ? "Fermer" : step === STEP.ATTRIBUTION ? "Passer" : "Plus tard";
 
   const submitPreferences = async () => {
-    if (styles.length === 0) return;
+    if (styles.length === 0 && !city.trim()) return;
     tap(Haptics.ImpactFeedbackStyle.Medium);
     setSavingPrefs(true);
     const res = await clientOnboardingApi.setPreferences(styles, city.trim() || undefined);
@@ -630,7 +630,7 @@ export default function ClientOnboardingScreen() {
                 <PillButton
                   label="Continuer →"
                   onPress={submitPreferences}
-                  bg={styles.length ? field.pill.bg : withAlpha(ink, 0.25)}
+                  bg={styles.length || city.trim() ? field.pill.bg : withAlpha(ink, 0.25)}
                   fg={field.pill.fg}
                   loading={savingPrefs}
                 />
