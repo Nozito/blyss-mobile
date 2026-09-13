@@ -15,7 +15,7 @@ import Constants from "expo-constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { storage } from "@/lib/storage";
-import { notificationsApi } from "@/lib/api";
+import { notificationsApi, proApi } from "@/lib/api";
 
 // Notification types that mean "Mes avis" is now stale — a pro looking at
 // that screen when the admin acts should see the change without having to
@@ -259,6 +259,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           // routage, elle atterrissait sur la liste générique et laissait
           // la pro chercher l'écran elle-même.
           router.push("/pro-subscription" as never);
+        } else if (notifType === "booking_rescheduled" && reservationId) {
+          // #11 — /(pro)/calendar est toujours borné au mois déjà chargé :
+          // sans la date du RDV, un taper sur "report accepté/refusé" pouvait
+          // atterrir sur un mois qui ne contient pas ce RDV (voire déclencher
+          // le toast "n'est plus disponible" à tort). On va chercher sa date
+          // avant de naviguer ; si l'appel échoue, on ouvre quand même le
+          // calendrier plutôt que de bloquer la navigation.
+          proApi
+            .getReservation(Number(reservationId))
+            .then((res) => {
+              if (res.success && res.data?.date) {
+                router.push({
+                  pathname: "/(pro)/calendar",
+                  params: { appointmentId: String(reservationId), date: res.data.date },
+                } as never);
+              } else {
+                router.push("/(pro)/calendar" as never);
+              }
+            })
+            .catch(() => router.push("/(pro)/calendar" as never));
         } else {
           router.push("/(pro)/notifications" as never);
         }
