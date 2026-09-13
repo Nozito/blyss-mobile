@@ -1,4 +1,10 @@
-import * as Calendar from "expo-calendar";
+// SDK 57 (expo-calendar 57) a déprécié toute l'API "flat function" au profit
+// d'une API orientée objet — l'import racine lève une erreur runtime sur
+// chaque appel (confirmé par Sentry le 2026-09-12 : "Method
+// requestCalendarPermissionsAsync ... is deprecated", cause racine du bug
+// "l'ajout au calendrier ne fait rien"). `expo-calendar/legacy` réexporte
+// l'ancienne API intacte, sans réécrire toute la logique ci-dessous.
+import * as Calendar from "expo-calendar/legacy";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
