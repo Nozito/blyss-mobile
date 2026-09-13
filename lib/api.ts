@@ -1075,17 +1075,6 @@ export interface OnboardingRecommendation {
   open_slots: { today: number; this_week: number; this_weekend: number };
 }
 
-export interface CitySuggestion {
-  nom: string;
-  codePostal: string | null;
-}
-
-export const geoApi = {
-  /** Autocomplete villes françaises réelles (#5) — public, non authentifié. */
-  searchCities: (query: string): Promise<ApiResponse<CitySuggestion[]>> =>
-    apiCall(`/api/geo/cities?q=${encodeURIComponent(query)}`),
-};
-
 export const clientOnboardingApi = {
   getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
     apiCall("/api/client/onboarding/status"),
@@ -1094,21 +1083,18 @@ export const clientOnboardingApi = {
    * #34 passe 3b — style multi-choix (styles[0] = « principal »).
    * On envoie aussi `style_nails` = styles[0] pour rester compatible avec un
    * backend pas encore à jour (avant le déploiement de la reco régionale).
+   * Plus de ville préférée à enregistrer (redondant avec la géoloc, lue en
+   * direct côté recos) — on ne persiste plus que les styles.
    */
   setPreferences: (
-    styles: NailStyle[],
-    city?: string
+    styles: NailStyle[]
   ): Promise<ApiResponse<{ styles: NailStyle[]; style_nails: NailStyle }>> =>
     apiCall("/api/client/onboarding/preferences", {
       method: "POST",
       // styles:[] (tableau vide, pas absent) fait échouer z.array(...).min(1)
       // côté backend même si le champ est `.optional()` — optional = absent,
-      // pas vide. On omet la clé plutôt que d'envoyer un tableau vide, pour
-      // que "ville seule" (#4) fonctionne vraiment.
-      body: JSON.stringify({
-        ...(styles.length ? { styles, style_nails: styles[0] } : {}),
-        ...(city ? { city } : {}),
-      }),
+      // pas vide. On omet la clé plutôt que d'envoyer un tableau vide.
+      body: JSON.stringify(styles.length ? { styles, style_nails: styles[0] } : {}),
     }),
 
   /** #34 passe 3b — écran « comment tu as connu Blyss » (best-effort). */

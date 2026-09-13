@@ -34,23 +34,17 @@ describe("clientOnboardingApi", () => {
     expect(res.success && res.data?.current_step).toBe(2);
   });
 
-  it("setPreferences envoie styles[] + style_nails (compat) + city", async () => {
+  it("setPreferences envoie styles[] + style_nails (compat)", async () => {
     mockFetch.mockReturnValueOnce(ok({ styles: ["semi_permanent"], style_nails: "semi_permanent" }));
-    await clientOnboardingApi.setPreferences(["semi_permanent", "nail_art"], "Lyon");
+    await clientOnboardingApi.setPreferences(["semi_permanent", "nail_art"]);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body).toEqual({ styles: ["semi_permanent", "nail_art"], style_nails: "semi_permanent", city: "Lyon" });
+    expect(body).toEqual({ styles: ["semi_permanent", "nail_art"], style_nails: "semi_permanent" });
   });
 
-  it("setPreferences omet city quand absente", async () => {
-    mockFetch.mockReturnValueOnce(ok({ styles: ["nail_art"], style_nails: "nail_art" }));
-    await clientOnboardingApi.setPreferences(["nail_art"]);
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["nail_art"], style_nails: "nail_art" });
-  });
-
-  it("setPreferences omet styles/style_nails (pas [] ) quand aucun style choisi — ville seule doit passer la validation backend", async () => {
-    mockFetch.mockReturnValueOnce(ok({ city: "Lyon" }));
-    await clientOnboardingApi.setPreferences([], "Lyon");
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ city: "Lyon" });
+  it("setPreferences envoie un body vide (pas [] ) quand aucun style choisi", async () => {
+    mockFetch.mockReturnValueOnce(ok({}));
+    await clientOnboardingApi.setPreferences([]);
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({});
   });
 
   it("setAttribution → POST avec payload", async () => {

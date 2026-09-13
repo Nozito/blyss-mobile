@@ -451,37 +451,26 @@ export default function ClientHome() {
   const [refreshing, setRefreshing] = useState(false);
 
   // "Choisies pour toi" doit refléter les préférences enregistrées — avant
-  // ce fix, getPros() était appelé sans filtre du tout (ni ville, ni style).
+  // ce fix, getPros() était appelé sans filtre du tout. Plus de ville
+  // préférée à lire (redondant avec la géoloc — seule source de "où est la
+  // cliente maintenant") : juste les styles.
   const { data: prefsRes } = useQuery({
     queryKey: ["client-preferences", "home"],
     queryFn: () => clientOnboardingApi.getStatus(),
     enabled: !!user,
     staleTime: 5 * 60_000,
   });
-  const preferredCity = prefsRes?.data?.city || undefined;
   const preferredStyles = prefsRes?.data?.styles?.length ? prefsRes.data.styles : undefined;
 
-  // "Choisies pour toi" ne doit jamais rester vide : ville enregistrée en
-  // premier, sinon position actuelle (sans jamais demander la permission
-  // depuis cet écran — juste vérifier si elle est déjà accordée ailleurs),
-  // sinon la liste générale plutôt que rien.
+  // "Choisies pour toi" ne doit jamais rester vide : position actuelle en
+  // premier (sans jamais demander la permission depuis cet écran — juste
+  // vérifier si elle est déjà accordée ailleurs), sinon la liste générale
+  // plutôt que rien.
   const { data: proRes, isLoading: loadingPros, refetch: refetchPros } = useQuery({
-    queryKey: ["pros", "home", preferredCity, preferredStyles],
+    queryKey: ["pros", "home", preferredStyles],
     queryFn: async () => {
-      // Logs temporaires — la home reste vide sans aucune trace exploitable
-      // nulle part (ni Sentry, ni logs serveur : le backend répond bien dans
-      // tous les cas testés en direct) ; ça ne peut venir que d'ici. Objectif
-      // : voir dans la console Metro exactement quelle étape échoue et
-      // pourquoi, au prochain test.
-      if (preferredCity) {
-        const byCity = await specialistsApi.getPros({ limit: 8, city: preferredCity, styles: preferredStyles });
-        console.log("[home:pros] tentative ville", { preferredCity, success: byCity.success, count: byCity.data?.length, error: byCity.error });
-        if (byCity.success && byCity.data?.length) return byCity;
-      }
-
       try {
         const { status } = await Location.getForegroundPermissionsAsync();
-        console.log("[home:pros] permission localisation", { status });
         if (status === "granted") {
           // getCurrentPositionAsync n'a pas de timeout intégré — sans garde-fou,
           // un GPS indisponible (simulateur sans position simulée, signal
@@ -500,17 +489,13 @@ export default function ClientHome() {
             nearby: true,
             styles: preferredStyles,
           });
-          console.log("[home:pros] tentative position", { success: nearby.success, count: nearby.data?.length, error: nearby.error });
           if (nearby.success && nearby.data?.length) return nearby;
         }
-      } catch (e) {
+      } catch {
         // pas de position dispo — on retombe sur la liste générale
-        console.log("[home:pros] exception branche position", e instanceof Error ? e.message : e);
       }
 
-      const fallback = await specialistsApi.getPros({ limit: 8, styles: preferredStyles });
-      console.log("[home:pros] tentative générale (fallback final)", { success: fallback.success, count: fallback.data?.length, error: fallback.error });
-      return fallback;
+      return specialistsApi.getPros({ limit: 8, styles: preferredStyles });
     },
     staleTime: 2 * 60_000,
   });
@@ -722,23 +707,14 @@ export default function ClientHome() {
                 scrollEnabled={false}
               />
             ) : pros.length === 0 ? (
-              // Ne devrait normalement jamais arriver (fallback ville→position→
-              // liste générale) — mais un état visible et explicite vaut mieux
-              // qu'un espace vide indiscernable d'un vrai chargement bloqué.
+              // Ne devrait normalement jamais arriver (fallback position→liste
+              // générale) — mais un état visible et explicite vaut mieux qu'un
+              // espace vide indiscernable d'un vrai chargement bloqué.
               <View style={{ marginHorizontal: 24, padding: 20, borderRadius: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 8 }}>
                 <Ionicons name="cloud-offline-outline" size={22} color={colors.mutedForeground} />
                 <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center" }}>
                   On n'a pas pu charger les expertes pour l'instant
                 </Text>
-                {/* Debug temporaire visible à l'écran — le message ci-dessus ne dit
-                    pas POURQUOI c'est vide (backend OK en direct, rien dans Sentry
-                    ni les logs serveur), et on n'a pas confirmation que les logs
-                    Metro sont consultés. À retirer une fois la cause identifiée. */}
-                {__DEV__ && (
-                  <Text style={{ fontSize: 10, color: colors.mutedForeground, textAlign: "center", opacity: 0.6 }}>
-                    debug: success={String(proRes?.success)} error={proRes?.error ?? "—"} data.length={Array.isArray(proRes?.data) ? proRes.data.length : "n/a"}
-                  </Text>
-                )}
                 <Pressable onPress={() => refetchPros()} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.primary }}>
                   <Text style={{ color: colors.onColor, fontSize: 12, fontWeight: "700" }}>Réessayer</Text>
                 </Pressable>
