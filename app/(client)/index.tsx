@@ -730,6 +730,15 @@ export default function ClientHome() {
                 <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center" }}>
                   On n'a pas pu charger les expertes pour l'instant
                 </Text>
+                {/* Debug temporaire visible à l'écran — le message ci-dessus ne dit
+                    pas POURQUOI c'est vide (backend OK en direct, rien dans Sentry
+                    ni les logs serveur), et on n'a pas confirmation que les logs
+                    Metro sont consultés. À retirer une fois la cause identifiée. */}
+                {__DEV__ && (
+                  <Text style={{ fontSize: 10, color: colors.mutedForeground, textAlign: "center", opacity: 0.6 }}>
+                    debug: success={String(proRes?.success)} error={proRes?.error ?? "—"} data.length={Array.isArray(proRes?.data) ? proRes.data.length : "n/a"}
+                  </Text>
+                )}
                 <Pressable onPress={() => refetchPros()} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.primary }}>
                   <Text style={{ color: colors.onColor, fontSize: 12, fontWeight: "700" }}>Réessayer</Text>
                 </Pressable>

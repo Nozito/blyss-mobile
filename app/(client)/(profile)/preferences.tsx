@@ -34,6 +34,8 @@ export default function ClientPreferencesScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // Debug temporaire — voir __DEV__ ci-dessous, à retirer une fois la cause identifiée.
+  const [lastPayload, setLastPayload] = useState<{ styles: NailStyle[]; city: string | undefined } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,12 +70,14 @@ export default function ClientPreferencesScreen() {
       return;
     }
     setSaving(true);
-    const res = await clientOnboardingApi.setPreferences(styles, city.trim() || undefined);
+    const sentCity = city.trim() || undefined;
+    setLastPayload({ styles, city: sentCity });
+    const res = await clientOnboardingApi.setPreferences(styles, sentCity);
     setSaving(false);
     // Log temporaire — l'échec persiste malgré une validation backend vérifiée
     // OK en direct (curl) ; ça ne peut venir que d'ici. Objectif : voir dans
     // la console Metro le payload exact envoyé et la réponse exacte reçue.
-    console.log("[preferences:save]", { styles, city: city.trim() || undefined, success: res.success, error: res.error, data: res.data });
+    console.log("[preferences:save]", { styles, city: sentCity, success: res.success, error: res.error, data: res.data });
     if (res.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSuccess("Préférences enregistrées.");
@@ -169,6 +173,16 @@ export default function ClientPreferencesScreen() {
             {error && (
               <View style={{ backgroundColor: colors.destructiveLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.destructive }}>
                 <Text style={{ fontSize: 13, color: colors.destructiveText, fontWeight: "500" }}>{error}</Text>
+                {/* Debug temporaire visible à l'écran (même raison que sur la home :
+                    le backend accepte "ville seule" vérifié en direct, mais l'erreur
+                    persiste sur device — on affiche ici le payload exact envoyé pour
+                    voir s'il correspond vraiment à ce qu'on croit envoyer). À retirer
+                    une fois la cause identifiée. */}
+                {__DEV__ && lastPayload && (
+                  <Text style={{ fontSize: 10, color: colors.destructiveText, opacity: 0.7, marginTop: 6 }}>
+                    debug: payload envoyé = {JSON.stringify(lastPayload)}
+                  </Text>
+                )}
               </View>
             )}
             {success && (
