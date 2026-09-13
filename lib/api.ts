@@ -1101,7 +1101,14 @@ export const clientOnboardingApi = {
   ): Promise<ApiResponse<{ styles: NailStyle[]; style_nails: NailStyle }>> =>
     apiCall("/api/client/onboarding/preferences", {
       method: "POST",
-      body: JSON.stringify({ styles, style_nails: styles[0], ...(city ? { city } : {}) }),
+      // styles:[] (tableau vide, pas absent) fait échouer z.array(...).min(1)
+      // côté backend même si le champ est `.optional()` — optional = absent,
+      // pas vide. On omet la clé plutôt que d'envoyer un tableau vide, pour
+      // que "ville seule" (#4) fonctionne vraiment.
+      body: JSON.stringify({
+        ...(styles.length ? { styles, style_nails: styles[0] } : {}),
+        ...(city ? { city } : {}),
+      }),
     }),
 
   /** #34 passe 3b — écran « comment tu as connu Blyss » (best-effort). */
