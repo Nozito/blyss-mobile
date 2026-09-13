@@ -53,6 +53,7 @@ type Appointment = {
   client_name?: string;
   client_first_name?: string;
   client_last_name?: string;
+  prestation_id?: number | null;
   prestation_name?: string;
   price?: number;
 };
@@ -790,7 +791,7 @@ export default function ProCalendarScreen() {
     setEditingAppt({
       id: apt.id,
       clientLabel: apt.client_name ?? `${apt.client_first_name ?? ""} ${apt.client_last_name ?? ""}`.trim(),
-      prestationId: null,
+      prestationId: apt.prestation_id ?? null,
       date: aptDate,
       durationMinutes: parseDuration(apt.duration),
     });

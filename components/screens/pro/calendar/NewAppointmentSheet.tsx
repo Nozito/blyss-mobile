@@ -143,11 +143,17 @@ export function NewAppointmentSheet({
     if (!visible) return;
     setServicesLoading(true);
     proApi.getServices().then((res) => {
-      const list = (res.success && res.data ? (res.data as Prestation[]) : []).filter((p) => p.active !== false);
-      setServices(list);
+      const all = res.success && res.data ? (res.data as Prestation[]) : [];
+      const active = all.filter((p) => p.active !== false);
+      setServices(active);
       if (editing?.prestationId) {
-        const match = list.find((p) => p.id === editing.prestationId);
+        // Cherche dans la liste complète (pas seulement les actives) : la
+        // prestation d'un rdv déjà pris peut avoir été désactivée depuis —
+        // on doit quand même pouvoir reprogrammer ce rdv, juste pas en
+        // proposer une nouvelle réservation dessus.
+        const match = all.find((p) => p.id === editing.prestationId);
         if (match) setSelectedPrestation(match);
+        else setError("Impossible de retrouver la prestation de ce rendez-vous — contacte le support si ça persiste.");
       }
     }).catch(() => setServices([])).finally(() => setServicesLoading(false));
   }, [visible, editing]);
@@ -424,6 +430,17 @@ export function NewAppointmentSheet({
                 </View>
               )}
             </View>
+          )}
+
+          {step === 3 && !selectedPrestation && servicesLoading && (
+            <View style={{ padding: 20, alignItems: "center" }}><ActivityIndicator size="small" color={colors.primary} /></View>
+          )}
+
+          {step === 3 && !selectedPrestation && !servicesLoading && (
+            // isEditing uniquement : en création, step 3 n'est atteint qu'après
+            // avoir choisi une prestation à l'étape 2, selectedPrestation est
+            // donc toujours posé à ce stade-là.
+            <ErrorMessage message={error ?? "Impossible de charger cette prestation."} />
           )}
 
           {step === 3 && selectedPrestation && (

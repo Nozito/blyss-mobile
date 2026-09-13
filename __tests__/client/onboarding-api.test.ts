@@ -47,6 +47,12 @@ describe("clientOnboardingApi", () => {
     expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ styles: ["nail_art"], style_nails: "nail_art" });
   });
 
+  it("setPreferences omet styles/style_nails (pas [] ) quand aucun style choisi — ville seule doit passer la validation backend", async () => {
+    mockFetch.mockReturnValueOnce(ok({ city: "Lyon" }));
+    await clientOnboardingApi.setPreferences([], "Lyon");
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ city: "Lyon" });
+  });
+
   it("setAttribution → POST avec payload", async () => {
     mockFetch.mockReturnValueOnce(ok(null));
     await clientOnboardingApi.setAttribution("instagram");

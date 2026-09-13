@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Modal } from "@/components/ui/Modal";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
@@ -17,6 +17,13 @@ export type Unavailability = {
   start_date: string;
   end_date: string;
   reason: string | null;
+};
+
+type ConflictingAppointment = {
+  id: number;
+  start_datetime: string;
+  first_name: string;
+  last_name: string;
 };
 
 /**
@@ -47,6 +54,10 @@ export function AbsenceSheet({
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Non-null ⇒ on affiche le panneau de conflits à la place du formulaire,
+  // le temps que la pro en prenne connaissance (remplace l'Alert.alert natif
+  // — hors DA de l'app, et impossible à revoir une fois fermé).
+  const [conflicts, setConflicts] = useState<ConflictingAppointment[] | null>(null);
 
   const resetForm = () => {
     setStartDate(null);
@@ -57,6 +68,7 @@ export function AbsenceSheet({
 
   const handleClose = () => {
     resetForm();
+    setConflicts(null);
     onClose();
   };
 
@@ -78,22 +90,18 @@ export function AbsenceSheet({
       const res = await proApi.getUnavailabilities();
       if (res.success && res.data) onChanged(res.data as Unavailability[]);
 
-      const conflicts = createRes.data?.conflictingAppointments ?? [];
+      const newConflicts = createRes.data?.conflictingAppointments ?? [];
       resetForm();
-      onClose();
 
       // La période bloquée n'annule pas les rdv déjà pris dessus — on le
-      // signale pour que la pro pense à les reprogrammer elle-même.
-      if (conflicts.length > 0) {
-        const names = conflicts.slice(0, 3).map((c) => `${c.first_name} ${c.last_name}`).join(", ");
-        const rest = conflicts.length > 3 ? ` et ${conflicts.length - 3} autre(s)` : "";
-        Alert.alert(
-          "Rendez-vous à reprogrammer",
-          `${conflicts.length} rendez-vous ${conflicts.length > 1 ? "sont déjà pris" : "est déjà pris"} sur cette période (${names}${rest}). Pense à les reprogrammer.`,
-          [{ text: "Compris" }]
-        );
+      // signale pour que la pro pense à les reprogrammer elle-même. Sheet
+      // gardée ouverte le temps qu'elle en prenne connaissance, au lieu de
+      // fermer direct (l'info serait perdue si elle rate un toast).
+      if (newConflicts.length > 0) {
+        setConflicts(newConflicts);
       } else {
         showToast("Absence enregistrée", "success");
+        onClose();
       }
     } catch {
       setError("Impossible d'enregistrer la période");
@@ -141,6 +149,43 @@ export function AbsenceSheet({
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16, gap: 16 }}>
+        {conflicts ? (
+          <View style={{ gap: 14 }}>
+            <View style={{ flexDirection: "row", gap: 12, backgroundColor: colors.warningLight, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.warningBorder }}>
+              <Ionicons name="alert-circle" size={20} color={colors.warningText} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warningTextDark }}>
+                  {conflicts.length > 1 ? `${conflicts.length} rendez-vous à reprogrammer` : "1 rendez-vous à reprogrammer"}
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.warningText, marginTop: 2 }}>
+                  Déjà pris sur la période que tu viens de bloquer — pense à contacter ces clientes.
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ gap: 8 }}>
+              {conflicts.map((c) => {
+                const dt = new Date(c.start_datetime);
+                return (
+                  <View key={c.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: withAlpha(colors.warning, 0.12), alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="person" size={17} color={colors.warningText} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }} numberOfLines={1}>
+                        {c.first_name} {c.last_name}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>
+                        {dt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} · {dt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : (
+          <>
           <View style={{ gap: 12 }}>
             <DateField
               label="Du"
@@ -216,9 +261,15 @@ export function AbsenceSheet({
               ))}
             </View>
           )}
+          </>
+        )}
         </ScrollView>
 
         <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 8 }}>
+          {conflicts ? (
+            <LoadingButton loading={false} onPress={handleClose} label="Compris" />
+          ) : (
+            <>
           {error && <ErrorMessage message={error} />}
           <LoadingButton
             loading={saving}
@@ -227,6 +278,8 @@ export function AbsenceSheet({
             label={!startDate || !endDate ? "Sélectionne les dates" : "Bloquer la période"}
             style={{ backgroundColor: (!startDate || !endDate) ? colors.disabled : colors.primary }}
           />
+          </>
+          )}
         </View>
       </View>
     </Modal>

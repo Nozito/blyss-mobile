@@ -9,6 +9,7 @@ import {
   type ListRenderItem,
 } from "react-native";
 import { Image } from "expo-image";
+import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useScrollToTop } from "expo-router";
@@ -460,9 +461,37 @@ export default function ClientHome() {
   const preferredCity = prefsRes?.data?.city || undefined;
   const preferredStyles = prefsRes?.data?.styles?.length ? prefsRes.data.styles : undefined;
 
+  // "Choisies pour toi" ne doit jamais rester vide : ville enregistrée en
+  // premier, sinon position actuelle (sans jamais demander la permission
+  // depuis cet écran — juste vérifier si elle est déjà accordée ailleurs),
+  // sinon la liste générale plutôt que rien.
   const { data: proRes, isLoading: loadingPros, refetch: refetchPros } = useQuery({
     queryKey: ["pros", "home", preferredCity, preferredStyles],
-    queryFn: () => specialistsApi.getPros({ limit: 8, city: preferredCity, styles: preferredStyles }),
+    queryFn: async () => {
+      if (preferredCity) {
+        const byCity = await specialistsApi.getPros({ limit: 8, city: preferredCity, styles: preferredStyles });
+        if (byCity.success && byCity.data?.length) return byCity;
+      }
+
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const nearby = await specialistsApi.getPros({
+            limit: 8,
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            nearby: true,
+            styles: preferredStyles,
+          });
+          if (nearby.success && nearby.data?.length) return nearby;
+        }
+      } catch {
+        // pas de position dispo — on retombe sur la liste générale
+      }
+
+      return specialistsApi.getPros({ limit: 8, styles: preferredStyles });
+    },
     staleTime: 2 * 60_000,
   });
 
