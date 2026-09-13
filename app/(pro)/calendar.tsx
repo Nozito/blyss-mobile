@@ -460,7 +460,7 @@ export default function ProCalendarScreen() {
   const { showToast } = useToast();
   const { activePlan } = useRevenueCat();
   const { refreshNow: refreshLiveActivity } = useLiveActivity();
-  const deepLinkParams = useLocalSearchParams<{ appointmentId?: string; date?: string }>();
+  const deepLinkParams = useLocalSearchParams<{ appointmentId?: string; date?: string; openAbsences?: string }>();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -619,6 +619,16 @@ export default function ProCalendarScreen() {
       if (!isNaN(parsed.getTime())) setSelectedDate(parsed);
     }
   }, [deepLinkParams.date, deepLinkParams.appointmentId]);
+
+  // Raccourci "Bloquer" du dashboard → ouvre directement la sheet Absences,
+  // au lieu du modal dupliqué qui existait là-bas (même backend, deux UI
+  // différentes — supprimé, un seul flux de blocage maintenant).
+  const openAbsencesHandledRef = useRef(false);
+  useEffect(() => {
+    if (!deepLinkParams.openAbsences || openAbsencesHandledRef.current) return;
+    openAbsencesHandledRef.current = true;
+    setShowUnavailModal(true);
+  }, [deepLinkParams.openAbsences]);
 
   useEffect(() => {
     if (!deepLinkParams.appointmentId || deepLinkCheckedRef.current || loading) return;

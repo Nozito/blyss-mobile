@@ -5,14 +5,11 @@ import {
   ScrollView,
   Pressable,
   Animated,
-  ActivityIndicator,
-  Platform,
   RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Modal } from "@/components/ui/Modal";
-import { toLocalDate, formatRelativeDayTime } from "@/lib/dateUtils";
+import { formatRelativeDayTime } from "@/lib/dateUtils";
 import { toNumber as n } from "@/lib/bookingUtils";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -25,13 +22,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { proApi } from "@/lib/api";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { SkeletonBox } from "@/components/ui/SkeletonBox"; // BLYSS-FIX: 2.3
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { syncProDashboardWidgets } from "@/lib/widgetSync";
-
-type Unavailability = { id: number; start_date: string; end_date: string; reason: string | null };
 
 type UpcomingClient = {
   id: number;
@@ -195,12 +189,6 @@ export default function ProDashboard() {
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const [showSlotsModal, setShowSlotsModal] = useState(false);
-  const [showBlockModal, setShowBlockModal] = useState(false);
-  const [blockDate, setBlockDate] = useState<Date>(new Date());
-  const [showBlockDatePicker, setShowBlockDatePicker] = useState(false);
-  const [blockLoading, setBlockLoading] = useState(false);
-  const [blockError, setBlockError] = useState<string | null>(null);
-  const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([]);
 
   // Redirect new pros to onboarding if they haven't seen it yet
   useEffect(() => {
@@ -297,40 +285,6 @@ export default function ProDashboard() {
       onPressCta: () => router.push("/(pro)/calendar"),
     };
   }, [upcomingClients.length, todayAppointmentsCount, weeklyStats.services, todayForecast, router]);
-
-  const isBlockedDay = (d: Date) => {
-    const s = toLocalDate(d);
-    return unavailabilities.some((u) => s >= u.start_date && s <= u.end_date);
-  };
-
-  const openBlockModal = async () => {
-    setShowBlockModal(true);
-    try {
-      const res = await proApi.getUnavailabilities();
-      if (res.success && res.data) setUnavailabilities(res.data as Unavailability[]);
-    } catch { /* silent */ }
-  };
-
-  const handleBlockDay = async () => {
-    const dayStr = toLocalDate(blockDate);
-    const existing = unavailabilities.find((u) => dayStr >= u.start_date && dayStr <= u.end_date);
-    setBlockLoading(true);
-    try {
-      if (existing) {
-        await proApi.deleteUnavailability(existing.id);
-        setUnavailabilities((prev) => prev.filter((u) => u.id !== existing.id));
-      } else {
-        await proApi.createUnavailability({ start_date: dayStr, end_date: dayStr, reason: "blocked" });
-        const res = await proApi.getUnavailabilities();
-        if (res.success && res.data) setUnavailabilities(res.data as Unavailability[]);
-      }
-      setShowBlockModal(false);
-    } catch {
-      setBlockError("Impossible de modifier le statut de la journée");
-    } finally {
-      setBlockLoading(false);
-    }
-  };
 
   if (isLoading) { // BLYSS-FIX: 2.3 — shimmer skeletons replacing static boxes
     return (
@@ -508,7 +462,10 @@ export default function ProDashboard() {
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
             { label: "Créneaux", icon: "add" as const, onPress: () => setShowSlotsModal(true), color: colors.primary, iconBg: withAlpha(colors.primary, 0.15) },
-            { label: "Bloquer",  icon: "ban-outline" as const, onPress: openBlockModal, color: colors.destructive, iconBg: withAlpha(colors.destructive, 0.15) },
+            // Ouvre directement la sheet Absences de l'agenda plutôt que de
+            // dupliquer un second flux de blocage ici (même backend, deux UI
+            // différentes avant ce fix — une seule maintenant).
+            { label: "Absences", icon: "moon-outline" as const, onPress: () => router.push({ pathname: "/(pro)/calendar", params: { openAbsences: "1" } }), color: colors.destructive, iconBg: withAlpha(colors.destructive, 0.15) },
             { label: "Planning", icon: "eye-outline" as const, onPress: () => router.push("/(pro)/calendar"), color: colors.primary, iconBg: withAlpha(colors.primary, 0.15) },
           ].map(({ label, icon, onPress, color, iconBg }) => (
             <AnimatedPressable
@@ -890,92 +847,6 @@ export default function ProDashboard() {
         </AnimatedPressable>
       </Modal>
 
-      {/* ── BLOCK MODAL ── */}
-      <Modal visible={showBlockModal} onClose={() => setShowBlockModal(false)} title="Bloquer une journée" bottomSheet>
-        {/* Date picker */}
-        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground,
-          textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
-          Journée à bloquer
-        </Text>
-        <Pressable
-          onPress={() => setShowBlockDatePicker((v) => !v)}
-          style={{ height: 48, borderRadius: 14, borderWidth: 1.5,
-            borderColor: showBlockDatePicker ? colors.destructive : colors.border,
-            paddingHorizontal: 14, backgroundColor: colors.destructiveLight,
-            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-            marginBottom: 12 }}
-        >
-          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>
-            {blockDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-          </Text>
-          <Ionicons name="calendar-outline" size={18} color={colors.destructive} />
-        </Pressable>
-
-        {showBlockDatePicker && (
-          <DateTimePicker
-            value={blockDate}
-            mode="date"
-            display={Platform.OS === "ios" ? "inline" : "default"}
-            minimumDate={new Date()}
-            onChange={(_, date) => {
-              if (Platform.OS === "android") setShowBlockDatePicker(false);
-              if (date) setBlockDate(date);
-            }}
-            themeVariant={isDark ? "dark" : "light"}
-            accentColor={colors.destructive}
-          />
-        )}
-
-        {/* Statut de la journée sélectionnée */}
-        <Text style={{ fontSize: 12, marginBottom: 20, lineHeight: 18,
-          color: isBlockedDay(blockDate) ? colors.destructive : colors.mutedForeground,
-          fontWeight: isBlockedDay(blockDate) ? "700" : "400" }}>
-          {isBlockedDay(blockDate)
-            ? "Cette journée est bloquée — appuie sur Débloquer pour la réouvrir"
-            : "Cette journée est disponible à la réservation"}
-        </Text>
-
-        {blockError && <View style={{ marginBottom: 8 }}><ErrorMessage message={blockError} /></View>}
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <Pressable
-            onPress={() => { setBlockError(null); setShowBlockModal(false); }}
-            style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.muted, alignItems: "center" }}
-          >
-            <Text style={{ fontWeight: "700", color: colors.foreground, fontSize: 14 }}>Annuler</Text>
-          </Pressable>
-          <AnimatedPressable
-            onPress={() => {
-              Haptics.impactAsync(
-                isBlockedDay(blockDate) ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Heavy
-              ).catch(() => {});
-              handleBlockDay();
-            }}
-            disabled={blockLoading}
-            style={{
-              flex: 1,
-              borderRadius: 12,
-              backgroundColor: colors.destructive,
-              paddingVertical: 14,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              opacity: blockLoading ? 0.7 : 1,
-            }}
-          >
-            {blockLoading ? (
-              <ActivityIndicator color={colors.onColor} size="small" />
-            ) : (
-              <>
-                <Ionicons name={isBlockedDay(blockDate) ? "lock-open-outline" : "ban-outline"} size={18} color={colors.onColor} />
-                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 14 }}>
-                  {isBlockedDay(blockDate) ? "Débloquer" : "Bloquer"}
-                </Text>
-              </>
-            )}
-          </AnimatedPressable>
-        </View>
-      </Modal>
     </ScrollView>
     </Animated.View>
   );
