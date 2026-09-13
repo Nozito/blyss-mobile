@@ -254,6 +254,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         // new_booking → open agenda directly so pro sees the slot immediately
         if (notifType === "new_booking") {
           router.push("/(pro)/calendar" as never);
+        } else if (notifType === "subscription_billing_issue") {
+          // La notif promet "mets à jour ton moyen de paiement" — sans ce
+          // routage, elle atterrissait sur la liste générique et laissait
+          // la pro chercher l'écran elle-même.
+          router.push("/pro-subscription" as never);
         } else {
           router.push("/(pro)/notifications" as never);
         }

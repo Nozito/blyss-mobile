@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Modal } from "@/components/ui/Modal";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
@@ -74,11 +74,27 @@ export function AbsenceSheet({
     }
     setSaving(true);
     try {
-      await proApi.createUnavailability({ start_date: startStr, end_date: endStr, reason: reason || undefined });
+      const createRes = await proApi.createUnavailability({ start_date: startStr, end_date: endStr, reason: reason || undefined });
       const res = await proApi.getUnavailabilities();
       if (res.success && res.data) onChanged(res.data as Unavailability[]);
+
+      const conflicts = createRes.data?.conflictingAppointments ?? [];
       resetForm();
       onClose();
+
+      // La période bloquée n'annule pas les rdv déjà pris dessus — on le
+      // signale pour que la pro pense à les reprogrammer elle-même.
+      if (conflicts.length > 0) {
+        const names = conflicts.slice(0, 3).map((c) => `${c.first_name} ${c.last_name}`).join(", ");
+        const rest = conflicts.length > 3 ? ` et ${conflicts.length - 3} autre(s)` : "";
+        Alert.alert(
+          "Rendez-vous à reprogrammer",
+          `${conflicts.length} rendez-vous ${conflicts.length > 1 ? "sont déjà pris" : "est déjà pris"} sur cette période (${names}${rest}). Pense à les reprogrammer.`,
+          [{ text: "Compris" }]
+        );
+      } else {
+        showToast("Absence enregistrée", "success");
+      }
     } catch {
       setError("Impossible d'enregistrer la période");
     } finally {

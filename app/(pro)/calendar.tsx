@@ -1018,8 +1018,8 @@ export default function ProCalendarScreen() {
                         backgroundColor: isActive ? colors.white : colors.primary }} />
                     )}
                     {isUnavail && (
-                      <View style={{ width: 18, height: 3, borderRadius: 2, marginTop: 2,
-                        backgroundColor: isActive ? withAlpha(colors.white, 0.8) : colors.mutedForeground }} />
+                      <Ionicons name="moon" size={10} style={{ marginTop: 2 }}
+                        color={isActive ? colors.white : colors.warningText} />
                     )}
                   </AnimatedPressable>
                 );
@@ -1134,6 +1134,13 @@ export default function ProCalendarScreen() {
         )}
 
         {/* ── SLOTS ── */}
+        {/* Section scopée au jour sélectionné — titre explicite pour éviter
+            de laisser croire que ce sont TOUS les créneaux libres à venir. */}
+        {useNewEngine && (
+          <Text style={{ fontSize: 10, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, paddingHorizontal: 2 }}>
+            Créneaux libres · {selectedDateLabel}
+          </Text>
+        )}
         {useNewEngine ? (
           engineSlotsLoading ? (
             <View style={{ padding: 20, alignItems: "center" }}>
@@ -1306,8 +1313,8 @@ export default function ProCalendarScreen() {
                         <Ionicons name="create-outline" size={22} color={colors.pro} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Modifier le rendez-vous</Text>
-                        <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>Changer la date, l'heure ou la prestation</Text>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>Reprogrammer le rendez-vous</Text>
+                        <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>Changer la date ou l'heure</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
                     </AnimatedPressable>
