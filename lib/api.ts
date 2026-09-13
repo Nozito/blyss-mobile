@@ -1069,6 +1069,17 @@ export interface OnboardingRecommendation {
   open_slots: { today: number; this_week: number; this_weekend: number };
 }
 
+export interface CitySuggestion {
+  nom: string;
+  codePostal: string | null;
+}
+
+export const geoApi = {
+  /** Autocomplete villes françaises réelles (#5) — public, non authentifié. */
+  searchCities: (query: string): Promise<ApiResponse<CitySuggestion[]>> =>
+    apiCall(`/api/geo/cities?q=${encodeURIComponent(query)}`),
+};
+
 export const clientOnboardingApi = {
   getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
     apiCall("/api/client/onboarding/status"),

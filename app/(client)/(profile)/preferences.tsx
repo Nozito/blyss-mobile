@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { clientOnboardingApi, type NailStyle } from "@/lib/api";
 import { NAIL_STYLE_OPTIONS } from "@/lib/clientOnboardingContent";
-import { Input } from "@/components/ui/Input";
+import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
@@ -152,15 +152,12 @@ export default function ClientPreferencesScreen() {
             <View style={{ marginBottom: 20 }}>
               <SectionHeader icon="location-outline" label="Ta ville" />
               <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, ...Shadows.card }}>
-                <Input
-                  label="Ville"
+                <CityAutocomplete
                   value={city}
                   onChangeText={(t) => {
                     setSuccess(null);
                     setCity(t);
                   }}
-                  placeholder="Ex. Nantes"
-                  leftIcon="location-outline"
                 />
               </View>
             </View>
