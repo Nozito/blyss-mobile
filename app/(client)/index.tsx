@@ -476,7 +476,16 @@ export default function ClientHome() {
       try {
         const { status } = await Location.getForegroundPermissionsAsync();
         if (status === "granted") {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          // getCurrentPositionAsync n'a pas de timeout intégré — sans garde-fou,
+          // un GPS indisponible (simulateur sans position simulée, signal
+          // faible) bloque cette requête indéfiniment, et avec elle tout le
+          // fallback : loadingPros resterait vrai pour toujours, "Choisies
+          // pour toi" resterait bloqué sur le skeleton au lieu de retomber
+          // sur la liste générale.
+          const loc = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("location_timeout")), 4000)),
+          ]);
           const nearby = await specialistsApi.getPros({
             limit: 8,
             lat: loc.coords.latitude,
@@ -701,6 +710,19 @@ export default function ClientHome() {
                 contentContainerStyle={SPECIALIST_LIST_STYLE}
                 scrollEnabled={false}
               />
+            ) : pros.length === 0 ? (
+              // Ne devrait normalement jamais arriver (fallback ville→position→
+              // liste générale) — mais un état visible et explicite vaut mieux
+              // qu'un espace vide indiscernable d'un vrai chargement bloqué.
+              <View style={{ marginHorizontal: 24, padding: 20, borderRadius: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 8 }}>
+                <Ionicons name="cloud-offline-outline" size={22} color={colors.mutedForeground} />
+                <Text style={{ fontSize: 13, color: colors.mutedForeground, textAlign: "center" }}>
+                  On n'a pas pu charger les expertes pour l'instant
+                </Text>
+                <Pressable onPress={() => refetchPros()} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.primary }}>
+                  <Text style={{ color: colors.onColor, fontSize: 12, fontWeight: "700" }}>Réessayer</Text>
+                </Pressable>
+              </View>
             ) : (
               <FlatList
                 horizontal
