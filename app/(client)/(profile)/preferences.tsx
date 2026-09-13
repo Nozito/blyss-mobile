@@ -63,8 +63,8 @@ export default function ClientPreferencesScreen() {
   const handleSave = async () => {
     setError(null);
     setSuccess(null);
-    if (styles.length === 0) {
-      setError("Choisis au moins un style qui te plaît.");
+    if (styles.length === 0 && !city.trim()) {
+      setError("Choisis au moins un style ou renseigne ta ville.");
       return;
     }
     setSaving(true);

@@ -17,7 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
-import { specialistsApi, clientApi } from "@/lib/api";
+import { specialistsApi, clientApi, clientOnboardingApi } from "@/lib/api";
 import { Shadows } from "@/constants/shadows";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -449,9 +449,20 @@ export default function ClientHome() {
   // ── Data queries ─────────────────────────────────────────────────────────
   const [refreshing, setRefreshing] = useState(false);
 
+  // "Choisies pour toi" doit refléter les préférences enregistrées — avant
+  // ce fix, getPros() était appelé sans filtre du tout (ni ville, ni style).
+  const { data: prefsRes } = useQuery({
+    queryKey: ["client-preferences", "home"],
+    queryFn: () => clientOnboardingApi.getStatus(),
+    enabled: !!user,
+    staleTime: 5 * 60_000,
+  });
+  const preferredCity = prefsRes?.data?.city || undefined;
+  const preferredStyles = prefsRes?.data?.styles?.length ? prefsRes.data.styles : undefined;
+
   const { data: proRes, isLoading: loadingPros, refetch: refetchPros } = useQuery({
-    queryKey: ["pros", "home"],
-    queryFn: () => specialistsApi.getPros({ limit: 8 }),
+    queryKey: ["pros", "home", preferredCity, preferredStyles],
+    queryFn: () => specialistsApi.getPros({ limit: 8, city: preferredCity, styles: preferredStyles }),
     staleTime: 2 * 60_000,
   });
 
