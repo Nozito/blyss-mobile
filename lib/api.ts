@@ -676,6 +676,12 @@ export const proApi = {
   searchReservations: (q: string) =>
     apiCall<unknown[]>(`/api/pro/reservations/search?q=${encodeURIComponent(q)}`),
 
+  // #11 — deep-link depuis une notif de report : donne juste assez (la date)
+  // pour naviguer le calendrier dessus avant de chercher le RDV, plutôt que
+  // de rester bloqué sur le mois déjà chargé (souvent le mauvais).
+  getReservation: (id: number): Promise<ApiResponse<{ id: number; date: string; status: string }>> =>
+    apiCall(`/api/pro/reservations/${id}`),
+
   getClients: () => apiCall<unknown[]>("/api/pro/clients"),
 
   // RGPD — recherche filtrée côté serveur, STRICTEMENT bornée aux clientes
