@@ -7,7 +7,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { clientOnboardingApi, type NailStyle } from "@/lib/api";
 import { NAIL_STYLE_OPTIONS } from "@/lib/clientOnboardingContent";
-import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
 import { Shadows } from "@/constants/shadows";
@@ -30,12 +29,9 @@ export default function ClientPreferencesScreen() {
 
   const [loading, setLoading] = useState(true);
   const [styles, setStyles] = useState<NailStyle[]>([]);
-  const [city, setCity] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  // Debug temporaire — voir __DEV__ ci-dessous, à retirer une fois la cause identifiée.
-  const [lastPayload, setLastPayload] = useState<{ styles: NailStyle[]; city: string | undefined } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +41,6 @@ export default function ClientPreferencesScreen() {
       if (res.success && res.data) {
         const current = res.data.styles ?? (res.data.style_nails ? [res.data.style_nails] : []);
         setStyles(current);
-        setCity(res.data.city ?? "");
       }
       setLoading(false);
     })();
@@ -65,19 +60,13 @@ export default function ClientPreferencesScreen() {
   const handleSave = async () => {
     setError(null);
     setSuccess(null);
-    if (styles.length === 0 && !city.trim()) {
-      setError("Choisis au moins un style ou renseigne ta ville.");
+    if (styles.length === 0) {
+      setError("Choisis au moins un style.");
       return;
     }
     setSaving(true);
-    const sentCity = city.trim() || undefined;
-    setLastPayload({ styles, city: sentCity });
-    const res = await clientOnboardingApi.setPreferences(styles, sentCity);
+    const res = await clientOnboardingApi.setPreferences(styles);
     setSaving(false);
-    // Log temporaire — l'échec persiste malgré une validation backend vérifiée
-    // OK en direct (curl) ; ça ne peut venir que d'ici. Objectif : voir dans
-    // la console Metro le payload exact envoyé et la réponse exacte reçue.
-    console.log("[preferences:save]", { styles, city: sentCity, success: res.success, error: res.error, data: res.data });
     if (res.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSuccess("Préférences enregistrées.");
@@ -105,7 +94,7 @@ export default function ClientPreferencesScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Mes préférences</Text>
             <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-              On s'en sert pour te recommander des pros
+              On s'en sert pour te recommander des pros — avec ta position quand elle est activée
             </Text>
           </View>
         </View>
@@ -156,33 +145,9 @@ export default function ClientPreferencesScreen() {
               </View>
             </View>
 
-            {/* Ville */}
-            <View style={{ marginBottom: 20 }}>
-              <SectionHeader icon="location-outline" label="Ta ville" />
-              <View style={{ backgroundColor: colors.white, borderRadius: 20, padding: 20, ...Shadows.card }}>
-                <CityAutocomplete
-                  value={city}
-                  onChangeText={(t) => {
-                    setSuccess(null);
-                    setCity(t);
-                  }}
-                />
-              </View>
-            </View>
-
             {error && (
               <View style={{ backgroundColor: colors.destructiveLight, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.destructive }}>
                 <Text style={{ fontSize: 13, color: colors.destructiveText, fontWeight: "500" }}>{error}</Text>
-                {/* Debug temporaire visible à l'écran (même raison que sur la home :
-                    le backend accepte "ville seule" vérifié en direct, mais l'erreur
-                    persiste sur device — on affiche ici le payload exact envoyé pour
-                    voir s'il correspond vraiment à ce qu'on croit envoyer). À retirer
-                    une fois la cause identifiée. */}
-                {__DEV__ && lastPayload && (
-                  <Text style={{ fontSize: 10, color: colors.destructiveText, opacity: 0.7, marginTop: 6 }}>
-                    debug: payload envoyé = {JSON.stringify(lastPayload)}
-                  </Text>
-                )}
               </View>
             )}
             {success && (

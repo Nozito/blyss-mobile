@@ -17,7 +17,6 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   Pressable,
   Animated as RNAnimated,
@@ -154,9 +153,12 @@ export default function ClientOnboardingScreen() {
 
   const [step, setStep] = useState<number>(STEP.WELCOME);
   const [styles, setStyles] = useState<NailStyle[]>([]);
-  const [city, setCity] = useState("");
-  const [cityFocused, setCityFocused] = useState(false);
+  // Plus de ville préférée saisie à la main (redondant avec la géoloc, qui
+  // seule sait vraiment "où est la cliente maintenant") — juste une
+  // autorisation de position, ponctuelle, pour l'aperçu carte + les recos.
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationGranted, setLocationGranted] = useState(false);
+  const [requestingLocation, setRequestingLocation] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [recos, setRecos] = useState<OnboardingRecommendation[] | null>(null);
   const [recosError, setRecosError] = useState(false);
@@ -217,7 +219,6 @@ export default function ClientOnboardingScreen() {
         if (res.success && res.data) {
           if (res.data.styles?.length) setStyles(res.data.styles);
           else if (res.data.style_nails) setStyles([res.data.style_nails]);
-          if (res.data.city) setCity(res.data.city);
           if (res.data.acquisition_source) setAttribution(res.data.acquisition_source);
           if (fromSettings && res.data.current_step > 1 && !res.data.completed) {
             setStep(Math.min(res.data.current_step, STEP_COUNT));
@@ -232,27 +233,52 @@ export default function ClientOnboardingScreen() {
     if (step === STEP.NOTIFICATIONS) track("onboarding_notif_prompted", { from: notifFrom.current });
   }, [step, track]);
 
-  // Géocodage de la ville / du code postal pour l'aperçu carte + la reco régionale.
+  // Si la permission a déjà été accordée ailleurs dans l'app, pas besoin de
+  // re-demander ici — juste récupérer la position pour préremplir l'aperçu.
   useEffect(() => {
-    const q = city.trim();
-    if (q.length < 2) {
-      setCoords(null);
-      return;
-    }
     let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const [hit] = await Location.geocodeAsync(q);
-        if (!cancelled && hit) setCoords({ latitude: hit.latitude, longitude: hit.longitude });
-      } catch {
-        if (!cancelled) setCoords(null);
-      }
-    }, 600);
+    Location.getForegroundPermissionsAsync()
+      .then(async ({ status }) => {
+        if (cancelled || status !== "granted") return;
+        try {
+          const pos = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("location_timeout")), 4000)),
+          ]);
+          if (cancelled) return;
+          setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          setLocationGranted(true);
+        } catch {
+          // GPS indisponible malgré la permission — pas grave, le bouton reste proposable.
+        }
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
-  }, [city]);
+  }, []);
+
+  const requestLocation = useCallback(async () => {
+    tap();
+    setRequestingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationGranted(false);
+        return;
+      }
+      const pos = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("location_timeout")), 6000)),
+      ]);
+      setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+      setLocationGranted(true);
+    } catch {
+      setLocationGranted(false);
+    } finally {
+      setRequestingLocation(false);
+    }
+  }, []);
 
   const leave = useCallback(() => {
     router.replace("/(client)" as never);
@@ -280,20 +306,26 @@ export default function ClientOnboardingScreen() {
   const skipLabel = fromSettings ? "Fermer" : step === STEP.ATTRIBUTION ? "Passer" : "Plus tard";
 
   const submitPreferences = async () => {
-    if (styles.length === 0 && !city.trim()) return;
+    if (styles.length === 0 && !locationGranted) return;
     tap(Haptics.ImpactFeedbackStyle.Medium);
     setSavingPrefs(true);
-    const res = await clientOnboardingApi.setPreferences(styles, city.trim() || undefined);
-    setSavingPrefs(false);
-    if (!res.success) {
-      setNotice("On n'a pas pu enregistrer, réessaie");
-      return;
+    // La position est ponctuelle (lue en direct par getRecommendations via
+    // lat/lng ci-dessous) — rien à persister côté serveur si aucun style
+    // n'a été choisi, l'appeler avec un tableau vide échouerait la
+    // validation (styles/style_nails requis côté backend).
+    if (styles.length > 0) {
+      const res = await clientOnboardingApi.setPreferences(styles);
+      if (!res.success) {
+        setSavingPrefs(false);
+        setNotice("On n'a pas pu enregistrer, réessaie");
+        return;
+      }
     }
+    setSavingPrefs(false);
     track("onboarding_preferences_selected", {
       styles,
       styles_count: styles.length,
-      has_location: !!city.trim(),
-      location: city.trim() || null,
+      has_location: locationGranted,
     });
     go(STEP.RECOMMENDATIONS);
     loadRecos();
@@ -303,7 +335,6 @@ export default function ClientOnboardingScreen() {
     setLoadingRecos(true);
     setRecosError(false);
     const res = await clientOnboardingApi.getRecommendations({
-      city: city.trim() || undefined,
       lat: coords?.latitude,
       lng: coords?.longitude,
     });
@@ -565,25 +596,41 @@ export default function ClientOnboardingScreen() {
                 <Text style={{ color: ink, opacity: 0.72, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 22 }}>
                   Où cherches-tu ?
                 </Text>
-                <TextInput
-                  value={city}
-                  onChangeText={setCity}
-                  onFocus={() => setCityFocused(true)}
-                  onBlur={() => setCityFocused(false)}
-                  placeholder="Ville / code postal"
-                  placeholderTextColor={withAlpha(ink, 0.4)}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  style={{
-                    marginTop: 8,
-                    borderBottomWidth: 1.5,
-                    borderBottomColor: cityFocused ? colors.primary : withAlpha(ink, 0.25),
-                    paddingVertical: 9,
-                    fontSize: 14,
-                    color: ink,
-                  }}
-                />
+                {locationGranted ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
+                    <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                    <Text style={{ color: ink, fontSize: 13, fontWeight: "700" }}>Position activée</Text>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={requestLocation}
+                    disabled={requestingLocation}
+                    accessibilityRole="button"
+                    accessibilityLabel="Autoriser ma position"
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      marginTop: 10,
+                      height: 46,
+                      borderRadius: 999,
+                      borderWidth: 1.5,
+                      borderColor: withAlpha(ink, 0.25),
+                    }}
+                  >
+                    {requestingLocation ? (
+                      <ActivityIndicator size="small" color={ink} />
+                    ) : (
+                      <>
+                        <Ionicons name="navigate-outline" size={16} color={ink} />
+                        <Text style={{ color: ink, fontSize: 13, fontWeight: "700", letterSpacing: 0.3 }}>
+                          Autoriser ma position
+                        </Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
 
                 {coords && (
                   <View
@@ -620,7 +667,7 @@ export default function ClientOnboardingScreen() {
                       }}
                     >
                       <Text style={{ color: CREAM, fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase" }}>
-                        {city.trim()}
+                        Ta position
                       </Text>
                     </View>
                   </View>
@@ -630,7 +677,7 @@ export default function ClientOnboardingScreen() {
                 <PillButton
                   label="Continuer →"
                   onPress={submitPreferences}
-                  bg={styles.length || city.trim() ? field.pill.bg : withAlpha(ink, 0.25)}
+                  bg={styles.length || locationGranted ? field.pill.bg : withAlpha(ink, 0.25)}
                   fg={field.pill.fg}
                   loading={savingPrefs}
                 />
@@ -653,7 +700,7 @@ export default function ClientOnboardingScreen() {
               ) : isEmpty ? (
                 <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
                   <Text style={{ color: ink, fontWeight: "900", fontSize: 26, lineHeight: 27, letterSpacing: -0.5, textTransform: "uppercase" }}>
-                    {city.trim() ? `Pas encore de pro à ${city.trim()}` : "Pas encore de pro par ici"}
+                    Pas encore de pro par ici
                   </Text>
                   <Text style={{ color: ink, opacity: 0.7, fontSize: 13, lineHeight: 19, marginTop: 12 }}>
                     On agrandit le réseau chaque semaine.
@@ -674,7 +721,7 @@ export default function ClientOnboardingScreen() {
                     Choisies pour toi
                   </Text>
                   <Text style={{ color: ink, opacity: 0.6, fontSize: 10.5, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginTop: 6 }}>
-                    {city.trim() ? `Autour de ${city.trim()} · ` : ""}
+                    {locationGranted ? "Autour de toi · " : ""}
                     {styles[0] ? `${STYLE_LABEL[styles[0]] ?? ""} · ` : ""}
                     {recos?.length ?? 0} pro{(recos?.length ?? 0) > 1 ? "s" : ""}
                   </Text>
@@ -770,7 +817,7 @@ export default function ClientOnboardingScreen() {
                     />
                     <Pressable onPress={leave} style={{ alignItems: "center", paddingVertical: 6 }}>
                       <Text style={{ color: ink, opacity: 0.6, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
-                        Explorer les autres villes
+                        Explorer Blyss
                       </Text>
                     </Pressable>
                   </View>
