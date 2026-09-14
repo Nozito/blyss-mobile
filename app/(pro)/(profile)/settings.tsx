@@ -20,7 +20,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, usersApi, proApi } from "@/lib/api";
 import { phoneSchema, bioSchema, getZodError } from "@/lib/validation";
 import { Input } from "@/components/ui/Input";
-import { CityAutocomplete, type CityValidation } from "@/components/ui/CityAutocomplete";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
@@ -69,9 +68,6 @@ export default function ProSettingsScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  // "unchecked" tant que la valeur n'a pas changé depuis le chargement —
-  // ne bloque jamais une pro qui n'a pas touché à sa ville existante.
-  const [cityValidation, setCityValidation] = useState<CityValidation>("unchecked");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -84,9 +80,7 @@ export default function ProSettingsScreen() {
       last_name:         user?.last_name ?? "",
       email:             user?.email ?? "",
       phone_number:      formatPhoneFR(user?.phone_number),
-      city:              user?.city ?? "",
       bio:               user?.bio ?? "",
-      instagram_account: user?.instagram_account ?? "",
     },
   });
 
@@ -95,14 +89,6 @@ export default function ProSettingsScreen() {
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
-
-    // Ville non reconnue par geo.api.gouv.fr (upstream a répondu, pas de
-    // match) — on bloque. "unknown" (upstream injoignable) et "unchecked"
-    // (champ non modifié) laissent passer volontairement.
-    if (cityValidation === "invalid") {
-      setError("Cette ville ne correspond à aucune commune française connue. Choisis une suggestion dans la liste.");
-      return;
-    }
 
     // Validate phone format if provided
     const phoneNum = (data.phone_number ?? "").replace(/\s/g, "");
@@ -297,29 +283,9 @@ export default function ProSettingsScreen() {
 
           <Controller
             control={control}
-            name="city"
-            render={({ field: { onChange, value } }) => (
-              <CityAutocomplete
-                value={value ?? ""}
-                onChangeText={onChange}
-                onValidationChange={setCityValidation}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
             name="phone_number"
             render={({ field: { onChange, value } }) => (
               <Input label="Téléphone" value={value ?? ""} onChangeText={(v) => onChange(formatPhoneFR(v))} keyboardType="phone-pad" leftIcon="call-outline" />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="instagram_account"
-            render={({ field: { onChange, value } }) => (
-              <Input label="Instagram" value={value ?? ""} onChangeText={onChange} leftIcon="logo-instagram" placeholder="@moncompte" />
             )}
           />
         </View>
