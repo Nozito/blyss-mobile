@@ -169,6 +169,8 @@ export default function ProPublicProfileScreen() {
   const missingForPublic: string[] = [];
   if (!activityName.trim()) missingForPublic.push("le nom de ton activité");
   if (!city.trim()) missingForPublic.push("ta ville");
+  if (!addressLine.trim()) missingForPublic.push("ton adresse");
+  if (!postalCode.trim()) missingForPublic.push("ton code postal");
   if (services.length === 0) missingForPublic.push("au moins une prestation active");
   const canGoPublic = missingForPublic.length === 0;
 
@@ -664,41 +666,64 @@ export default function ProPublicProfileScreen() {
           </View>
         </View>
 
-        {/* Section: Galerie de réalisations */}
+        {/* Section: Galerie de réalisations — Sérénité+ */}
         <View className="mb-6">
           <SectionTitle title="Galerie de réalisations" />
           {galleryError && (
             <View style={{ marginBottom: 8 }}><ErrorMessage message={galleryError} /></View>
           )}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-            {gallery.map((img) => (
-              <Pressable
-                key={img.id}
-                onPress={() => setSelectedGalleryImage(img)}
-                accessibilityRole="button"
-                accessibilityLabel="Voir la photo de réalisation"
-                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: colors.muted }}
-              >
-                <Image source={{ uri: resolveMediaUrl(img.thumbnail || img.url) }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-              </Pressable>
-            ))}
-            {gallery.length < MAX_GALLERY && (
-              <Pressable
-                onPress={handleAddGalleryPhoto}
-                disabled={galleryUploading}
-                accessibilityRole="button"
-                accessibilityLabel="Ajouter une photo à la galerie"
-                style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, backgroundColor: colors.muted, borderWidth: 1.5, borderColor: colors.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" }}
-              >
-                {galleryUploading
-                  ? <ActivityIndicator size="small" color={colors.primary} />
-                  : <Ionicons name="add" size={28} color={colors.mutedForeground} />}
-              </Pressable>
-            )}
-          </View>
-          <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6, paddingHorizontal: 2 }}>
-            {gallery.length}/{MAX_GALLERY} photos
-          </Text>
+          {!hasPlanAtLeast(activePlan, "serenite") && gallery.length === 0 ? (
+            <Pressable
+              onPress={() => router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "serenite" } })}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.muted, borderRadius: 14, padding: 14 }}
+            >
+              <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
+              <Text style={{ flex: 1, fontSize: 12, color: colors.mutedForeground, lineHeight: 17 }}>
+                Débloque la galerie de réalisations avec le palier Sérénité pour attirer plus de clientes.
+              </Text>
+            </Pressable>
+          ) : (
+            <>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                {gallery.map((img) => (
+                  <Pressable
+                    key={img.id}
+                    onPress={() => setSelectedGalleryImage(img)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Voir la photo de réalisation"
+                    style={{ width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10, overflow: "hidden", backgroundColor: colors.muted }}
+                  >
+                    <Image source={{ uri: resolveMediaUrl(img.thumbnail || img.url) }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                  </Pressable>
+                ))}
+                {gallery.length < MAX_GALLERY && (
+                  <Pressable
+                    onPress={handleAddGalleryPhoto}
+                    disabled={galleryUploading}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ajouter une photo à la galerie"
+                    style={{
+                      width: GALLERY_CELL, height: GALLERY_CELL, borderRadius: 10,
+                      backgroundColor: colors.muted, borderWidth: 1.5, borderColor: colors.border, borderStyle: "dashed",
+                      alignItems: "center", justifyContent: "center",
+                      opacity: hasPlanAtLeast(activePlan, "serenite") ? 1 : 0.6,
+                    }}
+                  >
+                    {galleryUploading ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : !hasPlanAtLeast(activePlan, "serenite") ? (
+                      <Ionicons name="lock-closed-outline" size={22} color={colors.mutedForeground} />
+                    ) : (
+                      <Ionicons name="add" size={28} color={colors.mutedForeground} />
+                    )}
+                  </Pressable>
+                )}
+              </View>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6, paddingHorizontal: 2 }}>
+                {gallery.length}/{MAX_GALLERY} photos
+              </Text>
+            </>
+          )}
         </View>
 
 

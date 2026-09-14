@@ -668,6 +668,9 @@ export const notificationsApi = {
     apiCall("/api/client/notification-settings", { method: "PUT", body: JSON.stringify(settings) }),
   savePushToken: (token: string): Promise<ApiResponse<void>> =>
     apiCall("/api/notifications/push-token", { method: "POST", body: JSON.stringify({ token }) }),
+  /** Appelé au logout — sans ça, l'appareil continue de recevoir les notifs de ce compte indéfiniment. */
+  deletePushToken: (token: string): Promise<ApiResponse<void>> =>
+    apiCall("/api/notifications/push-token", { method: "DELETE", body: JSON.stringify({ token }) }),
 };
 
 // ── Pro API ───────────────────────────────────────────────────────────────────

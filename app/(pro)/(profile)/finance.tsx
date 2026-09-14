@@ -321,10 +321,15 @@ export default function ProFinanceScreen() {
             disabled={exporting || !stats}
             accessibilityRole="button"
             accessibilityLabel="Exporter les données"
-            style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", opacity: exporting || !stats ? 0.5 : 1, ...Shadows.card }}
+            style={{
+              width: 40, height: 40, borderRadius: 12, backgroundColor: colors.white, alignItems: "center", justifyContent: "center",
+              opacity: exporting || !stats || !hasDetailedStats ? 0.5 : 1, ...Shadows.card,
+            }}
           >
             {exporting ? (
               <ActivityIndicator size="small" color={colors.primary} />
+            ) : !hasDetailedStats ? (
+              <Ionicons name="lock-closed-outline" size={16} color={colors.mutedForeground} />
             ) : (
               <Ionicons name="download-outline" size={18} color={colors.primary} />
             )}

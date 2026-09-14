@@ -120,6 +120,29 @@ export function syncAccountRole(account: { role: "pro" | "client"; isAdmin: bool
   });
 }
 
+/**
+ * Purge tout le blob App Group partagé (revenue, RDV suivant, résumé du
+ * jour, vue d'ensemble admin, alertes) — à appeler au logout. `syncAccountRole(null)`
+ * seule ne suffit pas : le merge natif est un merge de clés superficiel
+ * (mergeAndWriteWidgetSnapshot dans LiveActivityModule.swift), donc les
+ * chiffres du compte précédent restent en stockage tant qu'aucun écran n'a
+ * resynchronisé sa propre tranche — sur un appareil partagé, une autre pro
+ * connectée ensuite pouvait voir ses figures dans les widgets écran
+ * d'accueil avant le premier refresh.
+ */
+export function clearAllWidgetData(): void {
+  writeWidgetSnapshot({
+    nextAppointment: null,
+    daySummary: null,
+    revenue: null,
+    platformOverview: null,
+    alerts: null,
+    growth: null,
+    accountRole: null,
+    accountIsAdmin: false,
+  });
+}
+
 /** From GET /api/admin/analytics — see app/(admin-tools)/analytics.tsx. */
 export function syncAdminAnalyticsWidgets(
   a?: {

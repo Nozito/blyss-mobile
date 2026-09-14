@@ -60,14 +60,19 @@ export interface WidgetGrowthPayload {
 }
 
 export interface WidgetSnapshotPayload {
-  // `| null` clears a real "no upcoming RDV" state — distinct from omitting
-  // the key, which leaves whatever was last synced untouched.
+  // `| null` on every field clears that slice of the shared App Group blob
+  // — distinct from omitting the key, which leaves whatever was last synced
+  // untouched (native side does a shallow key-merge, see
+  // mergeAndWriteWidgetSnapshot in LiveActivityModule.swift). The Swift
+  // WidgetSnapshot struct declares each of these Optional, so a JSON `null`
+  // decodes cleanly to `nil` — used by widgetSync.clearAllWidgetData() on
+  // logout so a signed-out device holds none of the previous pro's figures.
   nextAppointment?: WidgetNextAppointmentPayload | null;
-  daySummary?: WidgetDaySummaryPayload;
-  revenue?: WidgetRevenuePayload;
-  platformOverview?: WidgetPlatformOverviewPayload;
-  alerts?: WidgetAlertsPayload;
-  growth?: WidgetGrowthPayload;
+  daySummary?: WidgetDaySummaryPayload | null;
+  revenue?: WidgetRevenuePayload | null;
+  platformOverview?: WidgetPlatformOverviewPayload | null;
+  alerts?: WidgetAlertsPayload | null;
+  growth?: WidgetGrowthPayload | null;
   // Which account is currently signed in — lets a widget lock instead of
   // rendering figures meant for a different role (see widgetSync.syncAccountRole).
   accountRole?: "pro" | "client" | null;

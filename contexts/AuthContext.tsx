@@ -20,8 +20,9 @@ import {
   type SignupResponse,
 } from "@/lib/api";
 import { storage } from "@/lib/storage";
-import { syncAccountRole } from "@/lib/widgetSync";
+import { syncAccountRole, clearAllWidgetData } from "@/lib/widgetSync";
 import { disableCalendarSync } from "@/lib/appleCalendarSync";
+import { deregisterPushToken } from "@/lib/pushToken";
 
 async function rcLogIn(userId: number) {
   try {
@@ -129,10 +130,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Un seul point d'entrée pour garder les widgets à jour sur le rôle du
   // compte connecté, plutôt qu'un appel à dupliquer à chaque site qui fait
   // setUser (login, signup, refreshProfile, patchUser, logout...) — capte
-  // aussi bien la reconnexion que le logout (user → null verrouille les
-  // widgets Pro/Admin jusqu'à la prochaine connexion).
+  // aussi bien la reconnexion que le logout. user → null purge tout le blob
+  // (clearAllWidgetData, pas juste accountRole) : le merge natif est un
+  // merge de clés superficiel, donc sans ça les chiffres du compte précédent
+  // restaient en stockage jusqu'au premier refresh du prochain compte connecté.
   useEffect(() => {
-    syncAccountRole(user ? { role: user.role, isAdmin: user.is_admin ?? false } : null);
+    if (user) {
+      syncAccountRole({ role: user.role, isAdmin: user.is_admin ?? false });
+    } else {
+      clearAllWidgetData();
+    }
   }, [user]);
 
   // Refetch du profil quand l'app revient au premier plan (rôle, pro_status peuvent avoir changé)
@@ -199,6 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
+    // Doit tourner AVANT authApi.logout()/storage.clearAll() : la route de
+    // désenregistrement du token push a besoin du token d'accès encore
+    // valide pour s'authentifier comme le compte qui se déconnecte.
+    await deregisterPushToken();
     try {
       await authApi.logout();
     } finally {
