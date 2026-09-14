@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { View, Text, Image, Pressable, Animated } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -30,10 +30,6 @@ export default function WelcomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.primary }}>
-      <View style={{ position: "absolute", top: insets.top + 12, left: 22 }}>
-        <Image source={require("@/assets/logo.png")} style={{ width: 38, height: 38 }} resizeMode="contain" />
-      </View>
-
       <Animated.View style={{ flex: 1, opacity, paddingTop: insets.top + 78 }}>
         <View style={{ flex: 1, paddingHorizontal: 22, justifyContent: "center" }}>
           <Text

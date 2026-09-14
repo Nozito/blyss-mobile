@@ -853,7 +853,7 @@ export default function ProPublicProfileScreen() {
         {saveSuccess && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.successLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 }}>
             <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.successText }}>Profil public mis à jour !</Text>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.successText }}>Profil mis à jour !</Text>
           </View>
         )}
         <AnimatedPressable

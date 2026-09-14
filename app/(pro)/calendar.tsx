@@ -1050,13 +1050,17 @@ export default function ProCalendarScreen() {
           </View>
         )}
 
-        {/* ── APPLE CALENDAR SYNC ── */}
+        {/* ── APPLE CALENDAR SYNC — Signature uniquement ── */}
         {Platform.OS === "ios" && (
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 12,
-            backgroundColor: colors.white, borderRadius: 16, padding: 14,
-            marginBottom: 16, ...Shadows.card,
-          }}>
+          <Pressable
+            disabled={hasPlanAtLeast(activePlan, "signature")}
+            onPress={() => router.push({ pathname: "/(pro)/(profile)/upgrade", params: { requiredPlan: "signature" } })}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12,
+              backgroundColor: colors.white, borderRadius: 16, padding: 14,
+              marginBottom: 16, opacity: hasPlanAtLeast(activePlan, "signature") ? 1 : 0.6, ...Shadows.card,
+            }}
+          >
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${colors.primary}15`, alignItems: "center", justifyContent: "center" }}>
               <Ionicons name="calendar-outline" size={18} color={colors.primary} />
             </View>
@@ -1066,7 +1070,9 @@ export default function ProCalendarScreen() {
                 Tes rendez-vous Blyss dans ton calendrier iPhone
               </Text>
             </View>
-            {calendarSyncLoading ? (
+            {!hasPlanAtLeast(activePlan, "signature") ? (
+              <Ionicons name="lock-closed-outline" size={16} color={colors.mutedForeground} />
+            ) : calendarSyncLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <Switch
@@ -1076,7 +1082,7 @@ export default function ProCalendarScreen() {
                 thumbColor={colors.onColor}
               />
             )}
-          </View>
+          </Pressable>
         )}
 
         {/* ── PLANNING & ABSENCES CARDS ── */}
