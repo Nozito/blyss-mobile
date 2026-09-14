@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import Purchases from "react-native-purchases";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   authApi,
   type User,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/api";
 import { storage } from "@/lib/storage";
 import { syncAccountRole } from "@/lib/widgetSync";
+import { disableCalendarSync } from "@/lib/appleCalendarSync";
 
 async function rcLogIn(userId: number) {
   try {
@@ -203,6 +205,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       await storage.clearAll();
       await rcLogOut();
+      // Flag + calendrier/événements de lib/appleCalendarSync.ts sont
+      // persistés en AsyncStorage sous des clés fixes, pas scopées par user
+      // — sans ça, un changement de compte sur le même appareil garde la
+      // sync active (ou mélange les événements) entre deux comptes pro.
+      await disableCalendarSync().catch(() => {});
+      // Même souci : "pro_onboarding_done" (app/pro-onboarding.tsx,
+      // app/(pro)/dashboard.tsx) est un flag global non scopé — sans ce
+      // clear, une nouvelle pro qui se connecte après une autre sur le même
+      // appareil sautait l'onboarding qu'elle n'a jamais vu.
+      await AsyncStorage.removeItem("pro_onboarding_done").catch(() => {});
     }
   }, []);
 

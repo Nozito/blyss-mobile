@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { queryClient } from "./queryClient";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -224,6 +225,7 @@ async function tryRefreshToken(): Promise<boolean> {
       const refreshToken = await storage.getRefreshToken();
       if (!refreshToken) {
         await storage.clearAll();
+        queryClient.clear();
         return false;
       }
 
@@ -235,6 +237,7 @@ async function tryRefreshToken(): Promise<boolean> {
 
       if (!response.ok) {
         await storage.clearAll();
+        queryClient.clear();
         return false;
       }
 
@@ -248,6 +251,11 @@ async function tryRefreshToken(): Promise<boolean> {
       return true;
     } catch {
       await storage.clearAll();
+      // Le QueryClient est un singleton module-level qui survit à un logout
+      // sans redémarrage de l'app — sans ce clear(), un changement de compte
+      // dans la même session continue de servir les données en cache de
+      // l'utilisateur précédent (mêmes clés de query, non scopées par user).
+      queryClient.clear();
       return false;
     } finally {
       _refreshInFlight = null;
@@ -396,6 +404,7 @@ export const authApi = {
       // ignore
     } finally {
       await storage.clearAll();
+      queryClient.clear();
     }
   },
 

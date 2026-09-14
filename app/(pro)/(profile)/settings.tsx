@@ -84,7 +84,6 @@ export default function ProSettingsScreen() {
       last_name:         user?.last_name ?? "",
       email:             user?.email ?? "",
       phone_number:      formatPhoneFR(user?.phone_number),
-      activity_name:     user?.activity_name ?? "",
       city:              user?.city ?? "",
       bio:               user?.bio ?? "",
       instagram_account: user?.instagram_account ?? "",
@@ -295,19 +294,6 @@ export default function ProSettingsScreen() {
               Changer d'email demande ton mot de passe actuel (section Sécurité).
             </Text>
           </View>
-
-          <Controller
-            control={control}
-            name="activity_name"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                label="Nom de l'activité"
-                value={value ?? ""}
-                onChangeText={onChange}
-                leftIcon="storefront-outline"
-              />
-            )}
-          />
 
           <Controller
             control={control}
