@@ -29,6 +29,7 @@ import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { Input } from "@/components/ui/Input";
 import { CityAutocomplete, type CityValidation } from "@/components/ui/CityAutocomplete";
+import { AddressAutocomplete, type AddressValidation } from "@/components/ui/AddressAutocomplete";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { proProfileSchema, postalCodeSchema } from "@/lib/validation";
@@ -127,6 +128,7 @@ export default function ProPublicProfileScreen() {
   const [activityName, setActivityName] = useState("");
   const [city, setCity] = useState("");
   const [cityValidation, setCityValidation] = useState<CityValidation>("unchecked");
+  const [addressValidation, setAddressValidation] = useState<AddressValidation>("unchecked");
   const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
   const [instagramError, setInstagramError] = useState<string | undefined>();
@@ -250,6 +252,12 @@ export default function ProPublicProfileScreen() {
     const postalParsed = postalCodeSchema.safeParse(postalCode);
     if (!postalParsed.success) {
       setSaveError(postalParsed.error.errors[0]?.message ?? "Code postal invalide.");
+      return;
+    }
+    // Adresse non reconnue par la Base Adresse Nationale — "unknown" (API
+    // injoignable) et "unchecked" (champ non modifié) laissent passer.
+    if (addressValidation === "invalid") {
+      setSaveError("Cette adresse ne correspond à aucune adresse française connue. Choisis une suggestion dans la liste.");
       return;
     }
 
@@ -541,7 +549,13 @@ export default function ProPublicProfileScreen() {
               </View>
             )}
 
-            <Input label="Adresse *" value={addressLine} onChangeText={setAddressLine} leftIcon="pin-outline" />
+            <AddressAutocomplete
+              addressLine={addressLine}
+              onChangeAddressLine={setAddressLine}
+              postalCode={postalCode}
+              onSelectAddress={(s) => { setAddressLine(s.label); setPostalCode(s.postcode); }}
+              onValidationChange={setAddressValidation}
+            />
             <Input
               label="Code postal *"
               value={postalCode}

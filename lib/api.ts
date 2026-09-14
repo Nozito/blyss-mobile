@@ -1098,10 +1098,25 @@ export interface CitySuggestion {
 /** `degraded: true` = geo.api.gouv.fr injoignable, liste vide non fiable — ne pas bloquer une sauvegarde dessus. */
 export type CitySearchResponse = ApiResponse<CitySuggestion[]> & { degraded?: boolean };
 
+export interface AddressSuggestion {
+  label: string;
+  postcode: string;
+  city: string;
+  fullLabel: string;
+  lat: number;
+  lon: number;
+}
+
+/** `degraded: true` = api-adresse.data.gouv.fr injoignable, liste vide non fiable — ne pas bloquer une sauvegarde dessus. */
+export type AddressSearchResponse = ApiResponse<AddressSuggestion[]> & { degraded?: boolean };
+
 export const geoApi = {
   /** Autocomplete + vérification de villes françaises réelles — public, non authentifié. */
   searchCities: (query: string): Promise<CitySearchResponse> =>
     apiCall(`/api/geo/cities?q=${encodeURIComponent(query)}`),
+  /** Autocomplete + vérification d'adresses françaises réelles (numéro + voie) — public, non authentifié. */
+  searchAddresses: (query: string): Promise<AddressSearchResponse> =>
+    apiCall(`/api/geo/addresses?q=${encodeURIComponent(query)}`),
 };
 
 export const clientOnboardingApi = {
