@@ -458,7 +458,7 @@ export default function ProCalendarScreen() {
   const qc = useQueryClient();
   const router = useRouter();
   const { showToast } = useToast();
-  const { activePlan } = useRevenueCat();
+  const { activePlan, isReady: rcReady } = useRevenueCat();
   const { refreshNow: refreshLiveActivity } = useLiveActivity();
   const deepLinkParams = useLocalSearchParams<{ appointmentId?: string; date?: string; openAbsences?: string }>();
 
@@ -667,7 +667,18 @@ export default function ProCalendarScreen() {
   }, []);
 
   useEffect(() => { void isCalendarSyncEnabled().then(setCalendarSyncEnabled); }, []);
-  useEffect(() => { if (calendarSyncEnabled) void runCalendarSync(); }, [calendarSyncEnabled, runCalendarSync]);
+  // Sync Apple Calendar = Signature. Le flag activé est persisté en local
+  // (AsyncStorage, pas de backend) — sans ce re-check, un pro qui downgrade
+  // après avoir activé la sync la garde active indéfiniment.
+  useEffect(() => {
+    if (!calendarSyncEnabled || !rcReady) return;
+    if (!hasPlanAtLeast(activePlan, "signature")) {
+      void disableCalendarSync();
+      setCalendarSyncEnabled(false);
+      return;
+    }
+    void runCalendarSync();
+  }, [calendarSyncEnabled, runCalendarSync, rcReady, activePlan]);
 
   const toggleCalendarSync = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
