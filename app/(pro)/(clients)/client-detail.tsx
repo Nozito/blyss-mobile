@@ -17,10 +17,10 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { proApi, nailTechApi } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
-import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { useToast } from "@/components/ui/Toast";
 import { safeBack } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { formatLastVisit } from "@/lib/dateUtils";
@@ -61,6 +61,7 @@ export default function ClientDetailScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const reduceMotion = useReducedMotion();
   const contentOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
@@ -154,6 +155,7 @@ export default function ClientDetailScreen() {
         qc.invalidateQueries({ queryKey: ["client-notes", clientId] });
         setInitial({ notes, allergies, shape, style, patchTest });
         setHasChanges(false);
+        showToast("Notes enregistrées", "success");
       } else {
         setSaveError("Impossible de sauvegarder les notes.");
       }
@@ -200,7 +202,7 @@ export default function ClientDetailScreen() {
         contentContainerStyle={{
           paddingTop: insets.top,
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 100,
+          paddingBottom: insets.bottom + 24,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -451,26 +453,19 @@ export default function ClientDetailScreen() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.destructive} />
         </AnimatedPressable>
-      </ScrollView>
 
-      {/* Sticky save */}
-      {hasChanges && (
-        <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          paddingHorizontal: 20, paddingTop: 12,
-          paddingBottom: insets.bottom + 96,
-          backgroundColor: withAlpha(colors.background, 0.97),
-        }}>
+        {/* Enregistrer — dans le flux normal, juste après la zone critique */}
+        <View style={{ marginTop: 20 }}>
           {saveError && <View style={{ marginBottom: 10 }}><ErrorMessage message={saveError} /></View>}
           <AnimatedPressable
             onPress={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !hasChanges}
             style={{
               height: 56, borderRadius: 20,
               backgroundColor: colors.primary,
               alignItems: "center", justifyContent: "center",
               flexDirection: "row", gap: 8,
-              opacity: isSaving ? 0.7 : 1,
+              opacity: isSaving || !hasChanges ? 0.5 : 1,
               shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
@@ -486,7 +481,7 @@ export default function ClientDetailScreen() {
             )}
           </AnimatedPressable>
         </View>
-      )}
+      </ScrollView>
       </Animated.View>
     </View>
   );
