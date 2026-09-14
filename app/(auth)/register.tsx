@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import Reanimated, { FadeIn } from "react-native-reanimated";
 import RNDateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
@@ -18,6 +19,8 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 import { authErrorMessage } from "@/lib/authErrors";
+import { formatPhoneFR } from "@/lib/format";
+import { useCitySearch } from "@/hooks/useCitySearch";
 import { useAppTransition } from "@/contexts/TransitionContext";
 import { useThemeColors, useIsDarkMode } from "@/hooks/useThemeColors";
 import { withAlpha } from "@/constants/colors";
@@ -61,13 +64,6 @@ interface FormData {
   password: string;
   confirmPassword: string;
   acceptedTerms: boolean;
-}
-
-function formatPhone(value: string): string {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 10)
-    .replace(/(\d{2})(?=\d)/g, "$1 ");
 }
 
 function getAge(birthDate: Date | undefined): number {
@@ -139,6 +135,15 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [cityFocused, setCityFocused] = useState(false);
+  const {
+    debouncedQuery: debouncedCity,
+    suggestions: citySuggestions,
+    loading: cityLoading,
+    validation: cityValidation,
+    setSuggestions: setCitySuggestions,
+    setValidation: setCityValidation,
+  } = useCitySearch(formData.city, cityFocused);
 
   const totalSteps = formData.role === "pro" ? 9 : 6;
 
@@ -176,6 +181,11 @@ export default function RegisterScreen() {
       case 6:
         return formData.role === "client" ? formData.acceptedTerms : true;
       case 7:
+        // Vide = "Plus tard →" (étape optionnelle, toujours permis). Rempli,
+        // on bloque seulement si l'API a confirmé qu'aucune commune ne
+        // correspond ("invalid") — "unknown" (API injoignable) et
+        // "unchecked" (debounce pas encore résolu) laissent passer.
+        return formData.city.trim().length === 0 || cityValidation !== "invalid";
       case 8:
         return true;
       case 9:
@@ -382,7 +392,7 @@ export default function RegisterScreen() {
           ink={ink}
           accent={colors.primary}
           value={formData.phone}
-          onChangeText={(v) => update({ phone: formatPhone(v) })}
+          onChangeText={(v) => update({ phone: formatPhoneFR(v) })}
           keyboardType="phone-pad"
           autoComplete="tel"
           textContentType="telephoneNumber"
@@ -488,16 +498,59 @@ export default function RegisterScreen() {
     } else if (formData.role === "pro" && step === 7) {
       title = "Où exerces-tu ?";
       subtitle = "Ville ou quartier";
+      const showCitySuggestions =
+        cityFocused && debouncedCity.length >= 2 && (cityLoading || citySuggestions.length > 0);
       body = (
-        <PosterField
-          label="Ville"
-          ink={ink}
-          accent={colors.primary}
-          value={formData.city}
-          onChangeText={(v) => update({ city: v })}
-          placeholder="Ex. : Paris 11"
-          maxLength={VALIDATION.TEXT_MAX}
-        />
+        <View>
+          <PosterField
+            label="Ville"
+            ink={ink}
+            accent={colors.primary}
+            value={formData.city}
+            onChangeText={(v) => update({ city: v })}
+            onFocus={() => setCityFocused(true)}
+            onBlur={() => setTimeout(() => setCityFocused(false), 150)}
+            placeholder="Ex. : Paris 11"
+            maxLength={VALIDATION.TEXT_MAX}
+          />
+          {showCitySuggestions && (
+            <View style={{ marginTop: 10, backgroundColor: withAlpha(ink, 0.06), borderRadius: 14, overflow: "hidden" }}>
+              {cityLoading ? (
+                <View style={{ padding: 14, alignItems: "center" }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : (
+                citySuggestions.map((s, i) => (
+                  <Pressable
+                    key={`${s.nom}-${s.codePostal ?? i}`}
+                    onPress={() => {
+                      update({ city: s.nom });
+                      setCitySuggestions([]);
+                      setCityFocused(false);
+                      setCityValidation("valid");
+                    }}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      paddingHorizontal: 14, paddingVertical: 12,
+                      borderTopWidth: i === 0 ? 0 : 1, borderTopColor: withAlpha(ink, 0.12),
+                    }}
+                  >
+                    <Ionicons name="location-outline" size={15} color={withAlpha(ink, 0.6)} />
+                    <Text style={{ fontSize: 14, color: ink, flex: 1 }} numberOfLines={1}>{s.nom}</Text>
+                    {!!s.codePostal && (
+                      <Text style={{ fontSize: 12, color: withAlpha(ink, 0.55) }}>{s.codePostal}</Text>
+                    )}
+                  </Pressable>
+                ))
+              )}
+            </View>
+          )}
+          {cityValidation === "invalid" && formData.city.trim().length > 0 && !showCitySuggestions && (
+            <Text style={{ color: withAlpha(ink, 0.75), fontSize: 12, marginTop: 8 }}>
+              Ville non reconnue — vérifie l'orthographe ou choisis une suggestion.
+            </Text>
+          )}
+        </View>
       );
     } else if (formData.role === "pro" && step === 8) {
       title = "Ton Instagram";

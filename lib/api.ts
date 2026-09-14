@@ -1081,6 +1081,20 @@ export interface OnboardingRecommendation {
   open_slots: { today: number; this_week: number; this_weekend: number };
 }
 
+export interface CitySuggestion {
+  nom: string;
+  codePostal: string | null;
+}
+
+/** `degraded: true` = geo.api.gouv.fr injoignable, liste vide non fiable — ne pas bloquer une sauvegarde dessus. */
+export type CitySearchResponse = ApiResponse<CitySuggestion[]> & { degraded?: boolean };
+
+export const geoApi = {
+  /** Autocomplete + vérification de villes françaises réelles — public, non authentifié. */
+  searchCities: (query: string): Promise<CitySearchResponse> =>
+    apiCall(`/api/geo/cities?q=${encodeURIComponent(query)}`),
+};
+
 export const clientOnboardingApi = {
   getStatus: (): Promise<ApiResponse<ClientOnboardingStatus>> =>
     apiCall("/api/client/onboarding/status"),

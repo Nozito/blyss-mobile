@@ -25,6 +25,7 @@ import { Shadows } from "@/constants/shadows";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { BlockedClient } from "@/lib/api";
 import { formatLastVisit } from "@/lib/dateUtils";
+import { formatPhoneFR } from "@/lib/format";
 
 type Client = {
   id: number;
@@ -177,7 +178,7 @@ export default function ProClientsScreen() {
         {item.phone ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 }}>
             <Ionicons name="call-outline" size={11} color={colors.mutedForeground} />
-            <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>{item.phone}</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>{formatPhoneFR(item.phone)}</Text>
           </View>
         ) : null}
       </View>

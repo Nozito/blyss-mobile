@@ -105,6 +105,9 @@ jest.mock('@/lib/api', () => ({
   proApi: {
     getSubscription: (...args: any[]) => mockGetSubscription(...args),
   },
+  geoApi: {
+    searchCities: () => Promise.resolve({ success: true, data: [] }),
+  },
 }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

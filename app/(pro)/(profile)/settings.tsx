@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, usersApi, proApi } from "@/lib/api";
 import { phoneSchema, bioSchema, getZodError } from "@/lib/validation";
 import { Input } from "@/components/ui/Input";
+import { CityAutocomplete, type CityValidation } from "@/components/ui/CityAutocomplete";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Shadows } from "@/constants/shadows";
@@ -30,6 +31,7 @@ import { BiometricToggle } from "@/components/screens/shared/BiometricToggle";
 import type { User } from "@/lib/api";
 import { safeBack, logoutAndGoTo } from "@/lib/navigation";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { formatPhoneFR } from "@/lib/format";
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string }) {
   const colors = useThemeColors();
@@ -67,6 +69,9 @@ export default function ProSettingsScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  // "unchecked" tant que la valeur n'a pas changé depuis le chargement —
+  // ne bloque jamais une pro qui n'a pas touché à sa ville existante.
+  const [cityValidation, setCityValidation] = useState<CityValidation>("unchecked");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -78,7 +83,7 @@ export default function ProSettingsScreen() {
       first_name:        user?.first_name ?? "",
       last_name:         user?.last_name ?? "",
       email:             user?.email ?? "",
-      phone_number:      user?.phone_number ?? "",
+      phone_number:      formatPhoneFR(user?.phone_number),
       activity_name:     user?.activity_name ?? "",
       city:              user?.city ?? "",
       bio:               user?.bio ?? "",
@@ -91,6 +96,14 @@ export default function ProSettingsScreen() {
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
+
+    // Ville non reconnue par geo.api.gouv.fr (upstream a répondu, pas de
+    // match) — on bloque. "unknown" (upstream injoignable) et "unchecked"
+    // (champ non modifié) laissent passer volontairement.
+    if (cityValidation === "invalid") {
+      setError("Cette ville ne correspond à aucune commune française connue. Choisis une suggestion dans la liste.");
+      return;
+    }
 
     // Validate phone format if provided
     const phoneNum = (data.phone_number ?? "").replace(/\s/g, "");
@@ -128,7 +141,7 @@ export default function ProSettingsScreen() {
 
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { ...data };
+      const payload: Record<string, unknown> = { ...data, phone_number: phoneNum };
       if (changingPassword) {
         payload.currentPassword = currentPassword;
         payload.newPassword = newPassword;
@@ -300,7 +313,11 @@ export default function ProSettingsScreen() {
             control={control}
             name="city"
             render={({ field: { onChange, value } }) => (
-              <Input label="Ville" value={value ?? ""} onChangeText={onChange} leftIcon="location-outline" />
+              <CityAutocomplete
+                value={value ?? ""}
+                onChangeText={onChange}
+                onValidationChange={setCityValidation}
+              />
             )}
           />
 
@@ -308,7 +325,7 @@ export default function ProSettingsScreen() {
             control={control}
             name="phone_number"
             render={({ field: { onChange, value } }) => (
-              <Input label="Téléphone" value={value ?? ""} onChangeText={onChange} keyboardType="phone-pad" leftIcon="call-outline" />
+              <Input label="Téléphone" value={value ?? ""} onChangeText={(v) => onChange(formatPhoneFR(v))} keyboardType="phone-pad" leftIcon="call-outline" />
             )}
           />
 

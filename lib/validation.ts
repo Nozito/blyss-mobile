@@ -43,6 +43,26 @@ export const reviewSchema = z.object({
   comment: z.string().max(200, "Maximum 200 caractères").optional().or(z.literal("")),
 });
 
+// ─── Ville (CityAutocomplete + register.tsx étape 7) ───────────────────────────
+
+/**
+ * Une ville saisie est considérée valide si elle correspond à une commune
+ * connue dans un sens ou dans l'autre :
+ *  - la valeur commence par "<commune> " → "Paris 15" face à la suggestion
+ *    "Paris" (préfixe complété par la pro) ;
+ *  - la commune commence par la valeur → "Paris 11e" face à la suggestion
+ *    "Paris 11e Arrondissement" (préfixe du nom officiel, la pro n'a pas
+ *    tapé "Arrondissement").
+ */
+export function cityMatchesSuggestion(value: string, suggestions: { nom: string }[]): boolean {
+  const v = value.trim().toLowerCase();
+  if (!v) return false;
+  return suggestions.some((s) => {
+    const nom = s.nom.toLowerCase();
+    return v === nom || v.startsWith(`${nom} `) || nom.startsWith(v);
+  });
+}
+
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 export function getZodError(schema: z.ZodTypeAny, value: unknown): string | null {

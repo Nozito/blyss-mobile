@@ -54,3 +54,16 @@ export function formatPercentFR(
   if (n === null) return "—";
   return `${n.toFixed(digits).replace(".", ",")}${NBSP}%`;
 }
+
+/**
+ * Numéro FR par groupes de 2 : "0623194021" → "06 23 19 40 21". Tronque à
+ * 10 chiffres et ignore tout caractère non numérique (utilisable en live
+ * pendant la saisie comme sur un stockage brut). Renvoie "" si vide.
+ */
+export function formatPhoneFR(value: string | null | undefined): string {
+  if (!value) return "";
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 10)
+    .replace(/(\d{2})(?=\d)/g, "$1 ");
+}

@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRevenueCat } from "@/contexts/RevenueCatContext";
 import { hasPlanAtLeast } from "@/constants/plans";
 import { Input } from "@/components/ui/Input";
+import { CityAutocomplete, type CityValidation } from "@/components/ui/CityAutocomplete";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { proProfileSchema, postalCodeSchema } from "@/lib/validation";
@@ -125,6 +126,7 @@ export default function ProPublicProfileScreen() {
 
   const [activityName, setActivityName] = useState("");
   const [city, setCity] = useState("");
+  const [cityValidation, setCityValidation] = useState<CityValidation>("unchecked");
   const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
   const [instagramError, setInstagramError] = useState<string | undefined>();
@@ -232,6 +234,12 @@ export default function ProPublicProfileScreen() {
     const parsed = proProfileSchema.safeParse({ activityName, city, bio, instagram });
     if (!parsed.success) {
       setSaveError(parsed.error.errors[0]?.message ?? "Champ invalide.");
+      return;
+    }
+    // Ville non reconnue par geo.api.gouv.fr — "unknown" (API injoignable)
+    // et "unchecked" (champ non modifié) laissent passer volontairement.
+    if (cityValidation === "invalid") {
+      setSaveError("Cette ville ne correspond à aucune commune française connue. Choisis une suggestion dans la liste.");
       return;
     }
     if (instagram && instagramError) { setSaveError(instagramError ?? "Handle Instagram invalide."); return; }
@@ -469,14 +477,12 @@ export default function ProPublicProfileScreen() {
                 hint="Le nom sous lequel tes clientes te trouveront sur Blyss."
               />
             </View>
-            <Input
+            <CityAutocomplete
               label="Ville / Zone *"
               value={city}
               onChangeText={setCity}
-              placeholder="Ex : Paris 11e, Lyon centre"
-              leftIcon="location-outline"
-              maxLength={100}
-              autoCapitalize="words"
+              onValidationChange={setCityValidation}
+              placeholder="Ex : Paris 11e, Lyon 3e"
             />
           </View>
         </View>
