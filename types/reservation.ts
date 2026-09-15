@@ -8,10 +8,21 @@
  * confiance à un prix/durée envoyé par le client — doc §5.2).
  */
 
+export interface ReservationAnswerSelection {
+  questionId: number;
+  /** short_text / long_text / boolean. */
+  value?: string;
+  /** single_choice (1 élément) / multi_choice (0..N) — ids de question_choices. */
+  values?: number[];
+  /** Consentement explicite requis si la question est sensible (doc §9.2). */
+  consent?: boolean;
+}
+
 export interface ReservationSelection {
   prestationId: number;
   selectedVariantValueIds: number[];
   selectedOptionIds: number[];
+  answers: ReservationAnswerSelection[];
 }
 
 export interface ReservationItemVariantSnapshot {
@@ -30,7 +41,6 @@ export interface ReservationItemOptionSnapshot {
   snapshot_duration_delta: number;
 }
 
-// V2 — préparé, non exposé.
 export interface ReservationItemAnswerSnapshot {
   question_id: number | null;
   snapshot_question_label: string;
@@ -38,6 +48,7 @@ export interface ReservationItemAnswerSnapshot {
   snapshot_is_sensitive: boolean;
   snapshot_choices_available: string[] | null;
   answer_value: string | null;
+  answer_values: string[] | null;
 }
 
 export interface ReservationItem {

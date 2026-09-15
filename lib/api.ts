@@ -1,6 +1,19 @@
 import { storage } from "./storage";
 import { queryClient } from "./queryClient";
-import type { PricingMode, VariantGroup, PrestationOption } from "@/types/prestation";
+import type { PricingMode, VariantGroup, PrestationOption, Question, QuestionChoice, QuestionType } from "@/types/prestation";
+import type { ReservationAnswerSelection } from "@/types/reservation";
+
+/** Forme réseau attendue par le backend (doc §13.2) — question_id en snake_case. */
+export interface ReservationAnswerWire {
+  question_id: number;
+  value?: string;
+  values?: number[];
+  consent?: boolean;
+}
+
+export function toAnswerWire(answers: ReservationAnswerSelection[]): ReservationAnswerWire[] {
+  return answers.map((a) => ({ question_id: a.questionId, value: a.value, values: a.values, consent: a.consent }));
+}
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -500,6 +513,10 @@ export const specialistsApi = {
   getOptions: (prestationId: number): Promise<ApiResponse<PrestationOption[]>> =>
     apiCall(`/api/prestations/${prestationId}/options`),
 
+  /** Questions actives uniquement (doc §13.2), avec choix + texte de consentement si sensible. */
+  getQuestions: (prestationId: number): Promise<ApiResponse<Question[]>> =>
+    apiCall(`/api/prestations/${prestationId}/questions`),
+
   getGalleryByPro: (proId: number) =>
     apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>(`/api/gallery/pro/${proId}`),
 
@@ -745,6 +762,8 @@ export const proApi = {
     /** Moteur de prestations (doc §13.1) — sélection de variantes/options pour cette prestation. */
     selected_variant_value_ids?: number[];
     selected_option_ids?: number[];
+    /** Réponses aux questions personnalisées (doc §13.2) — utiliser toAnswerWire(). */
+    answers?: ReservationAnswerWire[];
     /** Override d'ajout manuel — cf. 3.4. Jamais envoyé sans confirmation pro explicite. */
     manual_override?: {
       mode: ManualOverrideMode;
@@ -1074,6 +1093,38 @@ export const prestationConfigApi = {
 
   deleteOption: (optionId: number): Promise<ApiResponse<{ deactivated: boolean }>> =>
     apiCall(`/api/pro/options/${optionId}`, { method: "DELETE" }),
+
+  // ── Questions personnalisées (V2) — doc §13.2 ──────────────────────────────
+  getQuestions: (prestationId: number): Promise<ApiResponse<Question[]>> =>
+    apiCall(`/api/pro/prestations/${prestationId}/questions`),
+
+  createQuestion: (
+    prestationId: number,
+    data: { label: string; type: QuestionType; required?: boolean; is_sensitive?: boolean; sort_order?: number }
+  ): Promise<ApiResponse<Question>> =>
+    apiCall(`/api/pro/prestations/${prestationId}/questions`, { method: "POST", body: JSON.stringify(data) }),
+
+  updateQuestion: (
+    questionId: number,
+    data: Partial<{ label: string; type: QuestionType; required: boolean; is_sensitive: boolean; active: boolean; sort_order: number }>
+  ): Promise<ApiResponse<Question>> =>
+    apiCall(`/api/pro/questions/${questionId}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteQuestion: (questionId: number): Promise<ApiResponse<{ deactivated: boolean }>> =>
+    apiCall(`/api/pro/questions/${questionId}`, { method: "DELETE" }),
+
+  createQuestionChoice: (questionId: number, data: { label: string; sort_order?: number }): Promise<ApiResponse<QuestionChoice>> =>
+    apiCall(`/api/pro/questions/${questionId}/choices`, { method: "POST", body: JSON.stringify(data) }),
+
+  updateQuestionChoice: (choiceId: number, data: Partial<{ label: string; sort_order: number }>): Promise<ApiResponse<QuestionChoice>> =>
+    apiCall(`/api/pro/question-choices/${choiceId}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteQuestionChoice: (choiceId: number): Promise<ApiResponse<{ deleted: boolean }>> =>
+    apiCall(`/api/pro/question-choices/${choiceId}`, { method: "DELETE" }),
+
+  /** Suggestion (jamais une décision automatique, doc §9.2) — la pro confirme/infirme is_sensitive elle-même. */
+  detectSensitiveQuestion: (label: string): Promise<ApiResponse<{ suggested: boolean; matchedKeywords: string[] }>> =>
+    apiCall(`/api/pro/questions/detect-sensitive`, { method: "POST", body: JSON.stringify({ label }) }),
 };
 
 // ── Client API ────────────────────────────────────────────────────────────────
@@ -1261,6 +1312,8 @@ export const stripePaymentsApi = {
     /** Moteur de prestations (doc §13.1) — sélection de variantes/options pour cette prestation. Prix/durée toujours recalculés côté serveur. */
     selected_variant_value_ids?: number[];
     selected_option_ids?: number[];
+    /** Réponses aux questions personnalisées (doc §13.2) — utiliser toAnswerWire(). */
+    answers?: ReservationAnswerWire[];
   }): Promise<ApiResponse<{ id: number; deposit_percentage: number; deposit_amount: number | null; price: number }>> =>
     apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
 

@@ -18,7 +18,16 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
-import type { VariantGroup, PrestationOption } from "@/types/prestation";
+import type { VariantGroup, PrestationOption, Question, QuestionType } from "@/types/prestation";
+
+const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  short_text: "Texte court",
+  long_text: "Texte long",
+  boolean: "Oui / Non",
+  single_choice: "Choix unique",
+  multi_choice: "Choix multiple",
+};
+const QUESTION_TYPES = Object.keys(QUESTION_TYPE_LABELS) as QuestionType[];
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   const colors = useThemeColors();
@@ -78,13 +87,19 @@ export default function ServiceConfigScreen() {
     queryKey: ["prestation-options", prestationId],
     queryFn: () => prestationConfigApi.getOptions(prestationId),
   });
+  const questionsQuery = useQuery({
+    queryKey: ["prestation-questions", prestationId],
+    queryFn: () => prestationConfigApi.getQuestions(prestationId),
+  });
 
   const groups = (groupsQuery.data?.data as VariantGroup[] | undefined) ?? [];
   const options = (optionsQuery.data?.data as PrestationOption[] | undefined) ?? [];
+  const questions = (questionsQuery.data?.data as Question[] | undefined) ?? [];
 
   function invalidate() {
     qc.invalidateQueries({ queryKey: ["prestation-variant-groups", prestationId] });
     qc.invalidateQueries({ queryKey: ["prestation-options", prestationId] });
+    qc.invalidateQueries({ queryKey: ["prestation-questions", prestationId] });
   }
 
   function handleResult<T>(res: { success: boolean; error?: string; message?: string }) {
@@ -164,7 +179,67 @@ export default function ServiceConfigScreen() {
     onSuccess: handleResult,
   });
 
-  const isLoading = groupsQuery.isLoading || optionsQuery.isLoading;
+  // ── Questions (V2) ───────────────────────────────────────────────────────
+  const [newQuestion, setNewQuestion] = useState<{ label: string; type: QuestionType; required: boolean; isSensitive: boolean }>({
+    label: "",
+    type: "short_text",
+    required: false,
+    isSensitive: false,
+  });
+  const [sensitiveSuggestion, setSensitiveSuggestion] = useState<{ suggested: boolean; matchedKeywords: string[] } | null>(null);
+
+  async function handleQuestionLabelChange(label: string) {
+    setNewQuestion((q) => ({ ...q, label }));
+    if (label.trim().length < 3) {
+      setSensitiveSuggestion(null);
+      return;
+    }
+    const res = await prestationConfigApi.detectSensitiveQuestion(label.trim());
+    if (res.success && res.data?.suggested) {
+      setSensitiveSuggestion(res.data);
+      setNewQuestion((q) => ({ ...q, isSensitive: true }));
+    } else {
+      setSensitiveSuggestion(null);
+    }
+  }
+
+  const createQuestionMutation = useMutation({
+    mutationFn: () =>
+      prestationConfigApi.createQuestion(prestationId, {
+        label: newQuestion.label.trim(),
+        type: newQuestion.type,
+        required: newQuestion.required,
+        is_sensitive: newQuestion.isSensitive,
+      }),
+    onSuccess: (res) => {
+      if (handleResult(res)) {
+        setNewQuestion({ label: "", type: "short_text", required: false, isSensitive: false });
+        setSensitiveSuggestion(null);
+      }
+    },
+  });
+  const toggleQuestion = useMutation({
+    mutationFn: ({ questionId, active }: { questionId: number; active: boolean }) => prestationConfigApi.updateQuestion(questionId, { active }),
+    onSuccess: handleResult,
+  });
+  const deleteQuestion = useMutation({
+    mutationFn: (questionId: number) => prestationConfigApi.deleteQuestion(questionId),
+    onSuccess: handleResult,
+  });
+
+  const [newChoiceDrafts, setNewChoiceDrafts] = useState<Record<number, string>>({});
+  const createChoice = useMutation({
+    mutationFn: (questionId: number) => prestationConfigApi.createQuestionChoice(questionId, { label: (newChoiceDrafts[questionId] ?? "").trim() }),
+    onSuccess: (res, questionId) => {
+      if (handleResult(res)) setNewChoiceDrafts((d) => ({ ...d, [questionId]: "" }));
+    },
+  });
+  const deleteChoice = useMutation({
+    mutationFn: (choiceId: number) => prestationConfigApi.deleteQuestionChoice(choiceId),
+    onSuccess: handleResult,
+  });
+
+  const isLoading = groupsQuery.isLoading || optionsQuery.isLoading || questionsQuery.isLoading;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -182,8 +257,8 @@ export default function ServiceConfigScreen() {
             <Ionicons name="chevron-back" size={20} color={colors.foreground} />
           </AnimatedIconButton>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Variantes & options</Text>
-            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>Le prix et la durée s'ajustent automatiquement</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.foreground }}>Variantes, options & questions</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>Personnalise ta prestation et les informations à recueillir</Text>
           </View>
         </View>
 
@@ -300,6 +375,121 @@ export default function ServiceConfigScreen() {
                   <Ionicons name="add" size={18} color={colors.onColor} />
                 </Pressable>
               </View>
+            </Card>
+
+            <Card title="Questions" subtitle="Récupère les informations dont tu as besoin avant le rendez-vous">
+              {questions.map((q) => (
+                <View key={q.id} style={{ marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground, opacity: q.active ? 1 : 0.5 }}>{q.label}</Text>
+                      <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2 }}>
+                        {QUESTION_TYPE_LABELS[q.type]}
+                        {q.required && " · requise"}
+                        {q.is_sensitive && " · donnée sensible"}
+                      </Text>
+                    </View>
+                    <RowActions
+                      active={q.active}
+                      onToggle={() => toggleQuestion.mutate({ questionId: q.id, active: !q.active })}
+                      onDelete={() => deleteQuestion.mutate(q.id)}
+                    />
+                  </View>
+
+                  {(q.type === "single_choice" || q.type === "multi_choice") && (
+                    <View style={{ paddingLeft: 12 }}>
+                      {(q.choices ?? []).map((c) => (
+                        <View key={c.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <Text style={{ flex: 1, fontSize: 13, color: colors.foreground }}>{c.label}</Text>
+                          <Pressable onPress={() => deleteChoice.mutate(c.id)} accessibilityLabel="Supprimer le choix" hitSlop={8}>
+                            <Ionicons name="trash-outline" size={16} color={colors.mutedForeground} />
+                          </Pressable>
+                        </View>
+                      ))}
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                        <TextInput
+                          value={newChoiceDrafts[q.id] ?? ""}
+                          onChangeText={(t) => setNewChoiceDrafts((d) => ({ ...d, [q.id]: t }))}
+                          placeholder="Nouveau choix"
+                          placeholderTextColor={colors.inputPlaceholder}
+                          style={{ flex: 1, backgroundColor: colors.cream, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: colors.foreground }}
+                        />
+                        <Pressable
+                          onPress={() => createChoice.mutate(q.id)}
+                          disabled={!(newChoiceDrafts[q.id] ?? "").trim() || createChoice.isPending}
+                          accessibilityLabel="Ajouter le choix"
+                          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", opacity: (newChoiceDrafts[q.id] ?? "").trim() ? 1 : 0.5 }}
+                        >
+                          <Ionicons name="add" size={18} color={colors.onColor} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
+
+              <TextInput
+                value={newQuestion.label}
+                onChangeText={handleQuestionLabelChange}
+                placeholder="Nouvelle question (ex : As-tu déjà une pose ?)"
+                placeholderTextColor={colors.inputPlaceholder}
+                style={{ backgroundColor: colors.cream, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: colors.foreground, marginBottom: 10 }}
+              />
+
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }} accessibilityRole="radiogroup">
+                {QUESTION_TYPES.map((t) => {
+                  const selected = newQuestion.type === t;
+                  return (
+                    <Pressable
+                      key={t}
+                      onPress={() => setNewQuestion((q) => ({ ...q, type: t }))}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      style={{
+                        paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1.5,
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? `${colors.primary}15` : colors.cream,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11.5, fontWeight: "700", color: selected ? colors.primary : colors.mutedForeground }}>
+                        {QUESTION_TYPE_LABELS[t]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 10 }}>
+                <Pressable onPress={() => setNewQuestion((q) => ({ ...q, required: !q.required }))} accessibilityLabel="Réponse obligatoire" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons name={newQuestion.required ? "checkbox" : "square-outline"} size={18} color={colors.primary} />
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Obligatoire</Text>
+                </Pressable>
+                <Pressable onPress={() => setNewQuestion((q) => ({ ...q, isSensitive: !q.isSensitive }))} accessibilityLabel="Donnée sensible" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons name={newQuestion.isSensitive ? "checkbox" : "square-outline"} size={18} color={colors.destructive} />
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Donnée sensible</Text>
+                </Pressable>
+              </View>
+
+              {sensitiveSuggestion?.suggested && (
+                <View style={{ backgroundColor: colors.destructiveLight, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 11.5, color: colors.destructiveText }}>
+                    Cette question semble porter sur une donnée sensible ({sensitiveSuggestion.matchedKeywords.join(", ")}). "Donnée sensible" a été cochée automatiquement — décoche si ce n'est pas le cas.
+                  </Text>
+                </View>
+              )}
+
+              <Pressable
+                onPress={() => createQuestionMutation.mutate()}
+                disabled={!newQuestion.label.trim() || createQuestionMutation.isPending}
+                accessibilityLabel="Ajouter la question"
+                style={{
+                  height: 40, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center",
+                  flexDirection: "row", gap: 6, opacity: newQuestion.label.trim() ? 1 : 0.5,
+                }}
+              >
+                <Ionicons name="add" size={16} color={colors.onColor} />
+                <Text style={{ color: colors.onColor, fontWeight: "700", fontSize: 13 }}>Ajouter la question</Text>
+              </Pressable>
             </Card>
           </>
         )}

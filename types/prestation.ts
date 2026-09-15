@@ -60,7 +60,7 @@ export interface PrestationOption {
   sort_order: number;
 }
 
-// ── V2 — préparé, non exposé (voir doc §9) ─────────────────────────────────
+// ── V2 — questions personnalisées ────────────────────────────────────────────
 
 export interface QuestionChoice {
   id: number;
@@ -79,4 +79,10 @@ export interface Question {
   is_sensitive: boolean;
   sort_order: number;
   choices?: QuestionChoice[];
+  /**
+   * Texte de consentement dédié, servi UNIQUEMENT par l'endpoint public de
+   * lecture pour une question is_sensitive=true — jamais codé en dur côté
+   * app (contenu provisoire côté backend, cf. lib/sensitive-questions.ts).
+   */
+  sensitive_consent_text?: string;
 }
