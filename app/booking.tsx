@@ -23,6 +23,12 @@ import {
 } from "@/components/screens/client/booking/ServiceSelector";
 import { DateTimeSelector, type Slot } from "@/components/screens/client/booking/DateTimeSelector";
 import { BookingSummary } from "@/components/screens/client/booking/BookingSummary";
+import {
+  PrestationConfigurator,
+  computeIndicativePricing,
+  isConfigComplete,
+} from "@/components/screens/client/booking/PrestationConfigurator";
+import type { VariantGroup, PrestationOption } from "@/types/prestation";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -147,6 +153,16 @@ export default function BookingScreen() {
   const [prestations, setPrestations] = useState<Prestation[]>([]);
 
   const [selectedPrestation, setSelectedPrestation] = useState<number | null>(null);
+  // Moteur de prestations (doc §14.2) : sous-étape de configuration au sein
+  // de l'étape 1, entre le choix de la prestation et le choix du créneau.
+  // Restée `false` (comportement V1 actuel inchangé) tant qu'une prestation
+  // n'a ni groupe de variante ni option — rétrocompatibilité, doc §16.
+  const [showConfigurator, setShowConfigurator] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
+  const [prestationOptions, setPrestationOptions] = useState<PrestationOption[]>([]);
+  const [selectedVariantValueByGroup, setSelectedVariantValueByGroup] = useState<Record<number, number>>({});
+  const [selectedOptionIds, setSelectedOptionIds] = useState<Set<number>>(new Set());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
@@ -336,6 +352,21 @@ export default function BookingScreen() {
     [selectedPrestation, prestations]
   );
 
+  // Prix/durée indicatifs après configuration (doc §5.2) — le backend
+  // recalcule tout et fait toujours foi ; identique à la base tant qu'aucune
+  // variante/option n'est configurée (rétrocompatibilité).
+  const effectivePricing = useMemo(() => {
+    if (!selectedPrestationData) return null;
+    return computeIndicativePricing(
+      selectedPrestationData.price,
+      selectedPrestationData.duration_minutes,
+      variantGroups,
+      prestationOptions,
+      selectedVariantValueByGroup,
+      selectedOptionIds
+    );
+  }, [selectedPrestationData, variantGroups, prestationOptions, selectedVariantValueByGroup, selectedOptionIds]);
+
   const canPayOnline = computeCanPayOnline(
     Boolean(pro?.stripe_onboarding_complete),
     Boolean(pro?.accept_online_payment)
@@ -363,9 +394,14 @@ export default function BookingScreen() {
 
   const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (step === 1 && showConfigurator) {
+      setShowConfigurator(false);
+      setSelectedPrestation(null);
+      return;
+    }
     if (step === 1) safeBack(router);
     else setStep((s) => s - 1);
-  }, [step, router]);
+  }, [step, router, showConfigurator]);
 
   const handleConfirmBooking = async () => {
     if (!selectedPrestation || !selectedDate || !selectedTime || !proId || !selectedPrestationData) {
@@ -377,6 +413,12 @@ export default function BookingScreen() {
     try {
       let reservationId = pendingReservationId;
       let depositPct = depositPercentage;
+      // effectivePricing reflète les variantes/options sélectionnées
+      // (indicatif — le serveur recalcule et fait foi, doc §5.2). Calculé en
+      // dehors du bloc de création pour rester disponible sur le chemin de
+      // retry (reservationId déjà présent) et sur l'écran de confirmation.
+      const finalDurationMinutes = effectivePricing?.durationMinutes ?? selectedPrestationData.duration_minutes;
+      const finalPrice = effectivePricing?.price ?? selectedPrestationData.price;
 
       if (reservationId == null) {
         const selectedSlot = availableSlots.find((s) => s.time === selectedTime);
@@ -392,17 +434,19 @@ export default function BookingScreen() {
               return d;
             })();
         const endDT = selectedSlot?.startISO
-          ? new Date(startDT.getTime() + selectedPrestationData.duration_minutes * 60_000)
-          : calculateEndDateTime(selectedDate, selectedTime, selectedPrestationData.duration_minutes);
+          ? new Date(startDT.getTime() + finalDurationMinutes * 60_000)
+          : calculateEndDateTime(selectedDate, selectedTime, finalDurationMinutes);
 
         const resaResult = await stripePaymentsApi.createReservation({
           pro_id: Number(proId),
           prestation_id: selectedPrestation,
           start_datetime: startDT.toISOString(),
           end_datetime: endDT.toISOString(),
-          price: selectedPrestationData.price,
+          price: finalPrice,
           payment_method: paymentMethod ?? "on_site",
           early_execution_requested: withdrawalRightAccepted,
+          selected_variant_value_ids: Object.values(selectedVariantValueByGroup),
+          selected_option_ids: Array.from(selectedOptionIds),
         });
 
         if (!resaResult.success || !resaResult.data) {
@@ -437,7 +481,7 @@ export default function BookingScreen() {
             time: selectedTime ?? "",
             paymentMethod: "on_site",
             dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
-            durationMinutes: String(selectedPrestationData.duration_minutes),
+            durationMinutes: String(finalDurationMinutes),
             proCity: pro?.city ?? "",
             proId: String(proId),
           },
@@ -517,13 +561,64 @@ export default function BookingScreen() {
   const renderStep = () => {
     switch (step) {
       case 1:
+        if (showConfigurator && selectedPrestationData) {
+          return (
+            <PrestationConfigurator
+              prestationName={selectedPrestationData.name}
+              basePrice={selectedPrestationData.price}
+              baseDurationMinutes={selectedPrestationData.duration_minutes}
+              isLoading={configLoading}
+              variantGroups={variantGroups}
+              options={prestationOptions}
+              selectedVariantValueByGroup={selectedVariantValueByGroup}
+              selectedOptionIds={selectedOptionIds}
+              onSelectVariantValue={(groupId, valueId) =>
+                setSelectedVariantValueByGroup((prev) => ({ ...prev, [groupId]: valueId }))
+              }
+              onToggleOption={(optionId) =>
+                setSelectedOptionIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(optionId)) next.delete(optionId);
+                  else next.add(optionId);
+                  return next;
+                })
+              }
+            />
+          );
+        }
         return (
           <ServiceSelector
             prestations={prestations}
             selectedId={selectedPrestation}
-            onSelect={(id) => {
+            onSelect={async (id) => {
               setSelectedPrestation(id);
-              setTimeout(() => setStep(2), 120);
+              setSelectedVariantValueByGroup({});
+              setSelectedOptionIds(new Set());
+              setConfigLoading(true);
+              try {
+                const [groupsRes, optionsRes] = await Promise.all([
+                  specialistsApi.getVariantGroups(id),
+                  specialistsApi.getOptions(id),
+                ]);
+                const groups = groupsRes.success && groupsRes.data ? groupsRes.data : [];
+                const opts = optionsRes.success && optionsRes.data ? optionsRes.data : [];
+                setVariantGroups(groups);
+                setPrestationOptions(opts);
+                if (groups.length === 0 && opts.length === 0) {
+                  // Prestation simple, sans configuration (comportement actuel
+                  // inchangé — doc §16, Test 1) : on passe directement au créneau.
+                  setTimeout(() => setStep(2), 120);
+                } else {
+                  setShowConfigurator(true);
+                }
+              } catch {
+                // Config indisponible : on ne bloque pas la réservation simple.
+                setVariantGroups([]);
+                setPrestationOptions([]);
+                setTimeout(() => setStep(2), 120);
+              } finally {
+                setConfigLoading(false);
+              }
             }}
             proName={proName}
             proCity={pro.city}
@@ -551,8 +646,8 @@ export default function BookingScreen() {
         return selectedDate && selectedTime && selectedPrestationData ? (
           <BookingSummary
             prestationName={selectedPrestationData.name}
-            prestationPrice={selectedPrestationData.price}
-            prestationDuration={selectedPrestationData.duration_minutes}
+            prestationPrice={effectivePricing?.price ?? selectedPrestationData.price}
+            prestationDuration={effectivePricing?.durationMinutes ?? selectedPrestationData.duration_minutes}
             proName={proName}
             proCity={pro.city}
             selectedDate={selectedDate}
@@ -584,7 +679,7 @@ export default function BookingScreen() {
       case 4:
         return (
           <PaymentStep
-            amount={depositAmount ?? selectedPrestationData?.price ?? 0}
+            amount={depositAmount ?? effectivePricing?.price ?? selectedPrestationData?.price ?? 0}
             depositPercentage={depositPercentage}
             prestationName={selectedPrestationData?.name}
             clientSecret={clientSecret}
@@ -603,8 +698,8 @@ export default function BookingScreen() {
                     time: selectedTime ?? "",
                     amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
                     dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
-                    durationMinutes: selectedPrestationData?.duration_minutes != null
-                      ? String(selectedPrestationData.duration_minutes)
+                    durationMinutes: effectivePricing?.durationMinutes != null
+                      ? String(effectivePricing.durationMinutes)
                       : "",
                     proCity: pro.city ?? "",
                     proId: String(proId),
@@ -666,6 +761,41 @@ export default function BookingScreen() {
         {bookingError && (
           <View style={{ paddingBottom: 8 }}>
             <ErrorMessage message={bookingError} />
+          </View>
+        )}
+
+        {step === 1 && showConfigurator && (
+          <View style={{ paddingVertical: 16 }}>
+            <AnimatedPressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                setStep(2);
+              }}
+              disabled={!isConfigComplete(variantGroups, selectedVariantValueByGroup)}
+              style={{ opacity: isConfigComplete(variantGroups, selectedVariantValueByGroup) ? 1 : 0.5 }}
+            >
+              <LinearGradient
+                colors={[colors.primary, `${colors.primary}E6`]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: 56,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                  <Text style={{ color: colors.white, fontWeight: "700", fontSize: 15 }}>Continuer</Text>
+                </View>
+              </LinearGradient>
+            </AnimatedPressable>
           </View>
         )}
 

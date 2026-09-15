@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { queryClient } from "./queryClient";
+import type { PricingMode, VariantGroup, PrestationOption } from "@/types/prestation";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -491,6 +492,14 @@ export const specialistsApi = {
 
   getServices: (proId: number) => apiCall("GET", `/api/prestations/pro/${proId}`),
 
+  /** Moteur de prestations (doc §13.1) — groupes/valeurs actifs uniquement, lecture publique. */
+  getVariantGroups: (prestationId: number): Promise<ApiResponse<VariantGroup[]>> =>
+    apiCall(`/api/prestations/${prestationId}/variant-groups`),
+
+  /** Options actives uniquement, lecture publique. */
+  getOptions: (prestationId: number): Promise<ApiResponse<PrestationOption[]>> =>
+    apiCall(`/api/prestations/${prestationId}/options`),
+
   getGalleryByPro: (proId: number) =>
     apiCall<Array<{ id: number; url: string; thumbnail: string; created_at: string }>>(`/api/gallery/pro/${proId}`),
 
@@ -733,6 +742,9 @@ export const proApi = {
     start_datetime: string;
     end_datetime: string;
     early_execution_requested?: boolean;
+    /** Moteur de prestations (doc §13.1) — sélection de variantes/options pour cette prestation. */
+    selected_variant_value_ids?: number[];
+    selected_option_ids?: number[];
     /** Override d'ajout manuel — cf. 3.4. Jamais envoyé sans confirmation pro explicite. */
     manual_override?: {
       mode: ManualOverrideMode;
@@ -916,10 +928,10 @@ export const proApi = {
 
   getServices: () => apiCall<unknown[]>("/api/pro/prestations"),
 
-  createService: (data: { name: string; description: string; price: number; duration_minutes: number; active?: boolean; buffer_before_minutes?: number; buffer_after_minutes?: number }) =>
+  createService: (data: { name: string; description: string; price: number; duration_minutes: number; active?: boolean; buffer_before_minutes?: number; buffer_after_minutes?: number; pricing_mode?: PricingMode; ordering_rank?: number }) =>
     apiCall("/api/pro/prestations", { method: "POST", body: JSON.stringify(data) }),
 
-  updateService: (id: number, data: Partial<{ name: string; description: string; price: number; duration_minutes: number; active: boolean; buffer_before_minutes: number; buffer_after_minutes: number }>) =>
+  updateService: (id: number, data: Partial<{ name: string; description: string; price: number; duration_minutes: number; active: boolean; buffer_before_minutes: number; buffer_after_minutes: number; pricing_mode: PricingMode; ordering_rank: number }>) =>
     apiCall(`/api/pro/prestations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   deleteService: (id: number) => apiCall(`/api/pro/prestations/${id}`, { method: "DELETE" }),
@@ -1007,6 +1019,61 @@ export const proApi = {
       return { success: false, error: err instanceof Error ? err.message : "Erreur de connexion" };
     }
   },
+};
+
+// ── Configuration de prestation — variantes/options (moteur de prestations V1) ──
+// Réf : docs/ARCHITECTURE_MOTEUR_PRESTATIONS_V1_V3.md (§13.1).
+export const prestationConfigApi = {
+  getVariantGroups: (prestationId: number): Promise<ApiResponse<VariantGroup[]>> =>
+    apiCall(`/api/pro/prestations/${prestationId}/variant-groups`),
+
+  createVariantGroup: (
+    prestationId: number,
+    data: { name: string; required?: boolean; selection_mode?: "single" | "multi"; sort_order?: number }
+  ): Promise<ApiResponse<VariantGroup>> =>
+    apiCall(`/api/pro/prestations/${prestationId}/variant-groups`, { method: "POST", body: JSON.stringify(data) }),
+
+  updateVariantGroup: (
+    groupId: number,
+    data: Partial<{ name: string; required: boolean; selection_mode: "single" | "multi"; active: boolean; sort_order: number }>
+  ): Promise<ApiResponse<VariantGroup>> =>
+    apiCall(`/api/pro/variant-groups/${groupId}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteVariantGroup: (groupId: number): Promise<ApiResponse<{ deactivated: boolean }>> =>
+    apiCall(`/api/pro/variant-groups/${groupId}`, { method: "DELETE" }),
+
+  createVariantValue: (
+    groupId: number,
+    data: { label: string; price_delta?: number; duration_delta?: number; sort_order?: number }
+  ): Promise<ApiResponse<VariantGroup["values"][number]>> =>
+    apiCall(`/api/pro/variant-groups/${groupId}/values`, { method: "POST", body: JSON.stringify(data) }),
+
+  updateVariantValue: (
+    valueId: number,
+    data: Partial<{ label: string; price_delta: number; duration_delta: number; active: boolean; sort_order: number }>
+  ): Promise<ApiResponse<VariantGroup["values"][number]>> =>
+    apiCall(`/api/pro/variant-values/${valueId}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteVariantValue: (valueId: number): Promise<ApiResponse<{ deactivated: boolean }>> =>
+    apiCall(`/api/pro/variant-values/${valueId}`, { method: "DELETE" }),
+
+  getOptions: (prestationId: number): Promise<ApiResponse<PrestationOption[]>> =>
+    apiCall(`/api/pro/prestations/${prestationId}/options`),
+
+  createOption: (
+    prestationId: number,
+    data: { name: string; price_delta?: number; duration_delta?: number; sort_order?: number }
+  ): Promise<ApiResponse<PrestationOption>> =>
+    apiCall(`/api/pro/prestations/${prestationId}/options`, { method: "POST", body: JSON.stringify(data) }),
+
+  updateOption: (
+    optionId: number,
+    data: Partial<{ name: string; price_delta: number; duration_delta: number; active: boolean; sort_order: number }>
+  ): Promise<ApiResponse<PrestationOption>> =>
+    apiCall(`/api/pro/options/${optionId}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteOption: (optionId: number): Promise<ApiResponse<{ deactivated: boolean }>> =>
+    apiCall(`/api/pro/options/${optionId}`, { method: "DELETE" }),
 };
 
 // ── Client API ────────────────────────────────────────────────────────────────
@@ -1191,6 +1258,9 @@ export const stripePaymentsApi = {
     payment_method: "online" | "on_site";
     /** Demande expresse d'exécution anticipée — cf. server.ts POST /api/reservations. */
     early_execution_requested: boolean;
+    /** Moteur de prestations (doc §13.1) — sélection de variantes/options pour cette prestation. Prix/durée toujours recalculés côté serveur. */
+    selected_variant_value_ids?: number[];
+    selected_option_ids?: number[];
   }): Promise<ApiResponse<{ id: number; deposit_percentage: number; deposit_amount: number | null; price: number }>> =>
     apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
 
