@@ -11,6 +11,10 @@ interface Props {
   prestationName: string;
   prestationPrice: number;
   prestationDuration: number;
+  /** Panier V3 (doc §2) — détail des prestations si plus d'une. Le cas à une
+   * seule prestation n'utilise jamais ce prop (rétrocompatibilité visuelle,
+   * doc §16 : le parcours simple doit rester identique à avant). */
+  items?: Array<{ name: string; price: number }>;
   proName: string;
   proCity: string | null;
   selectedDate: Date;
@@ -106,6 +110,7 @@ export function BookingSummary({
   prestationName,
   prestationPrice,
   prestationDuration,
+  items,
   proName,
   proCity,
   selectedDate,
@@ -150,25 +155,52 @@ export function BookingSummary({
           ...Shadows.card,
         }}
       >
-        {/* Prestation + price */}
-        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 2 }}>Prestation</Text>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
-              {prestationName}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+        {/* Prestation(s) + price */}
+        {items && items.length > 1 ? (
+          <View style={{ gap: 10 }}>
+            <View style={{ gap: 6 }}>
+              {items.map((item, i) => (
+                <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.mutedForeground }}>
+                    {item.price.toFixed(2)}€
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
               avec {proName}
               {proCity ? ` · ${proCity}` : ""}
             </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>Total</Text>
+              <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground }}>
+                {prestationPrice.toFixed(2)}€
+              </Text>
+            </View>
           </View>
-          <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
-            <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 2 }}>Total</Text>
-            <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground }}>
-              {prestationPrice.toFixed(2)}€
-            </Text>
+        ) : (
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 2 }}>Prestation</Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
+                {prestationName}
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+                avec {proName}
+                {proCity ? ` · ${proCity}` : ""}
+              </Text>
+            </View>
+            <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, marginBottom: 2 }}>Total</Text>
+              <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground }}>
+                {prestationPrice.toFixed(2)}€
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Divider */}
         <View style={{ height: 1, backgroundColor: colors.border }} />
