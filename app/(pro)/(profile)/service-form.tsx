@@ -19,6 +19,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { safeBack } from "@/lib/navigation";
+import type { PricingMode } from "@/types/prestation";
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
 // Alignées sur les CHECK constraints buffer_before_minutes / buffer_after_minutes
@@ -42,6 +43,7 @@ type Service = {
   active?: boolean;
   buffer_before_minutes?: number;
   buffer_after_minutes?: number;
+  pricing_mode?: PricingMode;
 };
 
 type FormData = {
@@ -60,6 +62,38 @@ function SectionLabel({ text }: { text: string }) {
   );
 }
 
+function FormCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  const colors = useThemeColors();
+  return (
+    <View
+      style={{
+        backgroundColor: colors.card,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: 18,
+        marginBottom: 16,
+      }}
+    >
+      <View style={{ marginBottom: 16 }}>
+        <Text style={{ fontSize: 15, fontWeight: "800", color: colors.foreground }}>{title}</Text>
+        {subtitle && (
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>{subtitle}</Text>
+        )}
+      </View>
+      {children}
+    </View>
+  );
+}
+
 export default function ServiceFormScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -71,6 +105,7 @@ export default function ServiceFormScreen() {
   const [isActive, setIsActive] = useState(true);
   const [bufferBefore, setBufferBefore] = useState(0);
   const [bufferAfter, setBufferAfter] = useState(0);
+  const [pricingMode, setPricingMode] = useState<PricingMode>("fixed");
   const [formError, setFormError] = useState<string | null>(null);
   // Tant que la prestation existante n'est pas chargée (édition), le formulaire
   // reste masqué : sinon un utilisateur rapide peut modifier un champ (ex: le
@@ -113,6 +148,7 @@ export default function ServiceFormScreen() {
       setIsActive(existing.active !== false);
       setBufferBefore(existing.buffer_before_minutes ?? 0);
       setBufferAfter(existing.buffer_after_minutes ?? 0);
+      setPricingMode(existing.pricing_mode ?? "fixed");
     }
     setReady(true);
   }, [existing, isLoadingExisting, reset]);
@@ -167,6 +203,7 @@ export default function ServiceFormScreen() {
       active: isActive,
       buffer_before_minutes: bufferBefore,
       buffer_after_minutes: bufferAfter,
+      pricing_mode: pricingMode,
     };
     if (isEdit && existing) {
       updateMutation.mutate({ pid: existing.id, data: payload });
@@ -220,147 +257,234 @@ export default function ServiceFormScreen() {
           </View>
         </View>
 
-        {/* Nom */}
-        <View style={{ marginBottom: 16 }}>
-          <SectionLabel text="Nom de la prestation *" />
-          <Controller
-            control={control}
-            name="name"
-            rules={{ required: "Nom requis", maxLength: { value: 100, message: "100 caractères max" } }}
-            render={({ field: { onChange, value } }) => (
-              <Input
-                value={value}
-                onChangeText={onChange}
-                placeholder="Ex : Pose gel full cover"
-                leftIcon="sparkles-outline"
-                error={errors.name?.message}
-                autoCapitalize="sentences"
-              />
-            )}
-          />
-        </View>
-
-        {/* Description */}
-        <View style={{ marginBottom: 16 }}>
-          <SectionLabel text="Description" />
-          <Controller
-            control={control}
-            name="description"
-            render={({ field: { onChange, value } }) => (
-              <View style={{
-                backgroundColor: colors.cream, borderRadius: 14,
-                borderWidth: 1.5, borderColor: colors.border,
-                paddingHorizontal: 14, paddingVertical: 12, minHeight: 90,
-              }}>
-                <TextInput
+        {/* Informations */}
+        <FormCard title="Informations">
+          <View style={{ marginBottom: 16 }}>
+            <SectionLabel text="Nom de la prestation *" />
+            <Controller
+              control={control}
+              name="name"
+              rules={{ required: "Nom requis", maxLength: { value: 100, message: "100 caractères max" } }}
+              render={({ field: { onChange, value } }) => (
+                <Input
                   value={value}
                   onChangeText={onChange}
-                  placeholder="Décris ta prestation : technique, matériaux, résultat..."
-                  placeholderTextColor={colors.inputPlaceholder}
-                  multiline
-                  textAlignVertical="top"
-                  maxLength={500}
-                  style={{ fontSize: 14.5, color: colors.foreground, padding: 0 }}
+                  placeholder="Ex : Pose gel full cover"
+                  error={errors.name?.message}
+                  autoCapitalize="sentences"
                 />
-              </View>
-            )}
-          />
-        </View>
+              )}
+            />
+          </View>
 
-        {/* Prix */}
-        <View style={{ marginBottom: 16 }}>
-          <SectionLabel text="Prix (€) *" />
-          <Controller
-            control={control}
-            name="price"
-            rules={{ required: "Prix requis" }}
-            render={({ field: { onChange, value } }) => (
-              <Input
-                value={value}
-                onChangeText={onChange}
-                placeholder="Ex : 55"
-                keyboardType="decimal-pad"
-                leftIcon="pricetag-outline"
-                error={errors.price?.message}
-              />
-            )}
-          />
-        </View>
+          <View>
+            <SectionLabel text="Description" />
+            <Controller
+              control={control}
+              name="description"
+              render={({ field: { onChange, value } }) => (
+                <View style={{
+                  backgroundColor: colors.cream, borderRadius: 14,
+                  borderWidth: 1.5, borderColor: colors.border,
+                  paddingHorizontal: 14, paddingVertical: 12, minHeight: 90,
+                }}>
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Décris ta prestation : technique, matériaux, résultat..."
+                    placeholderTextColor={colors.inputPlaceholder}
+                    multiline
+                    textAlignVertical="top"
+                    maxLength={500}
+                    style={{ fontSize: 14.5, color: colors.foreground, padding: 0 }}
+                    accessibilityLabel="Description de la prestation"
+                  />
+                </View>
+              )}
+            />
+          </View>
+        </FormCard>
 
-        {/* Durée */}
-        <View style={{ marginBottom: 16 }}>
-          <SectionLabel text="Durée *" />
-          <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-            {DURATION_PRESETS.map((d) => {
-              const selected = durationValue === String(d);
+        {/* Tarif & durée */}
+        <FormCard title="Tarif & durée">
+          <View style={{ marginBottom: 16 }}>
+            <SectionLabel text="Prix (€) *" />
+            <Controller
+              control={control}
+              name="price"
+              rules={{ required: "Prix requis" }}
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Ex : 55"
+                  keyboardType="decimal-pad"
+                  leftIcon="pricetag-outline"
+                  error={errors.price?.message}
+                />
+              )}
+            />
+          </View>
+
+          <View>
+            <SectionLabel text="Durée *" />
+            <View
+              style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}
+              accessibilityRole="radiogroup"
+            >
+              {DURATION_PRESETS.map((d) => {
+                const selected = durationValue === String(d);
+                return (
+                  <Pressable
+                    key={d}
+                    onPress={() => setValue("duration_minutes", String(d))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Durée ${formatDurationLabel(d)}`}
+                    accessibilityState={{ selected }}
+                    hitSlop={{ top: 4, bottom: 4 }}
+                    style={{
+                      flex: 1, minHeight: 44, paddingVertical: 10, borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? `${colors.primary}15` : colors.cream,
+                      alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: selected ? colors.primary : colors.mutedForeground }}>
+                      {formatDurationLabel(d)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Controller
+              control={control}
+              name="duration_minutes"
+              rules={{ required: "Durée requise" }}
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Durée en minutes"
+                  keyboardType="number-pad"
+                  leftIcon="time-outline"
+                  error={errors.duration_minutes?.message}
+                  hint="Ou saisis une durée personnalisée, en minutes"
+                />
+              )}
+            />
+          </View>
+        </FormCard>
+
+        {/* Mode de prix */}
+        <FormCard
+          title="Affichage du prix"
+          subtitle="« À partir de » n'a d'effet que si un groupe de variantes obligatoire existe"
+        >
+          <View style={{ flexDirection: "row", gap: 8 }} accessibilityRole="radiogroup">
+            {(
+              [
+                { mode: "fixed" as const, label: "Prix fixe" },
+                { mode: "from" as const, label: "À partir de" },
+              ]
+            ).map(({ mode, label }) => {
+              const selected = pricingMode === mode;
               return (
                 <Pressable
-                  key={d}
-                  onPress={() => setValue("duration_minutes", String(d))}
+                  key={mode}
+                  onPress={() => setPricingMode(mode)}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected }}
                   style={{
-                    flex: 1, paddingVertical: 10, borderRadius: 12,
+                    flex: 1, minHeight: 44, paddingVertical: 10, borderRadius: 12,
                     borderWidth: 1.5,
                     borderColor: selected ? colors.primary : colors.border,
                     backgroundColor: selected ? `${colors.primary}15` : colors.cream,
-                    alignItems: "center",
+                    alignItems: "center", justifyContent: "center",
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: selected ? colors.primary : colors.mutedForeground }}>
-                    {formatDurationLabel(d)}
+                  <Text style={{ fontSize: 12.5, fontWeight: "700", color: selected ? colors.primary : colors.mutedForeground }}>
+                    {label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
-          <Controller
-            control={control}
-            name="duration_minutes"
-            rules={{ required: "Durée requise" }}
-            render={({ field: { onChange, value } }) => (
-              <Input
-                value={value}
-                onChangeText={onChange}
-                placeholder="Durée en minutes"
-                keyboardType="number-pad"
-                leftIcon="time-outline"
-                error={errors.duration_minutes?.message}
-                hint="Saisie libre en minutes"
-              />
-            )}
-          />
-        </View>
+        </FormCard>
+
+        {/* Variantes & options — nécessite une prestation déjà créée */}
+        {isEdit && existing && (
+          <Pressable
+            onPress={() =>
+              // "as any" : route ajoutée par ce chantier, les types Expo Router
+              // (générés au démarrage du dev server) ne l'incluent pas encore.
+              router.push({ pathname: "/(pro)/(profile)/service-config" as any, params: { id: String(existing.id) } })
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Gérer les variantes et options de cette prestation"
+            style={{
+              backgroundColor: colors.card, borderRadius: 20,
+              borderWidth: 1, borderColor: colors.border,
+              padding: 18, flexDirection: "row", alignItems: "center", gap: 14,
+              marginBottom: 16,
+            }}
+          >
+            <View style={{
+              width: 44, height: 44, borderRadius: 12,
+              backgroundColor: `${colors.primary}15`,
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name="options-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
+                Variantes & options
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+                Tailles, formes, suppléments... et leur effet sur le prix/la durée
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        )}
 
         {/* Temps de battement */}
-        <View style={{ marginBottom: 16 }}>
-          <SectionLabel text="Temps de battement" />
-          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 10 }}>
-            Bloqué automatiquement avant/après chaque RDV pour cette prestation (nettoyage, préparation...).
-          </Text>
+        <FormCard
+          title="Temps de battement"
+          subtitle="Bloqué automatiquement avant/après le RDV (nettoyage, préparation...)"
+        >
           {(
             [
               { label: "Avant le RDV", value: bufferBefore, set: setBufferBefore },
               { label: "Après le RDV", value: bufferAfter, set: setBufferAfter },
             ] as const
-          ).map((row) => (
-            <View key={row.label} style={{ marginBottom: 10 }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.foreground, marginBottom: 6 }}>
+          ).map((row, i) => (
+            <View key={row.label} style={{ marginBottom: i === 0 ? 14 : 0 }}>
+              <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.foreground, marginBottom: 8 }}>
                 {row.label}
               </Text>
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }} accessibilityRole="radiogroup">
                 {BUFFER_PRESETS.map((m) => {
                   const selected = row.value === m;
+                  const label = m === 0 ? "Aucun" : `${m} minutes`;
                   return (
                     <Pressable
                       key={m}
                       onPress={() => row.set(m)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${row.label} : ${label}`}
+                      accessibilityState={{ selected }}
                       style={{
-                        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                        minHeight: 40, minWidth: 52,
+                        paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10,
                         borderWidth: 1.5,
                         borderColor: selected ? colors.primary : colors.border,
                         backgroundColor: selected ? `${colors.primary}15` : colors.cream,
+                        alignItems: "center", justifyContent: "center",
                       }}
                     >
-                      <Text style={{ fontSize: 12, fontWeight: "600", color: selected ? colors.primary : colors.mutedForeground }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: "700", color: selected ? colors.primary : colors.mutedForeground }}>
                         {m === 0 ? "Aucun" : `${m}min`}
                       </Text>
                     </Pressable>
@@ -369,13 +493,13 @@ export default function ServiceFormScreen() {
               </View>
             </View>
           ))}
-        </View>
+        </FormCard>
 
         {/* Actif / Inactif */}
         <View style={{
-          backgroundColor: colors.card, borderRadius: 16,
+          backgroundColor: colors.card, borderRadius: 20,
           borderWidth: 1, borderColor: colors.border,
-          padding: 16, flexDirection: "row", alignItems: "center", gap: 14,
+          padding: 18, flexDirection: "row", alignItems: "center", gap: 14,
         }}>
           <View style={{
             width: 44, height: 44, borderRadius: 12,
@@ -401,6 +525,8 @@ export default function ServiceFormScreen() {
             onValueChange={setIsActive}
             trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor={colors.onColor}
+            accessibilityLabel="Activer ou désactiver la prestation"
+            accessibilityRole="switch"
           />
         </View>
 
