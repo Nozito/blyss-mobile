@@ -15,6 +15,9 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import type { VariantGroup, PrestationOption, Question } from "@/types/prestation";
 import type { ReservationAnswerSelection } from "@/types/reservation";
+import { computeIndicativePricing } from "@/lib/cart";
+
+export { computeIndicativePricing };
 
 interface Props {
   prestationName: string;
@@ -30,33 +33,6 @@ interface Props {
   onSelectVariantValue: (groupId: number, valueId: number) => void;
   onToggleOption: (optionId: number) => void;
   onAnswerChange: (questionId: number, patch: Partial<ReservationAnswerSelection>) => void;
-}
-
-export function computeIndicativePricing(
-  basePrice: number,
-  baseDurationMinutes: number,
-  variantGroups: VariantGroup[],
-  options: PrestationOption[],
-  selectedVariantValueByGroup: Record<number, number>,
-  selectedOptionIds: Set<number>
-): { price: number; durationMinutes: number } {
-  let price = basePrice;
-  let durationMinutes = baseDurationMinutes;
-  for (const group of variantGroups) {
-    const valueId = selectedVariantValueByGroup[group.id];
-    const value = group.values.find((v) => v.id === valueId);
-    if (value) {
-      price += Number(value.price_delta);
-      durationMinutes += Number(value.duration_delta);
-    }
-  }
-  for (const option of options) {
-    if (selectedOptionIds.has(option.id)) {
-      price += Number(option.price_delta);
-      durationMinutes += Number(option.duration_delta);
-    }
-  }
-  return { price: Math.round(price * 100) / 100, durationMinutes };
 }
 
 export function isConfigComplete(variantGroups: VariantGroup[], selectedVariantValueByGroup: Record<number, number>): boolean {

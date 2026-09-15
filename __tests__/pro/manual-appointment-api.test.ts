@@ -63,7 +63,7 @@ describe("proApi.getAvailability", () => {
 describe("proApi.createAppointment", () => {
   const base = {
     client_id: 42,
-    prestation_id: 10,
+    items: [{ prestation_id: 10 }],
     start_datetime: "2026-09-07T08:00:00.000Z",
     end_datetime: "2026-09-07T09:00:00.000Z",
   };

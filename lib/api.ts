@@ -1,7 +1,7 @@
 import { storage } from "./storage";
 import { queryClient } from "./queryClient";
 import type { PricingMode, VariantGroup, PrestationOption, Question, QuestionChoice, QuestionType } from "@/types/prestation";
-import type { ReservationAnswerSelection } from "@/types/reservation";
+import type { ReservationAnswerSelection, CartItem } from "@/types/reservation";
 
 /** Forme réseau attendue par le backend (doc §13.2) — question_id en snake_case. */
 export interface ReservationAnswerWire {
@@ -13,6 +13,23 @@ export interface ReservationAnswerWire {
 
 export function toAnswerWire(answers: ReservationAnswerSelection[]): ReservationAnswerWire[] {
   return answers.map((a) => ({ question_id: a.questionId, value: a.value, values: a.values, consent: a.consent }));
+}
+
+/** Élément du panier V3 (doc §2, §13.3) — forme réseau attendue par le backend. */
+export interface ReservationItemWire {
+  prestation_id: number;
+  selected_variant_value_ids?: number[];
+  selected_option_ids?: number[];
+  answers?: ReservationAnswerWire[];
+}
+
+export function toReservationItemsWire(items: CartItem[]): ReservationItemWire[] {
+  return items.map((item) => ({
+    prestation_id: item.prestationId,
+    selected_variant_value_ids: Object.values(item.selectedVariantValueByGroup),
+    selected_option_ids: item.selectedOptionIds,
+    answers: toAnswerWire(item.answers),
+  }));
 }
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -533,12 +550,15 @@ export const specialistsApi = {
     fromDate: string;
     toDate: string;
     timezone?: string;
+    /** Panier V3 (doc §5.4) — durée indicative par item, alignée positionnellement sur serviceIds. */
+    durationOverrides?: number[];
   }): Promise<ApiResponse<AvailabilityResponse>> => {
     const q = new URLSearchParams({
       service_ids: params.serviceIds.join(","),
       from: params.fromDate,
       to: params.toDate,
       ...(params.timezone ? { timezone: params.timezone } : {}),
+      ...(params.durationOverrides ? { duration_overrides: params.durationOverrides.join(",") } : {}),
     });
     return apiCall(`/api/availability/${params.proId}?${q.toString()}`);
   },
@@ -742,6 +762,8 @@ export const proApi = {
     toDate: string;
     timezone?: string;
     slotStepMinutes?: number;
+    /** Panier V3 (doc §5.4) — durée indicative par item, alignée positionnellement sur serviceIds. */
+    durationOverrides?: number[];
   }): Promise<ApiResponse<AvailabilityResponse>> => {
     const q = new URLSearchParams({
       service_ids: params.serviceIds.join(","),
@@ -749,21 +771,18 @@ export const proApi = {
       to: params.toDate,
       ...(params.timezone ? { timezone: params.timezone } : {}),
       ...(params.slotStepMinutes ? { step: String(params.slotStepMinutes) } : {}),
+      ...(params.durationOverrides ? { duration_overrides: params.durationOverrides.join(",") } : {}),
     });
     return apiCall(`/api/pro/${params.proId}/availability?${q.toString()}`);
   },
 
   createAppointment: async (data: {
     client_id: number;
-    prestation_id: number;
+    /** Panier V3 (doc §2) — une ou plusieurs prestations, chacune avec sa propre configuration. */
+    items: ReservationItemWire[];
     start_datetime: string;
     end_datetime: string;
     early_execution_requested?: boolean;
-    /** Moteur de prestations (doc §13.1) — sélection de variantes/options pour cette prestation. */
-    selected_variant_value_ids?: number[];
-    selected_option_ids?: number[];
-    /** Réponses aux questions personnalisées (doc §13.2) — utiliser toAnswerWire(). */
-    answers?: ReservationAnswerWire[];
     /** Override d'ajout manuel — cf. 3.4. Jamais envoyé sans confirmation pro explicite. */
     manual_override?: {
       mode: ManualOverrideMode;
@@ -1302,18 +1321,13 @@ export const stripePaymentsApi = {
 
   createReservation: (data: {
     pro_id: number;
-    prestation_id: number;
+    /** Panier V3 (doc §2) — une ou plusieurs prestations, chacune avec sa propre configuration. Prix/durée toujours recalculés côté serveur. */
+    items: ReservationItemWire[];
     start_datetime: string;
     end_datetime: string;
-    price: number;
     payment_method: "online" | "on_site";
     /** Demande expresse d'exécution anticipée — cf. server.ts POST /api/reservations. */
     early_execution_requested: boolean;
-    /** Moteur de prestations (doc §13.1) — sélection de variantes/options pour cette prestation. Prix/durée toujours recalculés côté serveur. */
-    selected_variant_value_ids?: number[];
-    selected_option_ids?: number[];
-    /** Réponses aux questions personnalisées (doc §13.2) — utiliser toAnswerWire(). */
-    answers?: ReservationAnswerWire[];
   }): Promise<ApiResponse<{ id: number; deposit_percentage: number; deposit_amount: number | null; price: number }>> =>
     apiCall("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
 

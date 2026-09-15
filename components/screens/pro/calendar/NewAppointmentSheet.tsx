@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Modal } from "@/components/ui/Modal";
@@ -11,7 +11,24 @@ import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
-import { proApi, type AvailabilitySlot, type ManualOverrideMode } from "@/lib/api";
+import { proApi, specialistsApi, toReservationItemsWire, type AvailabilitySlot, type ManualOverrideMode } from "@/lib/api";
+import {
+  PrestationConfigurator,
+  isConfigComplete,
+  isQuestionsComplete,
+} from "@/components/screens/client/booking/PrestationConfigurator";
+import {
+  buildSimpleCartItem,
+  buildConfiguredCartItem,
+  removeCartItem as removeCartItemPure,
+  cartTotals,
+  cartServiceIds as cartServiceIdsOf,
+  cartDurationOverrides as cartDurationOverridesOf,
+  shouldAutoAdvance,
+  cartLabel,
+} from "@/lib/cart";
+import type { VariantGroup, PrestationOption, Question } from "@/types/prestation";
+import type { ReservationAnswerSelection, CartItem } from "@/types/reservation";
 
 type Client = {
   id: number;
@@ -80,6 +97,19 @@ export function NewAppointmentSheet({
   const [servicesLoading, setServicesLoading] = useState(false);
   const [selectedPrestation, setSelectedPrestation] = useState<Prestation | null>(null);
 
+  // Panier V3 (doc §12) : prestations déjà validées pour ce RDV manuel. Non
+  // utilisé en édition (reprogrammer ≠ reconfigurer le panier — la
+  // prestation reste celle d'origine, cf. reschedule.service.ts §11).
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [showConfigurator, setShowConfigurator] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
+  const [prestationOptions, setPrestationOptions] = useState<PrestationOption[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [selectedVariantValueByGroup, setSelectedVariantValueByGroup] = useState<Record<number, number>>({});
+  const [selectedOptionIds, setSelectedOptionIds] = useState<Set<number>>(new Set());
+  const [answersByQuestion, setAnswersByQuestion] = useState<Record<number, ReservationAnswerSelection>>({});
+
   const [date, setDate] = useState(new Date());
 
   const [time, setTime] = useState("09:00");
@@ -116,6 +146,14 @@ export function NewAppointmentSheet({
     setPendingOverride(null);
     setOverrideNote("");
     setAlternativeSlots([]);
+    setCartItems([]);
+    setShowConfigurator(false);
+    setVariantGroups([]);
+    setPrestationOptions([]);
+    setQuestions([]);
+    setSelectedVariantValueByGroup({});
+    setSelectedOptionIds(new Set());
+    setAnswersByQuestion({});
     if (editing) {
       // "Modifier" = reprogrammer, pas recréer le rdv : on saute direct à
       // l'étape date/heure, prestation et cliente restent celles d'origine
@@ -180,12 +218,69 @@ export function NewAppointmentSheet({
     return () => { cancelled = true; };
   }, [visible, isEditing, debouncedClientQuery]);
 
-  const duration = selectedPrestation?.duration_minutes ?? editing?.durationMinutes ?? 60;
+  // Panier V3 (doc §12) : la dispo se calcule sur la durée totale du panier —
+  // en édition, un seul item (celui d'origine) reste toujours utilisé.
+  const cartServiceIds = useMemo(() => cartServiceIdsOf(cartItems), [cartItems]);
+  const cartDurationOverrides = useMemo(() => cartDurationOverridesOf(cartItems), [cartItems]);
+  const { totalPrice: cartTotalPrice, totalDurationMinutes: cartTotalDuration } = useMemo(() => cartTotals(cartItems), [cartItems]);
+
+  function resetCurrentItemState() {
+    setSelectedPrestation(null);
+    setShowConfigurator(false);
+    setVariantGroups([]);
+    setPrestationOptions([]);
+    setQuestions([]);
+    setSelectedVariantValueByGroup({});
+    setSelectedOptionIds(new Set());
+    setAnswersByQuestion({});
+  }
+
+  /** Ajoute un item sans configuration (aucun groupe/option/question). */
+  function addSimpleItemToCart(p: Prestation) {
+    setCartItems((prev) => [...prev, buildSimpleCartItem(p, prev)]);
+  }
+
+  /** Ajoute l'item en cours de configuration (configurateur affiché) au panier. */
+  function addCurrentItemToCart() {
+    if (!selectedPrestation) return;
+    setCartItems((prev) => [
+      ...prev,
+      buildConfiguredCartItem(
+        {
+          prestationId: selectedPrestation.id,
+          prestationName: selectedPrestation.name,
+          basePrice: selectedPrestation.price,
+          baseDurationMinutes: selectedPrestation.duration_minutes,
+          variantGroups,
+          options: prestationOptions,
+          selectedVariantValueByGroup,
+          selectedOptionIds,
+          answersByQuestion,
+        },
+        prev
+      ),
+    ]);
+    resetCurrentItemState();
+  }
+
+  function removeCartItem(key: string) {
+    setCartItems((prev) => removeCartItemPure(prev, key));
+  }
+
+  const configuratorComplete =
+    isConfigComplete(variantGroups, selectedVariantValueByGroup) && isQuestionsComplete(questions, answersByQuestion);
+
+  const duration = isEditing ? (selectedPrestation?.duration_minutes ?? editing?.durationMinutes ?? 60) : cartTotalDuration;
   const dateStr = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 
-  // Charge les créneaux calculés pour la date + prestation sélectionnées.
+  // Charge les créneaux calculés pour la date + panier sélectionnés.
   useEffect(() => {
-    if (!visible || isEditing || step !== 3 || !selectedPrestation || !user?.id) return;
+    if (!visible || step !== 3 || !user?.id) return;
+    if (isEditing) {
+      if (!selectedPrestation) return;
+    } else if (cartServiceIds.length === 0) {
+      return;
+    }
     let cancelled = false;
     setSlotsLoading(true);
     setSelectedSlotStart(null);
@@ -194,7 +289,8 @@ export function NewAppointmentSheet({
     proApi
       .getAvailability({
         proId: user.id,
-        serviceIds: [selectedPrestation.id],
+        serviceIds: isEditing ? [selectedPrestation!.id] : cartServiceIds,
+        durationOverrides: isEditing ? undefined : cartDurationOverrides,
         fromDate: dateStr,
         toDate: dateStr,
       })
@@ -212,7 +308,7 @@ export function NewAppointmentSheet({
     return () => {
       cancelled = true;
     };
-  }, [visible, isEditing, step, selectedPrestation, dateStr, user?.id]);
+  }, [visible, isEditing, step, selectedPrestation, cartServiceIds, cartDurationOverrides, dateStr, user?.id]);
 
   // Départ effectif : un créneau calculé si choisi, sinon la saisie manuelle
   // (heure libre — déclenche le chemin override si hors créneaux).
@@ -224,8 +320,13 @@ export function NewAppointmentSheet({
 
   const handleSubmit = async () => {
     setError(null);
-    if (!selectedPrestation) {
-      setError("Choisis une prestation");
+    if (isEditing) {
+      if (!selectedPrestation) {
+        setError("Choisis une prestation");
+        return;
+      }
+    } else if (cartItems.length === 0) {
+      setError("Choisis au moins une prestation");
       return;
     }
     if (startAt <= new Date()) {
@@ -252,7 +353,7 @@ export function NewAppointmentSheet({
         const res = await proApi.updateAppointment(editing.id, {
           start_datetime: startAt.toISOString(),
           end_datetime: endAt.toISOString(),
-          prestation_id: selectedPrestation.id,
+          prestation_id: selectedPrestation!.id,
           initiated_via: initiatedVia,
           ...(initiatedVia === "phone" ? { reason: phoneReason.trim() } : {}),
         });
@@ -270,7 +371,7 @@ export function NewAppointmentSheet({
 
       const res = await proApi.createAppointment({
         client_id: selectedClient.id,
-        prestation_id: selectedPrestation.id,
+        items: toReservationItemsWire(cartItems),
         start_datetime: startAt.toISOString(),
         end_datetime: endAt.toISOString(),
         early_execution_requested: needsEarlyExecutionConsent,
@@ -325,7 +426,13 @@ export function NewAppointmentSheet({
               {isEditing ? "Reprogrammer le rendez-vous" : "Nouveau rendez-vous"}
             </Text>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
-              {isEditing ? editing?.clientLabel : step === 1 ? "1. Choisis la cliente" : step === 2 ? "2. Choisis la prestation" : "3. Date & heure"}
+              {isEditing
+                ? editing?.clientLabel
+                : step === 1
+                  ? "1. Choisis la cliente"
+                  : step === 2
+                    ? showConfigurator ? "2. Configure la prestation" : "2. Choisis la ou les prestations"
+                    : "3. Date & heure"}
             </Text>
           </View>
           <AnimatedIconButton
@@ -390,14 +497,104 @@ export function NewAppointmentSheet({
             </View>
           )}
 
-          {step === 2 && !isEditing && (
+          {step === 2 && !isEditing && showConfigurator && selectedPrestation && (
+            <View style={{ gap: 16 }}>
+              <AnimatedPressable onPress={resetCurrentItemState} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="chevron-back" size={16} color={colors.primary} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>Autres prestations</Text>
+              </AnimatedPressable>
+
+              <PrestationConfigurator
+                prestationName={selectedPrestation.name}
+                basePrice={selectedPrestation.price}
+                baseDurationMinutes={selectedPrestation.duration_minutes}
+                isLoading={configLoading}
+                variantGroups={variantGroups}
+                options={prestationOptions}
+                questions={questions}
+                selectedVariantValueByGroup={selectedVariantValueByGroup}
+                selectedOptionIds={selectedOptionIds}
+                answersByQuestion={answersByQuestion}
+                onSelectVariantValue={(groupId, valueId) =>
+                  setSelectedVariantValueByGroup((prev) => ({ ...prev, [groupId]: valueId }))
+                }
+                onToggleOption={(optionId) =>
+                  setSelectedOptionIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(optionId)) next.delete(optionId);
+                    else next.add(optionId);
+                    return next;
+                  })
+                }
+                onAnswerChange={(questionId, patch) =>
+                  setAnswersByQuestion((prev) => ({
+                    ...prev,
+                    [questionId]: { ...(prev[questionId] ?? { questionId }), ...patch },
+                  }))
+                }
+              />
+
+              <AnimatedPressable
+                onPress={() => { if (configuratorComplete) addCurrentItemToCart(); }}
+                disabled={!configuratorComplete}
+                style={{ alignItems: "center", opacity: configuratorComplete ? 1 : 0.5 }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>+ Ajouter une prestation</Text>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                onPress={() => {
+                  if (!configuratorComplete) return;
+                  addCurrentItemToCart();
+                  setStep(3);
+                }}
+                disabled={!configuratorComplete}
+                style={{ height: 50, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: configuratorComplete ? 1 : 0.5 }}
+              >
+                <Ionicons name="arrow-forward" size={16} color={colors.onColor} />
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>Voir les disponibilités</Text>
+              </AnimatedPressable>
+            </View>
+          )}
+
+          {step === 2 && !isEditing && !showConfigurator && (
             <View style={{ gap: 12 }}>
-              {!isEditing && selectedClient && (
+              {selectedClient && (
                 <AnimatedPressable onPress={() => setStep(1)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <Ionicons name="chevron-back" size={16} color={colors.primary} />
                   <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{selectedClient.first_name} {selectedClient.last_name}</Text>
                 </AnimatedPressable>
               )}
+
+              {cartItems.length > 0 && (
+                // Panier V3 (doc §12) : n'apparaît qu'à partir de la 2e
+                // prestation ajoutée — le cas simple (1 prestation) saute
+                // directement à l'étape 3 et ne voit jamais cet encart.
+                <View style={{ gap: 8, backgroundColor: colors.white, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.6 }}>
+                    Déjà ajoutées
+                  </Text>
+                  {cartItems.map((item) => (
+                    <View key={item.key} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                      <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>
+                        {item.prestationName}
+                      </Text>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>
+                        {item.indicativePrice.toFixed(2).replace(".", ",")} €
+                      </Text>
+                      <AnimatedIconButton
+                        onPress={() => removeCartItem(item.key)}
+                        accessibilityLabel={`Retirer ${item.prestationName}`}
+                        style={{ padding: 2 }}
+                      >
+                        <Ionicons name="close-circle-outline" size={18} color={colors.mutedForeground} />
+                      </AnimatedIconButton>
+                    </View>
+                  ))}
+                </View>
+              )}
+
               {servicesLoading ? (
                 <View style={{ padding: 20, alignItems: "center" }}><ActivityIndicator size="small" color={colors.primary} /></View>
               ) : services.length === 0 ? (
@@ -405,16 +602,55 @@ export function NewAppointmentSheet({
               ) : (
                 <View style={{ gap: 8 }}>
                   {services.map((s) => {
-                    const selected = selectedPrestation?.id === s.id;
+                    const alreadyInCart = cartItems.some((i) => i.prestationId === s.id);
                     return (
                       <AnimatedPressable
                         key={s.id}
-                        onPress={() => { setSelectedPrestation(s); setStep(3); }}
+                        onPress={async () => {
+                          setSelectedPrestation(s);
+                          setSelectedVariantValueByGroup({});
+                          setSelectedOptionIds(new Set());
+                          setAnswersByQuestion({});
+                          setConfigLoading(true);
+                          const autoAdvance = shouldAutoAdvance(cartItems.length);
+                          try {
+                            const [groupsRes, optionsRes, questionsRes] = await Promise.all([
+                              specialistsApi.getVariantGroups(s.id),
+                              specialistsApi.getOptions(s.id),
+                              specialistsApi.getQuestions(s.id),
+                            ]);
+                            const groups = groupsRes.success && groupsRes.data ? groupsRes.data : [];
+                            const opts = optionsRes.success && optionsRes.data ? optionsRes.data : [];
+                            const qs = questionsRes.success && questionsRes.data ? questionsRes.data : [];
+                            setVariantGroups(groups);
+                            setPrestationOptions(opts);
+                            setQuestions(qs);
+                            if (groups.length === 0 && opts.length === 0 && qs.length === 0) {
+                              // Prestation simple : comportement inchangé —
+                              // ajoutée directement, premier item ⇒ passage
+                              // direct à l'étape 3 (doc §16).
+                              addSimpleItemToCart(s);
+                              setSelectedPrestation(null);
+                              if (autoAdvance) setStep(3);
+                            } else {
+                              setShowConfigurator(true);
+                            }
+                          } catch {
+                            addSimpleItemToCart(s);
+                            setSelectedPrestation(null);
+                            setVariantGroups([]);
+                            setPrestationOptions([]);
+                            setQuestions([]);
+                            if (autoAdvance) setStep(3);
+                          } finally {
+                            setConfigLoading(false);
+                          }
+                        }}
                         style={{
                           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                          backgroundColor: selected ? withAlpha(colors.primary, 0.08) : colors.white,
+                          backgroundColor: alreadyInCart ? withAlpha(colors.primary, 0.08) : colors.white,
                           borderRadius: 14, padding: 14,
-                          borderWidth: 1.5, borderColor: selected ? colors.primary : colors.border,
+                          borderWidth: 1.5, borderColor: alreadyInCart ? colors.primary : colors.border,
                         }}
                       >
                         <View style={{ flex: 1, marginRight: 10 }}>
@@ -423,39 +659,58 @@ export function NewAppointmentSheet({
                             {s.duration_minutes} min · {Number(s.price).toFixed(2).replace(".", ",")} €
                           </Text>
                         </View>
-                        <Ionicons name={selected ? "checkmark-circle" : "chevron-forward"} size={20} color={selected ? colors.primary : colors.mutedForeground} />
+                        <Ionicons name={alreadyInCart ? "checkmark-circle" : "chevron-forward"} size={20} color={alreadyInCart ? colors.primary : colors.mutedForeground} />
                       </AnimatedPressable>
                     );
                   })}
                 </View>
               )}
+
+              {cartItems.length > 0 && (
+                <AnimatedPressable
+                  onPress={() => setStep(3)}
+                  style={{ marginTop: 4, height: 50, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}
+                >
+                  <Ionicons name="arrow-forward" size={16} color={colors.onColor} />
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onColor }}>
+                    Voir les disponibilités · {cartTotalPrice.toFixed(2).replace(".", ",")} €
+                  </Text>
+                </AnimatedPressable>
+              )}
             </View>
           )}
 
-          {step === 3 && !selectedPrestation && servicesLoading && (
+          {step === 3 && !isEditing && showConfigurator && selectedPrestation && (
+            // Ne devrait normalement pas s'afficher (le CTA du configurateur
+            // ramène toujours à step 2/3 explicitement) — filet de sécurité.
+            <ErrorMessage message="Termine la configuration de cette prestation avant de continuer." />
+          )}
+
+          {step === 3 && (isEditing ? !selectedPrestation : cartItems.length === 0) && servicesLoading && (
             <View style={{ padding: 20, alignItems: "center" }}><ActivityIndicator size="small" color={colors.primary} /></View>
           )}
 
-          {step === 3 && !selectedPrestation && !servicesLoading && (
+          {step === 3 && (isEditing ? !selectedPrestation : cartItems.length === 0) && !servicesLoading && (
             // isEditing uniquement : en création, step 3 n'est atteint qu'après
-            // avoir choisi une prestation à l'étape 2, selectedPrestation est
-            // donc toujours posé à ce stade-là.
+            // avoir ajouté au moins une prestation au panier à l'étape 2.
             <ErrorMessage message={error ?? "Impossible de charger cette prestation."} />
           )}
 
-          {step === 3 && selectedPrestation && (
+          {step === 3 && (isEditing ? !!selectedPrestation : cartItems.length > 0) && (
             <View style={{ gap: 18 }}>
               {isEditing ? (
                 // Prestation verrouillée en édition — pas de retour possible vers
                 // un choix de prestation (reprogrammer ≠ recréer le rdv).
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name="pricetag-outline" size={16} color={colors.mutedForeground} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>{selectedPrestation.name}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>{selectedPrestation!.name}</Text>
                 </View>
               ) : (
                 <AnimatedPressable onPress={() => setStep(2)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name="chevron-back" size={16} color={colors.primary} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{selectedPrestation.name}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>
+                    {cartItems.length === 1 ? cartItems[0].prestationName : `${cartItems.length} prestations · ${cartTotalPrice.toFixed(2).replace(".", ",")} €`}
+                  </Text>
                 </AnimatedPressable>
               )}
 

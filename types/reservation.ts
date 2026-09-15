@@ -25,6 +25,27 @@ export interface ReservationSelection {
   answers: ReservationAnswerSelection[];
 }
 
+/**
+ * Un élément du panier (V3, doc §2) tel que construit côté mobile pendant la
+ * configuration — porte à la fois la sélection à envoyer au backend et les
+ * données d'affichage (nom, prix/durée indicatifs) pour le récap. `key` est
+ * un identifiant local de rendu de liste (permet deux fois la même
+ * prestation dans le panier, cf. doc §4).
+ */
+export interface CartItem {
+  key: string;
+  prestationId: number;
+  prestationName: string;
+  basePrice: number;
+  baseDurationMinutes: number;
+  selectedVariantValueByGroup: Record<number, number>;
+  selectedOptionIds: number[];
+  answers: ReservationAnswerSelection[];
+  /** Prix/durée indicatifs (variantes/options appliquées) — le backend recalcule et fait toujours foi. */
+  indicativePrice: number;
+  indicativeDurationMinutes: number;
+}
+
 export interface ReservationItemVariantSnapshot {
   variant_group_id: number | null;
   variant_value_id: number | null;

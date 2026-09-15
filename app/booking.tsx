@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { stripePaymentsApi, specialistsApi, messagesApi, type AvailabilityResponse } from "@/lib/api";
+import { stripePaymentsApi, specialistsApi, messagesApi, toReservationItemsWire, type AvailabilityResponse } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -25,13 +25,21 @@ import { DateTimeSelector, type Slot } from "@/components/screens/client/booking
 import { BookingSummary } from "@/components/screens/client/booking/BookingSummary";
 import {
   PrestationConfigurator,
-  computeIndicativePricing,
   isConfigComplete,
   isQuestionsComplete,
 } from "@/components/screens/client/booking/PrestationConfigurator";
+import {
+  buildSimpleCartItem,
+  buildConfiguredCartItem,
+  removeCartItem as removeCartItemPure,
+  cartTotals,
+  cartServiceIds as cartServiceIdsOf,
+  cartDurationOverrides as cartDurationOverridesOf,
+  shouldAutoAdvance,
+  cartLabel,
+} from "@/lib/cart";
 import type { VariantGroup, PrestationOption, Question } from "@/types/prestation";
-import type { ReservationAnswerSelection } from "@/types/reservation";
-import { toAnswerWire } from "@/lib/api";
+import type { ReservationAnswerSelection, CartItem } from "@/types/reservation";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -168,6 +176,12 @@ export default function BookingScreen() {
   const [selectedVariantValueByGroup, setSelectedVariantValueByGroup] = useState<Record<number, number>>({});
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<number>>(new Set());
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<number, ReservationAnswerSelection>>({});
+  // Panier V3 (doc §2) : prestations déjà configurées et validées. Les
+  // states ci-dessus ne portent que l'item EN COURS de configuration, pas
+  // encore ajouté. Un RDV à une seule prestation ne voit jamais le panier —
+  // il se remplit silencieusement d'un seul item et le flow reste identique
+  // à avant (doc §16 : « le parcours simple doit rester aussi simple »).
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
@@ -199,7 +213,7 @@ export default function BookingScreen() {
     if (pendingReservationId == null) return;
     setPendingReservationId(null);
     setClientSecret(null);
-  }, [selectedPrestation, selectedDate, selectedTime]);
+  }, [cartItems, selectedDate, selectedTime]);
 
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -270,12 +284,19 @@ export default function BookingScreen() {
     void fetchData();
   }, [proId, authLoading, isAuthenticated, router]);
 
+  // Panier V3 (doc §5.4) : la disponibilité se calcule sur la DURÉE TOTALE du
+  // panier, pas prestation par prestation — d'où les tableaux positionnels
+  // serviceIds/durationOverrides envoyés au moteur de dispo.
+  const cartServiceIds = useMemo(() => cartServiceIdsOf(cartItems), [cartItems]);
+  const cartDurationOverrides = useMemo(() => cartDurationOverridesOf(cartItems), [cartItems]);
+  const { totalPrice: cartTotalPrice, totalDurationMinutes: cartTotalDuration } = useMemo(() => cartTotals(cartItems), [cartItems]);
+
   // Dates réservables du mois affiché — calculées par le moteur de dispo
   // (working_hours − absences − RDV), et non plus lues dans la table `slots`
   // précréée qui est vide pour toutes les pros basculées sur le moteur.
   useEffect(() => {
     const fetchDates = async () => {
-      if (!proId || step !== 2 || !selectedPrestation) return;
+      if (!proId || step !== 2 || cartServiceIds.length === 0) return;
       setIsLoadingDates(true);
       try {
         const year = currentMonth.getFullYear();
@@ -286,7 +307,8 @@ export default function BookingScreen() {
         const from = firstOfMonth < now ? now : firstOfMonth;
         const res = await specialistsApi.getPublicAvailability({
           proId: Number(proId),
-          serviceIds: [selectedPrestation],
+          serviceIds: cartServiceIds,
+          durationOverrides: cartDurationOverrides,
           fromDate: toLocalDateStr(from),
           toDate: toLocalDateStr(lastOfMonth),
         });
@@ -304,17 +326,18 @@ export default function BookingScreen() {
       }
     };
     void fetchDates();
-  }, [proId, currentMonth, step, selectedPrestation]);
+  }, [proId, currentMonth, step, cartServiceIds, cartDurationOverrides]);
 
   useEffect(() => {
     const fetchSlots = async () => {
-      if (!selectedDate || !proId || !selectedPrestation) return;
+      if (!selectedDate || !proId || cartServiceIds.length === 0) return;
       setIsLoadingSlots(true);
       try {
         const dateStr = toLocalDateStr(selectedDate);
         const res = await specialistsApi.getPublicAvailability({
           proId: Number(proId),
-          serviceIds: [selectedPrestation],
+          serviceIds: cartServiceIds,
+          durationOverrides: cartDurationOverrides,
           fromDate: dateStr,
           toDate: dateStr,
         });
@@ -328,16 +351,17 @@ export default function BookingScreen() {
       }
     };
     void fetchSlots();
-  }, [selectedDate, proId, selectedPrestation]);
+  }, [selectedDate, proId, cartServiceIds, cartDurationOverrides]);
 
   useEffect(() => {
-    if (step !== 2 || !selectedDate || !proId || !selectedPrestation) return;
+    if (step !== 2 || !selectedDate || !proId || cartServiceIds.length === 0) return;
     const refresh = async () => {
       try {
         const dateStr = toLocalDateStr(selectedDate);
         const res = await specialistsApi.getPublicAvailability({
           proId: Number(proId),
-          serviceIds: [selectedPrestation],
+          serviceIds: cartServiceIds,
+          durationOverrides: cartDurationOverrides,
           fromDate: dateStr,
           toDate: dateStr,
         });
@@ -346,7 +370,7 @@ export default function BookingScreen() {
     };
     const interval = setInterval(refresh, 30_000);
     return () => clearInterval(interval);
-  }, [step, selectedDate, proId, selectedPrestation]);
+  }, [step, selectedDate, proId, cartServiceIds, cartDurationOverrides]);
 
   useEffect(() => {
     setSelectedTime(null);
@@ -356,21 +380,6 @@ export default function BookingScreen() {
     () => prestations.find((p) => p.id === selectedPrestation),
     [selectedPrestation, prestations]
   );
-
-  // Prix/durée indicatifs après configuration (doc §5.2) — le backend
-  // recalcule tout et fait toujours foi ; identique à la base tant qu'aucune
-  // variante/option n'est configurée (rétrocompatibilité).
-  const effectivePricing = useMemo(() => {
-    if (!selectedPrestationData) return null;
-    return computeIndicativePricing(
-      selectedPrestationData.price,
-      selectedPrestationData.duration_minutes,
-      variantGroups,
-      prestationOptions,
-      selectedVariantValueByGroup,
-      selectedOptionIds
-    );
-  }, [selectedPrestationData, variantGroups, prestationOptions, selectedVariantValueByGroup, selectedOptionIds]);
 
   const configuratorComplete =
     isConfigComplete(variantGroups, selectedVariantValueByGroup) && isQuestionsComplete(questions, answersByQuestion);
@@ -394,11 +403,54 @@ export default function BookingScreen() {
   }, [pro, canPayOnline, mustPayOnline, paymentMethod]);
 
   const isStepValid = () => {
-    if (step === 1) return selectedPrestation !== null;
+    if (step === 1) return cartItems.length > 0 && !showConfigurator;
     if (step === 2) return selectedDate !== null && selectedTime !== null;
     if (step === 3) return paymentMethod !== null && cancellationPolicyAccepted && withdrawalRightAccepted;
     return true;
   };
+
+  function resetCurrentItemState() {
+    setSelectedPrestation(null);
+    setShowConfigurator(false);
+    setVariantGroups([]);
+    setPrestationOptions([]);
+    setQuestions([]);
+    setSelectedVariantValueByGroup({});
+    setSelectedOptionIds(new Set());
+    setAnswersByQuestion({});
+  }
+
+  /** Ajoute un item sans configuration (aucun groupe/option/question) — comportement V1 inchangé. */
+  function addSimpleItemToCart(p: Prestation) {
+    setCartItems((prev) => [...prev, buildSimpleCartItem(p, prev)]);
+  }
+
+  /** Ajoute l'item en cours de configuration (configurateur affiché) au panier. */
+  function addCurrentItemToCart() {
+    if (!selectedPrestationData) return;
+    setCartItems((prev) => [
+      ...prev,
+      buildConfiguredCartItem(
+        {
+          prestationId: selectedPrestationData.id,
+          prestationName: selectedPrestationData.name,
+          basePrice: selectedPrestationData.price,
+          baseDurationMinutes: selectedPrestationData.duration_minutes,
+          variantGroups,
+          options: prestationOptions,
+          selectedVariantValueByGroup,
+          selectedOptionIds,
+          answersByQuestion,
+        },
+        prev
+      ),
+    ]);
+    resetCurrentItemState();
+  }
+
+  function removeCartItem(key: string) {
+    setCartItems((prev) => removeCartItemPure(prev, key));
+  }
 
   const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -412,7 +464,7 @@ export default function BookingScreen() {
   }, [step, router, showConfigurator]);
 
   const handleConfirmBooking = async () => {
-    if (!selectedPrestation || !selectedDate || !selectedTime || !proId || !selectedPrestationData) {
+    if (cartItems.length === 0 || !selectedDate || !selectedTime || !proId) {
       setBookingError("Veuillez remplir tous les champs.");
       return;
     }
@@ -421,12 +473,13 @@ export default function BookingScreen() {
     try {
       let reservationId = pendingReservationId;
       let depositPct = depositPercentage;
-      // effectivePricing reflète les variantes/options sélectionnées
-      // (indicatif — le serveur recalcule et fait foi, doc §5.2). Calculé en
-      // dehors du bloc de création pour rester disponible sur le chemin de
-      // retry (reservationId déjà présent) et sur l'écran de confirmation.
-      const finalDurationMinutes = effectivePricing?.durationMinutes ?? selectedPrestationData.duration_minutes;
-      const finalPrice = effectivePricing?.price ?? selectedPrestationData.price;
+      // Totaux du panier (indicatifs — le serveur recalcule et fait foi,
+      // doc §5.2). Calculés en dehors du bloc de création pour rester
+      // disponibles sur le chemin de retry (reservationId déjà présent) et
+      // sur l'écran de confirmation.
+      const finalDurationMinutes = cartTotalDuration;
+      const finalPrice = cartTotalPrice;
+      const currentCartLabel = cartLabel(cartItems);
 
       if (reservationId == null) {
         const selectedSlot = availableSlots.find((s) => s.time === selectedTime);
@@ -447,15 +500,11 @@ export default function BookingScreen() {
 
         const resaResult = await stripePaymentsApi.createReservation({
           pro_id: Number(proId),
-          prestation_id: selectedPrestation,
+          items: toReservationItemsWire(cartItems),
           start_datetime: startDT.toISOString(),
           end_datetime: endDT.toISOString(),
-          price: finalPrice,
           payment_method: paymentMethod ?? "on_site",
           early_execution_requested: withdrawalRightAccepted,
-          selected_variant_value_ids: Object.values(selectedVariantValueByGroup),
-          selected_option_ids: Array.from(selectedOptionIds),
-          answers: toAnswerWire(Object.values(answersByQuestion)),
         });
 
         if (!resaResult.success || !resaResult.data) {
@@ -485,7 +534,7 @@ export default function BookingScreen() {
           pathname: "/booking/confirmation",
           params: {
             specialistName: proName,
-            serviceName: selectedPrestationData.name,
+            serviceName: currentCartLabel,
             date: formattedDate ?? "",
             time: selectedTime ?? "",
             paymentMethod: "on_site",
@@ -604,48 +653,91 @@ export default function BookingScreen() {
           );
         }
         return (
-          <ServiceSelector
-            prestations={prestations}
-            selectedId={selectedPrestation}
-            onSelect={async (id) => {
-              setSelectedPrestation(id);
-              setSelectedVariantValueByGroup({});
-              setSelectedOptionIds(new Set());
-              setAnswersByQuestion({});
-              setConfigLoading(true);
-              try {
-                const [groupsRes, optionsRes, questionsRes] = await Promise.all([
-                  specialistsApi.getVariantGroups(id),
-                  specialistsApi.getOptions(id),
-                  specialistsApi.getQuestions(id),
-                ]);
-                const groups = groupsRes.success && groupsRes.data ? groupsRes.data : [];
-                const opts = optionsRes.success && optionsRes.data ? optionsRes.data : [];
-                const qs = questionsRes.success && questionsRes.data ? questionsRes.data : [];
-                setVariantGroups(groups);
-                setPrestationOptions(opts);
-                setQuestions(qs);
-                if (groups.length === 0 && opts.length === 0 && qs.length === 0) {
-                  // Prestation simple, sans configuration (comportement actuel
-                  // inchangé — doc §16, Test 1) : on passe directement au créneau.
-                  setTimeout(() => setStep(2), 120);
-                } else {
-                  setShowConfigurator(true);
-                }
-              } catch {
-                // Config indisponible : on ne bloque pas la réservation simple.
-                setVariantGroups([]);
-                setPrestationOptions([]);
-                setQuestions([]);
-                setTimeout(() => setStep(2), 120);
-              } finally {
-                setConfigLoading(false);
-              }
-            }}
-            proName={proName}
-            proCity={pro.city}
-            conditions={pro.acceptance_conditions}
-          />
+          <View style={{ flex: 1, gap: 14 }}>
+            {cartItems.length > 0 && (
+              // Panier V3 (doc §2) : n'apparaît que quand une 2e prestation
+              // est en cours d'ajout — le parcours à une seule prestation ne
+              // voit jamais cet encart (doc §16).
+              <View style={{ gap: 8, backgroundColor: colors.white, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.6 }}>
+                  Déjà dans ton panier
+                </Text>
+                {cartItems.map((item) => (
+                  <View key={item.key} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                    <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>
+                      {item.prestationName}
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: colors.mutedForeground }}>
+                      {item.indicativePrice.toFixed(2)}€
+                    </Text>
+                    <AnimatedIconButton
+                      onPress={() => removeCartItem(item.key)}
+                      accessibilityLabel={`Retirer ${item.prestationName} du panier`}
+                      style={{ padding: 2 }}
+                    >
+                      <Ionicons name="close-circle-outline" size={18} color={colors.mutedForeground} />
+                    </AnimatedIconButton>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <ServiceSelector
+                prestations={prestations}
+                selectedId={selectedPrestation}
+                onSelect={async (id) => {
+                  setSelectedPrestation(id);
+                  setSelectedVariantValueByGroup({});
+                  setSelectedOptionIds(new Set());
+                  setAnswersByQuestion({});
+                  setConfigLoading(true);
+                  const autoAdvance = shouldAutoAdvance(cartItems.length);
+                  try {
+                    const [groupsRes, optionsRes, questionsRes] = await Promise.all([
+                      specialistsApi.getVariantGroups(id),
+                      specialistsApi.getOptions(id),
+                      specialistsApi.getQuestions(id),
+                    ]);
+                    const groups = groupsRes.success && groupsRes.data ? groupsRes.data : [];
+                    const opts = optionsRes.success && optionsRes.data ? optionsRes.data : [];
+                    const qs = questionsRes.success && questionsRes.data ? questionsRes.data : [];
+                    setVariantGroups(groups);
+                    setPrestationOptions(opts);
+                    setQuestions(qs);
+                    if (groups.length === 0 && opts.length === 0 && qs.length === 0) {
+                      // Prestation simple, sans configuration (comportement
+                      // actuel inchangé — doc §16, Test 1) : ajoutée
+                      // directement au panier. Si c'est la toute première
+                      // prestation choisie, on passe direct au créneau —
+                      // sinon (ajout d'une 2e+ prestation) on reste sur la
+                      // liste pour laisser la cliente continuer/valider.
+                      const p = prestations.find((pp) => pp.id === id);
+                      if (p) addSimpleItemToCart(p);
+                      setSelectedPrestation(null);
+                      if (autoAdvance) setTimeout(() => setStep(2), 120);
+                    } else {
+                      setShowConfigurator(true);
+                    }
+                  } catch {
+                    // Config indisponible : on ne bloque pas la réservation simple.
+                    const p = prestations.find((pp) => pp.id === id);
+                    setVariantGroups([]);
+                    setPrestationOptions([]);
+                    setQuestions([]);
+                    if (p) addSimpleItemToCart(p);
+                    setSelectedPrestation(null);
+                    if (autoAdvance) setTimeout(() => setStep(2), 120);
+                  } finally {
+                    setConfigLoading(false);
+                  }
+                }}
+                proName={proName}
+                proCity={pro.city}
+                conditions={pro.acceptance_conditions}
+              />
+            </View>
+          </View>
         );
       case 2:
         return (
@@ -664,12 +756,14 @@ export default function BookingScreen() {
             onMonthChange={setCurrentMonth}
           />
         );
-      case 3:
-        return selectedDate && selectedTime && selectedPrestationData ? (
+      case 3: {
+        const summaryLabel = cartItems.length === 1 ? cartItems[0].prestationName : `${cartItems.length} prestations`;
+        return selectedDate && selectedTime && cartItems.length > 0 ? (
           <BookingSummary
-            prestationName={selectedPrestationData.name}
-            prestationPrice={effectivePricing?.price ?? selectedPrestationData.price}
-            prestationDuration={effectivePricing?.durationMinutes ?? selectedPrestationData.duration_minutes}
+            prestationName={summaryLabel}
+            prestationPrice={cartTotalPrice}
+            prestationDuration={cartTotalDuration}
+            items={cartItems.length > 1 ? cartItems.map((i) => ({ name: i.prestationName, price: i.indicativePrice })) : undefined}
             proName={proName}
             proCity={pro.city}
             selectedDate={selectedDate}
@@ -698,12 +792,14 @@ export default function BookingScreen() {
             }}
           />
         ) : null;
-      case 4:
+      }
+      case 4: {
+        const paymentLabel = cartLabel(cartItems);
         return (
           <PaymentStep
-            amount={depositAmount ?? effectivePricing?.price ?? selectedPrestationData?.price ?? 0}
+            amount={depositAmount ?? cartTotalPrice}
             depositPercentage={depositPercentage}
-            prestationName={selectedPrestationData?.name}
+            prestationName={paymentLabel}
             clientSecret={clientSecret}
             onSuccess={() => {
               const formattedDate = selectedDate?.toLocaleDateString("fr-FR", {
@@ -715,14 +811,12 @@ export default function BookingScreen() {
                   pathname: "/booking/confirmation",
                   params: {
                     specialistName: proName,
-                    serviceName: selectedPrestationData?.name ?? "",
+                    serviceName: paymentLabel,
                     date: formattedDate ?? "",
                     time: selectedTime ?? "",
                     amount: depositAmount != null ? String(Number(depositAmount).toFixed(2).replace(".", ",")) : "",
                     dateISO: selectedDate ? toLocalDateStr(selectedDate) : "",
-                    durationMinutes: effectivePricing?.durationMinutes != null
-                      ? String(effectivePricing.durationMinutes)
-                      : "",
+                    durationMinutes: String(cartTotalDuration),
                     proCity: pro.city ?? "",
                     proId: String(proId),
                   },
@@ -745,6 +839,7 @@ export default function BookingScreen() {
             }}
           />
         );
+      }
       default:
         return null;
     }
@@ -787,10 +882,26 @@ export default function BookingScreen() {
         )}
 
         {step === 1 && showConfigurator && (
-          <View style={{ paddingVertical: 16 }}>
+          <View style={{ paddingVertical: 16, gap: 10 }}>
+            {/* Secondaire, discret : le parcours à une seule prestation ne
+                passe jamais par ce bouton (doc §16 — CTA principal = même
+                comportement qu'avant). */}
             <AnimatedPressable
               onPress={() => {
+                if (!configuratorComplete) return;
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                addCurrentItemToCart();
+              }}
+              disabled={!configuratorComplete}
+              style={{ alignItems: "center", opacity: configuratorComplete ? 1 : 0.5 }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>+ Ajouter une prestation</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              onPress={() => {
+                if (!configuratorComplete) return;
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                addCurrentItemToCart();
                 setStep(2);
               }}
               disabled={!configuratorComplete}
@@ -814,7 +925,47 @@ export default function BookingScreen() {
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name="arrow-forward" size={18} color={colors.white} />
-                  <Text style={{ color: colors.white, fontWeight: "700", fontSize: 15 }}>Continuer</Text>
+                  <Text style={{ color: colors.white, fontWeight: "700", fontSize: 15 }}>
+                    {cartItems.length > 0 ? "Voir les créneaux" : "Continuer"}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </AnimatedPressable>
+          </View>
+        )}
+
+        {step === 1 && !showConfigurator && cartItems.length > 0 && (
+          // Apparaît uniquement une fois une 2e prestation entamée depuis la
+          // liste (le premier item, cas simple, saute directement à
+          // l'étape 2 sans jamais afficher cette barre — doc §16).
+          <View style={{ paddingVertical: 16 }}>
+            <AnimatedPressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                setStep(2);
+              }}
+            >
+              <LinearGradient
+                colors={[colors.primary, `${colors.primary}E6`]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: 56,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                  <Text style={{ color: colors.white, fontWeight: "700", fontSize: 15 }}>
+                    Voir les créneaux · {cartTotalPrice.toFixed(2)}€
+                  </Text>
                 </View>
               </LinearGradient>
             </AnimatedPressable>
