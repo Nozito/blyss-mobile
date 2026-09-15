@@ -439,10 +439,10 @@ export default function ServiceFormScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
-                Variantes & options
+                Variantes, options & questions
               </Text>
               <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
-                Tailles, formes, suppléments... et leur effet sur le prix/la durée
+                Tailles, formes, suppléments... et les questions à poser à la cliente
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />

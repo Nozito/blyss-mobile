@@ -27,8 +27,11 @@ import {
   PrestationConfigurator,
   computeIndicativePricing,
   isConfigComplete,
+  isQuestionsComplete,
 } from "@/components/screens/client/booking/PrestationConfigurator";
-import type { VariantGroup, PrestationOption } from "@/types/prestation";
+import type { VariantGroup, PrestationOption, Question } from "@/types/prestation";
+import type { ReservationAnswerSelection } from "@/types/reservation";
+import { toAnswerWire } from "@/lib/api";
 import { PaymentStep } from "@/components/screens/client/booking/PaymentStep";
 import { AnimatedIconButton, AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -161,8 +164,10 @@ export default function BookingScreen() {
   const [configLoading, setConfigLoading] = useState(false);
   const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
   const [prestationOptions, setPrestationOptions] = useState<PrestationOption[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedVariantValueByGroup, setSelectedVariantValueByGroup] = useState<Record<number, number>>({});
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<number>>(new Set());
+  const [answersByQuestion, setAnswersByQuestion] = useState<Record<number, ReservationAnswerSelection>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
@@ -367,6 +372,9 @@ export default function BookingScreen() {
     );
   }, [selectedPrestationData, variantGroups, prestationOptions, selectedVariantValueByGroup, selectedOptionIds]);
 
+  const configuratorComplete =
+    isConfigComplete(variantGroups, selectedVariantValueByGroup) && isQuestionsComplete(questions, answersByQuestion);
+
   const canPayOnline = computeCanPayOnline(
     Boolean(pro?.stripe_onboarding_complete),
     Boolean(pro?.accept_online_payment)
@@ -447,6 +455,7 @@ export default function BookingScreen() {
           early_execution_requested: withdrawalRightAccepted,
           selected_variant_value_ids: Object.values(selectedVariantValueByGroup),
           selected_option_ids: Array.from(selectedOptionIds),
+          answers: toAnswerWire(Object.values(answersByQuestion)),
         });
 
         if (!resaResult.success || !resaResult.data) {
@@ -570,8 +579,10 @@ export default function BookingScreen() {
               isLoading={configLoading}
               variantGroups={variantGroups}
               options={prestationOptions}
+              questions={questions}
               selectedVariantValueByGroup={selectedVariantValueByGroup}
               selectedOptionIds={selectedOptionIds}
+              answersByQuestion={answersByQuestion}
               onSelectVariantValue={(groupId, valueId) =>
                 setSelectedVariantValueByGroup((prev) => ({ ...prev, [groupId]: valueId }))
               }
@@ -582,6 +593,12 @@ export default function BookingScreen() {
                   else next.add(optionId);
                   return next;
                 })
+              }
+              onAnswerChange={(questionId, patch) =>
+                setAnswersByQuestion((prev) => ({
+                  ...prev,
+                  [questionId]: { ...(prev[questionId] ?? { questionId }), ...patch },
+                }))
               }
             />
           );
@@ -594,17 +611,21 @@ export default function BookingScreen() {
               setSelectedPrestation(id);
               setSelectedVariantValueByGroup({});
               setSelectedOptionIds(new Set());
+              setAnswersByQuestion({});
               setConfigLoading(true);
               try {
-                const [groupsRes, optionsRes] = await Promise.all([
+                const [groupsRes, optionsRes, questionsRes] = await Promise.all([
                   specialistsApi.getVariantGroups(id),
                   specialistsApi.getOptions(id),
+                  specialistsApi.getQuestions(id),
                 ]);
                 const groups = groupsRes.success && groupsRes.data ? groupsRes.data : [];
                 const opts = optionsRes.success && optionsRes.data ? optionsRes.data : [];
+                const qs = questionsRes.success && questionsRes.data ? questionsRes.data : [];
                 setVariantGroups(groups);
                 setPrestationOptions(opts);
-                if (groups.length === 0 && opts.length === 0) {
+                setQuestions(qs);
+                if (groups.length === 0 && opts.length === 0 && qs.length === 0) {
                   // Prestation simple, sans configuration (comportement actuel
                   // inchangé — doc §16, Test 1) : on passe directement au créneau.
                   setTimeout(() => setStep(2), 120);
@@ -615,6 +636,7 @@ export default function BookingScreen() {
                 // Config indisponible : on ne bloque pas la réservation simple.
                 setVariantGroups([]);
                 setPrestationOptions([]);
+                setQuestions([]);
                 setTimeout(() => setStep(2), 120);
               } finally {
                 setConfigLoading(false);
@@ -771,8 +793,8 @@ export default function BookingScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                 setStep(2);
               }}
-              disabled={!isConfigComplete(variantGroups, selectedVariantValueByGroup)}
-              style={{ opacity: isConfigComplete(variantGroups, selectedVariantValueByGroup) ? 1 : 0.5 }}
+              disabled={!configuratorComplete}
+              style={{ opacity: configuratorComplete ? 1 : 0.5 }}
             >
               <LinearGradient
                 colors={[colors.primary, `${colors.primary}E6`]}
