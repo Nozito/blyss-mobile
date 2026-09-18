@@ -291,9 +291,11 @@ export function PrestationConfigurator({
                       color={selected ? colors.primary : colors.mutedForeground}
                     />
                     <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: colors.foreground }}>{option.name}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.mutedForeground }}>
-                      {option.price_delta > 0 ? "+" : ""}{option.price_delta}€
-                    </Text>
+                    {option.price_delta !== 0 && (
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.mutedForeground }}>
+                        {option.price_delta > 0 ? "+" : ""}{option.price_delta}€
+                      </Text>
+                    )}
                   </AnimatedPressable>
                 );
               })}
