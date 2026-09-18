@@ -4,8 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Shadows } from "@/constants/shadows";
 import { withAlpha } from "@/constants/colors";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { formatDuration } from "@/lib/dateUtils";
+import { PrestationCard } from "@/components/PrestationCard";
 
 export interface Prestation {
   id: number;
@@ -123,67 +122,14 @@ export function ServiceSelector({
 
         {/* Prestations list */}
         <View style={{ gap: 12 }}>
-          {prestations.map((prestation) => {
-            const isSelected = selectedId === prestation.id;
-            return (
-              <AnimatedPressable
-                key={prestation.id}
-                onPress={() => onSelect(prestation.id)}
-                style={{
-                  backgroundColor: colors.white,
-                  borderRadius: 20,
-                  padding: 20,
-                  borderWidth: 2,
-                  borderColor: isSelected ? colors.primary : colors.border,
-                  ...Shadows.card,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "600", fontSize: 15, color: colors.foreground, marginBottom: 4 }}>
-                      {prestation.name}
-                    </Text>
-                    {prestation.description && (
-                      <Text
-                        style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8, lineHeight: 18 }}
-                        numberOfLines={2}
-                      >
-                        {prestation.description}
-                      </Text>
-                    )}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Ionicons name="time-outline" size={14} color={colors.primary} />
-                        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-                          {formatDuration(prestation.duration_minutes)}
-                        </Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
-                          {prestation.price.toFixed(2)}€
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: isSelected ? colors.primary : colors.cream,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {isSelected && <Ionicons name="checkmark" size={14} color={colors.white} />}
-                  </View>
-                </View>
-              </AnimatedPressable>
-            );
-          })}
+          {prestations.map((prestation) => (
+            <PrestationCard
+              key={prestation.id}
+              prestation={prestation}
+              selected={selectedId === prestation.id}
+              onPress={() => onSelect(prestation.id)}
+            />
+          ))}
         </View>
       </View>
     </ScrollView>

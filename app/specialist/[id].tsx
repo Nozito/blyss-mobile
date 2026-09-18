@@ -30,7 +30,7 @@ import { AnimatedIconButton } from "@/components/ui/AnimatedPressable";
 import { safeBack } from "@/lib/navigation";
 import { LocationSection, type ConditionItem } from "@/components/screens/client/specialist/LocationSection";
 import { resolveMediaUrl } from "@/lib/media";
-import { formatDuration } from "@/lib/dateUtils";
+import { PrestationCard, type PrestationCardData } from "@/components/PrestationCard";
 
 function getRelativeDate(dateStr: string): string {
   const now = Date.now();
@@ -191,9 +191,21 @@ export default function SpecialistProfileScreen() {
   const avatarUrl = resolveMediaUrl(pro?.profile_photo as string | null);
   const bannerUrl = resolveMediaUrl(pro?.banner_photo as string | null);
   const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
-  const services: unknown[] = Array.isArray(servicesData?.data)
-    ? (servicesData.data as unknown[])
-    : [];
+  // Seules les prestations en ligne (actives) apparaissent sur le profil
+  // public — une prestation désactivée par la pro reste visible dans sa
+  // propre gestion, jamais côté cliente.
+  const services: PrestationCardData[] = (Array.isArray(servicesData?.data) ? servicesData.data : [])
+    .filter((s) => (s as Record<string, unknown>).active !== false)
+    .map((s) => {
+      const svc = s as Record<string, unknown>;
+      return {
+        name: String(svc.name ?? ""),
+        description: (svc.description as string | null) ?? null,
+        price: Number(svc.price ?? 0),
+        duration_minutes: Number(svc.duration_minutes ?? 60),
+        pricing_mode: svc.pricing_mode as PrestationCardData["pricing_mode"],
+      };
+    });
   const gallery = galleryData?.data ?? [];
 
   const reviewsCount =
@@ -201,9 +213,8 @@ export default function SpecialistProfileScreen() {
     (reviews.length > 0 ? reviews.length : Number(pro?.reviews_count ?? 0));
 
   const minPrice = services.reduce<number | null>((min, s) => {
-    const price = Number((s as Record<string, unknown>).price ?? (s as Record<string, unknown>).prixBase ?? NaN);
-    if (Number.isNaN(price)) return min;
-    return min == null ? price : Math.min(min, price);
+    if (Number.isNaN(s.price)) return min;
+    return min == null ? s.price : Math.min(min, s.price);
   }, null);
 
   return (
@@ -506,7 +517,6 @@ export default function SpecialistProfileScreen() {
           </View>
         )}
 
-        {/* BUG 3 / 5 fix — Prestations always rendered */}
         <View>
           <Text
             style={{
@@ -524,48 +534,11 @@ export default function SpecialistProfileScreen() {
               Aucune prestation renseignée
             </Text>
           ) : (
-            <>
-              {services.map((s) => {
-                const svc = s as Record<string, unknown>;
-                return (
-                  <View
-                    key={String(svc.id)}
-                    style={{
-                      backgroundColor: colors.white,
-                      borderRadius: 14,
-                      padding: 16,
-                      marginBottom: 10,
-                      shadowColor: colors.black,
-                      shadowOpacity: 0.04,
-                      shadowRadius: 6,
-                      elevation: 1,
-                    }}
-                  >
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
-                          {String(svc.name ?? svc.nom ?? "")}
-                        </Text>
-                        {svc.description != null && (
-                          <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 3, lineHeight: 18 }}>
-                            {String(svc.description)}
-                          </Text>
-                        )}
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
-                          <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
-                          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-                            {formatDuration(Number(svc.duration_minutes ?? svc.tempsBloque ?? 60))}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.foreground }}>
-                        {Number(svc.price ?? svc.prixBase ?? 0).toFixed(2)}€
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </>
+            <View style={{ gap: 10 }}>
+              {services.map((s, i) => (
+                <PrestationCard key={i} prestation={s} />
+              ))}
+            </View>
           )}
         </View>
 

@@ -36,15 +36,13 @@ function formatDuration(minutes: number): string {
 const ServiceRow = memo(function ServiceRow({
   item,
   onToggleActive,
-  onDuplicate,
+  onMore,
   onEdit,
-  onDelete,
 }: {
   item: Service;
   onToggleActive: (id: number, active: boolean) => void;
-  onDuplicate: (id: number) => void;
+  onMore: (id: number, name: string) => void;
   onEdit: (id: number) => void;
-  onDelete: (id: number, name: string) => void;
 }) {
   const colors = useThemeColors();
   const inactive = item.active === false;
@@ -55,8 +53,13 @@ const ServiceRow = memo(function ServiceRow({
       borderColor: inactive ? colors.border : `${colors.primary}25`,
       overflow: "hidden",
     }}>
-      {/* Ligne principale */}
-      <View style={{ padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+      {/* Ligne principale — toute la carte ouvre l'édition, même geste que côté cliente */}
+      <AnimatedPressable
+        onPress={() => onEdit(item.id)}
+        accessibilityRole="button"
+        accessibilityLabel={`Modifier ${item.name}`}
+        style={{ padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}
+      >
         <View style={{
           width: 48, height: 48, borderRadius: 14,
           backgroundColor: inactive ? colors.muted : `${colors.primary}15`,
@@ -103,11 +106,12 @@ const ServiceRow = memo(function ServiceRow({
             </Text>
           ) : null}
         </View>
-      </View>
+      </AnimatedPressable>
 
-      {/* Barre d'actions */}
+      {/* Barre d'actions — un seul geste ambigu à trancher (actif ou non), le
+          reste (dupliquer/supprimer) dans un menu pour ne pas rivaliser
+          visuellement avec le tap "modifier" sur la carte. */}
       <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: colors.border, alignItems: "center" }}>
-        {/* Toggle actif */}
         <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, gap: 6 }}>
           <Ionicons
             name={inactive ? "pause-circle-outline" : "checkmark-circle-outline"}
@@ -129,37 +133,13 @@ const ServiceRow = memo(function ServiceRow({
           />
         </View>
 
-        {/* Dupliquer */}
         <AnimatedPressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            onDuplicate(item.id);
-          }}
-          accessibilityLabel="Dupliquer la prestation"
+          onPress={() => onMore(item.id, item.name)}
+          accessibilityLabel="Plus d'actions"
           accessibilityRole="button"
           style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: colors.border }}
         >
-          <Ionicons name="copy-outline" size={18} color={colors.mutedForeground} />
-        </AnimatedPressable>
-
-        {/* Modifier */}
-        <AnimatedPressable
-          onPress={() => onEdit(item.id)}
-          accessibilityLabel="Modifier la prestation"
-          accessibilityRole="button"
-          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: colors.border }}
-        >
-          <Ionicons name="pencil-outline" size={18} color={colors.primary} />
-        </AnimatedPressable>
-
-        {/* Supprimer */}
-        <AnimatedPressable
-          onPress={() => onDelete(item.id, item.name)}
-          accessibilityLabel="Supprimer la prestation"
-          accessibilityRole="button"
-          style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", borderLeftWidth: 1, borderLeftColor: colors.border }}
-        >
-          <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+          <Ionicons name="ellipsis-horizontal" size={18} color={colors.mutedForeground} />
         </AnimatedPressable>
       </View>
     </View>
@@ -236,32 +216,43 @@ export default function ServicesScreen() {
     (id: number, active: boolean) => toggleMutation.mutate({ id, active }),
     [toggleMutation]
   );
-  const handleDuplicate = useCallback(
-    (id: number) => duplicateMutation.mutate(id),
-    [duplicateMutation]
-  );
   const handleEdit = useCallback(
     (id: number) => router.push(`/(pro)/(profile)/service-form?id=${id}`),
     [router]
   );
-  const handleDelete = useCallback(
+  const handleMore = useCallback(
     (id: number, name: string) =>
       showActionSheet(
         {
-          title: "Supprimer la prestation",
-          message: `Supprimer « ${name} » ? Cette action est irréversible.`,
-          options: ["Annuler", "Supprimer"],
+          title: name,
+          options: ["Annuler", "Dupliquer", "Supprimer"],
           cancelButtonIndex: 0,
-          destructiveButtonIndex: 1,
+          destructiveButtonIndex: 2,
         },
         (idx) => {
           if (idx === 1) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-            deleteMutation.mutate(id);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            duplicateMutation.mutate(id);
+          } else if (idx === 2) {
+            showActionSheet(
+              {
+                title: "Supprimer la prestation",
+                message: `Supprimer « ${name} » ? Cette action est irréversible.`,
+                options: ["Annuler", "Supprimer"],
+                cancelButtonIndex: 0,
+                destructiveButtonIndex: 1,
+              },
+              (confirmIdx) => {
+                if (confirmIdx === 1) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+                  deleteMutation.mutate(id);
+                }
+              }
+            );
           }
         }
       ),
-    [deleteMutation, showActionSheet]
+    [duplicateMutation, deleteMutation, showActionSheet]
   );
 
   const renderServiceItem = useCallback(
@@ -269,12 +260,11 @@ export default function ServicesScreen() {
       <ServiceRow
         item={item}
         onToggleActive={handleToggleActive}
-        onDuplicate={handleDuplicate}
+        onMore={handleMore}
         onEdit={handleEdit}
-        onDelete={handleDelete}
       />
     ),
-    [handleToggleActive, handleDuplicate, handleEdit, handleDelete]
+    [handleToggleActive, handleMore, handleEdit]
   );
 
   const listHeader = (
